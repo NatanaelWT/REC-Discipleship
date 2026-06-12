@@ -23,7 +23,9 @@ class CompatibilityController extends Controller
                 return $this->renderer->render($request, $legacyPage);
             }
 
-            return redirect($this->renderer->cleanUrlForLegacyPage($legacyPage, $request->query()));
+            $target = $this->renderer->cleanUrlForLegacyPage($legacyPage, $request->query());
+
+            return redirect()->away($request->getSchemeAndHttpHost() . $target);
         }
 
         return $this->renderer->render($request, 'kutisari');

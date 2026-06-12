@@ -2,17 +2,7 @@
 
 function discipleship_table_read_raw(string $name): array {
     $name = canonical_data_name($name);
-    $path = discipleship_table_path($name);
-    if (!is_file($path)) {
-        return discipleship_table_default($name);
-    }
-
-    $raw = file_get_contents($path);
-    if ($raw === false || trim($raw) === '') {
-        return discipleship_table_default($name);
-    }
-
-    $data = json_decode($raw, true);
+    $data = \App\Support\LegacyDataStore::readDocumentTable($name);
     if (!is_array($data)) {
         return discipleship_table_default($name);
     }

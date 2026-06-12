@@ -10,6 +10,12 @@ function read_json(string $path, $default) {
         }
     }
 
+    $found = false;
+    $data = \App\Support\LegacyDataStore::readPath($path, $default, $found);
+    if ($found && is_array($data)) {
+        return $data;
+    }
+
     if (!file_exists($path)) {
         return $default;
     }

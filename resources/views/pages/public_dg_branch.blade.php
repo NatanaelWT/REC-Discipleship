@@ -33,7 +33,7 @@ if ($page === 'public_dg_branch') {
         if ($branchLabel === '') {
             $branchLabel = 'Kutisari';
         }
-        echo "      <a class=\"public-branch-link-card\" href=\"?page=public_dg_report&cabang=" . rawurlencode($branchCode) . "\" aria-label=\"Isi laporan cabang " . h($branchLabel) . "\">\n";
+        echo "      <a class=\"public-branch-link-card\" href=\"/publik/jurnal-dg/" . rawurlencode($branchCode) . "/laporan\" aria-label=\"Isi laporan cabang " . h($branchLabel) . "\">\n";
         echo "        <span class=\"public-branch-card-eyebrow\">Cabang</span>\n";
         echo "        <span class=\"public-branch-card-title\">" . h($branchLabel) . "</span>\n";
         echo "        <span class=\"public-branch-card-cta\">Isi Laporan <svg viewBox=\"0 0 20 20\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M7 4l6 6-6 6\"/></svg></span>\n";

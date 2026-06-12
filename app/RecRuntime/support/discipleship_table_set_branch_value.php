@@ -13,30 +13,7 @@ function discipleship_table_set_branch_value(string $branch, string $name, $data
     }
 
     $branch = normalize_public_branch_code($branch);
-    $path = discipleship_table_path($name);
-    $dir = dirname($path);
-    if (!is_dir($dir) && !mkdir($dir, 0777, true) && !is_dir($dir)) {
-        return false;
-    }
-
-    $fp = fopen($path, 'c+');
-    if ($fp === false) {
-        return false;
-    }
-
-    flock($fp, LOCK_EX);
-    rewind($fp);
-    $raw = stream_get_contents($fp);
-    $database = null;
-    if (is_string($raw) && trim($raw) !== '') {
-        $decoded = json_decode($raw, true);
-        if (is_array($decoded)) {
-            $database = $decoded;
-        }
-    }
-    if (!is_array($database)) {
-        $database = discipleship_table_default($name);
-    }
+    $database = discipleship_table_read_raw($name);
     if (!isset($database['schema_version'])) {
         $database['schema_version'] = 1;
     }
@@ -81,23 +58,5 @@ function discipleship_table_set_branch_value(string $branch, string $name, $data
         $database = flatten_people_registry_table_for_storage($database);
     }
 
-    $json = json_encode($database, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-    if (!is_string($json)) {
-        flock($fp, LOCK_UN);
-        fclose($fp);
-        return false;
-    }
-    if (is_string($raw) && $raw === $json) {
-        flock($fp, LOCK_UN);
-        fclose($fp);
-        return true;
-    }
-
-    rewind($fp);
-    ftruncate($fp, 0);
-    $bytes = fwrite($fp, $json);
-    fflush($fp);
-    flock($fp, LOCK_UN);
-    fclose($fp);
-    return $bytes !== false;
+    return discipleship_table_write_raw($name, $database);
 }

@@ -79,7 +79,7 @@ if ($page === 'public_material_preview') {
         echo "    <div class=\"public-material-pdfjs-fallback\" data-pdfjs-fallback hidden>PDF belum bisa ditampilkan di browser ini. <a href=\"" . h($rawUrl) . "\">Buka PDF</a></div>\n";
         echo "  </div>\n";
         echo "  <div class=\"public-material-preview-actions\">\n";
-        echo "    <a class=\"btn public-material-journal-btn\" href=\"?page=public_dg_branch\">Isi Jurnal Temu DG</a>\n";
+        echo "    <a class=\"btn public-material-journal-btn\" href=\"/publik/jurnal-dg\">Isi Jurnal Temu DG</a>\n";
         if ($showFeedbackButton) {
             $feedbackSessionNumber = public_material_session_number($selected);
             $feedbackHref = '?page=public_member_feedback_branch';

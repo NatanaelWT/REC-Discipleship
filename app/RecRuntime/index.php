@@ -1,5 +1,5 @@
 <?php
-// REC administration system - PHP Native + File JSON
+// REC administration system - Laravel runtime compatibility layer
 
 const APP_TIMEZONE = 'Asia/Jakarta';
 const CHURCH_NAME = 'Reformed Exodus Community';
@@ -1749,7 +1749,9 @@ if ($churchFilesNormalized) {
 
 // Do not persist runtime projections during page boot. Login and read-only page loads
 // must not rewrite branch-scoped data such as DG reports or member/MSK records.
-if (!is_file(data_path('church_files'))) {
+$churchFilesDataFound = false;
+\App\Support\LegacyDataStore::readPath(data_path('church_files'), [], $churchFilesDataFound);
+if (!$churchFilesDataFound && !is_file(data_path('church_files'))) {
     write_json(data_path('church_files'), $churchFiles);
 }
 

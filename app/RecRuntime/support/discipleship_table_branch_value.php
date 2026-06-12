@@ -9,9 +9,11 @@ function discipleship_table_branch_value(string $branch, string $name, ?bool &$f
             $found = true;
             return $rows;
         }
-        if (!is_file(discipleship_table_path($name))) {
-            return null;
+        if (discipleship_unified_branch_exists($branch)) {
+            $found = true;
+            return [];
         }
+        return null;
     }
     if (isset(discipleship_embedded_relation_table_names()[$name])) {
         $rows = discipleship_relationship_rows_from_branch($branch, $name);
@@ -30,16 +32,14 @@ function discipleship_table_branch_value(string $branch, string $name, ?bool &$f
             $found = true;
             return $rows;
         }
-        if (!is_file(discipleship_table_path($name)) && !discipleship_relationship_database_exists()) {
-            if (discipleship_unified_branch_exists($branch)) {
-                $found = true;
-                return [];
-            }
-            return null;
+        if (discipleship_unified_branch_exists($branch)) {
+            $found = true;
+            return [];
         }
+        return null;
     }
 
-    if (!is_file(discipleship_table_path($name))) {
+    if (!discipleship_table_has_logical_source($name)) {
         return null;
     }
 

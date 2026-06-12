@@ -8,13 +8,13 @@ if ($page === 'kutisari' || $page === 'public_links') {
     }
 
     $publicMenuCards = [
-        ['title' => 'Jurnal Temu DG', 'title_lines' => ['Jurnal', 'Temu DG'], 'sub' => '', 'href' => '?page=public_dg_branch', 'is_primary' => true],
+        ['title' => 'Jurnal Temu DG', 'title_lines' => ['Jurnal', 'Temu DG'], 'sub' => '', 'href' => '/publik/jurnal-dg', 'is_primary' => true],
         ['title' => 'Jurnal Umpan Balik Anggota', 'title_lines' => ['Jurnal', 'Umpan Balik', 'Anggota'], 'sub' => '', 'href' => '?page=public_member_feedback_branch', 'is_primary' => true, 'cta' => 'Isi Jurnal'],
-        ['title' => 'Materi DG-1', 'sub' => '(BePI)', 'href' => '?page=public_materials&menu=materi_dg_1', 'is_primary' => false],
-        ['title' => 'Materi DG-2', 'sub' => '(BOI)', 'href' => '?page=public_materials&menu=materi_dg_2', 'is_primary' => false],
-        ['title' => 'Materi DG-3', 'href' => '?page=public_materials&menu=materi_dg_3', 'is_primary' => false],
-        ['title' => 'Meditasi Injil', 'sub' => '(BePI)', 'href' => '?page=public_materials&menu=meditasi_injil', 'is_primary' => false],
-        ['title' => 'Handbook & Perjanjian Kelompok', 'title_lines' => ['Handbook &', 'Perjanjian', 'Kelompok'], 'sub' => '', 'href' => '?page=public_materials&menu=handbook_perjanjian_kelompok', 'is_primary' => false],
+        ['title' => 'Materi DG-1', 'sub' => '(BePI)', 'href' => '/materi/materi_dg_1', 'is_primary' => false],
+        ['title' => 'Materi DG-2', 'sub' => '(BOI)', 'href' => '/materi/materi_dg_2', 'is_primary' => false],
+        ['title' => 'Materi DG-3', 'href' => '/materi/materi_dg_3', 'is_primary' => false],
+        ['title' => 'Meditasi Injil', 'sub' => '(BePI)', 'href' => '/materi/meditasi_injil', 'is_primary' => false],
+        ['title' => 'Handbook & Perjanjian Kelompok', 'title_lines' => ['Handbook &', 'Perjanjian', 'Kelompok'], 'sub' => '', 'href' => '/materi/handbook_perjanjian_kelompok', 'is_primary' => false],
         ['title' => 'Unggah Pertanyaan Sulit', 'title_lines' => ['Unggah', 'Pertanyaan', 'Sulit'], 'sub' => '', 'href' => '?page=public_difficult_question_submit', 'is_primary' => false, 'tile_class' => 'is-half'],
         ['title' => 'Jawaban Pertanyaan Sulit', 'title_lines' => ['Jawaban', 'Pertanyaan', 'Sulit'], 'sub' => '', 'href' => '?page=public_difficult_answer_lookup', 'is_primary' => false, 'tile_class' => 'is-half'],
     ];

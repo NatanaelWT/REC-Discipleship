@@ -197,7 +197,7 @@ if ($page === 'public_dg_report') {
 
     echo "    <div class=\"form-actions dg-form-actions\">\n";
     echo "      <button class=\"btn\" type=\"submit\" data-dg-submit" . ($dgFormUnlocked ? '' : ' disabled') . ">Kirim Laporan</button>\n";
-    echo "      <a class=\"btn ghost\" href=\"?page=public_dg_branch&cabang=" . h($publicBranch) . "\">Kembali</a>\n";
+    echo "      <a class=\"btn ghost\" href=\"/publik/jurnal-dg\">Kembali</a>\n";
     echo "    </div>\n";
     echo "  </form>\n";
     echo "</section>\n";

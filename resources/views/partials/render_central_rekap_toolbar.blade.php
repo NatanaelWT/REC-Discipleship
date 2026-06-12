@@ -17,11 +17,16 @@ function render_central_rekap_toolbar(string $currentPage): void {
         $preservedQueryParams[$paramKey] = $paramValue;
     }
     $buildRekapHref = function (string $branchCode) use ($currentPage, $preservedQueryParams): string {
-        $query = array_merge([
-            'page' => $currentPage,
+        $params = array_merge([
             'rekap_cabang' => $branchCode,
         ], $preservedQueryParams);
-        return '?' . http_build_query($query);
+
+        if (class_exists(\App\Services\Legacy\LegacyRouteMap::class) && \App\Services\Legacy\LegacyRouteMap::hasPage($currentPage)) {
+            return \App\Services\Legacy\LegacyRouteMap::pageUrl($currentPage, $params);
+        }
+
+        $params['page'] = $currentPage;
+        return '?' . http_build_query($params);
     };
 
     echo "  <section class=\"central-rekap-toolbar\" aria-label=\"Filter rekap cabang pusat\">\n";

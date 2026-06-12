@@ -2,7 +2,6 @@
 
 function discipleship_persons_set_unified_branch_value(string $branch, $data): bool {
     $branch = normalize_public_branch_code($branch);
-    $path = discipleship_table_path(PEOPLE_REGISTRY_DATA_NAME);
     $table = discipleship_table_read_raw(PEOPLE_REGISTRY_DATA_NAME);
     $records = $table['records'] ?? [];
     if (!is_array($records)) {
@@ -115,13 +114,5 @@ function discipleship_persons_set_unified_branch_value(string $branch, $data): b
     $table['updated_at'] = discipleship_table_now_iso();
     $table = flatten_people_registry_table_for_storage($table);
 
-    $json = json_encode($table, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-    if (!is_string($json)) {
-        return false;
-    }
-    $dir = dirname($path);
-    if (!is_dir($dir) && !mkdir($dir, 0777, true) && !is_dir($dir)) {
-        return false;
-    }
-    return file_put_contents($path, $json) !== false;
+    return discipleship_table_write_raw(PEOPLE_REGISTRY_DATA_NAME, $table);
 }

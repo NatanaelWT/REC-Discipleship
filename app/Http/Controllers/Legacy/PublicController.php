@@ -21,7 +21,7 @@ class PublicController extends Controller
                 return $this->legacy($request, $legacyPage);
             }
 
-            return redirect(LegacyRouteMap::pageUrl($legacyPage, $request->query()));
+            return redirect()->away($request->getSchemeAndHttpHost() . LegacyRouteMap::pageUrl($legacyPage, $request->query()));
         }
 
         return $this->legacy($request, 'kutisari');

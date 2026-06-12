@@ -17,31 +17,5 @@ function discipleship_table_write_raw(string $name, array $table): bool {
         $table = flatten_people_registry_table_for_storage($table);
     }
 
-    $json = json_encode($table, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-    if (!is_string($json)) {
-        return false;
-    }
-
-    $path = discipleship_table_path($name);
-    $dir = dirname($path);
-    if (!is_dir($dir) && !mkdir($dir, 0777, true) && !is_dir($dir)) {
-        return false;
-    }
-
-    $existingJson = is_file($path) ? file_get_contents($path) : false;
-    if ($existingJson !== false && $existingJson === $json) {
-        return true;
-    }
-
-    $fp = fopen($path, 'c+');
-    if ($fp === false) {
-        return false;
-    }
-    flock($fp, LOCK_EX);
-    ftruncate($fp, 0);
-    $bytes = fwrite($fp, $json);
-    fflush($fp);
-    flock($fp, LOCK_UN);
-    fclose($fp);
-    return $bytes !== false;
+    return \App\Support\LegacyDataStore::writeDocumentTable($name, $table);
 }

@@ -9,5 +9,10 @@ function discipleship_branch_json_exists(string $path): bool {
             return true;
         }
     }
+    $found = false;
+    \App\Support\LegacyDataStore::readPath($path, [], $found);
+    if ($found) {
+        return true;
+    }
     return is_file($path);
 }

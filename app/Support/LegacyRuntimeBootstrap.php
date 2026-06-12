@@ -1,0 +1,86 @@
+<?php
+
+namespace App\Support;
+
+use Illuminate\Http\Request;
+
+class LegacyRuntimeBootstrap
+{
+    private static bool $loaded = false;
+
+    public static function boot(?Request $request = null): void
+    {
+        self::startSession($request);
+        self::load();
+    }
+
+    public static function load(): void
+    {
+        if (self::$loaded) {
+            return;
+        }
+
+        if (! defined('APP_TIMEZONE')) {
+            define('APP_TIMEZONE', 'Asia/Jakarta');
+        }
+        if (! defined('CHURCH_NAME')) {
+            define('CHURCH_NAME', 'Reformed Exodus Community');
+        }
+        if (! defined('PEOPLE_REGISTRY_DATA_NAME')) {
+            define('PEOPLE_REGISTRY_DATA_NAME', 'people_registry');
+        }
+        if (! defined('DISCIPLESHIP_GROUPS_DATA_NAME')) {
+            define('DISCIPLESHIP_GROUPS_DATA_NAME', 'discipleship_groups');
+        }
+        if (! defined('DISCIPLESHIP_RELATIONSHIPS_DATA_NAME')) {
+            define('DISCIPLESHIP_RELATIONSHIPS_DATA_NAME', 'discipleship_relationships');
+        }
+        if (! defined('REC_LEGACY_RUNTIME_PATH')) {
+            define('REC_LEGACY_RUNTIME_PATH', LegacyDataStore::runtimeRoot());
+        }
+        if (! defined('REC_LEGACY_PUBLIC_PATH')) {
+            define('REC_LEGACY_PUBLIC_PATH', public_path());
+        }
+
+        date_default_timezone_set(APP_TIMEZONE);
+        LegacyDataStore::prepareRuntime();
+
+        foreach (glob(app_path('RecRuntime/support/*.php')) ?: [] as $supportFile) {
+            require_once $supportFile;
+        }
+
+        foreach (glob(resource_path('views/partials/*.blade.php')) ?: [] as $partialFile) {
+            if (basename($partialFile) === 'people_tree_group_history_content.blade.php') {
+                continue;
+            }
+
+            require_once $partialFile;
+        }
+
+        self::$loaded = true;
+    }
+
+    public static function startSession(?Request $request = null): void
+    {
+        if (session_status() !== PHP_SESSION_NONE) {
+            return;
+        }
+
+        $httpsEnabled = $request !== null
+            ? $request->isSecure()
+            : ((! empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
+                || ((int) ($_SERVER['SERVER_PORT'] ?? 0) === 443));
+
+        ini_set('session.use_strict_mode', '1');
+        ini_set('session.use_only_cookies', '1');
+        ini_set('session.cookie_httponly', '1');
+        ini_set('session.cookie_samesite', 'Lax');
+
+        if ($httpsEnabled) {
+            ini_set('session.cookie_secure', '1');
+        }
+
+        session_name('rec_admin_session');
+        session_start();
+    }
+}

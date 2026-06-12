@@ -6,6 +6,10 @@ function write_json_unrestricted(string $path, $data): bool {
         return discipleship_table_set_branch_value($info['branch'], $info['name'], $data);
     }
 
+    if (\App\Support\LegacyDataStore::writePath($path, $data)) {
+        return true;
+    }
+
     $existingJson = is_file($path) ? file_get_contents($path) : false;
     $json = encode_json_for_storage($data, detect_preferred_json_eol($existingJson));
     if ($json === null) {

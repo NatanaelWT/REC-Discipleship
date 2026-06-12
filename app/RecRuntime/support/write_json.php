@@ -10,6 +10,10 @@ function write_json(string $path, $data): void {
         return;
     }
 
+    if (\App\Support\LegacyDataStore::writePath($path, $data)) {
+        return;
+    }
+
     $existingJson = is_file($path) ? file_get_contents($path) : false;
     $json = encode_json_for_storage($data, detect_preferred_json_eol($existingJson));
     if ($json === null) {
