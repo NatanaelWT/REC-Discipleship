@@ -56,12 +56,15 @@ class PublicMaterialCatalog
      */
     public function fileRow(ChurchFile $file): array
     {
+        $path = (string) ($file->relative_path ?? '');
+
         return [
             'id' => (string) $file->public_id,
             'title' => (string) ($file->title ?? ''),
             'category' => (string) ($file->category_name ?? ''),
             'description' => (string) ($file->description ?? ''),
-            'path' => (string) ($file->relative_path ?? ''),
+            'path' => $path,
+            'public_url' => $this->publicUrlForPath($path),
             'file_name' => (string) ($file->original_file_name ?? ''),
             'size' => max(0, (int) ($file->size_bytes ?? 0)),
             'mime' => (string) ($file->mime_type ?? ''),
@@ -93,6 +96,18 @@ class PublicMaterialCatalog
         }
 
         return $name;
+    }
+
+    private function publicUrlForPath(string $path): string
+    {
+        RuntimeBootstrap::load();
+
+        $path = sanitize_relative_upload_path($path);
+        if ($path === '' || ! is_upload_path($path) || ! is_file(rec_public_path($path))) {
+            return '';
+        }
+
+        return asset($path);
     }
 
     private function normalizeMenuKey(string $menuKey): string

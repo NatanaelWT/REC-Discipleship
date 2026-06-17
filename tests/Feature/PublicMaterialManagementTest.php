@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
@@ -21,12 +22,12 @@ class PublicMaterialManagementTest extends TestCase
         RuntimeBootstrap::load();
         $this->createMaterialTables();
         $this->seedMaterialMenu();
-        File::deleteDirectory(rec_runtime_path('uploads/files/Material-Test'));
+        $this->deleteTestUploadFolders();
     }
 
     protected function tearDown(): void
     {
-        File::deleteDirectory(rec_runtime_path('uploads/files/Material-Test'));
+        $this->deleteTestUploadFolders();
         $_SESSION = [];
 
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -76,7 +77,47 @@ class PublicMaterialManagementTest extends TestCase
         $this->assertNotNull($row);
         $this->assertSame('Materi Baru Pusat.pdf', $row->original_file_name);
         $this->assertStringStartsWith($this->testFolder . '/file_', (string) $row->relative_path);
-        $this->assertFileExists(rec_runtime_path((string) $row->relative_path));
+        $this->assertFileExists(rec_public_path((string) $row->relative_path));
+        $this->assertFileDoesNotExist(rec_runtime_path((string) $row->relative_path));
+    }
+
+    public function test_public_material_preview_streams_file_from_public_uploads(): void
+    {
+        $fileName = 'file_public_only_20260617000000.pdf';
+        $fullDir = rec_public_path($this->testFolder);
+        File::ensureDirectoryExists($fullDir);
+        File::put($fullDir . '/' . $fileName, 'Public material');
+
+        $this->insertMaterialFile('church_file_public_only', 'File Public Only', $fileName, 0);
+
+        $response = $this->get('/materi/materi_dg_1/church_file_public_only/preview?raw=1');
+
+        $response->assertOk();
+        $this->assertStringStartsWith('application/pdf', (string) $response->headers->get('Content-Type'));
+    }
+
+    public function test_public_material_preview_falls_back_to_legacy_runtime_uploads(): void
+    {
+        $this->seedExistingMaterialFile();
+
+        $response = $this->get('/materi/materi_dg_1/church_file_test/preview?raw=1');
+
+        $response->assertOk();
+        $this->assertStringStartsWith('application/pdf', (string) $response->headers->get('Content-Type'));
+    }
+
+    public function test_materials_audit_reports_unregistered_public_files(): void
+    {
+        $fullDir = rec_public_path($this->testFolder);
+        File::ensureDirectoryExists($fullDir);
+        File::put($fullDir . '/file_unregistered_20260617000000.pdf', 'Unregistered material');
+
+        $exitCode = Artisan::call('materials:audit-files');
+        $output = Artisan::output();
+
+        $this->assertSame(1, $exitCode);
+        $this->assertStringContainsString('File fisik belum terdaftar', $output);
+        $this->assertStringContainsString($this->testFolder . '/file_unregistered_20260617000000.pdf', $output);
     }
 
     public function test_central_user_can_rename_public_material_file(): void
@@ -215,6 +256,18 @@ class PublicMaterialManagementTest extends TestCase
         if (session_status() === PHP_SESSION_NONE) {
             session_id('public-material-test-' . str_replace('.', '', uniqid('', true)));
             session_start();
+        }
+    }
+
+    private function deleteTestUploadFolders(): void
+    {
+        foreach ([
+            rec_runtime_path($this->testFolder),
+            rec_runtime_path('uploads/files/Material-Test'),
+            rec_public_path($this->testFolder),
+            rec_public_path('uploads/files/Material-Test'),
+        ] as $folder) {
+            File::deleteDirectory($folder);
         }
     }
 }

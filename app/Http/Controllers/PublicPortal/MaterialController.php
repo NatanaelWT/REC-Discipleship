@@ -88,12 +88,13 @@ class MaterialController extends Controller
         }
 
         $relativeDir = 'uploads/files/' . $folderPath;
-        $targetDir = rec_runtime_path($relativeDir);
+        $targetDir = rec_public_path($relativeDir);
         File::ensureDirectoryExists($targetDir);
 
         $targetFileName = generate_id('file') . '_' . date('YmdHis') . '.' . $extension;
         $file->move($targetDir, $targetFileName);
         $fullPath = $targetDir . '/' . $targetFileName;
+        @chmod($fullPath, 0644);
         $relativePath = sanitize_relative_upload_path($relativeDir . '/' . $targetFileName);
         if ($relativePath === '' || ! is_file($fullPath)) {
             return $this->redirectToMaterialMenu($menu, ['material_error' => 'upload_failed']);

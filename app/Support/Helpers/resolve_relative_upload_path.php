@@ -7,8 +7,8 @@ function resolve_relative_upload_path(string $path): ?string {
     }
 
     $baseRoots = [
-        rec_runtime_path(),
         rec_public_path(),
+        rec_runtime_path(),
         storage_path('app/public'),
         base_path(),
     ];

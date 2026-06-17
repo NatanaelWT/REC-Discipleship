@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\Console\Command\Command;
 
@@ -70,7 +71,57 @@ Artisan::command('env:use {profile : local, main, atau production} {--cache : Re
     return Command::SUCCESS;
 })->purpose('Switch active Laravel .env file and clear cached config');
 
-Artisan::command('materials:audit-files', function (): int {
+/**
+ * @return array<int, string>
+ */
+$materialFolderCandidates = static function (string $relativeFolder): array {
+    $relativeFolder = sanitize_relative_upload_path($relativeFolder);
+    if ($relativeFolder === '' || ! is_upload_path($relativeFolder)) {
+        return [];
+    }
+
+    return [
+        rec_public_path($relativeFolder),
+        rec_runtime_path($relativeFolder),
+        storage_path('app/public/' . $relativeFolder),
+        base_path($relativeFolder),
+    ];
+};
+
+$firstExistingMaterialFolder = static function (string $relativeFolder) use ($materialFolderCandidates): string {
+    $seen = [];
+    foreach ($materialFolderCandidates($relativeFolder) as $folder) {
+        $folder = rtrim(str_replace('\\', '/', (string) $folder), '/');
+        if ($folder === '' || isset($seen[$folder])) {
+            continue;
+        }
+        $seen[$folder] = true;
+
+        if (is_dir($folder)) {
+            return $folder;
+        }
+    }
+
+    return '';
+};
+
+/**
+ * @return array<int, string>
+ */
+$materialPhysicalFiles = static function (string $relativeFolder) use ($firstExistingMaterialFolder): array {
+    $folder = $firstExistingMaterialFolder($relativeFolder);
+    if ($folder === '') {
+        return [];
+    }
+
+    $files = glob(rtrim(str_replace('\\', '/', $folder), '/') . '/*') ?: [];
+    $files = array_values(array_filter($files, 'is_file'));
+    sort($files, SORT_NATURAL | SORT_FLAG_CASE);
+
+    return $files;
+};
+
+Artisan::command('materials:audit-files', function () use ($materialPhysicalFiles): int {
     \App\Support\RuntimeBootstrap::load();
 
     if (! Schema::hasTable('public_material_files')) {
@@ -129,24 +180,7 @@ Artisan::command('materials:audit-files', function (): int {
         }
 
         $relativeFolder = 'uploads/files/' . $folderPath;
-        $runtimeFolder = rec_runtime_path($relativeFolder);
-        $publicFolder = rec_public_path($relativeFolder);
-        $storagePublicFolder = storage_path('app/public/' . $relativeFolder);
-        $baseFolder = base_path($relativeFolder);
-        $fullFolder = is_dir($runtimeFolder)
-            ? $runtimeFolder
-            : (is_dir($publicFolder)
-                ? $publicFolder
-                : (is_dir($storagePublicFolder)
-                    ? $storagePublicFolder
-                    : (is_dir($baseFolder) ? $baseFolder : '')));
-
-        if ($fullFolder === '' || ! is_dir($fullFolder)) {
-            continue;
-        }
-
-        $physicalFiles = glob(rtrim(str_replace('\\', '/', $fullFolder), '/') . '/*') ?: [];
-        sort($physicalFiles, SORT_NATURAL | SORT_FLAG_CASE);
+        $physicalFiles = $materialPhysicalFiles($relativeFolder);
 
         foreach ($physicalFiles as $fullPath) {
             if (! is_file($fullPath)) {
@@ -195,7 +229,7 @@ Artisan::command('materials:audit-files', function (): int {
     return Command::SUCCESS;
 })->purpose('Audit public material file records against uploaded files');
 
-Artisan::command('materials:sync-files', function (): int {
+Artisan::command('materials:sync-files', function () use ($materialPhysicalFiles): int {
     \App\Support\RuntimeBootstrap::load();
 
     if (! Schema::hasTable('public_material_files') || ! Schema::hasTable('public_material_menus')) {
@@ -219,30 +253,11 @@ Artisan::command('materials:sync-files', function (): int {
         }
 
         $relativeFolder = 'uploads/files/' . $folderPath;
-        $fullFolder = resolve_relative_upload_path($relativeFolder . '/.keep');
-        if ($fullFolder !== null) {
-            $fullFolder = dirname($fullFolder);
-        } else {
-            $runtimeFolder = rec_runtime_path($relativeFolder);
-            $publicFolder = rec_public_path($relativeFolder);
-            $storagePublicFolder = storage_path('app/public/' . $relativeFolder);
-            $baseFolder = base_path($relativeFolder);
-            $fullFolder = is_dir($runtimeFolder)
-                ? $runtimeFolder
-                : (is_dir($publicFolder)
-                    ? $publicFolder
-                    : (is_dir($storagePublicFolder)
-                        ? $storagePublicFolder
-                        : (is_dir($baseFolder) ? $baseFolder : '')));
-        }
-
-        if ($fullFolder === '' || ! is_dir($fullFolder)) {
+        $files = $materialPhysicalFiles($relativeFolder);
+        if (count($files) === 0) {
             $skipped++;
             continue;
         }
-
-        $files = glob(rtrim(str_replace('\\', '/', $fullFolder), '/') . '/*') ?: [];
-        sort($files, SORT_NATURAL | SORT_FLAG_CASE);
 
         $nextSortOrder = ((int) DB::table('public_material_files')
             ->where('public_material_menu_id', $menu->id)
@@ -316,3 +331,111 @@ Artisan::command('materials:sync-files', function (): int {
 
     return Command::SUCCESS;
 })->purpose('Sync public material records from uploaded files');
+
+Artisan::command('materials:publish-files {--force : Overwrite existing public files when file sizes differ}', function (): int {
+    \App\Support\RuntimeBootstrap::load();
+
+    $sourceRoot = rtrim(str_replace('\\', '/', rec_runtime_path('uploads/files')), '/');
+    $targetRoot = rtrim(str_replace('\\', '/', rec_public_path('uploads/files')), '/');
+    if ($sourceRoot === $targetRoot) {
+        $this->error('Folder sumber dan tujuan sama. Pastikan REC_PUBLIC_PATH mengarah ke public path aplikasi.');
+
+        return Command::FAILURE;
+    }
+
+    if (! is_dir($sourceRoot)) {
+        $this->error('Folder sumber tidak ditemukan: ' . $sourceRoot);
+
+        return Command::FAILURE;
+    }
+
+    File::ensureDirectoryExists($targetRoot);
+
+    $copied = 0;
+    $overwritten = 0;
+    $skippedSame = 0;
+    $conflicts = [];
+    $failed = [];
+    $force = (bool) $this->option('force');
+    $iterator = new \RecursiveIteratorIterator(
+        new \RecursiveDirectoryIterator($sourceRoot, \FilesystemIterator::SKIP_DOTS),
+        \RecursiveIteratorIterator::LEAVES_ONLY,
+    );
+
+    foreach ($iterator as $fileInfo) {
+        if (! $fileInfo->isFile()) {
+            continue;
+        }
+
+        $sourcePath = str_replace('\\', '/', $fileInfo->getPathname());
+        $relativePath = ltrim(substr($sourcePath, strlen($sourceRoot)), '/');
+        if ($relativePath === '') {
+            continue;
+        }
+
+        $targetPath = $targetRoot . '/' . $relativePath;
+        File::ensureDirectoryExists(dirname($targetPath));
+
+        if (is_file($targetPath)) {
+            $sourceSize = max(0, (int) @filesize($sourcePath));
+            $targetSize = max(0, (int) @filesize($targetPath));
+            if ($sourceSize === $targetSize) {
+                $skippedSame++;
+                continue;
+            }
+
+            if (! $force) {
+                $conflicts[] = [$relativePath, (string) $sourceSize, (string) $targetSize];
+                continue;
+            }
+
+            if (! copy($sourcePath, $targetPath)) {
+                $failed[] = [$relativePath, 'Gagal overwrite'];
+                continue;
+            }
+
+            $overwritten++;
+            continue;
+        }
+
+        if (! copy($sourcePath, $targetPath)) {
+            $failed[] = [$relativePath, 'Gagal copy'];
+            continue;
+        }
+
+        $copied++;
+    }
+
+    $this->info('Publish file materi selesai.');
+    $this->line('Sumber: ' . $sourceRoot);
+    $this->line('Tujuan: ' . $targetRoot);
+    $this->line('File disalin: ' . (string) $copied);
+    $this->line('File overwrite: ' . (string) $overwritten);
+    $this->line('File dilewati karena sudah sama: ' . (string) $skippedSame);
+    $this->line('File konflik ukuran: ' . (string) count($conflicts));
+    $this->line('File gagal: ' . (string) count($failed));
+
+    if (count($conflicts) > 0) {
+        $this->warn('File tujuan sudah ada dengan ukuran berbeda. Jalankan ulang dengan --force jika memang ingin overwrite.');
+        $this->table(['Path', 'Size lama', 'Size public'], $conflicts);
+    }
+
+    if (count($failed) > 0) {
+        $this->error('Ada file yang gagal disalin.');
+        $this->table(['Path', 'Error'], $failed);
+    }
+
+    $this->line('');
+    $this->line('Menjalankan audit setelah publish...');
+    $auditCode = Artisan::call('materials:audit-files');
+    $auditOutput = trim(Artisan::output());
+    if ($auditOutput !== '') {
+        $this->line($auditOutput);
+    }
+
+    if ($auditCode !== Command::SUCCESS || count($conflicts) > 0 || count($failed) > 0) {
+        return Command::FAILURE;
+    }
+
+    return Command::SUCCESS;
+})->purpose('Copy public material files from private runtime storage to public/uploads/files');
