@@ -31,5 +31,11 @@
       @endif
       <a class="btn tiny secondary" href="{{ route('materials.download', ['menu' => $menu, 'churchFile' => $fileId]) }}">Unduh</a>
     </div>
+    @if (! empty($canManageMaterials))
+      <form class="public-material-rename-form" method="post" action="{{ route('materials.rename', ['menu' => $menu, 'churchFile' => $fileId]) }}">
+        <input class="public-material-rename-input" type="text" name="title" value="{{ $title }}" maxlength="180" required>
+        <button class="btn tiny" type="submit">Simpan nama</button>
+      </form>
+    @endif
   </article>
 @endif

@@ -54,8 +54,7 @@ class MaterialPreviewController extends Controller
             return response('File tidak ditemukan.', 404);
         }
 
-        $fullPath = rec_runtime_path($path);
-        if (! is_file($fullPath)) {
+        if (resolve_relative_upload_path($path) === null) {
             return response('File tidak ditemukan.', 404);
         }
 

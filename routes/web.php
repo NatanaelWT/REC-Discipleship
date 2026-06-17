@@ -71,6 +71,8 @@ Route::withoutMiddleware($statelessRouteMiddleware)->group(function (): void {
         Route::match(['GET', 'POST'], '/preview', [PublicMaterialPreviewController::class, 'redirectToPreview'])->name('preview.redirect');
         Route::match(['GET', 'POST'], '/download', [PublicMaterialDownloadController::class, 'redirectToDownload'])->name('download.redirect');
         Route::get('/{menu}', [PublicMaterialController::class, 'show'])->name('show');
+        Route::post('/{menu}/upload', [PublicMaterialController::class, 'upload'])->name('upload');
+        Route::post('/{menu}/{churchFile}/rename', [PublicMaterialController::class, 'rename'])->name('rename');
         Route::get('/{menu}/{churchFile}/preview', [PublicMaterialPreviewController::class, 'show'])->name('preview');
         Route::get('/{menu}/{churchFile}/download', [PublicMaterialDownloadController::class, 'download'])->name('download');
     });

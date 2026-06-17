@@ -646,6 +646,59 @@ button.nav-item {
   font-weight: 700;
 }
 
+.public-material-message {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.public-material-message.is-success {
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+}
+
+.public-material-message.is-danger {
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+}
+
+.public-material-admin-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.5fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 10px 0 14px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.public-material-admin-input,
+.public-material-rename-input {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  border-radius: 10px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
+  font: inherit;
+}
+
+.public-material-admin-file {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 10px;
+  padding: 6px;
+  background: rgba(248, 250, 252, 0.92);
+  color: #334155;
+  font-size: 13px;
+}
+
 .public-material-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -741,6 +794,16 @@ button.nav-item {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.public-material-rename-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .public-material-footer {
@@ -1509,6 +1572,11 @@ button.nav-item {
 
   .public-material-item {
     padding: 12px 13px;
+  }
+
+  .public-material-admin-form,
+  .public-material-rename-form {
+    grid-template-columns: 1fr;
   }
 
   .public-material-list {

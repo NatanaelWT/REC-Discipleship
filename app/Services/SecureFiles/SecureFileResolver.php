@@ -18,16 +18,9 @@ class SecureFileResolver
             throw new HttpException(403, 'Akses file tidak diizinkan.');
         }
 
-        $uploadsRoot = realpath(rec_runtime_path('uploads'));
-        $fullPath = realpath(rec_runtime_path($path));
-        if ($uploadsRoot === false || $fullPath === false || ! is_file($fullPath)) {
+        $fullPath = resolve_relative_upload_path($path);
+        if ($fullPath === null) {
             throw new HttpException(404, 'File tidak ditemukan.');
-        }
-
-        $uploadsRootNormalized = rtrim(str_replace('\\', '/', $uploadsRoot), '/');
-        $fullPathNormalized = str_replace('\\', '/', $fullPath);
-        if (! str_starts_with($fullPathNormalized, $uploadsRootNormalized . '/')) {
-            throw new HttpException(403, 'Akses file tidak diizinkan.');
         }
 
         $extension = secure_file_extension($fullPath);

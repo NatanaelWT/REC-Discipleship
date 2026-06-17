@@ -20,8 +20,8 @@ class PublicMaterialFileStreamer
             abort(404, 'File tidak ditemukan.');
         }
 
-        $fullPath = rec_runtime_path($path);
-        if (! is_file($fullPath)) {
+        $fullPath = resolve_relative_upload_path($path);
+        if ($fullPath === null) {
             abort(404, 'File tidak ditemukan.');
         }
 

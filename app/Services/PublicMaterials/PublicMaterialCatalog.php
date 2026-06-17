@@ -32,6 +32,8 @@ class PublicMaterialCatalog
 
         return $this->fileQueryForMenu($menu)
             ->get()
+            ->sortBy(fn (ChurchFile $file): string => $this->sortName($file), SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
             ->map(fn (ChurchFile $file): array => $this->fileRow($file))
             ->all();
     }
@@ -73,15 +75,24 @@ class PublicMaterialCatalog
         if (Schema::hasTable('public_material_files')) {
             return ChurchFile::query()
                 ->where('public_material_menu_id', $menu->id)
-                ->orderBy('sort_order')
-                ->orderBy('title')
-                ->orderBy('original_file_name');
+                ->orderBy('id');
         }
 
         return $menu->churchFiles()
-            ->orderBy('public_material_menu_files.sort_order')
-            ->orderBy('church_files.title')
-            ->orderBy('church_files.original_file_name');
+            ->orderBy('church_files.id');
+    }
+
+    private function sortName(ChurchFile $file): string
+    {
+        $name = trim((string) ($file->title ?? ''));
+        if ($name === '') {
+            $name = trim((string) ($file->original_file_name ?? ''));
+        }
+        if ($name === '') {
+            $name = basename((string) ($file->relative_path ?? ''));
+        }
+
+        return $name;
     }
 
     private function normalizeMenuKey(string $menuKey): string
