@@ -1210,7 +1210,7 @@ $centralReadOnly = is_effective_central_discipleship_readonly();
                         $progressPercentLabel = substr($progressPercentLabel, 0, -2);
                     }
                     echo "        <div class=\"discipleship-branch-target " . h((string) ($branchTargetProgressRow['class'] ?? '')) . "\">\n";
-                    echo "          <div class=\"discipleship-branch-target-top\"><span>" . h((string) ($branchTargetProgressRow['label'] ?? '-')) . "</span><strong>" . h(number_format($progressValue, 0, ',', '.')) . " / " . h(number_format($progressTarget, 0, ',', '.')) . " â€¢ " . h($progressPercentLabel) . "%</strong></div>\n";
+                    echo "          <div class=\"discipleship-branch-target-top\"><span>" . h((string) ($branchTargetProgressRow['label'] ?? '-')) . "</span><strong>" . h(number_format($progressValue, 0, ',', '.')) . " / " . h(number_format($progressTarget, 0, ',', '.')) . " &bull; " . h($progressPercentLabel) . "%</strong></div>\n";
                     echo "          <div class=\"discipleship-branch-target-bar\"><span style=\"width:" . h((string) $progressPercent) . "%\"></span></div>\n";
                     echo "        </div>\n";
                 }

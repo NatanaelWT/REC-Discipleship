@@ -48,7 +48,8 @@ function render_people_tree_v2_group_branch(
     if ($groupAssistantName !== '') {
         $groupMetaParts[] = 'Pendamping: ' . $groupAssistantName;
     }
-    $groupMetaLabel = implode(' â€¢ ', $groupMetaParts);
+    $groupMetaSeparator = ' ' . html_entity_decode('&bull;', ENT_QUOTES, 'UTF-8') . ' ';
+    $groupMetaLabel = implode($groupMetaSeparator, $groupMetaParts);
 
     $groupNodeClass = 'tree-v2-node tree-v2-group';
     if ($groupProgress !== '-') {
