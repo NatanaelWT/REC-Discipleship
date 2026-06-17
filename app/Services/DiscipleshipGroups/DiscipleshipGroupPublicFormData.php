@@ -104,21 +104,21 @@ class DiscipleshipGroupPublicFormData
     private function leaderForGroup(DiscipleshipGroup $group): ?DiscipleshipPerson
     {
         $leaderships = $group->leaderships
-            ->filter(static fn (DiscipleshipGroupLeadership $leadership): bool => strtolower(trim((string) $leadership->status)) === 'active');
+            ->filter(static fn (object $leadership): bool => strtolower(trim((string) $leadership->status)) === 'active');
 
         $leader = $leaderships
-            ->first(static fn (DiscipleshipGroupLeadership $leadership): bool => strtolower(trim((string) $leadership->role)) === 'leader')
+            ->first(static fn (object $leadership): bool => strtolower(trim((string) $leadership->role)) === 'leader')
             ?? $leaderships->first();
 
-        if ($leader instanceof DiscipleshipGroupLeadership && $leader->person instanceof DiscipleshipPerson) {
+        if (is_object($leader) && $leader->person instanceof DiscipleshipPerson) {
             return $leader->person;
         }
 
         $membershipLeader = $group->memberships
-            ->filter(static fn (DiscipleshipGroupMembership $membership): bool => strtolower(trim((string) $membership->status)) === 'active')
-            ->first(static fn (DiscipleshipGroupMembership $membership): bool => strtolower(trim((string) $membership->role)) === 'leader');
+            ->filter(static fn (object $membership): bool => strtolower(trim((string) $membership->status)) === 'active')
+            ->first(static fn (object $membership): bool => strtolower(trim((string) $membership->role)) === 'leader');
 
-        return $membershipLeader instanceof DiscipleshipGroupMembership && $membershipLeader->person instanceof DiscipleshipPerson
+        return is_object($membershipLeader) && $membershipLeader->person instanceof DiscipleshipPerson
             ? $membershipLeader->person
             : null;
     }
@@ -130,7 +130,7 @@ class DiscipleshipGroupPublicFormData
     {
         $members = [];
         foreach ($group->memberships as $membership) {
-            if (! $membership instanceof DiscipleshipGroupMembership) {
+            if (! is_object($membership)) {
                 continue;
             }
 

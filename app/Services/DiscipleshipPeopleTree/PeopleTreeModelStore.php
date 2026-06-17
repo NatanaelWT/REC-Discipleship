@@ -3,6 +3,7 @@
 namespace App\Services\DiscipleshipPeopleTree;
 
 use App\Models\DiscipleshipGroup;
+use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipGroupLeadership;
 use App\Models\DiscipleshipGroupMembership;
 use App\Models\DiscipleshipGroupMultiplication;
@@ -119,16 +120,23 @@ class PeopleTreeModelStore
         $branchLabels = $this->branchLabels();
         $rows = [];
 
-        MskParticipant::query()
-            ->with([
-                'sessions' => static fn ($query) => $query->orderBy('session_number'),
-                'photos' => static fn ($query) => $query->orderBy('id'),
-            ])
+        $query = MskParticipant::query()
             ->whereIn('branch_code', $branchCodes)
             ->orderBy('full_name')
-            ->orderBy('id')
-            ->get()
-            ->each(function (MskParticipant $participant) use (&$rows, $centralReadOnly, $branchLabels): void {
+            ->orderBy('id');
+
+        $with = [];
+        if (! Schema::hasColumn('msk_participants', 'session_numbers') && Schema::hasTable('msk_participant_sessions')) {
+            $with['sessions'] = static fn ($query) => $query->orderBy('session_number');
+        }
+        if (! Schema::hasColumn('msk_participants', 'photos') && Schema::hasTable('msk_participant_photos')) {
+            $with['photos'] = static fn ($query) => $query->orderBy('id');
+        }
+        if ($with !== []) {
+            $query->with($with);
+        }
+
+        $query->get()->each(function (MskParticipant $participant) use (&$rows, $centralReadOnly, $branchLabels): void {
                 $branchCode = normalize_public_branch_code((string) $participant->branch_code);
                 $branchLabel = $branchLabels[$branchCode] ?? strtoupper($branchCode);
                 $row = $participant->toViewArray();
@@ -240,7 +248,6 @@ class PeopleTreeModelStore
         $rows = [];
 
         DiscipleshipMeetingReport::query()
-            ->with(['absences', 'meditationSharers', 'photos'])
             ->whereIn('branch_code', $branchCodes)
             ->orderByDesc('meeting_date')
             ->orderByDesc('created_at')
@@ -273,11 +280,11 @@ class PeopleTreeModelStore
                     'material_topic' => trim((string) ($report->material_topic ?? '')),
                     'group_progress' => normalize_dg_progress_value((string) ($report->group_progress_snapshot ?? '')) ?: 'DG 1',
                     'absence_reason' => trim((string) ($report->absence_reason ?? '')),
-                    'absent_member_ids' => $this->reportPersonIds($branchCode, $report->absences, $centralReadOnly),
+                    'absent_member_ids' => $this->reportPersonIds($branchCode, $report->absenceItems(), $centralReadOnly),
                     'additional_notes' => trim((string) ($report->additional_notes ?? '')),
                     'meditation_min_times' => max(0, (int) $report->meditation_min_times),
-                    'meditation_sharer_ids' => $this->reportPersonIds($branchCode, $report->meditationSharers, $centralReadOnly),
-                    'meeting_photos' => $this->reportPhotos($report->photos),
+                    'meditation_sharer_ids' => $this->reportPersonIds($branchCode, $report->meditationSharerItems(), $centralReadOnly),
+                    'meeting_photos' => $this->reportPhotos($report->photoItems()),
                     'quality_pray' => $report->prayed_for_members ? 'true' : 'false',
                     'quality_prepare' => $report->prepared_material ? 'true' : 'false',
                     'quality_relational' => $report->relationally_contacted ? 'true' : 'false',
@@ -323,9 +330,10 @@ class PeopleTreeModelStore
         return Schema::hasTable('discipleship_people')
             && Schema::hasTable('discipleship_groups')
             && Schema::hasTable('discipleship_relationships')
-            && Schema::hasTable('discipleship_group_memberships')
-            && Schema::hasTable('discipleship_group_leaderships')
-            && Schema::hasTable('discipleship_group_multiplications');
+            && (Schema::hasTable('discipleship_group_people')
+                || (Schema::hasTable('discipleship_group_memberships') && Schema::hasTable('discipleship_group_leaderships')))
+            && (Schema::hasTable('discipleship_group_multiplications')
+                || Schema::hasColumn('discipleship_groups', 'source_group_public_id'));
     }
 
     /**
@@ -372,6 +380,9 @@ class PeopleTreeModelStore
                 'start_stage' => normalize_dg_progress_value((string) ($group->start_stage ?? '')),
                 'current_stage' => normalize_dg_progress_value((string) ($group->current_stage ?? '')),
                 'parent_group_id' => trim((string) ($group->parent_group_public_id ?? '')),
+                'source_group_id' => trim((string) ($group->source_group_public_id ?? '')),
+                'initiated_by_person_id' => trim((string) ($group->initiated_by_person_public_id ?? '')),
+                'multiplied_at' => $this->dateString($group->multiplied_at ?? null),
                 'notes' => trim((string) ($group->notes ?? '')),
                 'branch_code' => $branchCode,
                 'created_at' => $this->timestampString($group->created_at ?? null),
@@ -415,6 +426,30 @@ class PeopleTreeModelStore
      */
     private function membershipRows(string $branchCode): array
     {
+        if (Schema::hasTable('discipleship_group_people')) {
+            return DiscipleshipGroupPerson::query()
+                ->where('branch_code', $branchCode)
+                ->where('role', 'member')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (DiscipleshipGroupPerson $membership): array => [
+                    'id' => trim((string) ($membership->public_id ?? 'mem_db_' . (string) $membership->id)),
+                    'group_id' => trim((string) ($membership->group_public_id ?? '')),
+                    'person_id' => trim((string) ($membership->person_public_id ?? '')),
+                    'role' => trim((string) ($membership->role ?? 'member')) ?: 'member',
+                    'stage' => normalize_dg_progress_value((string) ($membership->stage ?? '')),
+                    'status' => trim((string) ($membership->status ?? 'active')) ?: 'active',
+                    'start_date' => $this->dateString($membership->started_on ?? null),
+                    'end_date' => $this->dateString($membership->ended_on ?? null),
+                    'reason_end' => trim((string) ($membership->end_reason ?? '')),
+                    'branch_code' => $branchCode,
+                    'created_at' => $this->timestampString($membership->created_at ?? null),
+                    'updated_at' => $this->timestampString($membership->updated_at ?? null),
+                ])
+                ->values()
+                ->all();
+        }
+
         return DiscipleshipGroupMembership::query()
             ->where('branch_code', $branchCode)
             ->orderBy('id')
@@ -442,6 +477,29 @@ class PeopleTreeModelStore
      */
     private function leadershipRows(string $branchCode): array
     {
+        if (Schema::hasTable('discipleship_group_people')) {
+            return DiscipleshipGroupPerson::query()
+                ->where('branch_code', $branchCode)
+                ->where('role', '!=', 'member')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (DiscipleshipGroupPerson $leadership): array => [
+                    'id' => trim((string) ($leadership->public_id ?? 'ldr_db_' . (string) $leadership->id)),
+                    'group_id' => trim((string) ($leadership->group_public_id ?? '')),
+                    'leader_person_id' => trim((string) ($leadership->person_public_id ?? '')),
+                    'role' => trim((string) ($leadership->role ?? 'leader')) ?: 'leader',
+                    'status' => trim((string) ($leadership->status ?? 'active')) ?: 'active',
+                    'start_date' => $this->dateString($leadership->started_on ?? null),
+                    'end_date' => $this->dateString($leadership->ended_on ?? null),
+                    'reason_change' => trim((string) ($leadership->end_reason ?? '')),
+                    'branch_code' => $branchCode,
+                    'created_at' => $this->timestampString($leadership->created_at ?? null),
+                    'updated_at' => $this->timestampString($leadership->updated_at ?? null),
+                ])
+                ->values()
+                ->all();
+        }
+
         return DiscipleshipGroupLeadership::query()
             ->where('branch_code', $branchCode)
             ->orderBy('id')
@@ -468,6 +526,31 @@ class PeopleTreeModelStore
      */
     private function multiplicationRows(string $branchCode): array
     {
+        if (Schema::hasColumn('discipleship_groups', 'source_group_public_id')) {
+            return DiscipleshipGroup::query()
+                ->where('branch_code', $branchCode)
+                ->where(static function ($query): void {
+                    $query->whereNotNull('source_group_public_id')
+                        ->orWhereNotNull('initiated_by_person_public_id')
+                        ->orWhereNotNull('multiplied_at');
+                })
+                ->orderBy('id')
+                ->get()
+                ->map(fn (DiscipleshipGroup $group): array => [
+                    'id' => 'gmx_group_' . (string) $group->public_id,
+                    'initiated_by_person_id' => trim((string) ($group->initiated_by_person_public_id ?? '')),
+                    'source_group_id' => trim((string) ($group->source_group_public_id ?? '')),
+                    'new_group_id' => trim((string) ($group->public_id ?? '')),
+                    'start_date' => $this->dateString($group->multiplied_at ?? null),
+                    'notes' => '',
+                    'branch_code' => $branchCode,
+                    'created_at' => $this->timestampString($group->created_at ?? null),
+                    'updated_at' => $this->timestampString($group->updated_at ?? null),
+                ])
+                ->values()
+                ->all();
+        }
+
         return DiscipleshipGroupMultiplication::query()
             ->where('branch_code', $branchCode)
             ->orderBy('id')
@@ -601,7 +684,7 @@ class PeopleTreeModelStore
     {
         $ids = [];
         foreach ($rows as $row) {
-            $personId = $this->contextPublicId($branchCode, (string) ($row->person_public_id ?? ''), $centralReadOnly);
+            $personId = $this->contextPublicId($branchCode, $this->rowString($row, 'person_public_id'), $centralReadOnly);
             if ($personId !== '' && ! in_array($personId, $ids, true)) {
                 $ids[] = $personId;
             }
@@ -618,17 +701,30 @@ class PeopleTreeModelStore
     {
         $rows = [];
         foreach ($photos as $photo) {
-            $path = sanitize_relative_upload_path((string) ($photo->relative_path ?? ''));
+            $path = sanitize_relative_upload_path($this->rowString($photo, 'path') ?: $this->rowString($photo, 'relative_path'));
             if ($path === '') {
                 continue;
             }
             $rows[] = [
                 'path' => $path,
-                'name' => trim((string) ($photo->original_file_name ?? '')) ?: basename($path),
+                'name' => trim($this->rowString($photo, 'name') ?: $this->rowString($photo, 'original_file_name')) ?: basename($path),
             ];
         }
 
         return $rows;
+    }
+
+    private function rowString(mixed $row, string $key): string
+    {
+        if (is_array($row)) {
+            return trim((string) ($row[$key] ?? ''));
+        }
+
+        if (is_object($row)) {
+            return trim((string) ($row->{$key} ?? ''));
+        }
+
+        return '';
     }
 
     /**
@@ -752,9 +848,29 @@ class PeopleTreeModelStore
 
     private function clearBranchRelations(string $branchCode): void
     {
-        DB::table('discipleship_group_multiplications')->where('branch_code', $branchCode)->delete();
-        DB::table('discipleship_group_leaderships')->where('branch_code', $branchCode)->delete();
-        DB::table('discipleship_group_memberships')->where('branch_code', $branchCode)->delete();
+        if (Schema::hasTable('discipleship_group_people')) {
+            DB::table('discipleship_group_people')->where('branch_code', $branchCode)->delete();
+        }
+        if (Schema::hasTable('discipleship_group_multiplications')) {
+            DB::table('discipleship_group_multiplications')->where('branch_code', $branchCode)->delete();
+        }
+        if (Schema::hasTable('discipleship_group_leaderships')) {
+            DB::table('discipleship_group_leaderships')->where('branch_code', $branchCode)->delete();
+        }
+        if (Schema::hasTable('discipleship_group_memberships')) {
+            DB::table('discipleship_group_memberships')->where('branch_code', $branchCode)->delete();
+        }
+        if (Schema::hasColumn('discipleship_groups', 'source_group_public_id')) {
+            DB::table('discipleship_groups')
+                ->where('branch_code', $branchCode)
+                ->update([
+                    'source_group_id' => null,
+                    'source_group_public_id' => null,
+                    'initiated_by_person_id' => null,
+                    'initiated_by_person_public_id' => null,
+                    'multiplied_at' => null,
+                ]);
+        }
         DB::table('discipleship_relationships')->where('branch_code', $branchCode)->delete();
     }
 
@@ -846,7 +962,31 @@ class PeopleTreeModelStore
             ];
         }
 
-        $this->insertChunked('discipleship_group_memberships', $inserts);
+        if (Schema::hasTable('discipleship_group_people')) {
+            $branchId = $this->branchId($branchCode);
+            $groupPeopleRows = array_map(static fn (array $row): array => [
+                'public_id' => $row['public_id'],
+                'branch_id' => $branchId,
+                'branch_code' => $row['branch_code'],
+                'discipleship_group_id' => $row['discipleship_group_id'],
+                'group_public_id' => $row['group_public_id'],
+                'person_id' => $row['person_id'],
+                'person_public_id' => $row['person_public_id'],
+                'role' => $row['role'],
+                'stage' => $row['stage'],
+                'status' => $row['status'],
+                'started_on' => $row['start_date'],
+                'ended_on' => $row['end_date'],
+                'end_reason' => $row['reason_end'],
+                'created_at' => $row['created_at'],
+                'updated_at' => $row['updated_at'],
+            ], $inserts);
+            $this->insertChunked('discipleship_group_people', $groupPeopleRows);
+        }
+
+        if (Schema::hasTable('discipleship_group_memberships')) {
+            $this->insertChunked('discipleship_group_memberships', $inserts);
+        }
     }
 
     /**
@@ -888,7 +1028,31 @@ class PeopleTreeModelStore
             ];
         }
 
-        $this->insertChunked('discipleship_group_leaderships', $inserts);
+        if (Schema::hasTable('discipleship_group_people')) {
+            $branchId = $this->branchId($branchCode);
+            $groupPeopleRows = array_map(static fn (array $row): array => [
+                'public_id' => $row['public_id'],
+                'branch_id' => $branchId,
+                'branch_code' => $row['branch_code'],
+                'discipleship_group_id' => $row['discipleship_group_id'],
+                'group_public_id' => $row['group_public_id'],
+                'person_id' => $row['person_id'],
+                'person_public_id' => $row['person_public_id'],
+                'role' => $row['role'],
+                'stage' => null,
+                'status' => $row['status'],
+                'started_on' => $row['start_date'],
+                'ended_on' => $row['end_date'],
+                'end_reason' => $row['reason_change'],
+                'created_at' => $row['created_at'],
+                'updated_at' => $row['updated_at'],
+            ], $inserts);
+            $this->insertChunked('discipleship_group_people', $groupPeopleRows);
+        }
+
+        if (Schema::hasTable('discipleship_group_leaderships')) {
+            $this->insertChunked('discipleship_group_leaderships', $inserts);
+        }
     }
 
     /**
@@ -931,7 +1095,30 @@ class PeopleTreeModelStore
             ];
         }
 
-        $this->insertChunked('discipleship_group_multiplications', $inserts);
+        if (Schema::hasColumn('discipleship_groups', 'source_group_public_id')) {
+            foreach ($inserts as $row) {
+                $newGroupPublicId = $row['new_group_public_id'] ?? null;
+                if ($newGroupPublicId === null) {
+                    continue;
+                }
+
+                DB::table('discipleship_groups')
+                    ->where('branch_code', $branchCode)
+                    ->where('public_id', $newGroupPublicId)
+                    ->update([
+                        'source_group_id' => $row['source_group_id'],
+                        'source_group_public_id' => $row['source_group_public_id'],
+                        'initiated_by_person_id' => $row['initiated_by_person_id'],
+                        'initiated_by_person_public_id' => $row['initiated_by_person_public_id'],
+                        'multiplied_at' => $row['multiplication_date'],
+                        'updated_at' => $row['updated_at'],
+                    ]);
+            }
+        }
+
+        if (Schema::hasTable('discipleship_group_multiplications')) {
+            $this->insertChunked('discipleship_group_multiplications', $inserts);
+        }
     }
 
     /**
@@ -968,6 +1155,19 @@ class PeopleTreeModelStore
     private function mappedId(array $map, ?string $publicId): ?int
     {
         return $publicId === null || ! isset($map[$publicId]) ? null : $map[$publicId];
+    }
+
+    private function branchId(string $branchCode): ?int
+    {
+        if (! Schema::hasTable('branches')) {
+            return null;
+        }
+
+        $id = DB::table('branches')
+            ->where('code', normalize_public_branch_code($branchCode))
+            ->value('id');
+
+        return $id === null ? null : (int) $id;
     }
 
     /**

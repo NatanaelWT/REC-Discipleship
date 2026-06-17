@@ -3,10 +3,12 @@
 namespace App\Services\DiscipleshipGroups;
 
 use App\Models\DiscipleshipGroup;
+use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipGroupLeadership;
 use App\Models\DiscipleshipGroupMembership;
 use App\Models\DiscipleshipPerson;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class DiscipleshipGroupIndexData
 {
@@ -164,6 +166,33 @@ class DiscipleshipGroupIndexData
     {
         $rows = [];
 
+        if (Schema::hasTable('discipleship_group_people')) {
+            foreach (DiscipleshipGroupPerson::query()->whereIn('branch_code', $branchCodes)->where('role', '!=', 'member')->orderBy('id')->get() as $leadership) {
+                $branchCode = normalize_public_branch_code((string) $leadership->branch_code);
+                $groupId = $this->effectiveId($branchCode, (string) $leadership->group_public_id);
+                $personId = $this->effectiveId($branchCode, (string) $leadership->person_public_id);
+                if ($groupId === '' || $personId === '') {
+                    continue;
+                }
+
+                $rows[] = [
+                    'id' => (string) $leadership->public_id,
+                    'branch_code' => $branchCode,
+                    'group_id' => $groupId,
+                    'leader_person_id' => $personId,
+                    'role' => strtolower(trim((string) ($leadership->role ?? 'leader'))) ?: 'leader',
+                    'status' => strtolower(trim((string) ($leadership->status ?? 'active'))) ?: 'active',
+                    'start_date' => $this->dateString($leadership->started_on ?? null),
+                    'end_date' => $this->dateString($leadership->ended_on ?? null),
+                    'reason_change' => trim((string) ($leadership->end_reason ?? '')),
+                    'created_at' => $this->stringTimestamp($leadership->created_at ?? null),
+                    'updated_at' => $this->stringTimestamp($leadership->updated_at ?? null),
+                ];
+            }
+
+            return $rows;
+        }
+
         $leaderships = DiscipleshipGroupLeadership::query()
             ->whereIn('branch_code', $branchCodes)
             ->orderBy('id')
@@ -202,6 +231,34 @@ class DiscipleshipGroupIndexData
     private function loadMemberships(array $branchCodes, bool $centralReadOnly): array
     {
         $rows = [];
+
+        if (Schema::hasTable('discipleship_group_people')) {
+            foreach (DiscipleshipGroupPerson::query()->whereIn('branch_code', $branchCodes)->where('role', 'member')->orderBy('id')->get() as $membership) {
+                $branchCode = normalize_public_branch_code((string) $membership->branch_code);
+                $groupId = $this->effectiveId($branchCode, (string) $membership->group_public_id);
+                $personId = $this->effectiveId($branchCode, (string) $membership->person_public_id);
+                if ($groupId === '' || $personId === '') {
+                    continue;
+                }
+
+                $rows[] = [
+                    'id' => (string) $membership->public_id,
+                    'branch_code' => $branchCode,
+                    'group_id' => $groupId,
+                    'person_id' => $personId,
+                    'role' => strtolower(trim((string) ($membership->role ?? 'member'))) ?: 'member',
+                    'stage' => normalize_dg_progress_value((string) ($membership->stage ?? '')),
+                    'status' => strtolower(trim((string) ($membership->status ?? 'active'))) ?: 'active',
+                    'start_date' => $this->dateString($membership->started_on ?? null),
+                    'end_date' => $this->dateString($membership->ended_on ?? null),
+                    'reason_end' => trim((string) ($membership->end_reason ?? '')),
+                    'created_at' => $this->stringTimestamp($membership->created_at ?? null),
+                    'updated_at' => $this->stringTimestamp($membership->updated_at ?? null),
+                ];
+            }
+
+            return $rows;
+        }
 
         $memberships = DiscipleshipGroupMembership::query()
             ->whereIn('branch_code', $branchCodes)

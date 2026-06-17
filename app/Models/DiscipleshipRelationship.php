@@ -9,6 +9,7 @@ class DiscipleshipRelationship extends Model
 {
     protected $fillable = [
         'public_id',
+        'branch_id',
         'branch_code',
         'mentor_person_id',
         'mentor_person_public_id',

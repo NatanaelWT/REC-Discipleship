@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Schema;
 
 class ChurchFile extends Model
 {
@@ -16,12 +17,22 @@ class ChurchFile extends Model
         'original_file_name',
         'size_bytes',
         'mime_type',
+        'branch_id',
         'branch_code',
     ];
 
     protected $casts = [
         'size_bytes' => 'integer',
     ];
+
+    public function getTable()
+    {
+        if (Schema::hasTable('public_material_files')) {
+            return 'public_material_files';
+        }
+
+        return 'church_files';
+    }
 
     public function getRouteKeyName(): string
     {

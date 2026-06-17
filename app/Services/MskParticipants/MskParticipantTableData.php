@@ -49,14 +49,23 @@ class MskParticipantTableData
             return [];
         }
 
-        return MskParticipant::query()
-            ->with([
-                'sessions' => static fn ($query) => $query->orderBy('session_number'),
-                'photos' => static fn ($query) => $query->orderBy('id'),
-            ])
+        $query = MskParticipant::query()
             ->whereIn('branch_code', $branchCodes)
             ->orderBy('full_name')
-            ->orderBy('id')
+            ->orderBy('id');
+
+        $with = [];
+        if (! $this->hasJsonColumn('session_numbers') && Schema::hasTable('msk_participant_sessions')) {
+            $with['sessions'] = static fn ($query) => $query->orderBy('session_number');
+        }
+        if (! $this->hasJsonColumn('photos') && Schema::hasTable('msk_participant_photos')) {
+            $with['photos'] = static fn ($query) => $query->orderBy('id');
+        }
+        if ($with !== []) {
+            $query->with($with);
+        }
+
+        return $query
             ->get()
             ->map(static function (MskParticipant $participant): array {
                 $row = $participant->toViewArray();
@@ -153,8 +162,12 @@ class MskParticipantTableData
 
             $participantIds = array_values(array_map('intval', array_values($participantIdsByPublicId)));
             if ($participantIds !== []) {
-                MskParticipantSession::query()->whereIn('msk_participant_id', $participantIds)->delete();
-                MskParticipantPhoto::query()->whereIn('msk_participant_id', $participantIds)->delete();
+                if (Schema::hasTable('msk_participant_sessions')) {
+                    MskParticipantSession::query()->whereIn('msk_participant_id', $participantIds)->delete();
+                }
+                if (Schema::hasTable('msk_participant_photos')) {
+                    MskParticipantPhoto::query()->whereIn('msk_participant_id', $participantIds)->delete();
+                }
             }
 
             $now = now();
@@ -174,7 +187,7 @@ class MskParticipantTableData
                 }
             }
             foreach (array_chunk($sessionRows, 500) as $chunk) {
-                if ($chunk !== []) {
+                if ($chunk !== [] && Schema::hasTable('msk_participant_sessions')) {
                     DB::table('msk_participant_sessions')->insert($chunk);
                 }
             }
@@ -201,7 +214,7 @@ class MskParticipantTableData
                 }
             }
             foreach (array_chunk($photoRows, 500) as $chunk) {
-                if ($chunk !== []) {
+                if ($chunk !== [] && Schema::hasTable('msk_participant_photos')) {
                     DB::table('msk_participant_photos')->insert($chunk);
                 }
             }
@@ -221,8 +234,8 @@ class MskParticipantTableData
     public function hasTables(): bool
     {
         return Schema::hasTable('msk_participants')
-            && Schema::hasTable('msk_participant_sessions')
-            && Schema::hasTable('msk_participant_photos');
+            && ($this->usesJsonPayloads()
+                || (Schema::hasTable('msk_participant_sessions') && Schema::hasTable('msk_participant_photos')));
     }
 
     /**
@@ -251,8 +264,10 @@ class MskParticipantTableData
         $createdAt = $this->timestampFrom([$row['created_at'] ?? null]) ?? now();
         $updatedAt = $this->timestampFrom([$row['updated_at'] ?? null, $row['created_at'] ?? null]) ?? $createdAt;
         $birthDate = normalize_ymd_date((string) ($row['birth_date'] ?? ''));
+        $sessionNumbers = normalize_msk_session_numbers($row['session_numbers'] ?? []);
+        $photos = extract_msk_participant_photos($row);
 
-        return [
+        $data = [
             'branch_code' => $branchCode,
             'public_id' => $publicId,
             'member_public_id' => $this->nullableString($row['member_id'] ?? null),
@@ -272,6 +287,25 @@ class MskParticipantTableData
             'created_at' => $createdAt,
             'updated_at' => $updatedAt,
         ];
+
+        if ($this->hasJsonColumn('session_numbers')) {
+            $data['session_numbers'] = json_encode($sessionNumbers);
+        }
+        if ($this->hasJsonColumn('photos')) {
+            $data['photos'] = json_encode($photos);
+        }
+
+        return $data;
+    }
+
+    private function usesJsonPayloads(): bool
+    {
+        return $this->hasJsonColumn('session_numbers') || $this->hasJsonColumn('photos');
+    }
+
+    private function hasJsonColumn(string $column): bool
+    {
+        return Schema::hasColumn('msk_participants', $column);
     }
 
     /**

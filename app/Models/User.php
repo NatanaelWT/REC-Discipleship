@@ -23,6 +23,7 @@ class User extends Authenticatable
         'email',
         'username',
         'password',
+        'branch_id',
         'branch_code',
         'access_scope',
         'last_login_at',

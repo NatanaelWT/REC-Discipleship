@@ -3,11 +3,13 @@
 namespace App\Services\DiscipleshipPeople;
 
 use App\Models\DiscipleshipGroup;
+use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipGroupLeadership;
 use App\Models\DiscipleshipGroupMembership;
 use App\Models\DiscipleshipPerson;
 use App\Models\DiscipleshipRelationship;
 use App\Services\MskParticipants\MskParticipantTableData;
+use Illuminate\Support\Facades\Schema;
 
 class DiscipleshipPeopleListData
 {
@@ -158,6 +160,48 @@ class DiscipleshipPeopleListData
      */
     private function loadLeaderships(array $branchCodes): array
     {
+        if (Schema::hasTable('discipleship_group_people')) {
+            return DiscipleshipGroupPerson::query()
+                ->select([
+                    'id',
+                    'public_id',
+                    'branch_code',
+                    'discipleship_group_id',
+                    'group_public_id',
+                    'person_id',
+                    'person_public_id',
+                    'role',
+                    'status',
+                    'started_on',
+                    'ended_on',
+                    'end_reason',
+                    'created_at',
+                    'updated_at',
+                ])
+                ->whereIn('branch_code', $branchCodes)
+                ->where('role', '!=', 'member')
+                ->orderBy('id')
+                ->get()
+                ->map(static fn (DiscipleshipGroupPerson $leadership): array => [
+                    'id' => $leadership->id,
+                    'public_id' => $leadership->public_id,
+                    'branch_code' => $leadership->branch_code,
+                    'discipleship_group_id' => $leadership->discipleship_group_id,
+                    'group_public_id' => $leadership->group_public_id,
+                    'person_id' => $leadership->person_id,
+                    'person_public_id' => $leadership->person_public_id,
+                    'role' => $leadership->role,
+                    'status' => $leadership->status,
+                    'start_date' => $leadership->started_on,
+                    'end_date' => $leadership->ended_on,
+                    'reason_change' => $leadership->end_reason,
+                    'created_at' => $leadership->created_at,
+                    'updated_at' => $leadership->updated_at,
+                ])
+                ->values()
+                ->all();
+        }
+
         return DiscipleshipGroupLeadership::query()
             ->select([
                 'id',
@@ -189,6 +233,50 @@ class DiscipleshipPeopleListData
      */
     private function loadMemberships(array $branchCodes): array
     {
+        if (Schema::hasTable('discipleship_group_people')) {
+            return DiscipleshipGroupPerson::query()
+                ->select([
+                    'id',
+                    'public_id',
+                    'branch_code',
+                    'discipleship_group_id',
+                    'group_public_id',
+                    'person_id',
+                    'person_public_id',
+                    'role',
+                    'stage',
+                    'status',
+                    'started_on',
+                    'ended_on',
+                    'end_reason',
+                    'created_at',
+                    'updated_at',
+                ])
+                ->whereIn('branch_code', $branchCodes)
+                ->where('role', 'member')
+                ->orderBy('id')
+                ->get()
+                ->map(static fn (DiscipleshipGroupPerson $membership): array => [
+                    'id' => $membership->id,
+                    'public_id' => $membership->public_id,
+                    'branch_code' => $membership->branch_code,
+                    'discipleship_group_id' => $membership->discipleship_group_id,
+                    'group_public_id' => $membership->group_public_id,
+                    'person_id' => $membership->person_id,
+                    'person_public_id' => $membership->person_public_id,
+                    'role' => $membership->role,
+                    'stage' => $membership->stage,
+                    'status' => $membership->status,
+                    'start_date' => $membership->started_on,
+                    'end_date' => $membership->ended_on,
+                    'reason_end' => $membership->end_reason,
+                    'created_at' => $membership->created_at,
+                    'updated_at' => $membership->updated_at,
+                ])
+                ->values()
+                ->all();
+        }
+
         return DiscipleshipGroupMembership::query()
             ->select([
                 'id',

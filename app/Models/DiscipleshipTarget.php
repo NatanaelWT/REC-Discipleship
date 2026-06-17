@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class DiscipleshipTarget extends Model
 {
     protected $fillable = [
+        'branch_id',
         'branch_code',
         'camp_gap_participant_target',
         'msk_completion_target',

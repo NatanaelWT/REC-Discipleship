@@ -7,6 +7,7 @@ use App\Models\MskParticipant;
 use App\Models\MskParticipantPhoto;
 use App\Models\MskParticipantSession;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class MskParticipantWriter
 {
@@ -180,7 +181,7 @@ class MskParticipantWriter
             ]);
 
             $birthDate = normalize_ymd_date((string) ($participantData['birth_date'] ?? ''));
-            $participant->fill([
+            $fill = [
                 'branch_code' => $branchCode,
                 'public_id' => (string) $participantData['id'],
                 'member_public_id' => $this->nullableString($participantData['member_id'] ?? null),
@@ -197,13 +198,22 @@ class MskParticipantWriter
                 'completed_at' => $this->nullableString($participantData['completed_at'] ?? null),
                 'journey_bridge_status' => normalize_journey_bridge_status((string) ($participantData['journey_bridge_status'] ?? 'belum')),
                 'status' => normalize_msk_participant_status((string) ($participantData['status'] ?? 'active')),
-            ]);
+            ];
+
+            if ($this->hasJsonColumn('session_numbers')) {
+                $fill['session_numbers'] = normalize_msk_session_numbers($participantData['session_numbers'] ?? []);
+            }
+            if ($this->hasJsonColumn('photos')) {
+                $fill['photos'] = is_array($participantData['photos'] ?? null) ? $participantData['photos'] : [];
+            }
+
+            $participant->fill($fill);
             $participant->save();
 
             $this->replaceSessions($participant, $participantData['session_numbers'] ?? []);
             $this->replacePhotos($participant, is_array($participantData['photos'] ?? null) ? $participantData['photos'] : []);
 
-            return $participant->fresh(['sessions', 'photos']) ?? $participant;
+            return $participant->fresh($this->refreshRelations()) ?? $participant;
         });
     }
 
@@ -212,6 +222,16 @@ class MskParticipantWriter
      */
     private function replaceSessions(MskParticipant $participant, mixed $sessionNumbers): void
     {
+        if (! Schema::hasTable('msk_participant_sessions')) {
+            if ($this->hasJsonColumn('session_numbers')) {
+                $participant->forceFill([
+                    'session_numbers' => normalize_msk_session_numbers($sessionNumbers),
+                ])->save();
+            }
+
+            return;
+        }
+
         MskParticipantSession::query()
             ->where('msk_participant_id', $participant->id)
             ->delete();
@@ -237,6 +257,16 @@ class MskParticipantWriter
      */
     private function replacePhotos(MskParticipant $participant, array $photos): void
     {
+        if (! Schema::hasTable('msk_participant_photos')) {
+            if ($this->hasJsonColumn('photos')) {
+                $participant->forceFill([
+                    'photos' => $photos,
+                ])->save();
+            }
+
+            return;
+        }
+
         MskParticipantPhoto::query()
             ->where('msk_participant_id', $participant->id)
             ->delete();
@@ -361,11 +391,16 @@ class MskParticipantWriter
 
     private function participantForBranch(string $branchCode, string $publicId): ?MskParticipant
     {
-        return MskParticipant::query()
+        $query = MskParticipant::query()
             ->where('branch_code', $branchCode)
-            ->where('public_id', $publicId)
-            ->with(['sessions', 'photos'])
-            ->first();
+            ->where('public_id', $publicId);
+
+        $relations = $this->refreshRelations();
+        if ($relations !== []) {
+            $query->with($relations);
+        }
+
+        return $query->first();
     }
 
     /**
@@ -373,18 +408,41 @@ class MskParticipantWriter
      */
     private function participantsForBranch(string $branchCode): array
     {
-        return MskParticipant::query()
-            ->with([
-                'sessions' => static fn ($query) => $query->orderBy('session_number'),
-                'photos' => static fn ($query) => $query->orderBy('id'),
-            ])
+        $query = MskParticipant::query()
             ->where('branch_code', $branchCode)
             ->orderBy('full_name')
-            ->orderBy('id')
-            ->get()
+            ->orderBy('id');
+
+        $relations = $this->refreshRelations();
+        if ($relations !== []) {
+            $query->with($relations);
+        }
+
+        return $query->get()
             ->map(static fn (MskParticipant $participant): array => $participant->toViewArray())
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<int, string>|array<string, \Closure>
+     */
+    private function refreshRelations(): array
+    {
+        $relations = [];
+        if (! $this->hasJsonColumn('session_numbers') && Schema::hasTable('msk_participant_sessions')) {
+            $relations['sessions'] = static fn ($query) => $query->orderBy('session_number');
+        }
+        if (! $this->hasJsonColumn('photos') && Schema::hasTable('msk_participant_photos')) {
+            $relations['photos'] = static fn ($query) => $query->orderBy('id');
+        }
+
+        return $relations;
+    }
+
+    private function hasJsonColumn(string $column): bool
+    {
+        return Schema::hasColumn('msk_participants', $column);
     }
 
     private function nullableString(mixed $value): ?string

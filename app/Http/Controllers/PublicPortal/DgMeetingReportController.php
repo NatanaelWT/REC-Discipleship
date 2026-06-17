@@ -11,6 +11,7 @@ use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use Throwable;
 
@@ -92,7 +93,7 @@ class DgMeetingReportController extends Controller
 
         try {
             DB::transaction(function () use ($request, $meetingPhotos): void {
-                $report = DiscipleshipMeetingReport::query()->create([
+                $reportData = [
                     'public_id' => $this->generatePublicId(),
                     'branch_code' => $request->publicBranch(),
                     'leader_person_id' => $request->leaderPersonId(),
@@ -113,35 +114,67 @@ class DgMeetingReportController extends Controller
                     'shared_meditation' => $request->sharedMeditation(),
                     'relationally_contacted' => $request->relationallyContacted(),
                     'source' => 'public_form',
-                ]);
+                ];
 
-                foreach ($request->absentMemberIds() as $memberId) {
-                    $report->absences()->create([
+                if (Schema::hasColumn('discipleship_meeting_reports', 'absences')) {
+                    $reportData['absences'] = array_map(static fn (string $memberId) => [
                         'person_id' => $request->memberRecordId($memberId),
                         'person_public_id' => $memberId,
                         'person_name_snapshot' => $request->memberName($memberId),
-                    ]);
+                    ], $request->absentMemberIds());
                 }
-
-                foreach ($request->meditationSharerIds() as $memberId) {
-                    $report->meditationSharers()->create([
+                if (Schema::hasColumn('discipleship_meeting_reports', 'meditation_sharers')) {
+                    $reportData['meditation_sharers'] = array_map(static fn (string $memberId) => [
                         'person_id' => $request->memberRecordId($memberId),
                         'person_public_id' => $memberId,
                         'person_name_snapshot' => $request->memberName($memberId),
-                    ]);
+                    ], $request->meditationSharerIds());
+                }
+                if (Schema::hasColumn('discipleship_meeting_reports', 'photos')) {
+                    $reportData['photos'] = array_values(array_filter(array_map(static function (array $photo): array {
+                        $relativePath = sanitize_relative_upload_path((string) ($photo['path'] ?? ''));
+                        return $relativePath === '' ? [] : [
+                            'path' => $relativePath,
+                            'name' => trim((string) ($photo['name'] ?? '')) ?: null,
+                        ];
+                    }, $meetingPhotos)));
                 }
 
-                foreach (array_values($meetingPhotos) as $sortOrder => $photo) {
-                    $relativePath = sanitize_relative_upload_path((string) ($photo['path'] ?? ''));
-                    if ($relativePath === '') {
-                        continue;
+                $report = DiscipleshipMeetingReport::query()->create($reportData);
+
+                if (Schema::hasTable('discipleship_meeting_report_absences')) {
+                    foreach ($request->absentMemberIds() as $memberId) {
+                        $report->absences()->create([
+                            'person_id' => $request->memberRecordId($memberId),
+                            'person_public_id' => $memberId,
+                            'person_name_snapshot' => $request->memberName($memberId),
+                        ]);
                     }
+                }
 
-                    $report->photos()->create([
-                        'relative_path' => $relativePath,
-                        'original_file_name' => trim((string) ($photo['name'] ?? '')) ?: null,
-                        'sort_order' => $sortOrder,
-                    ]);
+                if (Schema::hasTable('discipleship_meeting_report_meditation_sharers')) {
+                    foreach ($request->meditationSharerIds() as $memberId) {
+                        $report->meditationSharers()->create([
+                            'person_id' => $request->memberRecordId($memberId),
+                            'person_public_id' => $memberId,
+                            'person_name_snapshot' => $request->memberName($memberId),
+                        ]);
+                    }
+                }
+
+                if (Schema::hasTable('discipleship_meeting_report_photos')) {
+                    foreach (array_values($meetingPhotos) as $sortOrder => $photo) {
+                        $relativePath = sanitize_relative_upload_path((string) ($photo['path'] ?? ''));
+                        if ($relativePath === '') {
+                            continue;
+                        }
+
+                        $report->photos()->create([
+                            'relative_path' => $relativePath,
+                            'original_file_name' => trim((string) ($photo['name'] ?? '')) ?: null,
+                            'sort_order' => $sortOrder,
+                        ]);
+                    }
                 }
 
                 $report->fresh();

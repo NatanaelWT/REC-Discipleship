@@ -5,6 +5,7 @@ namespace App\Services\PublicMaterials;
 use App\Models\ChurchFile;
 use App\Models\PublicMaterialMenu;
 use App\Support\RuntimeBootstrap;
+use Illuminate\Support\Facades\Schema;
 
 class PublicMaterialCatalog
 {
@@ -29,10 +30,7 @@ class PublicMaterialCatalog
     {
         RuntimeBootstrap::load();
 
-        return $menu->churchFiles()
-            ->orderBy('public_material_menu_files.sort_order')
-            ->orderBy('church_files.title')
-            ->orderBy('church_files.original_file_name')
+        return $this->fileQueryForMenu($menu)
             ->get()
             ->map(fn (ChurchFile $file): array => $this->fileRow($file))
             ->all();
@@ -41,6 +39,10 @@ class PublicMaterialCatalog
     public function fileBelongsToMenu(PublicMaterialMenu $menu, ChurchFile $file): bool
     {
         RuntimeBootstrap::load();
+
+        if (Schema::hasTable('public_material_files')) {
+            return (int) ($file->public_material_menu_id ?? 0) === (int) $menu->id;
+        }
 
         return $menu->churchFiles()
             ->where('church_files.id', $file->id)
@@ -64,6 +66,22 @@ class PublicMaterialCatalog
             'uploaded_at' => optional($file->created_at)->toIso8601String(),
             'updated_at' => optional($file->updated_at)->toIso8601String(),
         ];
+    }
+
+    private function fileQueryForMenu(PublicMaterialMenu $menu)
+    {
+        if (Schema::hasTable('public_material_files')) {
+            return ChurchFile::query()
+                ->where('public_material_menu_id', $menu->id)
+                ->orderBy('sort_order')
+                ->orderBy('title')
+                ->orderBy('original_file_name');
+        }
+
+        return $menu->churchFiles()
+            ->orderBy('public_material_menu_files.sort_order')
+            ->orderBy('church_files.title')
+            ->orderBy('church_files.original_file_name');
     }
 
     private function normalizeMenuKey(string $menuKey): string

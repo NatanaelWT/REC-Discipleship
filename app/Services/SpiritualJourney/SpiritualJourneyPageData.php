@@ -3,6 +3,7 @@
 namespace App\Services\SpiritualJourney;
 
 use App\Models\DiscipleshipGroup;
+use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipGroupLeadership;
 use App\Models\DiscipleshipGroupMembership;
 use App\Models\DiscipleshipPerson;
@@ -183,12 +184,16 @@ class SpiritualJourneyPageData
      */
     private function loadMemberships(array $branchCodes): array
     {
-        if (! Schema::hasTable('discipleship_group_memberships')) {
+        if (! Schema::hasTable('discipleship_group_people') && ! Schema::hasTable('discipleship_group_memberships')) {
             return [];
         }
 
         $rows = [];
-        foreach (DiscipleshipGroupMembership::query()->whereIn('branch_code', $branchCodes)->orderBy('id')->get() as $membership) {
+        $query = Schema::hasTable('discipleship_group_people')
+            ? DiscipleshipGroupPerson::query()->whereIn('branch_code', $branchCodes)->where('role', 'member')->orderBy('id')
+            : DiscipleshipGroupMembership::query()->whereIn('branch_code', $branchCodes)->orderBy('id');
+
+        foreach ($query->get() as $membership) {
             $branchCode = normalize_public_branch_code((string) $membership->branch_code);
             $groupId = $this->effectiveId($branchCode, (string) $membership->group_public_id);
             $personId = $this->effectiveId($branchCode, (string) $membership->person_public_id);
@@ -204,9 +209,9 @@ class SpiritualJourneyPageData
                 'role' => strtolower(trim((string) ($membership->role ?? 'member'))) ?: 'member',
                 'stage' => normalize_dg_progress_value((string) ($membership->stage ?? '')),
                 'status' => strtolower(trim((string) ($membership->status ?? 'active'))) ?: 'active',
-                'start_date' => $this->dateString($membership->start_date ?? null),
-                'end_date' => $this->dateString($membership->end_date ?? null),
-                'reason_end' => trim((string) ($membership->reason_end ?? '')),
+                'start_date' => $this->dateString($membership->started_on ?? $membership->start_date ?? null),
+                'end_date' => $this->dateString($membership->ended_on ?? $membership->end_date ?? null),
+                'reason_end' => trim((string) ($membership->end_reason ?? $membership->reason_end ?? '')),
                 'created_at' => $this->timestampString($membership->created_at ?? null),
                 'updated_at' => $this->timestampString($membership->updated_at ?? null),
             ];
@@ -221,12 +226,16 @@ class SpiritualJourneyPageData
      */
     private function loadLeaderships(array $branchCodes): array
     {
-        if (! Schema::hasTable('discipleship_group_leaderships')) {
+        if (! Schema::hasTable('discipleship_group_people') && ! Schema::hasTable('discipleship_group_leaderships')) {
             return [];
         }
 
         $rows = [];
-        foreach (DiscipleshipGroupLeadership::query()->whereIn('branch_code', $branchCodes)->orderBy('id')->get() as $leadership) {
+        $query = Schema::hasTable('discipleship_group_people')
+            ? DiscipleshipGroupPerson::query()->whereIn('branch_code', $branchCodes)->where('role', '!=', 'member')->orderBy('id')
+            : DiscipleshipGroupLeadership::query()->whereIn('branch_code', $branchCodes)->orderBy('id');
+
+        foreach ($query->get() as $leadership) {
             $branchCode = normalize_public_branch_code((string) $leadership->branch_code);
             $groupId = $this->effectiveId($branchCode, (string) $leadership->group_public_id);
             $personId = $this->effectiveId($branchCode, (string) $leadership->person_public_id);
@@ -242,9 +251,9 @@ class SpiritualJourneyPageData
                 'leader_person_id' => $personId,
                 'role' => strtolower(trim((string) ($leadership->role ?? 'leader'))) ?: 'leader',
                 'status' => strtolower(trim((string) ($leadership->status ?? 'active'))) ?: 'active',
-                'start_date' => $this->dateString($leadership->start_date ?? null),
-                'end_date' => $this->dateString($leadership->end_date ?? null),
-                'reason_change' => trim((string) ($leadership->reason_change ?? '')),
+                'start_date' => $this->dateString($leadership->started_on ?? $leadership->start_date ?? null),
+                'end_date' => $this->dateString($leadership->ended_on ?? $leadership->end_date ?? null),
+                'reason_change' => trim((string) ($leadership->end_reason ?? $leadership->reason_change ?? '')),
                 'created_at' => $this->timestampString($leadership->created_at ?? null),
                 'updated_at' => $this->timestampString($leadership->updated_at ?? null),
             ];

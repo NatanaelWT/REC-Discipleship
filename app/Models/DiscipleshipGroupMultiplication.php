@@ -9,6 +9,7 @@ class DiscipleshipGroupMultiplication extends Model
 {
     protected $fillable = [
         'public_id',
+        'branch_id',
         'branch_code',
         'initiated_by_person_id',
         'initiated_by_person_public_id',

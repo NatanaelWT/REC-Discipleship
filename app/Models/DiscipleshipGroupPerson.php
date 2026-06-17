@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class DiscipleshipGroupMembership extends Model
+class DiscipleshipGroupPerson extends Model
 {
     protected $fillable = [
         'public_id',
@@ -18,15 +18,20 @@ class DiscipleshipGroupMembership extends Model
         'role',
         'stage',
         'status',
-        'start_date',
-        'end_date',
-        'reason_end',
+        'started_on',
+        'ended_on',
+        'end_reason',
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date',
+        'started_on' => 'date',
+        'ended_on' => 'date',
     ];
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
 
     public function group(): BelongsTo
     {
