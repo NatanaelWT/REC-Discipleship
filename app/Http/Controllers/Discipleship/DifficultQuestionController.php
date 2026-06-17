@@ -5,41 +5,33 @@ namespace App\Http\Controllers\Discipleship;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DifficultQuestions\AnswerDifficultQuestionRequest;
 use App\Models\DifficultQuestion;
+use App\Services\DifficultQuestions\DifficultQuestionAdminPageData;
 use App\Services\DifficultQuestions\DifficultQuestionTextNormalizer;
-use App\Services\Legacy\LegacyRouteMap;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Services\Routing\CompatibilityRouteMap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DifficultQuestionController extends Controller
 {
-    public function index(Request $request): RedirectResponse|View
+    public function index(Request $request, DifficultQuestionAdminPageData $pageData): RedirectResponse|View
     {
-        $legacyPage = trim((string) $request->query('page', ''));
-        if ($legacyPage !== '' && LegacyRouteMap::hasPage($legacyPage)) {
-            return redirect()->away($request->getSchemeAndHttpHost() . LegacyRouteMap::pageUrl($legacyPage, $request->query()));
+        $pageQuery = trim((string) $request->query('page', ''));
+        if ($pageQuery !== '' && CompatibilityRouteMap::hasPage($pageQuery)) {
+            return redirect()->away($request->getSchemeAndHttpHost() . CompatibilityRouteMap::pageUrl($pageQuery, $request->query()));
         }
 
-        LegacyRuntimeBootstrap::boot($request);
+        RuntimeBootstrap::boot($request);
 
         if (! can_manage_difficult_questions()) {
-            return redirect(LegacyRouteMap::pageUrl(
+            return redirect(CompatibilityRouteMap::pageUrl(
                 branch_home_page(current_user_branch()),
                 ['error' => 'access_denied'],
             ));
         }
 
-        $questions = DifficultQuestion::query()->pendingFirst()->get();
-
-        return view('discipleship.difficult-questions.index', [
-            'settings' => ['church_name' => CHURCH_NAME],
-            'questions' => $questions,
-            'pendingQuestionCount' => $questions->where('status', DifficultQuestion::STATUS_PENDING)->count(),
-            'answeredQuestionCount' => $questions->where('status', DifficultQuestion::STATUS_ANSWERED)->count(),
-            'errorCode' => trim((string) $request->query('error', '')),
-            'answered' => $request->query->has('answered'),
-        ]);
+        return view('discipleship.difficult-questions.index', $pageData->forRequest($request));
     }
 
     public function answer(
@@ -51,9 +43,9 @@ class DifficultQuestionController extends Controller
         return redirect()->route('discipleship.difficult-questions', ['answered' => 1]);
     }
 
-    public function answerLegacy(Request $request, DifficultQuestionTextNormalizer $normalizer): RedirectResponse
+    public function answerFromForm(Request $request, DifficultQuestionTextNormalizer $normalizer): RedirectResponse
     {
-        LegacyRuntimeBootstrap::boot($request);
+        RuntimeBootstrap::boot($request);
 
         if (trim((string) $request->input('action', '')) === 'logout') {
             destroy_current_session();
@@ -62,7 +54,7 @@ class DifficultQuestionController extends Controller
         }
 
         if (! can_manage_difficult_questions()) {
-            return redirect(LegacyRouteMap::pageUrl(
+            return redirect(CompatibilityRouteMap::pageUrl(
                 branch_home_page(current_user_branch()),
                 ['error' => 'access_denied'],
             ));

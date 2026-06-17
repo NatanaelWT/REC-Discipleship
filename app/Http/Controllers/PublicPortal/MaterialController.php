@@ -6,13 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicMaterials\ShowPublicMaterialRequest;
 use App\Models\PublicMaterialMenu;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class MaterialController extends Controller
 {
-    public function legacyIndex(ShowPublicMaterialRequest $request): RedirectResponse
+    public function redirectToMenu(ShowPublicMaterialRequest $request): RedirectResponse
     {
         $menuKey = $request->materialMenuKey();
         if ($menuKey === '') {
@@ -26,7 +26,7 @@ class MaterialController extends Controller
         ShowPublicMaterialRequest $request,
         PublicMaterialCatalog $catalog,
     ): RedirectResponse|View {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         $menu = $catalog->menu($request->materialMenuKey());
         if (! $menu instanceof PublicMaterialMenu) {

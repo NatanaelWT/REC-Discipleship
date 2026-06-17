@@ -4,7 +4,7 @@ namespace App\Http\Requests\PublicMaterials;
 
 use App\Models\ChurchFile;
 use App\Models\PublicMaterialMenu;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StreamPublicMaterialRequest extends FormRequest
@@ -16,7 +16,7 @@ class StreamPublicMaterialRequest extends FormRequest
 
     protected function prepareForValidation()
     {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         $routeMenu = $this->route('menu');
         $menuKey = $routeMenu instanceof PublicMaterialMenu

@@ -2,13 +2,13 @@
 
 namespace App\Http\Requests\DgMeetingReports;
 
+use App\Models\DiscipleshipGroup;
+use App\Models\DiscipleshipPerson;
 use App\Services\DgMeetingReports\DgMeetingReportFormData;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class StoreDgMeetingReportRequest extends FormRequest
 {
@@ -55,7 +55,7 @@ class StoreDgMeetingReportRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        LegacyRuntimeBootstrap::boot($this);
+        RuntimeBootstrap::boot($this);
 
         $routeBranch = trim((string) $this->route('branch', ''));
         if (trim((string) $this->input('public_cabang', '')) === '' && $routeBranch !== '') {
@@ -379,14 +379,16 @@ class StoreDgMeetingReportRequest extends FormRequest
     private function personRecordId(string $publicId): ?int
     {
         $publicId = trim($publicId);
-        if ($publicId === '' || ! Schema::hasTable('rec_people_registry')) {
+        if ($publicId === '') {
             return null;
         }
 
-        $id = DB::table('rec_people_registry')
-            ->where('record_uid', $publicId)
-            ->orWhere('dg_person_id', $publicId)
-            ->orWhere('legacy_dg_person_id', $publicId)
+        $id = DiscipleshipPerson::query()
+            ->where('branch_code', $this->publicBranch)
+            ->where(static function ($query) use ($publicId): void {
+                $query->where('public_id', $publicId)
+                    ->orWhere('member_public_id', $publicId);
+            })
             ->value('id');
 
         return $id === null ? null : (int) $id;
@@ -395,11 +397,14 @@ class StoreDgMeetingReportRequest extends FormRequest
     private function discipleshipGroupRecordId(string $publicId): ?int
     {
         $publicId = trim($publicId);
-        if ($publicId === '' || ! Schema::hasTable('rec_discipleship_groups')) {
+        if ($publicId === '') {
             return null;
         }
 
-        $id = DB::table('rec_discipleship_groups')->where('record_uid', $publicId)->value('id');
+        $id = DiscipleshipGroup::query()
+            ->where('branch_code', $this->publicBranch)
+            ->where('public_id', $publicId)
+            ->value('id');
 
         return $id === null ? null : (int) $id;
     }

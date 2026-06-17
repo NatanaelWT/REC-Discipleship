@@ -36,7 +36,7 @@ function page_header(string $title, array $settings, string $currentPage, bool $
     render_sidebar_navigation($currentPage, $currentBranch, $discipleshipOnlyAccess, $worshipOnlyAccess, $activeGroup, $hideMemberDataFeatures, $worshipScopeWithoutFeature);
     echo "      </nav>\n";
     echo "    </div>\n";
-    echo "    <form method=\"post\" class=\"sidebar-section\">\n";
+    echo "    <form method=\"post\" action=\"" . h(route('auth.logout')) . "\" class=\"sidebar-section\">\n";
     echo "      <input type=\"hidden\" name=\"action\" value=\"logout\">\n";
     echo "      <button class=\"nav-item button\" type=\"submit\">Keluar</button>\n";
     echo "    </form>\n";

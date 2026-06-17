@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         App\Console\Commands\MigrateWorshipServiceSchedulesToLaravelTables::class,
         App\Console\Commands\MigratePublicMaterialsToLaravelTables::class,
         App\Console\Commands\MigrateDgMeetingReportsToLaravelTables::class,
+        App\Console\Commands\MigrateDiscipleshipGroupsToLaravelTables::class,
+        App\Console\Commands\MigrateMskParticipantsToLaravelTables::class,
+        App\Console\Commands\MigrateAuthUsersToLaravelTables::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: [

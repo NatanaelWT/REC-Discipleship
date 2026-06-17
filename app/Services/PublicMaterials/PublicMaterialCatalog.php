@@ -4,13 +4,13 @@ namespace App\Services\PublicMaterials;
 
 use App\Models\ChurchFile;
 use App\Models\PublicMaterialMenu;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 
 class PublicMaterialCatalog
 {
     public function menu(string $menuKey): ?PublicMaterialMenu
     {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         $menuKey = $this->normalizeMenuKey($menuKey);
         if ($menuKey === '') {
@@ -27,20 +27,20 @@ class PublicMaterialCatalog
      */
     public function filesForMenu(PublicMaterialMenu $menu): array
     {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         return $menu->churchFiles()
             ->orderBy('public_material_menu_files.sort_order')
             ->orderBy('church_files.title')
             ->orderBy('church_files.original_file_name')
             ->get()
-            ->map(fn (ChurchFile $file): array => $this->legacyFileRow($file))
+            ->map(fn (ChurchFile $file): array => $this->fileRow($file))
             ->all();
     }
 
     public function fileBelongsToMenu(PublicMaterialMenu $menu, ChurchFile $file): bool
     {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         return $menu->churchFiles()
             ->where('church_files.id', $file->id)
@@ -50,7 +50,7 @@ class PublicMaterialCatalog
     /**
      * @return array<string, mixed>
      */
-    public function legacyFileRow(ChurchFile $file): array
+    public function fileRow(ChurchFile $file): array
     {
         return [
             'id' => (string) $file->public_id,

@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\DifficultQuestions;
 
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -16,7 +16,7 @@ class LookupDifficultAnswerRequest extends FormRequest
 
     protected function prepareForValidation()
     {
-        LegacyRuntimeBootstrap::boot($this);
+        RuntimeBootstrap::boot($this);
     }
 
     /**

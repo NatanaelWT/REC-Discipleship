@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Discipleship;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DiscipleshipTargets\UpdateDiscipleshipTargetRequest;
 use App\Services\DiscipleshipTargets\DiscipleshipTargetReader;
-use App\Services\Legacy\LegacyRouteMap;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Services\Routing\CompatibilityRouteMap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,19 +15,19 @@ class TargetController extends Controller
 {
     public function index(Request $request, DiscipleshipTargetReader $targetReader): RedirectResponse|View
     {
-        $legacyPage = trim((string) $request->query('page', ''));
-        if ($legacyPage !== '' && LegacyRouteMap::hasPage($legacyPage)) {
-            return redirect()->away($request->getSchemeAndHttpHost() . LegacyRouteMap::pageUrl($legacyPage, $request->query()));
+        $pageQuery = trim((string) $request->query('page', ''));
+        if ($pageQuery !== '' && CompatibilityRouteMap::hasPage($pageQuery)) {
+            return redirect()->away($request->getSchemeAndHttpHost() . CompatibilityRouteMap::pageUrl($pageQuery, $request->query()));
         }
 
-        LegacyRuntimeBootstrap::boot($request);
+        RuntimeBootstrap::boot($request);
 
         if (! is_logged_in()) {
             return redirect()->route('auth.login');
         }
 
         if (! branch_can_access_page(current_user_branch(), 'discipleship_targets')) {
-            return redirect(LegacyRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
+            return redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
         }
 
         $centralReadOnly = is_effective_central_discipleship_readonly();
@@ -37,7 +37,7 @@ class TargetController extends Controller
             'settings' => ['church_name' => CHURCH_NAME],
             'saved' => $request->query->has('saved'),
             'centralReadOnly' => $centralReadOnly,
-            'targets' => $targetReader->legacyValuesForBranch($currentBranch),
+            'targets' => $targetReader->formValuesForBranch($currentBranch),
             'activeBranchLabel' => user_branch_label($currentBranch),
             'branchTargetRows' => $this->branchTargetRows($targetReader),
         ]);
@@ -65,7 +65,7 @@ class TargetController extends Controller
                 $branchLabel = strtoupper($branchCode);
             }
 
-            $targets = $targetReader->legacyValuesForBranch($branchCode);
+            $targets = $targetReader->formValuesForBranch($branchCode);
             $rows[] = [
                 'branch_code' => $branchCode,
                 'branch_label' => $branchLabel,

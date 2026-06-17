@@ -3,7 +3,7 @@
 namespace App\Services\PublicMaterials;
 
 use App\Models\ChurchFile;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PublicMaterialFileStreamer
@@ -13,14 +13,14 @@ class PublicMaterialFileStreamer
      */
     public function stream(ChurchFile $file, string $disposition): StreamedResponse
     {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         $path = sanitize_relative_upload_path((string) $file->relative_path);
         if ($path === '' || ! is_upload_path($path)) {
             abort(404, 'File tidak ditemukan.');
         }
 
-        $fullPath = legacy_runtime_path($path);
+        $fullPath = rec_runtime_path($path);
         if (! is_file($fullPath)) {
             abort(404, 'File tidak ditemukan.');
         }

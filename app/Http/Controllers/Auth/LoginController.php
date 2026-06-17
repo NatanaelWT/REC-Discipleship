@@ -1,0 +1,85 @@
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Services\Auth\AuthCredentialService;
+use App\Services\Auth\SessionAuthenticator;
+use App\Services\Auth\LoginAttemptLimiter;
+use App\Services\Routing\CompatibilityRouteMap;
+use App\Support\RuntimeBootstrap;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class LoginController extends Controller
+{
+    public function show(Request $request, AuthCredentialService $credentials, SessionAuthenticator $sessions): RedirectResponse|View
+    {
+        RuntimeBootstrap::boot($request);
+
+        if (function_exists('is_logged_in') && is_logged_in()) {
+            if (! $credentials->findByUsername(current_username())) {
+                $sessions->logout();
+
+                return redirect()->route('auth.login', ['account_removed' => 1]);
+            }
+
+            return redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch())));
+        }
+
+        return view('auth.login', $this->viewData($request));
+    }
+
+    public function store(
+        LoginRequest $request,
+        AuthCredentialService $credentials,
+        LoginAttemptLimiter $limiter,
+        SessionAuthenticator $sessions,
+    ): RedirectResponse {
+        RuntimeBootstrap::boot($request);
+
+        $ip = function_exists('client_ip_address') ? client_ip_address() : (string) ($request->ip() ?? 'unknown');
+        $now = CarbonImmutable::now(config('app.timezone', 'Asia/Jakarta'));
+        $waitSeconds = $limiter->waitSeconds($ip, $now);
+        if ($waitSeconds > 0) {
+            return redirect()->route('auth.login', ['error' => 'locked', 'wait' => $waitSeconds]);
+        }
+
+        $user = $credentials->attempt(
+            (string) $request->input('username', ''),
+            (string) $request->input('password', ''),
+        );
+
+        if ($user !== null) {
+            $limiter->clear($ip);
+            $credentials->updateLastLogin($user, $now);
+            $sessions->login($user, $now, $credentials);
+
+            return redirect(CompatibilityRouteMap::pageUrl(branch_home_page((string) ($_SESSION['cabang'] ?? 'kutisari'))));
+        }
+
+        $waitSeconds = $limiter->registerFailure($ip, $now);
+        if ($waitSeconds > 0) {
+            return redirect()->route('auth.login', ['error' => 'locked', 'wait' => $waitSeconds]);
+        }
+
+        return redirect()->route('auth.login', ['error' => 1]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function viewData(Request $request): array
+    {
+        return [
+            'settings' => ['church_name' => CHURCH_NAME],
+            'errorCode' => trim((string) $request->query('error', '')),
+            'waitSeconds' => max(0, (int) $request->query('wait', 0)),
+            'expired' => $request->query->has('expired'),
+            'accountRemoved' => $request->query->has('account_removed'),
+        ];
+    }
+}

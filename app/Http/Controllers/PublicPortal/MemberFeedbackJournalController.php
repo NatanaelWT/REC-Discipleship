@@ -4,10 +4,12 @@ namespace App\Http\Controllers\PublicPortal;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MemberFeedbackJournals\StoreMemberFeedbackJournalRequest;
+use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipMemberFeedbackJournal;
+use App\Models\DiscipleshipPerson;
 use App\Services\MemberFeedbackJournals\MemberFeedbackFormData;
 use App\Services\MemberFeedbackJournals\MemberFeedbackQuestionCatalog;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +20,7 @@ class MemberFeedbackJournalController extends Controller
 {
     public function selectBranch(Request $request): View
     {
-        LegacyRuntimeBootstrap::boot($request);
+        RuntimeBootstrap::boot($request);
 
         $feedbackSessionParam = normalize_public_member_feedback_session(
             $request->query('feedback_session', $request->query('session', '')),
@@ -39,7 +41,7 @@ class MemberFeedbackJournalController extends Controller
         MemberFeedbackFormData $formData,
         MemberFeedbackQuestionCatalog $questionCatalog,
     ): View|RedirectResponse {
-        LegacyRuntimeBootstrap::boot($request);
+        RuntimeBootstrap::boot($request);
 
         $old = is_array($_SESSION['public_member_feedback_old'] ?? null)
             ? $_SESSION['public_member_feedback_old']
@@ -112,9 +114,9 @@ class MemberFeedbackJournalController extends Controller
                     'public_id' => $this->generatePublicId(),
                     'branch_code' => $request->publicBranch(),
                     'feedback_session' => $request->feedbackSession(),
-                    'discipleship_group_id' => $this->discipleshipGroupRecordId($groupPublicId),
-                    'leader_person_id' => $this->peopleRecordId($leaderPublicId),
-                    'respondent_person_id' => $this->peopleRecordId($respondentPublicId),
+                    'discipleship_group_id' => $this->discipleshipGroupRecordId($groupPublicId, $request->publicBranch()),
+                    'leader_person_id' => $this->peopleRecordId($leaderPublicId, $request->publicBranch()),
+                    'respondent_person_id' => $this->peopleRecordId($respondentPublicId, $request->publicBranch()),
                     'respondent_name_snapshot' => $request->respondentName(),
                     'leader_name_snapshot' => trim((string) ($groupRow['leader_name'] ?? '')) ?: null,
                     'group_name_snapshot' => $groupName,
@@ -175,29 +177,34 @@ class MemberFeedbackJournalController extends Controller
         return $id;
     }
 
-    private function discipleshipGroupRecordId(string $publicId): ?int
+    private function discipleshipGroupRecordId(string $publicId, string $branchCode): ?int
     {
         $publicId = trim($publicId);
         if ($publicId === '') {
             return null;
         }
 
-        $id = DB::table('rec_discipleship_groups')->where('record_uid', $publicId)->value('id');
+        $id = DiscipleshipGroup::query()
+            ->where('branch_code', normalize_public_branch_code($branchCode))
+            ->where('public_id', $publicId)
+            ->value('id');
 
         return $id === null ? null : (int) $id;
     }
 
-    private function peopleRecordId(string $publicId): ?int
+    private function peopleRecordId(string $publicId, string $branchCode): ?int
     {
         $publicId = trim($publicId);
         if ($publicId === '') {
             return null;
         }
 
-        $id = DB::table('rec_people_registry')
-            ->where('record_uid', $publicId)
-            ->orWhere('dg_person_id', $publicId)
-            ->orWhere('legacy_dg_person_id', $publicId)
+        $id = DiscipleshipPerson::query()
+            ->where('branch_code', normalize_public_branch_code($branchCode))
+            ->where(static function ($query) use ($publicId): void {
+                $query->where('public_id', $publicId)
+                    ->orWhere('member_public_id', $publicId);
+            })
             ->value('id');
 
         return $id === null ? null : (int) $id;

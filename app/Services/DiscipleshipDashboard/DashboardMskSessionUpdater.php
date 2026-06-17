@@ -1,0 +1,37 @@
+<?php
+
+namespace App\Services\DiscipleshipDashboard;
+
+use App\Models\MskParticipant;
+use App\Services\MskParticipants\MskParticipantWriter;
+
+class DashboardMskSessionUpdater
+{
+    public function __construct(
+        private readonly MskParticipantWriter $writer,
+    ) {
+    }
+
+    /**
+     * @param array<int, int> $sessionNumbers
+     * @return array{auto_converted: bool, error: string}
+     */
+    public function update(string $participantPublicId, array $sessionNumbers): array
+    {
+        $participantPublicId = trim($participantPublicId);
+        if ($participantPublicId === '') {
+            return ['auto_converted' => false, 'error' => 'invalid_msk_participant'];
+        }
+
+        $participant = MskParticipant::query()
+            ->where('branch_code', normalize_public_branch_code(current_user_branch()))
+            ->where('public_id', $participantPublicId)
+            ->first();
+
+        if (! $participant instanceof MskParticipant) {
+            return ['auto_converted' => false, 'error' => 'invalid_msk_participant'];
+        }
+
+        return $this->writer->updateSessions($participant, $sessionNumbers);
+    }
+}

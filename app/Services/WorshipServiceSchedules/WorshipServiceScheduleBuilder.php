@@ -5,7 +5,7 @@ namespace App\Services\WorshipServiceSchedules;
 use App\Models\WorshipServiceSchedule;
 use App\Models\WorshipServiceScheduleRole;
 use App\Models\WorshipServiceScheduleWeek;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +21,7 @@ class WorshipServiceScheduleBuilder
      */
     public function allRecords(): array
     {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         $schedules = WorshipServiceSchedule::query()
             ->with(['roles.assignments', 'weeks'])
@@ -38,7 +38,7 @@ class WorshipServiceScheduleBuilder
      */
     public function recordForMonth(string $month): ?array
     {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         $month = normalize_month_value($month);
         $schedule = WorshipServiceSchedule::query()
@@ -55,7 +55,7 @@ class WorshipServiceScheduleBuilder
      */
     public function buildSchedule(string $month, ?array $existing = null): array
     {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         return build_worship_penatalayan_schedule($month, $existing);
     }
@@ -65,7 +65,7 @@ class WorshipServiceScheduleBuilder
      */
     public function saveRecord(array $record, bool $preserveTimestamps = false): WorshipServiceSchedule
     {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         $month = normalize_month_value((string) ($record['month'] ?? date('Y-m')));
         $title = trim((string) ($record['title'] ?? ''));
@@ -104,7 +104,7 @@ class WorshipServiceScheduleBuilder
 
     public function deleteMonth(string $month): bool
     {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         $month = normalize_month_value($month);
         $schedule = WorshipServiceSchedule::query()->where('month', $month)->first();
@@ -122,7 +122,7 @@ class WorshipServiceScheduleBuilder
      */
     public function recordFromModel(WorshipServiceSchedule $schedule): array
     {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         $schedule->loadMissing(['roles.assignments', 'weeks']);
         $month = normalize_month_value((string) $schedule->month);

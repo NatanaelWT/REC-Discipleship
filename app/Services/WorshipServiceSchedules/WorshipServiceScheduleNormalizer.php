@@ -2,7 +2,7 @@
 
 namespace App\Services\WorshipServiceSchedules;
 
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 use stdClass;
 
 class WorshipServiceScheduleNormalizer
@@ -19,7 +19,7 @@ class WorshipServiceScheduleNormalizer
         array $rowLabelsInput,
         array $assignmentsInput,
     ): array {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         $month = normalize_month_value($month);
         $submittedRows = [];
@@ -81,9 +81,9 @@ class WorshipServiceScheduleNormalizer
     /**
      * @return array<string, mixed>
      */
-    public function fromLegacyRow(stdClass $row): array
+    public function fromDatabaseRow(stdClass $row): array
     {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         $month = normalize_month_value((string) ($row->month ?? date('Y-m')));
         $rows = json_decode((string) ($row->rows_payload ?? '[]'), true);
@@ -100,7 +100,6 @@ class WorshipServiceScheduleNormalizer
             'rows' => normalize_worship_penatalayan_rows($rows, count(worship_penatalayan_week_dates($month))),
             'branch_code' => $this->nullableString($row->branch ?? null),
             'created_at' => $this->firstNonEmpty([
-                $row->created_at_legacy ?? null,
                 $row->created_at ?? null,
             ]),
             'updated_at' => $this->firstNonEmpty([

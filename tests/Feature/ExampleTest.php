@@ -15,6 +15,9 @@ class ExampleTest extends TestCase
         $response->assertSee('Website Manajemen Pemuridan REC Indonesia');
         $response->assertDontSee('?page=', false);
         $response->assertSee('/publik/jurnal-dg', false);
+        $response->assertSee('/publik/umpan-balik-anggota', false);
+        $response->assertSee('/publik/pertanyaan-sulit/kirim', false);
+        $response->assertSee('/publik/pertanyaan-sulit/jawaban', false);
     }
 
     public function test_legacy_page_query_redirects_to_clean_laravel_route(): void
@@ -22,5 +25,23 @@ class ExampleTest extends TestCase
         $response = $this->get('/?page=public_materials&menu=materi_dg_1');
 
         $response->assertRedirect('/materi?menu=materi_dg_1');
+    }
+
+    public function test_public_empty_menu_renders_from_laravel_view(): void
+    {
+        $response = $this->get('/publik/menu-kosong?menu=materi_dg_1');
+
+        $response->assertOk();
+        $response->assertSee('Materi DG-1 (BePI)');
+        $response->assertSee('Halaman ini masih kosong dan akan diisi berikutnya.');
+        $response->assertSee('href="/"', false);
+        $response->assertDontSee('?page=', false);
+    }
+
+    public function test_legacy_public_empty_menu_query_redirects_to_clean_route(): void
+    {
+        $response = $this->get('/index.php?page=public_menu_empty&menu=materi_dg_1');
+
+        $response->assertRedirect('/publik/menu-kosong?menu=materi_dg_1');
     }
 }

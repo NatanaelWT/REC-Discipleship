@@ -6,21 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\DgMeetingReports\StoreDgMeetingReportRequest;
 use App\Models\DiscipleshipMeetingReport;
 use App\Services\DgMeetingReports\DgMeetingReportFormData;
-use App\Services\DgMeetingReports\DgMeetingReportLegacySync;
 use App\Services\DgMeetingReports\DgMeetingReportPhotoUploader;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use Throwable;
 
 class DgMeetingReportController extends Controller
 {
-    public function legacy(Request $request): RedirectResponse
+    public function redirectToBranchReport(Request $request): RedirectResponse
     {
-        LegacyRuntimeBootstrap::boot($request);
+        RuntimeBootstrap::boot($request);
 
         $branchRaw = trim((string) $request->query('cabang', $request->query('branch', '')));
         if ($branchRaw === '') {
@@ -48,7 +46,7 @@ class DgMeetingReportController extends Controller
         DgMeetingReportFormData $formData,
         string $branch,
     ): View|RedirectResponse {
-        LegacyRuntimeBootstrap::boot($request);
+        RuntimeBootstrap::boot($request);
 
         if (! is_known_public_branch_code($branch)) {
             return redirect()->route('public.dg.branch', ['error' => 'invalid_branch']);
@@ -80,7 +78,6 @@ class DgMeetingReportController extends Controller
     public function store(
         StoreDgMeetingReportRequest $request,
         DgMeetingReportPhotoUploader $photoUploader,
-        DgMeetingReportLegacySync $legacySync,
         string $branch = '',
     ): RedirectResponse {
         $publicBranch = $request->publicBranch();
@@ -94,7 +91,7 @@ class DgMeetingReportController extends Controller
         $meetingPhotos = $uploadResult['photos'];
 
         try {
-            DB::transaction(function () use ($request, $legacySync, $meetingPhotos): void {
+            DB::transaction(function () use ($request, $meetingPhotos): void {
                 $report = DiscipleshipMeetingReport::query()->create([
                     'public_id' => $this->generatePublicId(),
                     'branch_code' => $request->publicBranch(),
@@ -147,7 +144,7 @@ class DgMeetingReportController extends Controller
                     ]);
                 }
 
-                $legacySync->sync($report->fresh() ?? $report);
+                $report->fresh();
             });
         } catch (Throwable) {
             $photoUploader->cleanup($meetingPhotos);
@@ -177,11 +174,6 @@ class DgMeetingReportController extends Controller
 
     private function publicIdExists(string $publicId): bool
     {
-        if (DiscipleshipMeetingReport::query()->where('public_id', $publicId)->exists()) {
-            return true;
-        }
-
-        return Schema::hasTable('rec_dg_meeting_reports')
-            && DB::table('rec_dg_meeting_reports')->where('record_uid', $publicId)->exists();
+        return DiscipleshipMeetingReport::query()->where('public_id', $publicId)->exists();
     }
 }

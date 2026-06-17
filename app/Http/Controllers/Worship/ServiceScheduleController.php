@@ -5,10 +5,9 @@ namespace App\Http\Controllers\Worship;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\WorshipServiceSchedules\DeleteWorshipServiceScheduleRequest;
 use App\Http\Requests\WorshipServiceSchedules\StoreWorshipServiceScheduleRequest;
-use App\Services\Legacy\LegacyRouteMap;
+use App\Services\Routing\CompatibilityRouteMap;
 use App\Services\WorshipServiceSchedules\WorshipServiceScheduleBuilder;
-use App\Services\WorshipServiceSchedules\WorshipServiceScheduleLegacySync;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,19 +16,19 @@ class ServiceScheduleController extends Controller
 {
     public function index(Request $request, WorshipServiceScheduleBuilder $scheduleBuilder): RedirectResponse|View
     {
-        $legacyPage = trim((string) $request->query('page', ''));
-        if ($legacyPage !== '' && LegacyRouteMap::hasPage($legacyPage)) {
-            return redirect()->away($request->getSchemeAndHttpHost() . LegacyRouteMap::pageUrl($legacyPage, $request->query()));
+        $pageQuery = trim((string) $request->query('page', ''));
+        if ($pageQuery !== '' && CompatibilityRouteMap::hasPage($pageQuery)) {
+            return redirect()->away($request->getSchemeAndHttpHost() . CompatibilityRouteMap::pageUrl($pageQuery, $request->query()));
         }
 
-        LegacyRuntimeBootstrap::boot($request);
+        RuntimeBootstrap::boot($request);
 
         if (! is_logged_in()) {
             return redirect()->route('auth.login');
         }
 
         if (! branch_can_access_page(current_user_branch(), 'worship_penatalayan')) {
-            return redirect(LegacyRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
+            return redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
         }
 
         $selectedMonth = normalize_month_value((string) $request->query('month', date('Y-m')));
@@ -75,16 +74,14 @@ class ServiceScheduleController extends Controller
     public function store(
         StoreWorshipServiceScheduleRequest $request,
         WorshipServiceScheduleBuilder $scheduleBuilder,
-        WorshipServiceScheduleLegacySync $legacySync,
     ): RedirectResponse {
         if (trim((string) $request->input('action', '')) === 'delete_worship_penatalayan') {
             $month = normalize_month_value((string) $request->input('month', date('Y-m')));
 
-            return $this->deleteByMonth($month, $scheduleBuilder, $legacySync);
+            return $this->deleteByMonth($month, $scheduleBuilder);
         }
 
         $schedule = $scheduleBuilder->saveRecord($request->scheduleRecord());
-        $legacySync->syncSchedule($schedule);
 
         return redirect()->route('worship.penatalayan', [
             'month' => $schedule->month,
@@ -95,9 +92,8 @@ class ServiceScheduleController extends Controller
     public function destroy(
         DeleteWorshipServiceScheduleRequest $request,
         WorshipServiceScheduleBuilder $scheduleBuilder,
-        WorshipServiceScheduleLegacySync $legacySync,
     ): RedirectResponse {
-        return $this->deleteByMonth($request->scheduleMonth(), $scheduleBuilder, $legacySync);
+        return $this->deleteByMonth($request->scheduleMonth(), $scheduleBuilder);
     }
 
     /**
@@ -146,7 +142,6 @@ class ServiceScheduleController extends Controller
     private function deleteByMonth(
         string $month,
         WorshipServiceScheduleBuilder $scheduleBuilder,
-        WorshipServiceScheduleLegacySync $legacySync,
     ): RedirectResponse {
         $month = normalize_month_value($month);
         if (! $scheduleBuilder->deleteMonth($month)) {
@@ -155,8 +150,6 @@ class ServiceScheduleController extends Controller
                 'month' => $month,
             ]);
         }
-
-        $legacySync->deleteMonth($month);
 
         return redirect()->route('worship.penatalayan', ['deleted' => 1]);
     }

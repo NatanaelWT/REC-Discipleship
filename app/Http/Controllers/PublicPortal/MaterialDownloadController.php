@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MaterialDownloadController extends Controller
 {
-    public function legacy(
+    public function redirectToDownload(
         StreamPublicMaterialRequest $request,
         PublicMaterialRouteResolver $resolver,
     ): RedirectResponse|Response {

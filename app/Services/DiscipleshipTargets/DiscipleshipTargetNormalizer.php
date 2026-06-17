@@ -33,17 +33,17 @@ class DiscipleshipTargetNormalizer
     }
 
     /**
-     * @param array<string, mixed> $legacyValues
+     * @param array<string, mixed> $formValues
      * @return array<string, int>
      */
-    public function normalizeLegacy(array $legacyValues): array
+    public function normalizeFormValues(array $formValues): array
     {
         return $this->normalize([
-            'camp_gap_participant_target' => $legacyValues['dg_total_people'] ?? 50,
-            'msk_completion_target' => $legacyValues['msk_completed'] ?? 50,
-            'dg1_completion_target' => $legacyValues['dg1_people'] ?? 50,
-            'dg2_completion_target' => $legacyValues['dg2_people'] ?? 50,
-            'dg3_completion_target' => $legacyValues['dg3_people'] ?? 50,
+            'camp_gap_participant_target' => $formValues['dg_total_people'] ?? 50,
+            'msk_completion_target' => $formValues['msk_completed'] ?? 50,
+            'dg1_completion_target' => $formValues['dg1_people'] ?? 50,
+            'dg2_completion_target' => $formValues['dg2_people'] ?? 50,
+            'dg3_completion_target' => $formValues['dg3_people'] ?? 50,
         ]);
     }
 
@@ -51,7 +51,7 @@ class DiscipleshipTargetNormalizer
      * @param array<string, int> $values
      * @return array<string, int>
      */
-    public function toLegacy(array $values): array
+    public function toFormValues(array $values): array
     {
         $values = $this->normalize($values);
 

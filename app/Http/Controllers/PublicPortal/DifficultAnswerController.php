@@ -4,30 +4,20 @@ namespace App\Http\Controllers\PublicPortal;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DifficultQuestions\LookupDifficultAnswerRequest;
-use App\Models\DifficultQuestion;
+use App\Services\DifficultQuestions\DifficultQuestionAnswerLookupPageData;
 use App\Services\DifficultQuestions\DifficultQuestionPasswordService;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DifficultAnswerController extends Controller
 {
-    public function show(Request $request): View
+    public function show(Request $request, DifficultQuestionAnswerLookupPageData $pageData): View
     {
-        LegacyRuntimeBootstrap::boot($request);
+        RuntimeBootstrap::boot($request);
 
-        $lookupHash = trim((string) ($_SESSION['difficult_answer_lookup_hash'] ?? ''));
-        $hasLookup = $request->query->has('looked') && $lookupHash !== '';
-
-        return view('public.difficult-questions.lookup', [
-            'settings' => ['church_name' => CHURCH_NAME],
-            'errorCode' => trim((string) $request->query('error', '')),
-            'hasLookup' => $hasLookup,
-            'matchedQuestions' => $hasLookup
-                ? DifficultQuestion::query()->forLookupHash($lookupHash)->orderByDesc('created_at')->get()
-                : collect(),
-        ]);
+        return view('public.difficult-questions.lookup', $pageData->forRequest($request));
     }
 
     public function lookup(

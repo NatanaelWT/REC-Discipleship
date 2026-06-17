@@ -1,23 +1,28 @@
 <?php
 
-use App\Http\Controllers\Legacy\AdminController;
-use App\Http\Controllers\Legacy\AuthController;
-use App\Http\Controllers\Legacy\CompatibilityController;
-use App\Http\Controllers\Legacy\DiscipleshipController;
-use App\Http\Controllers\Legacy\MemberController;
-use App\Http\Controllers\Legacy\PublicController;
-use App\Http\Controllers\Legacy\SecureFileController;
-use App\Http\Controllers\Legacy\WorshipController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\Files\SecureFileController;
+use App\Http\Controllers\Compatibility\CompatibilityController;
+use App\Http\Controllers\Discipleship\GroupController as DiscipleshipGroupController;
+use App\Http\Controllers\Discipleship\DashboardController as DiscipleshipDashboardController;
+use App\Http\Controllers\Settings\SettingsController;
+use App\Http\Controllers\Discipleship\PeopleListController as DiscipleshipPeopleListController;
 use App\Http\Controllers\PublicPortal\DgMeetingReportController as PublicDgMeetingReportController;
 use App\Http\Controllers\PublicPortal\DgReportBranchController as PublicDgReportBranchController;
 use App\Http\Controllers\PublicPortal\DifficultAnswerController as PublicDifficultAnswerController;
 use App\Http\Controllers\PublicPortal\DifficultQuestionController as PublicDifficultQuestionController;
 use App\Http\Controllers\Discipleship\DifficultQuestionController as DiscipleshipDifficultQuestionController;
+use App\Http\Controllers\Discipleship\MeetingReportRecapController as DiscipleshipMeetingReportRecapController;
+use App\Http\Controllers\Discipleship\MskParticipantController as DiscipleshipMskParticipantController;
+use App\Http\Controllers\Discipleship\PeopleTreeController as DiscipleshipPeopleTreeController;
+use App\Http\Controllers\Discipleship\SpiritualJourneyController as DiscipleshipSpiritualJourneyController;
 use App\Http\Controllers\Discipleship\TargetController as DiscipleshipTargetController;
 use App\Http\Controllers\PublicPortal\MaterialController as PublicMaterialController;
 use App\Http\Controllers\PublicPortal\MaterialDownloadController as PublicMaterialDownloadController;
 use App\Http\Controllers\PublicPortal\MaterialPreviewController as PublicMaterialPreviewController;
 use App\Http\Controllers\PublicPortal\MemberFeedbackJournalController as PublicMemberFeedbackJournalController;
+use App\Http\Controllers\PublicPortal\HomeController as PublicHomeController;
 use App\Http\Controllers\Worship\ServiceScheduleController as WorshipServiceScheduleController;
 use App\Http\Controllers\Worship\ServiceScheduleImageController as WorshipServiceScheduleImageController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -25,24 +30,26 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
-$legacyMiddleware = [
+$statelessRouteMiddleware = [
     ValidateCsrfToken::class,
     StartSession::class,
     ShareErrorsFromSession::class,
 ];
 
-Route::withoutMiddleware($legacyMiddleware)->group(function (): void {
-    Route::match(['GET', 'POST'], '/', [PublicController::class, 'home'])->name('home');
-    Route::match(['GET', 'POST'], '/index.php', CompatibilityController::class)->name('legacy.compat');
+Route::withoutMiddleware($statelessRouteMiddleware)->group(function (): void {
+    Route::match(['GET', 'POST'], '/', [PublicHomeController::class, 'index'])->name('home');
+    Route::match(['GET', 'POST'], '/index.php', CompatibilityController::class)->name('compat.index');
 
-    Route::match(['GET', 'POST'], '/login', [AuthController::class, 'login'])->name('auth.login');
-    Route::match(['GET', 'POST'], '/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-    Route::match(['GET', 'POST'], '/pengaturan', [AdminController::class, 'settings'])->name('settings');
+    Route::get('/login', [LoginController::class, 'show'])->name('auth.login');
+    Route::post('/login', [LoginController::class, 'store'])->name('auth.login.store');
+    Route::post('/logout', [LogoutController::class, 'destroy'])->name('auth.logout');
+    Route::get('/pengaturan', [SettingsController::class, 'index'])->name('settings');
+    Route::post('/pengaturan', [SettingsController::class, 'update'])->name('settings.update');
 
     Route::prefix('publik')->name('public.')->group(function (): void {
         Route::get('/jurnal-dg', [PublicDgReportBranchController::class, 'index'])->name('dg.branch');
-        Route::get('/jurnal-dg/laporan', [PublicDgMeetingReportController::class, 'legacy'])->name('dg.report.legacy');
-        Route::post('/jurnal-dg/laporan', [PublicDgMeetingReportController::class, 'store'])->name('dg.report.legacy-store');
+        Route::get('/jurnal-dg/laporan', [PublicDgMeetingReportController::class, 'redirectToBranchReport'])->name('dg.report.redirect');
+        Route::post('/jurnal-dg/laporan', [PublicDgMeetingReportController::class, 'store'])->name('dg.report.redirect-store');
         Route::get('/jurnal-dg/{branch}/laporan', [PublicDgMeetingReportController::class, 'create'])
             ->where('branch', '[A-Za-z0-9_-]+')
             ->name('dg.report');
@@ -56,40 +63,51 @@ Route::withoutMiddleware($legacyMiddleware)->group(function (): void {
         Route::post('/pertanyaan-sulit/kirim', [PublicDifficultQuestionController::class, 'store'])->name('difficult-question.store');
         Route::get('/pertanyaan-sulit/jawaban', [PublicDifficultAnswerController::class, 'show'])->name('difficult-question.answer');
         Route::post('/pertanyaan-sulit/jawaban', [PublicDifficultAnswerController::class, 'lookup'])->name('difficult-question.lookup');
-        Route::match(['GET', 'POST'], '/menu-kosong', [PublicController::class, 'menuEmpty'])->name('menu-empty');
+        Route::match(['GET', 'POST'], '/menu-kosong', [PublicHomeController::class, 'emptyMenu'])->name('menu-empty');
     });
 
     Route::prefix('materi')->name('materials.')->group(function (): void {
-        Route::match(['GET', 'POST'], '/', [PublicMaterialController::class, 'legacyIndex'])->name('index');
-        Route::match(['GET', 'POST'], '/preview', [PublicMaterialPreviewController::class, 'legacy'])->name('preview.legacy');
-        Route::match(['GET', 'POST'], '/download', [PublicMaterialDownloadController::class, 'legacy'])->name('download.legacy');
+        Route::match(['GET', 'POST'], '/', [PublicMaterialController::class, 'redirectToMenu'])->name('index');
+        Route::match(['GET', 'POST'], '/preview', [PublicMaterialPreviewController::class, 'redirectToPreview'])->name('preview.redirect');
+        Route::match(['GET', 'POST'], '/download', [PublicMaterialDownloadController::class, 'redirectToDownload'])->name('download.redirect');
         Route::get('/{menu}', [PublicMaterialController::class, 'show'])->name('show');
         Route::get('/{menu}/{churchFile}/preview', [PublicMaterialPreviewController::class, 'show'])->name('preview');
         Route::get('/{menu}/{churchFile}/download', [PublicMaterialDownloadController::class, 'download'])->name('download');
     });
 
-    Route::prefix('jemaat')->name('members.')->group(function (): void {
-        Route::match(['GET', 'POST'], '/dashboard', [MemberController::class, 'dashboard'])->name('dashboard');
-        Route::match(['GET', 'POST'], '/data', [MemberController::class, 'index'])->name('index');
-        Route::match(['GET', 'POST'], '/kelengkapan', [MemberController::class, 'completeness'])->name('completeness');
-        Route::match(['GET', 'POST'], '/keluarga', [MemberController::class, 'families'])->name('families');
-        Route::match(['GET', 'POST'], '/ulang-tahun', [MemberController::class, 'birthdays'])->name('birthdays');
-    });
-
     Route::prefix('pemuridan')->name('discipleship.')->group(function (): void {
-        Route::match(['GET', 'POST'], '/dashboard', [DiscipleshipController::class, 'dashboard'])->name('dashboard');
-        Route::match(['GET', 'POST'], '/kelompok', [DiscipleshipController::class, 'groups'])->name('groups');
-        Route::match(['GET', 'POST'], '/orang', [DiscipleshipController::class, 'people'])->name('people');
-        Route::match(['GET', 'POST'], '/anggota', [DiscipleshipController::class, 'peopleList'])->name('people-list');
-        Route::match(['GET', 'POST'], '/pohon', [DiscipleshipController::class, 'tree'])->name('tree');
-        Route::match(['GET', 'POST'], '/pohon-v2', [DiscipleshipController::class, 'treeV2'])->name('tree-v2');
-        Route::match(['GET', 'POST'], '/spiritual-journey', [DiscipleshipController::class, 'spiritualJourney'])->name('spiritual-journey');
-        Route::match(['GET', 'POST'], '/laporan-dg', [DiscipleshipController::class, 'reportsRecap'])->name('reports-recap');
-        Route::match(['GET', 'POST'], '/msk', [DiscipleshipController::class, 'mskClasses'])->name('msk-classes');
+        Route::get('/dashboard', [DiscipleshipDashboardController::class, 'index'])->name('dashboard');
+        Route::post('/dashboard/msk-sessions', [DiscipleshipDashboardController::class, 'updateMskSessions'])->name('dashboard.msk-sessions');
+        Route::match(['GET', 'POST'], '/kelompok', [DiscipleshipGroupController::class, 'index'])->name('groups');
+        Route::match(['GET', 'POST'], '/orang', static function (\Illuminate\Http\Request $request): \Illuminate\Http\RedirectResponse {
+            return redirect()->route('discipleship.tree', $request->query());
+        })->name('people');
+        Route::match(['GET', 'POST'], '/anggota', [DiscipleshipPeopleListController::class, 'index'])->name('people-list');
+        Route::get('/pohon', [DiscipleshipPeopleTreeController::class, 'index'])->name('tree');
+        Route::post('/pohon', [DiscipleshipPeopleTreeController::class, 'handleFormAction'])->name('tree.action');
+        Route::get('/pohon-v2', [DiscipleshipPeopleTreeController::class, 'treeV2'])->name('tree-v2');
+        Route::post('/pohon/orang', [DiscipleshipPeopleTreeController::class, 'savePerson'])->name('tree.people.save');
+        Route::post('/pohon/orang/hapus', [DiscipleshipPeopleTreeController::class, 'deletePerson'])->name('tree.people.delete');
+        Route::post('/pohon/kelompok', [DiscipleshipPeopleTreeController::class, 'saveGroup'])->name('tree.groups.save');
+        Route::post('/pohon/kelompok/keluar', [DiscipleshipPeopleTreeController::class, 'leavePersonGroup'])->name('tree.groups.leave');
+        Route::post('/pohon/kelompok/selesai', [DiscipleshipPeopleTreeController::class, 'completeGroup'])->name('tree.groups.complete');
+        Route::post('/pohon/kelompok/aktifkan', [DiscipleshipPeopleTreeController::class, 'reactivateGroup'])->name('tree.groups.reactivate');
+        Route::post('/pohon/export-dot', [DiscipleshipPeopleTreeController::class, 'exportDot'])->name('tree.export-dot');
+        Route::get('/spiritual-journey', [DiscipleshipSpiritualJourneyController::class, 'index'])->name('spiritual-journey');
+        Route::post('/spiritual-journey', [DiscipleshipSpiritualJourneyController::class, 'updateBridgeStatusFromForm'])->name('spiritual-journey.bridge-status-form');
+        Route::post('/spiritual-journey/{participant:public_id}/bridge-status', [DiscipleshipSpiritualJourneyController::class, 'updateBridgeStatus'])->name('spiritual-journey.bridge-status');
+        Route::match(['GET', 'POST'], '/laporan-dg', [DiscipleshipMeetingReportRecapController::class, 'index'])->name('reports-recap');
+        Route::get('/msk', [DiscipleshipMskParticipantController::class, 'index'])->name('msk-classes');
+        Route::post('/msk/peserta', [DiscipleshipMskParticipantController::class, 'store'])->name('msk-classes.store');
+        Route::post('/msk/impor', [DiscipleshipMskParticipantController::class, 'import'])->name('msk-classes.import');
+        Route::post('/msk/ekspor', [DiscipleshipMskParticipantController::class, 'export'])->name('msk-classes.export');
+        Route::post('/msk/{participant:public_id}/sesi', [DiscipleshipMskParticipantController::class, 'updateSessions'])->name('msk-classes.sessions');
+        Route::post('/msk/{participant:public_id}/nonaktif', [DiscipleshipMskParticipantController::class, 'deactivate'])->name('msk-classes.deactivate');
+        Route::post('/msk/{participant:public_id}/aktif', [DiscipleshipMskParticipantController::class, 'reactivate'])->name('msk-classes.reactivate');
         Route::get('/target', [DiscipleshipTargetController::class, 'index'])->name('targets');
         Route::post('/target', [DiscipleshipTargetController::class, 'update'])->name('targets.update');
         Route::get('/pertanyaan-sulit', [DiscipleshipDifficultQuestionController::class, 'index'])->name('difficult-questions');
-        Route::post('/pertanyaan-sulit', [DiscipleshipDifficultQuestionController::class, 'answerLegacy'])->name('difficult-questions.answer-legacy');
+        Route::post('/pertanyaan-sulit', [DiscipleshipDifficultQuestionController::class, 'answerFromForm'])->name('difficult-questions.answer-form');
         Route::post('/pertanyaan-sulit/{difficultQuestion}/jawaban', [DiscipleshipDifficultQuestionController::class, 'answer'])->name('difficult-questions.answer');
     });
 

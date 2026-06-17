@@ -1,5 +1,5 @@
 @php
-    \App\Support\LegacyRuntimeBootstrap::boot(request());
+    \App\Support\RuntimeBootstrap::boot(request());
     page_header_plain($title ?? 'Reformed Exodus Community', $settings ?? ['church_name' => CHURCH_NAME], $bodyClass ?? '');
 @endphp
 

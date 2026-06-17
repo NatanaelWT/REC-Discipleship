@@ -3,8 +3,8 @@
 namespace App\Http\Requests\DiscipleshipTargets;
 
 use App\Services\DiscipleshipTargets\DiscipleshipTargetNormalizer;
-use App\Services\Legacy\LegacyRouteMap;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Services\Routing\CompatibilityRouteMap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -12,7 +12,7 @@ class UpdateDiscipleshipTargetRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        LegacyRuntimeBootstrap::boot($this);
+        RuntimeBootstrap::boot($this);
 
         return is_logged_in()
             && branch_can_access_page(current_user_branch(), 'discipleship_targets')
@@ -21,9 +21,9 @@ class UpdateDiscipleshipTargetRequest extends FormRequest
 
     protected function prepareForValidation()
     {
-        LegacyRuntimeBootstrap::boot($this);
+        RuntimeBootstrap::boot($this);
 
-        $normalized = app(DiscipleshipTargetNormalizer::class)->normalizeLegacy([
+        $normalized = app(DiscipleshipTargetNormalizer::class)->normalizeFormValues([
             'dg_total_people' => $this->input('target_dg_total_people', ''),
             'msk_completed' => $this->input('target_msk_completed', ''),
             'dg1_people' => $this->input('target_dg1_people', ''),
@@ -69,7 +69,7 @@ class UpdateDiscipleshipTargetRequest extends FormRequest
         }
 
         throw new HttpResponseException(
-            redirect(LegacyRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied'])),
+            redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied'])),
         );
     }
 }

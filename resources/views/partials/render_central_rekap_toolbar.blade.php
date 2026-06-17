@@ -21,8 +21,8 @@ function render_central_rekap_toolbar(string $currentPage): void {
             'rekap_cabang' => $branchCode,
         ], $preservedQueryParams);
 
-        if (class_exists(\App\Services\Legacy\LegacyRouteMap::class) && \App\Services\Legacy\LegacyRouteMap::hasPage($currentPage)) {
-            return \App\Services\Legacy\LegacyRouteMap::pageUrl($currentPage, $params);
+        if (class_exists(\App\Services\Routing\CompatibilityRouteMap::class) && \App\Services\Routing\CompatibilityRouteMap::hasPage($currentPage)) {
+            return \App\Services\Routing\CompatibilityRouteMap::pageUrl($currentPage, $params);
         }
 
         $params['page'] = $currentPage;

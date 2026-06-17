@@ -33,33 +33,14 @@
         <section class="card public-answer-results-card">
           <div class="card-row public-answer-results-head">
             <h2>Hasil Pencarian</h2>
-            <span class="badge muted">{{ (string) $matchedQuestions->count() }} pertanyaan</span>
+            <span class="badge muted">{{ (string) $matchedQuestionCount }} pertanyaan</span>
           </div>
-          @if ($matchedQuestions->count() === 0)
+          @if ($matchedQuestionCount === 0)
             <div class="panel-note">Tidak ada pertanyaan dengan password tersebut.</div>
           @else
             <div class="public-answer-list">
-              @foreach ($matchedQuestions as $questionRow)
-                @php
-                    $questionText = trim((string) $questionRow->question);
-                    $answerText = trim((string) $questionRow->answer);
-                    $status = strtolower(trim((string) $questionRow->status));
-                    $statusLabel = app(\App\Services\DifficultQuestions\DifficultQuestionStatusLabel::class)->label($status);
-                    $createdDate = normalize_ymd_date($questionRow->created_at ? $questionRow->created_at->format('Y-m-d') : '');
-                    $createdLabel = $createdDate !== '' ? format_indo_date($createdDate) : '-';
-                    $answeredDate = normalize_ymd_date($questionRow->answered_at ? $questionRow->answered_at->format('Y-m-d') : '');
-                    $answeredLabel = $answeredDate !== '' ? format_indo_date($answeredDate) : '';
-                    $statusClass = $status === 'answered' && $answerText !== '' ? 'success' : 'warning';
-                @endphp
-                <article class="public-answer-item">
-                  <div class="public-answer-item-head"><span class="badge {{ $statusClass }}">{{ $statusLabel }}</span><span class="public-answer-date">Dikirim: {{ $createdLabel }}</span></div>
-                  <div class="public-answer-question">{!! nl2br(e($questionText)) !!}</div>
-                  @if ($status === 'answered' && $answerText !== '')
-                    <div class="public-answer-response"><strong>Jawaban</strong><div>{!! nl2br(e($answerText)) !!}</div>@if ($answeredLabel !== '')<span>Dijawab: {{ $answeredLabel }}</span>@endif</div>
-                  @else
-                    <div class="panel-note">Pertanyaan ini belum dijawab oleh admin pusat.</div>
-                  @endif
-                </article>
+              @foreach ($matchedQuestionItems as $questionItem)
+                @include('public.difficult-questions.partials.answer-result-item', ['questionItem' => $questionItem])
               @endforeach
             </div>
           @endif

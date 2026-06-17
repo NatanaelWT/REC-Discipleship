@@ -2,17 +2,20 @@
 
 namespace App\Services\MemberFeedbackJournals;
 
+use App\Services\DiscipleshipGroups\DiscipleshipGroupPublicFormData;
+
 class MemberFeedbackFormData
 {
+    public function __construct(private readonly DiscipleshipGroupPublicFormData $publicFormData)
+    {
+    }
+
     /**
      * @return array{groups: array<int, array<string, mixed>>, group_map: array<string, array<string, mixed>>}
      */
     public function forBranch(string $branchCode): array
     {
-        $branchRuntime = load_branch_discipleship_runtime($branchCode);
-        $peopleById = is_array($branchRuntime['people_by_id'] ?? null) ? $branchRuntime['people_by_id'] : [];
-        $groups = is_array($branchRuntime['groups'] ?? null) ? $branchRuntime['groups'] : [];
-        $formData = build_dg_public_form_data($groups, $peopleById);
+        $formData = $this->publicFormData->forBranch($branchCode);
 
         return [
             'groups' => is_array($formData['groups'] ?? null) ? $formData['groups'] : [],

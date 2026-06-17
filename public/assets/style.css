@@ -74,31 +74,6 @@ video {
   overflow-y: auto;
 }
 
-.page-member-table-scroll {
-  height: 100vh;
-  overflow: hidden;
-}
-
-.page-members {
-  min-height: 100vh;
-  height: auto;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-.page-member_completeness,
-.page-member_families {
-  min-height: 100vh;
-  height: auto;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-.page-member-families-scroll {
-  height: 100vh;
-  overflow: hidden;
-}
-
 .page-discipleship-groups-list .app-shell,
 .page-discipleship-people-list .app-shell,
 .page-discipleship-table-scroll .app-shell,
@@ -110,34 +85,6 @@ video {
   min-height: 100vh;
   height: auto;
   overflow: visible;
-}
-
-.page-member-table-scroll .app-shell,
-.page-member-table-scroll .app-main {
-  height: 100%;
-  overflow: hidden;
-}
-
-.page-members .app-shell,
-.page-members .app-main {
-  min-height: 100vh;
-  height: auto;
-  overflow: visible;
-}
-
-.page-member_completeness .app-shell,
-.page-member_completeness .app-main,
-.page-member_families .app-shell,
-.page-member_families .app-main {
-  min-height: 100vh;
-  height: auto;
-  overflow: visible;
-}
-
-.page-member-families-scroll .app-shell,
-.page-member-families-scroll .app-main {
-  height: 100%;
-  overflow: hidden;
 }
 
 .page-discipleship-dashboard .container,
@@ -155,46 +102,13 @@ video {
   overflow: visible;
 }
 
-.page-member-table-scroll .container {
-  height: 100%;
-  margin: 0 auto;
-  padding: 24px 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.page-members .container {
-  min-height: 100%;
-  height: auto;
-  overflow: visible;
-}
-
-.page-member_completeness .container,
-.page-member_families .container {
-  min-height: 100%;
-  height: auto;
-  overflow: visible;
-}
-
-.page-member-families-scroll .container {
-  height: 100%;
-  margin: 0 auto;
-  padding: 24px 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .page-discipleship-dashboard .container,
 .page-discipleship-groups-list .container,
 .page-discipleship-people-list .container,
 .page-discipleship-table-scroll .container,
 .page-dg_reports_recap .container,
 .page-msk_classes .container,
-.page-spiritual_journey .container,
-.page-member-table-scroll .container,
-.page-member-families-scroll .container {
+.page-spiritual_journey .container {
   padding-bottom: calc(24px + env(safe-area-inset-bottom));
 }
 
@@ -274,126 +188,6 @@ video {
 .page-discipleship-groups-list .discipleship-list-card .dg-recap-pagination-row,
 .page-discipleship-people-list .discipleship-list-card .dg-recap-pagination-row {
   margin-top: 10px;
-}
-
-.page-member-table-scroll .members-main-table {
-  margin-bottom: 0;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.page-members .members-main-table {
-  flex: 0 0 auto;
-}
-
-.page-member_completeness .member-completeness-main-table,
-.page-member_families .member-families-main-table {
-  flex: 0 0 auto;
-}
-
-.page-member-table-scroll .member-completeness-main-table {
-  margin-bottom: 0;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.page-member-table-scroll .members-main-table .table-wrap {
-  flex: 1;
-  min-height: 0;
-  height: auto;
-  max-height: none;
-  overflow: auto;
-}
-
-.page-member-table-scroll .member-completeness-main-table .table-wrap {
-  flex: 1;
-  min-height: 0;
-  height: auto;
-  max-height: none;
-  overflow: auto;
-}
-
-.page-member-table-scroll .members-main-table .table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-}
-
-.page-member-table-scroll .member-completeness-main-table .table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-}
-
-.page-member-families-scroll .member-families-main-table {
-  margin-bottom: 0;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.page-member-families-scroll .member-families-main-table .table-wrap {
-  flex: 1;
-  min-height: 0;
-  height: auto;
-  max-height: none;
-  overflow: auto;
-}
-
-.page-member-families-scroll .member-families-main-table .table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-}
-
-.page-member_completeness.page-member-table-scroll,
-.page-member_families.page-member-families-scroll {
-  min-height: 100vh;
-  height: auto;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-.page-member_completeness.page-member-table-scroll .app-shell,
-.page-member_completeness.page-member-table-scroll .app-main,
-.page-member_families.page-member-families-scroll .app-shell,
-.page-member_families.page-member-families-scroll .app-main {
-  min-height: 100vh;
-  height: auto;
-  overflow: visible;
-}
-
-.page-member_completeness.page-member-table-scroll .container,
-.page-member_families.page-member-families-scroll .container {
-  min-height: 100%;
-  height: auto;
-  overflow: visible;
-}
-
-.page-member_completeness.page-member-table-scroll .member-completeness-main-table,
-.page-member_families.page-member-families-scroll .member-families-main-table {
-  flex: 0 0 auto;
-}
-
-.page-member-table-scroll .member-left-archive {
-  margin-bottom: 0;
-}
-
-.page-member-table-scroll .member-left-archive .member-left-archive-wrap {
-  height: 340px;
-  max-height: 340px;
-  overflow: auto;
-}
-
-.page-member-table-scroll .member-left-archive .member-left-archive-wrap .table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
 }
 
 h1,
@@ -2304,39 +2098,6 @@ button.nav-item {
   box-shadow: inset 0 -1px 0 rgba(148, 163, 184, 0.4);
 }
 
-.page-member-table-scroll .members-main-table .table-wrap,
-.page-member-table-scroll .member-completeness-main-table .table-wrap,
-.page-member-families-scroll .member-families-main-table .table-wrap {
-  max-height: none;
-  height: 100%;
-}
-
-.page-members .members-main-table .table-wrap {
-  flex: 0 0 auto;
-  height: auto;
-  max-height: none;
-  overflow-x: auto;
-  overflow-y: visible;
-}
-
-.page-member_completeness.page-member-table-scroll .member-completeness-main-table .table-wrap,
-.page-member_families.page-member-families-scroll .member-families-main-table .table-wrap,
-.page-member_completeness .member-completeness-main-table .table-wrap,
-.page-member_families .member-families-main-table .table-wrap {
-  flex: 0 0 auto;
-  height: auto;
-  max-height: none;
-  overflow-x: auto;
-  overflow-y: visible;
-}
-
-.page-member_birthdays .table-card-plain .table-wrap {
-  height: auto;
-  max-height: none;
-  overflow-x: auto;
-  overflow-y: visible;
-}
-
 .journey-name-block {
   display: flex;
   flex-direction: column;
@@ -2440,145 +2201,6 @@ button.nav-item {
   #spiritual-journey-table td.actions {
     white-space: normal;
   }
-}
-
-.page-member-families .member-family-tools {
-  align-items: center;
-  gap: 8px;
-}
-
-.page-member-completeness .container {
-  gap: 10px;
-}
-
-.page-member-completeness .discipleship-page-head {
-  margin-bottom: 0;
-}
-
-.page-member-completeness .member-completeness-filter-form {
-  gap: 8px;
-}
-
-.member-completeness-filter-select {
-  width: 220px;
-  min-width: 180px;
-}
-
-.member-completeness-quick-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 0;
-}
-
-.member-completeness-missing {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.page-member-families #member-families-table th {
-  white-space: nowrap;
-}
-
-.member-family-note-strong {
-  font-weight: 700;
-  color: var(--text);
-}
-
-.member-family-divider td {
-  background: #f8fafc;
-  color: var(--muted);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: 11px;
-}
-
-.member-family-row.is-linked {
-  background: linear-gradient(90deg, rgba(209, 250, 229, 0.45), transparent 46%);
-}
-
-.member-family-row.is-single {
-  background: linear-gradient(90deg, rgba(229, 231, 235, 0.5), transparent 46%);
-}
-
-.member-family-index {
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.member-family-title {
-  font-weight: 700;
-}
-
-.member-family-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 36px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #f8fafc;
-  font-weight: 700;
-}
-
-.member-family-members,
-.member-family-contacts {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.member-family-member,
-.member-family-contact {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  max-width: 100%;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(15, 118, 110, 0.25);
-  background: #f0fdfa;
-  color: #0b4f4a;
-  font-size: 12px;
-  line-height: 1.35;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.member-family-contact {
-  border-color: rgba(59, 130, 246, 0.28);
-  background: #eff6ff;
-  color: #1e3a8a;
-}
-
-a.member-family-member.note-link,
-a.member-family-contact.note-link {
-  text-decoration: none;
-}
-
-a.member-family-member.note-link {
-  color: #0b4f4a;
-}
-
-a.member-family-contact.note-link {
-  color: #1e3a8a;
-}
-
-.member-family-member:hover,
-.member-family-contact:hover {
-  filter: brightness(0.98);
-}
-
-a.member-family-member.note-link:hover,
-a.member-family-contact.note-link:hover {
-  text-decoration: none;
-}
-
-.member-family-empty {
-  color: var(--muted);
 }
 
 .note-link {
@@ -4183,9 +3805,7 @@ button.note-link.dg-recap-photo-trigger {
 
 .app-page.is-central-readonly.page-discipleship-groups-list .container > .central-rekap-toolbar,
 .app-page.is-central-readonly.page-discipleship-people-list .container > .central-rekap-toolbar,
-.app-page.is-central-readonly.page-discipleship-table-scroll .container > .central-rekap-toolbar,
-.app-page.is-central-readonly.page-member-table-scroll .container > .central-rekap-toolbar,
-.app-page.is-central-readonly.page-member-families-scroll .container > .central-rekap-toolbar {
+.app-page.is-central-readonly.page-discipleship-table-scroll .container > .central-rekap-toolbar {
   margin-bottom: 22px;
 }
 
@@ -7357,9 +6977,7 @@ textarea:focus-visible {
 .page-discipleship-groups-list .discipleship-list-card .table-wrap,
 .page-discipleship-people-list .discipleship-list-card .table-wrap,
 .page-discipleship-table-scroll .table-card-plain .table-wrap,
-.page-dg_reports_recap .dg-recap-section-card > .table-wrap,
-.page-member-completeness .member-completeness-main-table .table-wrap,
-.page-member-families-scroll .member-families-main-table .table-wrap {
+.page-dg_reports_recap .dg-recap-section-card > .table-wrap {
   min-height: 0;
 }
 
@@ -7424,21 +7042,9 @@ textarea:focus-visible {
 .app-page.is-central-readonly.page-discipleship-people-list .discipleship-list-card .table-wrap,
 .app-page.is-central-readonly.page-discipleship-table-scroll .table-card-plain .table-wrap,
 .app-page.is-central-readonly.page-dg_reports_recap .dg-recap-section-card > .table-wrap,
-.app-page.is-central-readonly.page-member-table-scroll .members-main-table .table-wrap,
-.app-page.is-central-readonly.page-member-table-scroll .member-completeness-main-table .table-wrap,
-.app-page.is-central-readonly.page-member-families-scroll .member-families-main-table .table-wrap,
 .app-page.is-central-readonly.page-msk_classes .table-card-plain .table-wrap,
 .app-page.is-central-readonly.page-spiritual_journey .table-card-plain .table-wrap {
   max-height: clamp(450px, calc(100dvh - 300px), 1050px);
-}
-
-.app-page.is-central-readonly.page-members .members-main-table .table-wrap {
-  max-height: none;
-}
-
-.app-page.is-central-readonly.page-member_completeness .member-completeness-main-table .table-wrap,
-.app-page.is-central-readonly.page-member_families .member-families-main-table .table-wrap {
-  max-height: none;
 }
 
 .page-dg-public {
@@ -8166,9 +7772,7 @@ textarea:focus-visible {
   .page-discipleship-groups-list,
   .page-discipleship-people-list,
   .page-discipleship-table-scroll,
-  .page-dg_reports_recap,
-  .page-member-table-scroll,
-  .page-member-families-scroll {
+  .page-dg_reports_recap {
     height: auto;
     min-height: 0;
     overflow: visible;
@@ -8177,14 +7781,10 @@ textarea:focus-visible {
   .page-discipleship-people-list .app-shell,
   .page-discipleship-table-scroll .app-shell,
   .page-dg_reports_recap .app-shell,
-  .page-member-table-scroll .app-shell,
-  .page-member-families-scroll .app-shell,
   .page-discipleship-groups-list .app-main,
   .page-discipleship-people-list .app-main,
   .page-discipleship-table-scroll .app-main,
-  .page-dg_reports_recap .app-main,
-  .page-member-table-scroll .app-main,
-  .page-member-families-scroll .app-main {
+  .page-dg_reports_recap .app-main {
     height: auto;
     overflow: visible;
   }
@@ -8198,9 +7798,7 @@ textarea:focus-visible {
   .page-discipleship-groups-list .container,
   .page-discipleship-people-list .container,
   .page-discipleship-table-scroll .container,
-  .page-dg_reports_recap .container,
-  .page-member-table-scroll .container,
-  .page-member-families-scroll .container {
+  .page-dg_reports_recap .container {
     height: auto;
     min-height: 0;
     overflow: visible;
@@ -8218,13 +7816,6 @@ textarea:focus-visible {
     min-height: 0;
     flex: 0 0 auto;
   }
-  .page-member-table-scroll .members-main-table,
-  .page-member-table-scroll .member-completeness-main-table {
-    min-height: 0;
-  }
-  .page-member-families-scroll .member-families-main-table {
-    min-height: 0;
-  }
   .page-discipleship-groups-list .discipleship-list-card .table-wrap,
   .page-discipleship-people-list .discipleship-list-card .table-wrap,
   .page-discipleship-table-scroll .table-card-plain .table-wrap,
@@ -8236,10 +7827,7 @@ textarea:focus-visible {
   .app-page.is-central-readonly.page-discipleship-table-scroll .table-card-plain .table-wrap,
   .app-page.is-central-readonly.page-dg_reports_recap .dg-recap-section-card > .table-wrap,
   .app-page.is-central-readonly.page-msk_classes .table-card-plain .table-wrap,
-  .app-page.is-central-readonly.page-spiritual_journey .table-card-plain .table-wrap,
-  .page-member-table-scroll .members-main-table .table-wrap,
-  .page-member-table-scroll .member-completeness-main-table .table-wrap,
-  .page-member-families-scroll .member-families-main-table .table-wrap {
+  .app-page.is-central-readonly.page-spiritual_journey .table-card-plain .table-wrap {
     min-height: 0;
     height: auto;
     max-height: none;
@@ -8490,28 +8078,6 @@ textarea:focus-visible {
   }
   .card-row .actions .search {
     max-width: 100%;
-  }
-  .page-member-families .member-family-tools {
-    width: 100%;
-  }
-  .page-member-completeness .member-completeness-filter-form {
-    width: 100%;
-  }
-  .page-member-completeness .member-completeness-filter-form label {
-    width: 100%;
-  }
-  .member-completeness-filter-select {
-    width: 100%;
-    min-width: 0;
-  }
-  .page-member-families .member-family-tools > * {
-    flex: 1 1 100%;
-    width: 100%;
-  }
-  .member-family-member,
-  .member-family-contact {
-    width: 100%;
-    border-radius: 10px;
   }
   .dg-recap-report-tools {
     flex-wrap: wrap;
@@ -9560,11 +9126,6 @@ textarea:focus-visible {
   flex: 0 1 380px;
 }
 
-.member-completeness-hero-controls {
-  flex: 0 0 auto;
-  width: auto;
-}
-
 .member-dashboard-hero-controls {
   flex-wrap: wrap;
 }
@@ -9572,46 +9133,6 @@ textarea:focus-visible {
 .member-dashboard-hero-meta {
   justify-content: flex-end;
   flex-wrap: wrap;
-}
-
-.member-completeness-hero-tools .member-completeness-filter-form {
-  margin: 0;
-}
-
-.member-completeness-hero-tools .member-completeness-filter-select {
-  min-width: 220px;
-  height: 40px;
-  border-radius: 14px;
-  padding: 0 40px 0 14px;
-  background: rgba(255, 255, 255, 0.86);
-  border-color: rgba(203, 213, 225, 0.88);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  font-weight: 700;
-}
-
-.member-completeness-hero-search-wrap {
-  width: min(100%, 380px);
-  flex: 0 1 380px;
-}
-
-.member-birthday-hero-controls {
-  flex: 0 0 auto;
-  width: auto;
-}
-
-.member-birthday-hero-tools .member-birthday-month-form {
-  margin: 0;
-}
-
-.member-birthday-hero-tools .member-birthday-month-form input[type="month"] {
-  min-width: 220px;
-  height: 40px;
-  border-radius: 14px;
-  padding: 0 14px;
-  background: rgba(255, 255, 255, 0.86);
-  border-color: rgba(203, 213, 225, 0.88);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  font-weight: 700;
 }
 
 .worship-hero-tools .btn.tiny.icon-btn,

@@ -3,7 +3,7 @@
 namespace App\Http\Requests\DifficultQuestions;
 
 use App\Services\DifficultQuestions\DifficultQuestionTextNormalizer;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -12,14 +12,14 @@ class AnswerDifficultQuestionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        LegacyRuntimeBootstrap::boot($this);
+        RuntimeBootstrap::boot($this);
 
         return function_exists('can_manage_difficult_questions') && can_manage_difficult_questions();
     }
 
     protected function prepareForValidation()
     {
-        LegacyRuntimeBootstrap::boot($this);
+        RuntimeBootstrap::boot($this);
 
         $this->merge([
             'answer_text' => app(DifficultQuestionTextNormalizer::class)
@@ -41,10 +41,10 @@ class AnswerDifficultQuestionRequest extends FormRequest
     {
         $targetPage = function_exists('branch_home_page') && function_exists('current_user_branch')
             ? branch_home_page(current_user_branch())
-            : 'dashboard';
+            : 'discipleship_dashboard';
 
         throw new HttpResponseException(
-            redirect(\App\Services\Legacy\LegacyRouteMap::pageUrl($targetPage, ['error' => 'access_denied'])),
+            redirect(\App\Services\Routing\CompatibilityRouteMap::pageUrl($targetPage, ['error' => 'access_denied'])),
         );
     }
 

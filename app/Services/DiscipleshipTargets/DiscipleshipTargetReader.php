@@ -3,7 +3,6 @@
 namespace App\Services\DiscipleshipTargets;
 
 use App\Models\DiscipleshipTarget;
-use Illuminate\Support\Facades\DB;
 
 class DiscipleshipTargetReader
 {
@@ -34,9 +33,9 @@ class DiscipleshipTargetReader
     /**
      * @return array<string, int>
      */
-    public function legacyValuesForBranch(string $branchCode): array
+    public function formValuesForBranch(string $branchCode): array
     {
-        return $this->normalizer->toLegacy($this->valuesForBranch($branchCode));
+        return $this->normalizer->toFormValues($this->valuesForBranch($branchCode));
     }
 
     /**
@@ -53,29 +52,6 @@ class DiscipleshipTargetReader
             $values,
         );
 
-        $this->syncLegacyTable($branchCode, $values);
-
         return $target;
-    }
-
-    /**
-     * @param array<string, int> $values
-     */
-    public function syncLegacyTable(string $branchCode, array $values): void
-    {
-        $legacy = $this->normalizer->toLegacy($values);
-
-        DB::table('rec_discipleship_targets')->updateOrInsert(
-            ['branch' => $branchCode],
-            [
-                'dg_total_people' => $legacy['dg_total_people'],
-                'msk_completed' => $legacy['msk_completed'],
-                'dg1_people' => $legacy['dg1_people'],
-                'dg2_people' => $legacy['dg2_people'],
-                'dg3_people' => $legacy['dg3_people'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        );
     }
 }

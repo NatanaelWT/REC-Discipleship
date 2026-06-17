@@ -10,7 +10,7 @@ class MemberFeedbackQuestionCatalog
     public function sections(): array
     {
         if (! function_exists('public_member_feedback_questions')) {
-            require_once app_path('RecRuntime/support/public_member_feedback_questions.php');
+            require_once app_path('Support/Helpers/public_member_feedback_questions.php');
         }
 
         return public_member_feedback_questions();

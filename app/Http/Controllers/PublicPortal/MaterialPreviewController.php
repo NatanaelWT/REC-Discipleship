@@ -9,7 +9,7 @@ use App\Models\PublicMaterialMenu;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
 use App\Services\PublicMaterials\PublicMaterialFileStreamer;
 use App\Services\PublicMaterials\PublicMaterialRouteResolver;
-use App\Support\LegacyRuntimeBootstrap;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MaterialPreviewController extends Controller
 {
-    public function legacy(
+    public function redirectToPreview(
         StreamPublicMaterialRequest $request,
         PublicMaterialRouteResolver $resolver,
     ): RedirectResponse|Response {
@@ -42,19 +42,19 @@ class MaterialPreviewController extends Controller
         PublicMaterialCatalog $catalog,
         PublicMaterialFileStreamer $streamer,
     ): RedirectResponse|Response|StreamedResponse|View {
-        LegacyRuntimeBootstrap::load();
+        RuntimeBootstrap::load();
 
         if (! $catalog->fileBelongsToMenu($menu, $churchFile)) {
             return response('File tidak ditemukan.', 404);
         }
 
-        $row = $catalog->legacyFileRow($churchFile);
+        $row = $catalog->fileRow($churchFile);
         $path = sanitize_relative_upload_path((string) ($row['path'] ?? ''));
         if ($path === '' || ! is_upload_path($path)) {
             return response('File tidak ditemukan.', 404);
         }
 
-        $fullPath = legacy_runtime_path($path);
+        $fullPath = rec_runtime_path($path);
         if (! is_file($fullPath)) {
             return response('File tidak ditemukan.', 404);
         }
