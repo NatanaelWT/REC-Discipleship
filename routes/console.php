@@ -10,6 +10,66 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+Artisan::command('env:use {profile : local, main, atau production} {--cache : Rebuild config cache setelah switch}', function (string $profile): int {
+    $profile = strtolower(trim($profile));
+    $aliases = [
+        'dev' => 'local',
+        'development' => 'local',
+        'prod' => 'production',
+        'live' => 'production',
+    ];
+    $profile = $aliases[$profile] ?? $profile;
+
+    if (! in_array($profile, ['local', 'main', 'production'], true)) {
+        $this->error('Profile env tidak dikenal. Pakai: local, main, atau production.');
+
+        return Command::FAILURE;
+    }
+
+    $source = base_path('.env.' . $profile);
+    $target = base_path('.env');
+    if (! is_file($source)) {
+        $this->error('File sumber tidak ditemukan: .env.' . $profile);
+
+        return Command::FAILURE;
+    }
+
+    if (! copy($source, $target)) {
+        $this->error('Gagal menyalin .env.' . $profile . ' ke .env.');
+
+        return Command::FAILURE;
+    }
+
+    $this->info('Aktifkan env: ' . $profile);
+    $this->line('Sumber: .env.' . $profile . ' -> .env');
+
+    Artisan::call('optimize:clear');
+    $this->line(trim(Artisan::output()));
+
+    if ($this->option('cache')) {
+        Artisan::call('config:cache');
+        $this->line(trim(Artisan::output()));
+    }
+
+    $readEnv = static function (string $key) use ($target): string {
+        foreach (file($target, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
+            $line = trim((string) $line);
+            if ($line === '' || str_starts_with($line, '#') || ! str_starts_with($line, $key . '=')) {
+                continue;
+            }
+
+            return trim(substr($line, strlen($key) + 1), "\"'");
+        }
+
+        return '';
+    };
+
+    $this->line('APP_ENV=' . $readEnv('APP_ENV'));
+    $this->line('DB_DATABASE=' . $readEnv('DB_DATABASE'));
+
+    return Command::SUCCESS;
+})->purpose('Switch active Laravel .env file and clear cached config');
+
 Artisan::command('materials:audit-files', function (): int {
     \App\Support\RuntimeBootstrap::load();
 
