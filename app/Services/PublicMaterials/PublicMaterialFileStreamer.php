@@ -16,11 +16,11 @@ class PublicMaterialFileStreamer
         RuntimeBootstrap::load();
 
         $path = sanitize_relative_upload_path((string) $file->relative_path);
-        if ($path === '' || ! is_upload_path($path)) {
+        if ($path === '' || ! is_public_material_path($path)) {
             abort(404, 'File tidak ditemukan.');
         }
 
-        $fullPath = resolve_relative_upload_path($path);
+        $fullPath = public_material_resolve_path($path);
         if ($fullPath === null) {
             abort(404, 'File tidak ditemukan.');
         }

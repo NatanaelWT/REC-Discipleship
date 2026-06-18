@@ -60,10 +60,10 @@ class MaterialController extends Controller
             abort(403, 'Akses tidak diizinkan.');
         }
 
-        $folderPath = normalize_church_folder_path((string) $menu->folder_path);
-        if ($folderPath === '') {
+        if (! is_valid_public_material_folder_path((string) $menu->folder_path)) {
             return $this->redirectToMaterialMenu($menu, ['material_error' => 'invalid_folder']);
         }
+        $folderPath = public_material_menu_folder_path((string) $menu->folder_path);
 
         $file = $request->file('material_file');
         if ($file === null || ! $file->isValid()) {
@@ -87,15 +87,14 @@ class MaterialController extends Controller
             return $this->redirectToMaterialMenu($menu, ['material_error' => 'invalid_file_type']);
         }
 
-        $relativeDir = 'uploads/files/' . $folderPath;
-        $targetDir = rec_public_path($relativeDir);
+        $targetDir = public_material_folder_full_path($folderPath);
         File::ensureDirectoryExists($targetDir);
 
         $targetFileName = generate_id('file') . '_' . date('YmdHis') . '.' . $extension;
         $file->move($targetDir, $targetFileName);
         $fullPath = $targetDir . '/' . $targetFileName;
         @chmod($fullPath, 0644);
-        $relativePath = sanitize_relative_upload_path($relativeDir . '/' . $targetFileName);
+        $relativePath = public_material_file_relative_path($folderPath, $targetFileName);
         if ($relativePath === '' || ! is_file($fullPath)) {
             return $this->redirectToMaterialMenu($menu, ['material_error' => 'upload_failed']);
         }

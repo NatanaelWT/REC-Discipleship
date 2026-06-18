@@ -11,86 +11,29 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Artisan::command('env:use {profile : local, main, atau production} {--cache : Rebuild config cache setelah switch}', function (string $profile): int {
-    $profile = strtolower(trim($profile));
-    $aliases = [
-        'dev' => 'local',
-        'development' => 'local',
-        'prod' => 'production',
-        'live' => 'production',
-    ];
-    $profile = $aliases[$profile] ?? $profile;
-
-    if (! in_array($profile, ['local', 'main', 'production'], true)) {
-        $this->error('Profile env tidak dikenal. Pakai: local, main, atau production.');
-
-        return Command::FAILURE;
-    }
-
-    $source = base_path('.env.' . $profile);
-    $target = base_path('.env');
-    if (! is_file($source)) {
-        $this->error('File sumber tidak ditemukan: .env.' . $profile);
-
-        return Command::FAILURE;
-    }
-
-    if (! copy($source, $target)) {
-        $this->error('Gagal menyalin .env.' . $profile . ' ke .env.');
-
-        return Command::FAILURE;
-    }
-
-    $this->info('Aktifkan env: ' . $profile);
-    $this->line('Sumber: .env.' . $profile . ' -> .env');
-
-    Artisan::call('optimize:clear');
-    $this->line(trim(Artisan::output()));
-
-    if ($this->option('cache')) {
-        Artisan::call('config:cache');
-        $this->line(trim(Artisan::output()));
-    }
-
-    $readEnv = static function (string $key) use ($target): string {
-        foreach (file($target, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
-            $line = trim((string) $line);
-            if ($line === '' || str_starts_with($line, '#') || ! str_starts_with($line, $key . '=')) {
-                continue;
-            }
-
-            return trim(substr($line, strlen($key) + 1), "\"'");
-        }
-
-        return '';
-    };
-
-    $this->line('APP_ENV=' . $readEnv('APP_ENV'));
-    $this->line('DB_DATABASE=' . $readEnv('DB_DATABASE'));
-
-    return Command::SUCCESS;
-})->purpose('Switch active Laravel .env file and clear cached config');
-
 /**
  * @return array<int, string>
  */
-$materialFolderCandidates = static function (string $relativeFolder): array {
-    $relativeFolder = sanitize_relative_upload_path($relativeFolder);
-    if ($relativeFolder === '' || ! is_upload_path($relativeFolder)) {
+$materialFolderCandidates = static function (string $folderPath): array {
+    if (! is_valid_public_material_folder_path($folderPath)) {
         return [];
     }
 
+    $folderPath = public_material_menu_folder_path($folderPath);
+    $legacyFolder = public_material_legacy_folder_relative_path($folderPath);
+
     return [
-        rec_public_path($relativeFolder),
-        rec_runtime_path($relativeFolder),
-        storage_path('app/public/' . $relativeFolder),
-        base_path($relativeFolder),
+        public_material_folder_full_path($folderPath),
+        rec_runtime_path($legacyFolder),
+        rec_public_path($legacyFolder),
+        storage_path('app/public/' . $legacyFolder),
+        base_path($legacyFolder),
     ];
 };
 
-$firstExistingMaterialFolder = static function (string $relativeFolder) use ($materialFolderCandidates): string {
+$firstExistingMaterialFolder = static function (string $folderPath) use ($materialFolderCandidates): string {
     $seen = [];
-    foreach ($materialFolderCandidates($relativeFolder) as $folder) {
+    foreach ($materialFolderCandidates($folderPath) as $folder) {
         $folder = rtrim(str_replace('\\', '/', (string) $folder), '/');
         if ($folder === '' || isset($seen[$folder])) {
             continue;
@@ -108,8 +51,8 @@ $firstExistingMaterialFolder = static function (string $relativeFolder) use ($ma
 /**
  * @return array<int, string>
  */
-$materialPhysicalFiles = static function (string $relativeFolder) use ($firstExistingMaterialFolder): array {
-    $folder = $firstExistingMaterialFolder($relativeFolder);
+$materialPhysicalFiles = static function (string $folderPath) use ($firstExistingMaterialFolder): array {
+    $folder = $firstExistingMaterialFolder($folderPath);
     if ($folder === '') {
         return [];
     }
@@ -148,7 +91,7 @@ Artisan::command('materials:audit-files', function () use ($materialPhysicalFile
     $unregistered = [];
     foreach ($files as $file) {
         $path = sanitize_relative_upload_path((string) $file->relative_path);
-        if ($path === '' || ! is_upload_path($path)) {
+        if ($path === '' || ! is_public_material_path($path)) {
             $invalid[] = [
                 (string) $file->menu_key,
                 (string) $file->public_id,
@@ -158,7 +101,7 @@ Artisan::command('materials:audit-files', function () use ($materialPhysicalFile
             continue;
         }
 
-        if (resolve_relative_upload_path($path) === null) {
+        if (public_material_resolve_path($path) === null) {
             $missing[] = [
                 (string) $file->menu_key,
                 (string) $file->public_id,
@@ -174,21 +117,22 @@ Artisan::command('materials:audit-files', function () use ($materialPhysicalFile
         ->get();
 
     foreach ($menus as $menu) {
-        $folderPath = trim(str_replace('\\', '/', (string) $menu->folder_path), '/');
-        if ($folderPath === '') {
+        $folderPath = (string) $menu->folder_path;
+        if (! is_valid_public_material_folder_path($folderPath)) {
             continue;
         }
 
-        $relativeFolder = 'uploads/files/' . $folderPath;
-        $physicalFiles = $materialPhysicalFiles($relativeFolder);
+        $folderPath = public_material_menu_folder_path($folderPath);
+        $physicalFiles = $materialPhysicalFiles($folderPath);
 
         foreach ($physicalFiles as $fullPath) {
             if (! is_file($fullPath)) {
                 continue;
             }
 
-            $relativePath = sanitize_relative_upload_path($relativeFolder . '/' . basename($fullPath));
-            if ($relativePath === '' || DB::table('public_material_files')->where('relative_path', $relativePath)->exists()) {
+            $relativePath = public_material_file_relative_path($folderPath, basename($fullPath));
+            $legacyRelativePath = sanitize_relative_upload_path(public_material_legacy_folder_relative_path($folderPath) . '/' . basename($fullPath));
+            if ($relativePath === '' || DB::table('public_material_files')->whereIn('relative_path', array_filter([$relativePath, $legacyRelativePath]))->exists()) {
                 continue;
             }
 
@@ -246,14 +190,14 @@ Artisan::command('materials:sync-files', function () use ($materialPhysicalFiles
         ->get();
 
     foreach ($menus as $menu) {
-        $folderPath = trim(str_replace('\\', '/', (string) $menu->folder_path), '/');
-        if ($folderPath === '') {
+        $folderPath = (string) $menu->folder_path;
+        if (! is_valid_public_material_folder_path($folderPath)) {
             $skipped++;
             continue;
         }
 
-        $relativeFolder = 'uploads/files/' . $folderPath;
-        $files = $materialPhysicalFiles($relativeFolder);
+        $folderPath = public_material_menu_folder_path($folderPath);
+        $files = $materialPhysicalFiles($folderPath);
         if (count($files) === 0) {
             $skipped++;
             continue;
@@ -268,9 +212,9 @@ Artisan::command('materials:sync-files', function () use ($materialPhysicalFiles
                 continue;
             }
 
-            $relativePath = $relativeFolder . '/' . basename($fullPath);
-            $relativePath = sanitize_relative_upload_path($relativePath);
-            if ($relativePath === '' || DB::table('public_material_files')->where('relative_path', $relativePath)->exists()) {
+            $relativePath = public_material_file_relative_path($folderPath, basename($fullPath));
+            $legacyRelativePath = sanitize_relative_upload_path(public_material_legacy_folder_relative_path($folderPath) . '/' . basename($fullPath));
+            if ($relativePath === '' || DB::table('public_material_files')->whereIn('relative_path', array_filter([$relativePath, $legacyRelativePath]))->exists()) {
                 continue;
             }
 
@@ -335,10 +279,10 @@ Artisan::command('materials:sync-files', function () use ($materialPhysicalFiles
 Artisan::command('materials:publish-files {--force : Overwrite existing public files when file sizes differ}', function (): int {
     \App\Support\RuntimeBootstrap::load();
 
-    $sourceRoot = rtrim(str_replace('\\', '/', rec_runtime_path('uploads/files')), '/');
-    $targetRoot = rtrim(str_replace('\\', '/', rec_public_path('uploads/files')), '/');
+    $sourceRoot = rtrim(str_replace('\\', '/', rec_runtime_path(public_material_legacy_base_relative_path())), '/');
+    $targetRoot = rtrim(str_replace('\\', '/', public_material_folder_full_path()), '/');
     if ($sourceRoot === $targetRoot) {
-        $this->error('Folder sumber dan tujuan sama. Pastikan REC_PUBLIC_PATH mengarah ke public path aplikasi.');
+        $this->error('Folder sumber dan tujuan sama. Pastikan target storage publik benar.');
 
         return Command::FAILURE;
     }
@@ -438,4 +382,4 @@ Artisan::command('materials:publish-files {--force : Overwrite existing public f
     }
 
     return Command::SUCCESS;
-})->purpose('Copy public material files from private runtime storage to public/uploads/files');
+})->purpose('Copy public material files from private runtime storage to storage/app/public/msk-dg');

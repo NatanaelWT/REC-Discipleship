@@ -13,7 +13,9 @@ use Tests\TestCase;
 
 class PublicMaterialManagementTest extends TestCase
 {
-    private string $testFolder = 'uploads/files/Material-Test/DG-1';
+    private string $testFolder = 'Material-Test/DG-1';
+
+    private string $testRelativeFolder = 'msk-dg/Material-Test/DG-1';
 
     protected function setUp(): void
     {
@@ -76,15 +78,15 @@ class PublicMaterialManagementTest extends TestCase
         $row = DB::table('public_material_files')->where('title', 'Materi Baru Pusat')->first();
         $this->assertNotNull($row);
         $this->assertSame('Materi Baru Pusat.pdf', $row->original_file_name);
-        $this->assertStringStartsWith($this->testFolder . '/file_', (string) $row->relative_path);
-        $this->assertFileExists(rec_public_path((string) $row->relative_path));
+        $this->assertStringStartsWith($this->testRelativeFolder . '/file_', (string) $row->relative_path);
+        $this->assertFileExists(storage_path('app/public/' . (string) $row->relative_path));
         $this->assertFileDoesNotExist(rec_runtime_path((string) $row->relative_path));
     }
 
     public function test_public_material_preview_streams_file_from_public_uploads(): void
     {
         $fileName = 'file_public_only_20260617000000.pdf';
-        $fullDir = rec_public_path($this->testFolder);
+        $fullDir = public_material_folder_full_path($this->testFolder);
         File::ensureDirectoryExists($fullDir);
         File::put($fullDir . '/' . $fileName, 'Public material');
 
@@ -96,9 +98,20 @@ class PublicMaterialManagementTest extends TestCase
         $this->assertStringStartsWith('application/pdf', (string) $response->headers->get('Content-Type'));
     }
 
-    public function test_public_material_preview_falls_back_to_legacy_runtime_uploads(): void
+    public function test_public_material_preview_maps_legacy_record_to_new_public_storage(): void
     {
-        $this->seedExistingMaterialFile();
+        $fileName = 'file_existing_20260617000000.pdf';
+        $fullDir = public_material_folder_full_path($this->testFolder);
+        File::ensureDirectoryExists($fullDir);
+        File::put($fullDir . '/' . $fileName, 'Existing material');
+
+        $this->insertMaterialFileWithPath(
+            'church_file_test',
+            'Nama Lama',
+            'uploads/files/MSK-DG/' . $this->testFolder . '/' . $fileName,
+            'Nama Lama.pdf',
+            0,
+        );
 
         $response = $this->get('/materi/materi_dg_1/church_file_test/preview?raw=1');
 
@@ -108,7 +121,7 @@ class PublicMaterialManagementTest extends TestCase
 
     public function test_materials_audit_reports_unregistered_public_files(): void
     {
-        $fullDir = rec_public_path($this->testFolder);
+        $fullDir = public_material_folder_full_path($this->testFolder);
         File::ensureDirectoryExists($fullDir);
         File::put($fullDir . '/file_unregistered_20260617000000.pdf', 'Unregistered material');
 
@@ -117,7 +130,24 @@ class PublicMaterialManagementTest extends TestCase
 
         $this->assertSame(1, $exitCode);
         $this->assertStringContainsString('File fisik belum terdaftar', $output);
-        $this->assertStringContainsString($this->testFolder . '/file_unregistered_20260617000000.pdf', $output);
+        $this->assertStringContainsString($this->testRelativeFolder . '/file_unregistered_20260617000000.pdf', $output);
+    }
+
+    public function test_central_user_can_upload_public_material_file_to_root_folder(): void
+    {
+        $this->loginAsCentralUser();
+
+        $response = $this->post('/materi/msk_dg/upload', [
+            'title' => 'Materi Root Test',
+            'material_file' => UploadedFile::fake()->create('materi-root.pdf', 12, 'application/pdf'),
+        ]);
+
+        $response->assertRedirect('/materi/msk_dg?material_status=uploaded');
+
+        $row = DB::table('public_material_files')->where('title', 'Materi Root Test')->first();
+        $this->assertNotNull($row);
+        $this->assertStringStartsWith('msk-dg/file_', (string) $row->relative_path);
+        $this->assertFileExists(storage_path('app/public/' . (string) $row->relative_path));
     }
 
     public function test_central_user_can_rename_public_material_file(): void
@@ -191,20 +221,32 @@ class PublicMaterialManagementTest extends TestCase
     private function seedMaterialMenu(): void
     {
         DB::table('public_material_menus')->insert([
-            'id' => 1,
-            'menu_key' => 'materi_dg_1',
-            'label' => 'Materi DG-1 (BePI)',
-            'subtitle' => 'Berpusat Pada Injil',
-            'folder_path' => 'Material-Test/DG-1',
-            'sort_order' => 1,
-            'created_at' => now(),
-            'updated_at' => now(),
+            [
+                'id' => 1,
+                'menu_key' => 'materi_dg_1',
+                'label' => 'Materi DG-1 (BePI)',
+                'subtitle' => 'Berpusat Pada Injil',
+                'folder_path' => $this->testFolder,
+                'sort_order' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 2,
+                'menu_key' => 'msk_dg',
+                'label' => 'MSK DG',
+                'subtitle' => null,
+                'folder_path' => '',
+                'sort_order' => 2,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
     }
 
     private function seedExistingMaterialFile(): void
     {
-        $fullDir = rec_runtime_path($this->testFolder);
+        $fullDir = public_material_folder_full_path($this->testFolder);
         File::ensureDirectoryExists($fullDir);
         File::put($fullDir . '/file_existing_20260617000000.pdf', 'Existing material');
 
@@ -212,7 +254,7 @@ class PublicMaterialManagementTest extends TestCase
             'public_material_menu_id' => 1,
             'public_id' => 'church_file_test',
             'title' => 'Nama Lama',
-            'relative_path' => $this->testFolder . '/file_existing_20260617000000.pdf',
+            'relative_path' => $this->testRelativeFolder . '/file_existing_20260617000000.pdf',
             'original_file_name' => 'Nama Lama.pdf',
             'size_bytes' => 17,
             'mime_type' => 'application/pdf',
@@ -224,12 +266,29 @@ class PublicMaterialManagementTest extends TestCase
 
     private function insertMaterialFile(string $publicId, string $title, string $fileName, int $sortOrder): void
     {
+        $this->insertMaterialFileWithPath(
+            $publicId,
+            $title,
+            $this->testRelativeFolder . '/' . $fileName,
+            $title . '.pdf',
+            $sortOrder,
+        );
+    }
+
+    private function insertMaterialFileWithPath(
+        string $publicId,
+        string $title,
+        string $relativePath,
+        string $originalFileName,
+        int $sortOrder,
+    ): void
+    {
         DB::table('public_material_files')->insert([
             'public_material_menu_id' => 1,
             'public_id' => $publicId,
             'title' => $title,
-            'relative_path' => $this->testFolder . '/' . $fileName,
-            'original_file_name' => $title . '.pdf',
+            'relative_path' => $relativePath,
+            'original_file_name' => $originalFileName,
             'size_bytes' => 1024,
             'mime_type' => 'application/pdf',
             'sort_order' => $sortOrder,
@@ -261,11 +320,22 @@ class PublicMaterialManagementTest extends TestCase
 
     private function deleteTestUploadFolders(): void
     {
+        if (Schema::hasTable('public_material_files')) {
+            DB::table('public_material_files')
+                ->where('title', 'Materi Root Test')
+                ->pluck('relative_path')
+                ->each(function (string $relativePath): void {
+                    $relativePath = sanitize_relative_upload_path($relativePath);
+                    if ($relativePath !== '' && str_starts_with($relativePath, 'msk-dg/file_')) {
+                        File::delete(storage_path('app/public/' . $relativePath));
+                    }
+                });
+        }
+
         foreach ([
-            rec_runtime_path($this->testFolder),
-            rec_runtime_path('uploads/files/Material-Test'),
-            rec_public_path($this->testFolder),
-            rec_public_path('uploads/files/Material-Test'),
+            rec_runtime_path('uploads/files/MSK-DG/Material-Test'),
+            storage_path('app/public/msk-dg/Material-Test'),
+            rec_public_path('uploads/files/MSK-DG/Material-Test'),
         ] as $folder) {
             File::deleteDirectory($folder);
         }

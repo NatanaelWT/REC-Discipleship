@@ -1,7 +1,7 @@
 <?php
 
 function church_file_folder_from_path(string $filePath): string {
-    $safePath = sanitize_relative_upload_path($filePath);
+    $safePath = public_material_current_relative_path($filePath);
     if ($safePath === '') {
         return '';
     }

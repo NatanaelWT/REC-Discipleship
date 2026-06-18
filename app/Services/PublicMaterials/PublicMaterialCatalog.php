@@ -102,12 +102,7 @@ class PublicMaterialCatalog
     {
         RuntimeBootstrap::load();
 
-        $path = sanitize_relative_upload_path($path);
-        if ($path === '' || ! is_upload_path($path) || ! is_file(rec_public_path($path))) {
-            return '';
-        }
-
-        return asset($path);
+        return public_material_public_url($path);
     }
 
     private function normalizeMenuKey(string $menuKey): string

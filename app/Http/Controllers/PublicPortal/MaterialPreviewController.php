@@ -50,11 +50,11 @@ class MaterialPreviewController extends Controller
 
         $row = $catalog->fileRow($churchFile);
         $path = sanitize_relative_upload_path((string) ($row['path'] ?? ''));
-        if ($path === '' || ! is_upload_path($path)) {
+        if ($path === '' || ! is_public_material_path($path)) {
             return response('File tidak ditemukan.', 404);
         }
 
-        if (resolve_relative_upload_path($path) === null) {
+        if (public_material_resolve_path($path) === null) {
             return response('File tidak ditemukan.', 404);
         }
 
