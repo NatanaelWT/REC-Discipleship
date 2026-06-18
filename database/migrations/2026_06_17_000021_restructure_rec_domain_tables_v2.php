@@ -266,21 +266,16 @@ return new class extends Migration
 
         Schema::create('public_material_files', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('public_material_menu_id')->constrained('public_material_menus')->cascadeOnDelete();
+            $table->string('menu', 80)->index();
             $table->string('public_id', 120)->unique();
             $table->string('title')->nullable();
-            $table->string('category_name', 120)->nullable()->index();
+            $table->string('category_name', 120)->nullable();
             $table->longText('description')->nullable();
             $table->string('relative_path', 500)->index();
             $table->string('original_file_name')->nullable();
             $table->unsignedBigInteger('size_bytes')->default(0);
             $table->string('mime_type', 180)->nullable();
-            $table->foreignId('branch_id')->nullable()->constrained('branches')->nullOnDelete();
-            $table->string('branch_code', 40)->nullable()->index();
-            $table->unsignedSmallInteger('sort_order')->default(0)->index();
             $table->timestamps();
-
-            $table->index(['public_material_menu_id', 'sort_order'], 'public_material_files_menu_sort_index');
         });
     }
 
@@ -623,12 +618,11 @@ return new class extends Migration
             return;
         }
 
-        $branchIds = DB::table('branches')->pluck('id', 'code')->all();
         $rows = DB::table('public_material_menu_files')
             ->join('church_files', 'church_files.id', '=', 'public_material_menu_files.church_file_id')
+            ->join('public_material_menus', 'public_material_menus.id', '=', 'public_material_menu_files.public_material_menu_id')
             ->select([
-                'public_material_menu_files.public_material_menu_id',
-                'public_material_menu_files.sort_order',
+                'public_material_menus.menu_key',
                 'church_files.public_id',
                 'church_files.title',
                 'church_files.category_name',
@@ -637,7 +631,6 @@ return new class extends Migration
                 'church_files.original_file_name',
                 'church_files.size_bytes',
                 'church_files.mime_type',
-                'church_files.branch_code',
                 'church_files.created_at',
                 'church_files.updated_at',
             ])
@@ -648,7 +641,7 @@ return new class extends Migration
             DB::table('public_material_files')->updateOrInsert(
                 ['public_id' => $row->public_id],
                 [
-                    'public_material_menu_id' => $row->public_material_menu_id,
+                    'menu' => $row->menu_key,
                     'title' => $row->title,
                     'category_name' => $row->category_name,
                     'description' => $row->description,
@@ -656,9 +649,6 @@ return new class extends Migration
                     'original_file_name' => $row->original_file_name,
                     'size_bytes' => $row->size_bytes ?? 0,
                     'mime_type' => $row->mime_type,
-                    'branch_id' => $row->branch_code !== null ? ($branchIds[$row->branch_code] ?? null) : null,
-                    'branch_code' => $row->branch_code,
-                    'sort_order' => $row->sort_order ?? 0,
                     'created_at' => $row->created_at ?? now(),
                     'updated_at' => $row->updated_at ?? now(),
                 ],

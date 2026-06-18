@@ -2,8 +2,8 @@
 
 namespace App\Services\PublicMaterials;
 
-use App\Models\ChurchFile;
-use App\Models\PublicMaterialMenu;
+use App\Enums\PublicMaterialMenuKey;
+use App\Models\PublicMaterialFile;
 
 class PublicMaterialRouteResolver
 {
@@ -12,17 +12,17 @@ class PublicMaterialRouteResolver
     }
 
     /**
-     * @return array{0: PublicMaterialMenu, 1: ChurchFile}|null
+     * @return array{0: PublicMaterialMenuKey, 1: PublicMaterialFile}|null
      */
     public function resolve(string $menuKey, string $publicId): ?array
     {
         $menu = $this->catalog->menu($menuKey);
-        if (! $menu instanceof PublicMaterialMenu) {
+        if (! $menu instanceof PublicMaterialMenuKey) {
             return null;
         }
 
-        $file = ChurchFile::query()->where('public_id', trim($publicId))->first();
-        if (! $file instanceof ChurchFile) {
+        $file = PublicMaterialFile::query()->where('public_id', trim($publicId))->first();
+        if (! $file instanceof PublicMaterialFile) {
             return null;
         }
 

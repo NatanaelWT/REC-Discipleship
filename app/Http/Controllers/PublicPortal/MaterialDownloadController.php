@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\PublicPortal;
 
+use App\Enums\PublicMaterialMenuKey;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicMaterials\StreamPublicMaterialRequest;
-use App\Models\ChurchFile;
-use App\Models\PublicMaterialMenu;
+use App\Models\PublicMaterialFile;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
 use App\Services\PublicMaterials\PublicMaterialFileStreamer;
 use App\Services\PublicMaterials\PublicMaterialRouteResolver;
@@ -27,17 +27,22 @@ class MaterialDownloadController extends Controller
         [$menu, $file] = $resolved;
 
         return redirect()->route('materials.download', [
-            'menu' => $menu->menu_key,
+            'menu' => $menu->value,
             'churchFile' => $file->public_id,
         ]);
     }
 
     public function download(
-        PublicMaterialMenu $menu,
-        ChurchFile $churchFile,
+        string $menu,
+        PublicMaterialFile $churchFile,
         PublicMaterialCatalog $catalog,
         PublicMaterialFileStreamer $streamer,
     ): Response|StreamedResponse {
+        $menu = PublicMaterialMenuKey::fromKey($menu);
+        if (! $menu instanceof PublicMaterialMenuKey) {
+            return response('File tidak ditemukan.', 404);
+        }
+
         if (! $catalog->fileBelongsToMenu($menu, $churchFile)) {
             return response('File tidak ditemukan.', 404);
         }

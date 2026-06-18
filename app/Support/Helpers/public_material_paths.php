@@ -1,11 +1,13 @@
 <?php
 
 function public_material_base_relative_path(): string {
-    return 'msk-dg';
-}
+    $base = function_exists('config') ? (string) config('public_materials.base_path', 'msk-dg') : 'msk-dg';
+    $base = trim(str_replace('\\', '/', $base), '/');
+    if ($base === '' || str_contains($base, '..')) {
+        return 'msk-dg';
+    }
 
-function public_material_legacy_base_relative_path(): string {
-    return 'uploads/files/MSK-DG';
+    return $base;
 }
 
 function is_valid_public_material_folder_path(string $folderPath): bool {
@@ -38,13 +40,6 @@ function public_material_folder_relative_path(string $folderPath = ''): string {
     return $folderPath === '' ? $base : $base . '/' . $folderPath;
 }
 
-function public_material_legacy_folder_relative_path(string $folderPath = ''): string {
-    $folderPath = public_material_menu_folder_path($folderPath);
-    $base = public_material_legacy_base_relative_path();
-
-    return $folderPath === '' ? $base : $base . '/' . $folderPath;
-}
-
 function public_material_file_relative_path(string $folderPath, string $fileName): string {
     $fileName = basename(str_replace('\\', '/', trim($fileName)));
     if ($fileName === '') {
@@ -69,16 +64,6 @@ function public_material_current_relative_path(string $path): string {
         return $safePath;
     }
 
-    $legacyBase = public_material_legacy_base_relative_path();
-    $safePathLower = strtolower($safePath);
-    $legacyBaseLower = strtolower($legacyBase);
-    if ($safePathLower === $legacyBaseLower) {
-        return $base;
-    }
-    if (str_starts_with($safePathLower, $legacyBaseLower . '/')) {
-        return $base . substr($safePath, strlen($legacyBase));
-    }
-
     return '';
 }
 
@@ -96,10 +81,6 @@ function public_material_resolve_path(string $path): ?string {
     $publicStoragePath = storage_path('app/public/' . $currentPath);
     if (is_file($publicStoragePath)) {
         return $publicStoragePath;
-    }
-
-    if (is_upload_path($safePath)) {
-        return resolve_relative_upload_path($safePath);
     }
 
     return null;

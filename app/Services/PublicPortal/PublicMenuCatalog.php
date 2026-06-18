@@ -2,6 +2,8 @@
 
 namespace App\Services\PublicPortal;
 
+use App\Enums\PublicMaterialMenuKey;
+
 class PublicMenuCatalog
 {
     /**
@@ -28,26 +30,26 @@ class PublicMenuCatalog
                 [
                     'title' => 'Materi DG-1',
                     'sub' => '(BePI)',
-                    'href' => route('materials.show', ['menu' => 'materi_dg_1'], false),
+                    'href' => route('materials.show', ['menu' => PublicMaterialMenuKey::MateriDg1->value], false),
                 ],
                 [
                     'title' => 'Materi DG-2',
                     'sub' => '(BOI)',
-                    'href' => route('materials.show', ['menu' => 'materi_dg_2'], false),
+                    'href' => route('materials.show', ['menu' => PublicMaterialMenuKey::MateriDg2->value], false),
                 ],
                 [
                     'title' => 'Materi DG-3',
-                    'href' => route('materials.show', ['menu' => 'materi_dg_3'], false),
+                    'href' => route('materials.show', ['menu' => PublicMaterialMenuKey::MateriDg3->value], false),
                 ],
                 [
                     'title' => 'Meditasi Injil',
                     'sub' => '(BePI)',
-                    'href' => route('materials.show', ['menu' => 'meditasi_injil'], false),
+                    'href' => route('materials.show', ['menu' => PublicMaterialMenuKey::MeditasiInjil->value], false),
                 ],
                 [
                     'title' => 'Handbook & Perjanjian Kelompok',
                     'title_lines' => ['Handbook &', 'Perjanjian', 'Kelompok'],
-                    'href' => route('materials.show', ['menu' => 'handbook_perjanjian_kelompok'], false),
+                    'href' => route('materials.show', ['menu' => PublicMaterialMenuKey::HandbookPerjanjianKelompok->value], false),
                 ],
                 [
                     'title' => 'Unggah Pertanyaan Sulit',
@@ -67,13 +69,13 @@ class PublicMenuCatalog
 
     public function emptyMenuLabel(string $menuKey): string
     {
+        $menu = PublicMaterialMenuKey::fromKey($menuKey);
+        if ($menu instanceof PublicMaterialMenuKey) {
+            return $menu->label();
+        }
+
         $labels = [
-            'materi_dg_1' => 'Materi DG-1 (BePI)',
-            'materi_dg_2' => 'Materi DG-2 (BOI)',
-            'materi_dg_3' => 'Materi DG-3',
-            'meditasi_injil' => 'Meditasi Injil (BePI)',
             'jurnal_umpan_balik_anggota' => 'Jurnal Umpan Balik Anggota',
-            'handbook_perjanjian_kelompok' => 'Handbook & Perjanjian Kelompok',
             'unggah_pertanyaan_sulit' => 'Unggah Pertanyaan Sulit',
             'jawaban_pertanyaan_sulit' => 'Jawaban Pertanyaan Sulit',
         ];

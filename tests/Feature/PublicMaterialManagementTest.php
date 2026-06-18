@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PublicMaterialMenuKey;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
@@ -13,23 +14,22 @@ use Tests\TestCase;
 
 class PublicMaterialManagementTest extends TestCase
 {
-    private string $testFolder = 'Material-Test/DG-1';
-
-    private string $testRelativeFolder = 'msk-dg/Material-Test/DG-1';
+    private string $testBasePath = 'msk-dg-test-public-materials';
 
     protected function setUp(): void
     {
         parent::setUp();
 
         RuntimeBootstrap::load();
+        config(['public_materials.base_path' => $this->testBasePath]);
         $this->createMaterialTables();
-        $this->seedMaterialMenu();
         $this->deleteTestUploadFolders();
     }
 
     protected function tearDown(): void
     {
         $this->deleteTestUploadFolders();
+        config(['public_materials.base_path' => 'msk-dg']);
         $_SESSION = [];
 
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -50,9 +50,9 @@ class PublicMaterialManagementTest extends TestCase
 
     public function test_public_material_page_orders_files_by_name(): void
     {
-        $this->insertMaterialFile('church_file_sort_10', '10 Kesimpulan Injil', 'file_sort_10.pdf', 2);
-        $this->insertMaterialFile('church_file_sort_01', '01 Injil Bagi Orang Kristen', 'file_sort_01.pdf', 0);
-        $this->insertMaterialFile('church_file_sort_02', '02 Dampak Injil Dalam Kehidupan', 'file_sort_02.pdf', 1);
+        $this->insertMaterialFile('church_file_sort_10', '10 Kesimpulan Injil', 'file_sort_10.pdf');
+        $this->insertMaterialFile('church_file_sort_01', '01 Injil Bagi Orang Kristen', 'file_sort_01.pdf');
+        $this->insertMaterialFile('church_file_sort_02', '02 Dampak Injil Dalam Kehidupan', 'file_sort_02.pdf');
 
         $response = $this->get('/materi/materi_dg_1');
 
@@ -77,20 +77,19 @@ class PublicMaterialManagementTest extends TestCase
 
         $row = DB::table('public_material_files')->where('title', 'Materi Baru Pusat')->first();
         $this->assertNotNull($row);
+        $this->assertSame(PublicMaterialMenuKey::MateriDg1->value, $row->menu);
         $this->assertSame('Materi Baru Pusat.pdf', $row->original_file_name);
-        $this->assertStringStartsWith($this->testRelativeFolder . '/file_', (string) $row->relative_path);
+        $this->assertStringStartsWith($this->testRelativeFolder(PublicMaterialMenuKey::MateriDg1) . '/file_', (string) $row->relative_path);
         $this->assertFileExists(storage_path('app/public/' . (string) $row->relative_path));
         $this->assertFileDoesNotExist(rec_runtime_path((string) $row->relative_path));
     }
 
-    public function test_public_material_preview_streams_file_from_public_uploads(): void
+    public function test_public_material_preview_streams_file_from_public_storage(): void
     {
         $fileName = 'file_public_only_20260617000000.pdf';
-        $fullDir = public_material_folder_full_path($this->testFolder);
-        File::ensureDirectoryExists($fullDir);
-        File::put($fullDir . '/' . $fileName, 'Public material');
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Public material');
 
-        $this->insertMaterialFile('church_file_public_only', 'File Public Only', $fileName, 0);
+        $this->insertMaterialFile('church_file_public_only', 'File Public Only', $fileName);
 
         $response = $this->get('/materi/materi_dg_1/church_file_public_only/preview?raw=1');
 
@@ -98,56 +97,67 @@ class PublicMaterialManagementTest extends TestCase
         $this->assertStringStartsWith('application/pdf', (string) $response->headers->get('Content-Type'));
     }
 
-    public function test_public_material_preview_maps_legacy_record_to_new_public_storage(): void
+    public function test_public_material_preview_rejects_file_from_wrong_menu(): void
     {
-        $fileName = 'file_existing_20260617000000.pdf';
-        $fullDir = public_material_folder_full_path($this->testFolder);
-        File::ensureDirectoryExists($fullDir);
-        File::put($fullDir . '/' . $fileName, 'Existing material');
+        $fileName = 'file_wrong_menu_20260617000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg2, $fileName, 'Wrong menu material');
 
-        $this->insertMaterialFileWithPath(
-            'church_file_test',
-            'Nama Lama',
-            'uploads/files/MSK-DG/' . $this->testFolder . '/' . $fileName,
-            'Nama Lama.pdf',
-            0,
+        $this->insertMaterialFile(
+            'church_file_wrong_menu',
+            'Wrong Menu File',
+            $fileName,
+            PublicMaterialMenuKey::MateriDg2,
         );
 
-        $response = $this->get('/materi/materi_dg_1/church_file_test/preview?raw=1');
+        $response = $this->get('/materi/materi_dg_1/church_file_wrong_menu/preview?raw=1');
 
-        $response->assertOk();
-        $this->assertStringStartsWith('application/pdf', (string) $response->headers->get('Content-Type'));
+        $response->assertNotFound();
+    }
+
+    public function test_materials_audit_reports_missing_registered_files(): void
+    {
+        $this->insertMaterialFile('church_file_missing', 'Missing File', 'file_missing_20260617000000.pdf');
+
+        $exitCode = Artisan::call('materials:audit-files');
+        $output = Artisan::output();
+
+        $this->assertSame(1, $exitCode);
+        $this->assertStringContainsString('File fisik hilang', $output);
+        $this->assertStringContainsString($this->testRelativeFolder(PublicMaterialMenuKey::MateriDg1) . '/file_missing_20260617000000.pdf', $output);
     }
 
     public function test_materials_audit_reports_unregistered_public_files(): void
     {
-        $fullDir = public_material_folder_full_path($this->testFolder);
-        File::ensureDirectoryExists($fullDir);
-        File::put($fullDir . '/file_unregistered_20260617000000.pdf', 'Unregistered material');
+        $fileName = 'file_unregistered_20260617000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Unregistered material');
 
         $exitCode = Artisan::call('materials:audit-files');
         $output = Artisan::output();
 
         $this->assertSame(1, $exitCode);
         $this->assertStringContainsString('File fisik belum terdaftar', $output);
-        $this->assertStringContainsString($this->testRelativeFolder . '/file_unregistered_20260617000000.pdf', $output);
+        $this->assertStringContainsString($this->testRelativeFolder(PublicMaterialMenuKey::MateriDg1) . '/' . $fileName, $output);
     }
 
-    public function test_central_user_can_upload_public_material_file_to_root_folder(): void
+    public function test_materials_sync_adds_enum_folder_files_only(): void
     {
-        $this->loginAsCentralUser();
+        $fileName = 'file_sync_20260617000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Sync material');
 
-        $response = $this->post('/materi/msk_dg/upload', [
-            'title' => 'Materi Root Test',
-            'material_file' => UploadedFile::fake()->create('materi-root.pdf', 12, 'application/pdf'),
+        $ignoredDir = storage_path('app/public/' . $this->testBasePath . '/Materi-MSK');
+        File::ensureDirectoryExists($ignoredDir);
+        File::put($ignoredDir . '/file_ignored_20260617000000.pdf', 'Ignored material');
+
+        $exitCode = Artisan::call('materials:sync-files');
+
+        $this->assertSame(0, $exitCode);
+        $this->assertDatabaseHas('public_material_files', [
+            'menu' => PublicMaterialMenuKey::MateriDg1->value,
+            'relative_path' => $this->testRelativeFolder(PublicMaterialMenuKey::MateriDg1) . '/' . $fileName,
         ]);
-
-        $response->assertRedirect('/materi/msk_dg?material_status=uploaded');
-
-        $row = DB::table('public_material_files')->where('title', 'Materi Root Test')->first();
-        $this->assertNotNull($row);
-        $this->assertStringStartsWith('msk-dg/file_', (string) $row->relative_path);
-        $this->assertFileExists(storage_path('app/public/' . (string) $row->relative_path));
+        $this->assertDatabaseMissing('public_material_files', [
+            'relative_path' => $this->testBasePath . '/Materi-MSK/file_ignored_20260617000000.pdf',
+        ]);
     }
 
     public function test_central_user_can_rename_public_material_file(): void
@@ -162,6 +172,7 @@ class PublicMaterialManagementTest extends TestCase
         $response->assertRedirect('/materi/materi_dg_1?material_status=renamed');
         $this->assertDatabaseHas('public_material_files', [
             'public_id' => 'church_file_test',
+            'menu' => PublicMaterialMenuKey::MateriDg1->value,
             'title' => 'Nama File Baru',
             'original_file_name' => 'Nama File Baru.pdf',
         ]);
@@ -188,90 +199,48 @@ class PublicMaterialManagementTest extends TestCase
     private function createMaterialTables(): void
     {
         Schema::dropIfExists('public_material_files');
-        Schema::dropIfExists('public_material_menus');
-
-        Schema::create('public_material_menus', function (Blueprint $table): void {
-            $table->id();
-            $table->string('menu_key', 120)->unique();
-            $table->string('label');
-            $table->string('subtitle')->nullable();
-            $table->string('folder_path', 500);
-            $table->unsignedSmallInteger('sort_order')->default(0);
-            $table->timestamps();
-        });
 
         Schema::create('public_material_files', function (Blueprint $table): void {
             $table->id();
-            $table->unsignedBigInteger('public_material_menu_id');
+            $table->string('menu', 80)->index();
             $table->string('public_id', 120)->unique();
             $table->string('title')->nullable();
             $table->string('category_name', 120)->nullable();
             $table->longText('description')->nullable();
-            $table->string('relative_path', 500);
+            $table->string('relative_path', 500)->index();
             $table->string('original_file_name')->nullable();
             $table->unsignedBigInteger('size_bytes')->default(0);
             $table->string('mime_type', 180)->nullable();
-            $table->unsignedBigInteger('branch_id')->nullable();
-            $table->string('branch_code', 40)->nullable();
-            $table->unsignedSmallInteger('sort_order')->default(0);
             $table->timestamps();
         });
     }
 
-    private function seedMaterialMenu(): void
-    {
-        DB::table('public_material_menus')->insert([
-            [
-                'id' => 1,
-                'menu_key' => 'materi_dg_1',
-                'label' => 'Materi DG-1 (BePI)',
-                'subtitle' => 'Berpusat Pada Injil',
-                'folder_path' => $this->testFolder,
-                'sort_order' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'id' => 2,
-                'menu_key' => 'msk_dg',
-                'label' => 'MSK DG',
-                'subtitle' => null,
-                'folder_path' => '',
-                'sort_order' => 2,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
-    }
-
     private function seedExistingMaterialFile(): void
     {
-        $fullDir = public_material_folder_full_path($this->testFolder);
-        File::ensureDirectoryExists($fullDir);
-        File::put($fullDir . '/file_existing_20260617000000.pdf', 'Existing material');
+        $fileName = 'file_existing_20260617000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Existing material');
 
-        DB::table('public_material_files')->insert([
-            'public_material_menu_id' => 1,
-            'public_id' => 'church_file_test',
-            'title' => 'Nama Lama',
-            'relative_path' => $this->testRelativeFolder . '/file_existing_20260617000000.pdf',
-            'original_file_name' => 'Nama Lama.pdf',
-            'size_bytes' => 17,
-            'mime_type' => 'application/pdf',
-            'sort_order' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $this->insertMaterialFileWithPath(
+            'church_file_test',
+            'Nama Lama',
+            $this->testRelativeFolder(PublicMaterialMenuKey::MateriDg1) . '/' . $fileName,
+            'Nama Lama.pdf',
+            PublicMaterialMenuKey::MateriDg1,
+        );
     }
 
-    private function insertMaterialFile(string $publicId, string $title, string $fileName, int $sortOrder): void
-    {
+    private function insertMaterialFile(
+        string $publicId,
+        string $title,
+        string $fileName,
+        PublicMaterialMenuKey $menu = PublicMaterialMenuKey::MateriDg1,
+    ): void {
         $this->insertMaterialFileWithPath(
             $publicId,
             $title,
-            $this->testRelativeFolder . '/' . $fileName,
+            $this->testRelativeFolder($menu) . '/' . $fileName,
             $title . '.pdf',
-            $sortOrder,
+            $menu,
         );
     }
 
@@ -280,21 +249,31 @@ class PublicMaterialManagementTest extends TestCase
         string $title,
         string $relativePath,
         string $originalFileName,
-        int $sortOrder,
-    ): void
-    {
+        PublicMaterialMenuKey $menu,
+    ): void {
         DB::table('public_material_files')->insert([
-            'public_material_menu_id' => 1,
+            'menu' => $menu->value,
             'public_id' => $publicId,
             'title' => $title,
             'relative_path' => $relativePath,
             'original_file_name' => $originalFileName,
             'size_bytes' => 1024,
             'mime_type' => 'application/pdf',
-            'sort_order' => $sortOrder,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    private function putPublicMaterialFile(PublicMaterialMenuKey $menu, string $fileName, string $contents): void
+    {
+        $fullDir = public_material_folder_full_path($menu->folder());
+        File::ensureDirectoryExists($fullDir);
+        File::put($fullDir . '/' . $fileName, $contents);
+    }
+
+    private function testRelativeFolder(PublicMaterialMenuKey $menu): string
+    {
+        return public_material_folder_relative_path($menu->folder());
     }
 
     private function loginAsCentralUser(): void
@@ -320,24 +299,6 @@ class PublicMaterialManagementTest extends TestCase
 
     private function deleteTestUploadFolders(): void
     {
-        if (Schema::hasTable('public_material_files')) {
-            DB::table('public_material_files')
-                ->where('title', 'Materi Root Test')
-                ->pluck('relative_path')
-                ->each(function (string $relativePath): void {
-                    $relativePath = sanitize_relative_upload_path($relativePath);
-                    if ($relativePath !== '' && str_starts_with($relativePath, 'msk-dg/file_')) {
-                        File::delete(storage_path('app/public/' . $relativePath));
-                    }
-                });
-        }
-
-        foreach ([
-            rec_runtime_path('uploads/files/MSK-DG/Material-Test'),
-            storage_path('app/public/msk-dg/Material-Test'),
-            rec_public_path('uploads/files/MSK-DG/Material-Test'),
-        ] as $folder) {
-            File::deleteDirectory($folder);
-        }
+        File::deleteDirectory(storage_path('app/public/' . $this->testBasePath));
     }
 }

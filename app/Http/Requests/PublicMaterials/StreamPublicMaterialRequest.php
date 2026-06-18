@@ -2,8 +2,7 @@
 
 namespace App\Http\Requests\PublicMaterials;
 
-use App\Models\ChurchFile;
-use App\Models\PublicMaterialMenu;
+use App\Models\PublicMaterialFile;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -19,11 +18,9 @@ class StreamPublicMaterialRequest extends FormRequest
         RuntimeBootstrap::load();
 
         $routeMenu = $this->route('menu');
-        $menuKey = $routeMenu instanceof PublicMaterialMenu
-            ? (string) $routeMenu->menu_key
-            : trim((string) ($routeMenu ?? $this->query('menu', '')));
+        $menuKey = trim((string) ($routeMenu ?? $this->query('menu', '')));
         $routeFile = $this->route('churchFile');
-        $publicFileId = $routeFile instanceof ChurchFile
+        $publicFileId = $routeFile instanceof PublicMaterialFile
             ? (string) $routeFile->public_id
             : trim((string) ($routeFile ?? $this->query('id', '')));
 

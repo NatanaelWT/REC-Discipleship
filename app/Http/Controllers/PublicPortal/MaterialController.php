@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\PublicPortal;
 
+use App\Enums\PublicMaterialMenuKey;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicMaterials\ShowPublicMaterialRequest;
-use App\Models\ChurchFile;
-use App\Models\PublicMaterialMenu;
+use App\Models\PublicMaterialFile;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\Request;
@@ -33,7 +33,7 @@ class MaterialController extends Controller
         RuntimeBootstrap::boot($request);
 
         $menu = $catalog->menu($request->materialMenuKey());
-        if (! $menu instanceof PublicMaterialMenu) {
+        if (! $menu instanceof PublicMaterialMenuKey) {
             return redirect()->route('home');
         }
 
@@ -41,10 +41,10 @@ class MaterialController extends Controller
 
         return view('public.materials.index', [
             'settings' => ['church_name' => CHURCH_NAME],
-            'menu' => $menu->menu_key,
-            'menuLabel' => trim((string) ($menu->label ?? 'Materi')),
-            'menuSubtitle' => trim((string) ($menu->subtitle ?? 'Daftar file materi yang bisa diunduh.')),
-            'menuFolder' => trim((string) ($menu->folder_path ?? '')),
+            'menu' => $menu->value,
+            'menuLabel' => $menu->label(),
+            'menuSubtitle' => $menu->subtitle(),
+            'menuFolder' => $menu->folder(),
             'materialRows' => $materialRows,
             'canManageMaterials' => can_manage_public_materials(),
             'materialStatus' => trim((string) $request->query('material_status', '')),
@@ -52,7 +52,7 @@ class MaterialController extends Controller
         ]);
     }
 
-    public function upload(Request $request, PublicMaterialMenu $menu): RedirectResponse
+    public function upload(Request $request, string $menu): RedirectResponse
     {
         RuntimeBootstrap::boot($request);
 
@@ -60,10 +60,12 @@ class MaterialController extends Controller
             abort(403, 'Akses tidak diizinkan.');
         }
 
-        if (! is_valid_public_material_folder_path((string) $menu->folder_path)) {
-            return $this->redirectToMaterialMenu($menu, ['material_error' => 'invalid_folder']);
+        $menu = PublicMaterialMenuKey::fromKey($menu);
+        if (! $menu instanceof PublicMaterialMenuKey) {
+            abort(404, 'Menu tidak ditemukan.');
         }
-        $folderPath = public_material_menu_folder_path((string) $menu->folder_path);
+
+        $folderPath = $menu->folder();
 
         $file = $request->file('material_file');
         if ($file === null || ! $file->isValid()) {
@@ -107,7 +109,7 @@ class MaterialController extends Controller
         $downloadName = $this->downloadNameForTitle($title, $extension);
 
         DB::table('public_material_files')->insert([
-            'public_material_menu_id' => $menu->id,
+            'menu' => $menu->value,
             'public_id' => $this->newPublicMaterialId(),
             'title' => $title,
             'category_name' => null,
@@ -116,9 +118,6 @@ class MaterialController extends Controller
             'original_file_name' => $downloadName,
             'size_bytes' => max(0, (int) @filesize($fullPath)),
             'mime_type' => detect_file_mime_type($fullPath),
-            'branch_id' => null,
-            'branch_code' => 'pusat',
-            'sort_order' => $this->nextSortOrder((int) $menu->id),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -126,7 +125,7 @@ class MaterialController extends Controller
         return $this->redirectToMaterialMenu($menu, ['material_status' => 'uploaded']);
     }
 
-    public function rename(Request $request, PublicMaterialMenu $menu, ChurchFile $churchFile): RedirectResponse
+    public function rename(Request $request, string $menu, PublicMaterialFile $churchFile): RedirectResponse
     {
         RuntimeBootstrap::boot($request);
 
@@ -134,7 +133,8 @@ class MaterialController extends Controller
             abort(403, 'Akses tidak diizinkan.');
         }
 
-        if ((int) ($churchFile->public_material_menu_id ?? 0) !== (int) $menu->id) {
+        $menu = PublicMaterialMenuKey::fromKey($menu);
+        if (! $menu instanceof PublicMaterialMenuKey || (string) ($churchFile->menu ?? '') !== $menu->value) {
             abort(404, 'File tidak ditemukan.');
         }
 
@@ -157,16 +157,9 @@ class MaterialController extends Controller
     /**
      * @param array<string, string> $query
      */
-    private function redirectToMaterialMenu(PublicMaterialMenu $menu, array $query = []): RedirectResponse
+    private function redirectToMaterialMenu(PublicMaterialMenuKey $menu, array $query = []): RedirectResponse
     {
-        return redirect()->route('materials.show', array_merge(['menu' => $menu->menu_key], $query));
-    }
-
-    private function nextSortOrder(int $menuId): int
-    {
-        return ((int) DB::table('public_material_files')
-            ->where('public_material_menu_id', $menuId)
-            ->max('sort_order')) + 1;
+        return redirect()->route('materials.show', array_merge(['menu' => $menu->value], $query));
     }
 
     private function newPublicMaterialId(): string

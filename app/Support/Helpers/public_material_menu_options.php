@@ -1,31 +1,14 @@
 <?php
 
 function public_material_menu_options(): array {
-    return [
-        'materi_dg_1' => [
-            'label' => 'Materi DG-1 (BePI)',
-            'folder' => 'Materi-DG/DG-1',
-            'subtitle' => 'Berpusat Pada Injil',
-        ],
-        'materi_dg_2' => [
-            'label' => 'Materi DG-2 (BOI)',
-            'folder' => 'Materi-DG/DG-2',
-            'subtitle' => 'Berubah Oleh Injil',
-        ],
-        'materi_dg_3' => [
-            'label' => 'Materi DG-3',
-            'folder' => 'Materi-DG/DG-3',
-            'subtitle' => 'Bertumbuh Dalam Pemuridan Lanjutan',
-        ],
-        'meditasi_injil' => [
-            'label' => 'Meditasi Injil (BePI)',
-            'folder' => 'Materi-DG/Meditasi-Injil',
-            'subtitle' => 'Merenungkan Injil Setiap Hari',
-        ],
-        'handbook_perjanjian_kelompok' => [
-            'label' => 'Handbook & Perjanjian Kelompok',
-            'folder' => 'Materi-DG/Handbook-Perjanjian-Kelompok',
-            'subtitle' => 'Bertumbuh Dalam Komitmen Kelompok',
-        ],
-    ];
+    $options = [];
+    foreach (\App\Enums\PublicMaterialMenuKey::cases() as $menu) {
+        $options[$menu->value] = [
+            'label' => $menu->label(),
+            'folder' => $menu->folder(),
+            'subtitle' => $menu->subtitle(),
+        ];
+    }
+
+    return $options;
 }

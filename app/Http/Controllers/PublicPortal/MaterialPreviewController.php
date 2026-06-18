@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\PublicPortal;
 
+use App\Enums\PublicMaterialMenuKey;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicMaterials\StreamPublicMaterialRequest;
-use App\Models\ChurchFile;
-use App\Models\PublicMaterialMenu;
+use App\Models\PublicMaterialFile;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
 use App\Services\PublicMaterials\PublicMaterialFileStreamer;
 use App\Services\PublicMaterials\PublicMaterialRouteResolver;
@@ -29,7 +29,7 @@ class MaterialPreviewController extends Controller
         [$menu, $file] = $resolved;
 
         return redirect()->route('materials.preview', array_filter([
-            'menu' => $menu->menu_key,
+            'menu' => $menu->value,
             'churchFile' => $file->public_id,
             'raw' => $request->rawPreview() ? '1' : null,
         ]));
@@ -37,12 +37,17 @@ class MaterialPreviewController extends Controller
 
     public function show(
         StreamPublicMaterialRequest $request,
-        PublicMaterialMenu $menu,
-        ChurchFile $churchFile,
+        string $menu,
+        PublicMaterialFile $churchFile,
         PublicMaterialCatalog $catalog,
         PublicMaterialFileStreamer $streamer,
     ): RedirectResponse|Response|StreamedResponse|View {
         RuntimeBootstrap::load();
+
+        $menu = PublicMaterialMenuKey::fromKey($menu);
+        if (! $menu instanceof PublicMaterialMenuKey) {
+            return response('File tidak ditemukan.', 404);
+        }
 
         if (! $catalog->fileBelongsToMenu($menu, $churchFile)) {
             return response('File tidak ditemukan.', 404);
@@ -60,14 +65,14 @@ class MaterialPreviewController extends Controller
 
         if (! is_public_material_previewable_path($path)) {
             return redirect()->route('materials.download', [
-                'menu' => $menu->menu_key,
+                'menu' => $menu->value,
                 'churchFile' => $churchFile->public_id,
             ]);
         }
 
         $ext = secure_file_extension($path);
-        $showDgJournalButton = is_public_material_dg_session_menu((string) $menu->menu_key);
-        $showFeedbackButton = is_public_material_feedback_session((string) $menu->menu_key, $row);
+        $showDgJournalButton = is_public_material_dg_session_menu($menu->value);
+        $showFeedbackButton = is_public_material_feedback_session($menu->value, $row);
 
         if ($ext === 'pdf' && ! $request->rawPreview() && $showDgJournalButton) {
             $previewTitle = trim((string) ($row['title'] ?? ''));
@@ -83,7 +88,7 @@ class MaterialPreviewController extends Controller
                 'settings' => ['church_name' => CHURCH_NAME],
                 'previewTitle' => $previewTitle,
                 'rawUrl' => route('materials.preview', [
-                    'menu' => $menu->menu_key,
+                    'menu' => $menu->value,
                     'churchFile' => $churchFile->public_id,
                     'raw' => '1',
                 ]),

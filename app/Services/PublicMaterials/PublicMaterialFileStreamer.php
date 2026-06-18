@@ -2,7 +2,7 @@
 
 namespace App\Services\PublicMaterials;
 
-use App\Models\ChurchFile;
+use App\Models\PublicMaterialFile;
 use App\Support\RuntimeBootstrap;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -11,7 +11,7 @@ class PublicMaterialFileStreamer
     /**
      * @param "inline"|"attachment" $disposition
      */
-    public function stream(ChurchFile $file, string $disposition): StreamedResponse
+    public function stream(PublicMaterialFile $file, string $disposition): StreamedResponse
     {
         RuntimeBootstrap::load();
 
