@@ -11,8 +11,9 @@ Project ini adalah aplikasi Laravel mandiri untuk REC. Aplikasi tidak membutuhka
 - `app/Support/Helpers` berisi helper domain yang masih dipakai oleh view/service hasil refactor.
 - `resources/views` berisi seluruh tampilan aktif dalam format Blade, dengan layout dan partial reusable.
 - `public/assets` berisi CSS, JS, logo, dan vendor PDF.js untuk browser.
-- `public/uploads/files` berisi file materi publik yang boleh diakses langsung oleh browser.
-- `storage/app/private/rec_runtime/uploads` tetap dipakai untuk upload non-publik seperti `/file-aman`, serta fallback file materi lama sampai migrasi selesai.
+- `storage/app/public/msk-dg` berisi file materi publik yang diekspos lewat `public/storage`.
+- `storage/app/private/uploads` dipakai untuk upload non-publik seperti `/file-aman`.
+- `storage/app/private/assets`, `storage/app/private/data`, dan `storage/app/private/templates` berisi aset runtime, data internal, dan template aplikasi.
 
 ## Database
 

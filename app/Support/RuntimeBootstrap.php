@@ -34,7 +34,7 @@ class RuntimeBootstrap
             define('DISCIPLESHIP_RELATIONSHIPS_DATA_NAME', 'discipleship_relationships');
         }
         if (! defined('REC_RUNTIME_PATH')) {
-            define('REC_RUNTIME_PATH', storage_path('app/private/rec_runtime'));
+            define('REC_RUNTIME_PATH', storage_path('app/private'));
         }
         if (! defined('REC_PUBLIC_PATH')) {
             define('REC_PUBLIC_PATH', public_path());
@@ -84,7 +84,7 @@ class RuntimeBootstrap
 
     private static function ensureRuntimeFilesystem(): void
     {
-        foreach (['templates', 'uploads', 'assets'] as $directory) {
+        foreach (['assets', 'data', 'templates', 'uploads'] as $directory) {
             File::ensureDirectoryExists(REC_RUNTIME_PATH . DIRECTORY_SEPARATOR . $directory);
         }
     }
