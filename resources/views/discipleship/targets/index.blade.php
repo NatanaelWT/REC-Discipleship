@@ -100,6 +100,7 @@
             </div>
           </div>
           <form method="post" action="{{ route('discipleship.targets.update') }}" class="settings-target-form">
+            @csrf
             <input type="hidden" name="action" value="save_discipleship_targets">
             <div class="settings-target-grid">
               @foreach ($targetCards as $targetCard)

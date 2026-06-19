@@ -1,5 +1,8 @@
 <?php
 
-function current_username(): string {
-    return trim((string) ($_SESSION['user'] ?? ''));
+use App\Services\Auth\CurrentUserContext;
+
+function current_username(): string
+{
+    return app(CurrentUserContext::class)->username();
 }

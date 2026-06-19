@@ -26,6 +26,7 @@
       </div>
 
       <form method="post" action="{{ route('settings.update') }}" class="settings-account-form">
+        @csrf
         <div class="settings-account-grid">
           <label class="settings-account-field-card is-current">
             <span class="settings-account-field-top">

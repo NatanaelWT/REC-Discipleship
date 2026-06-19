@@ -20,7 +20,7 @@ class DifficultQuestionController extends Controller
 
         return view('public.difficult-questions.create', [
             'settings' => ['church_name' => app_church_name()],
-            'old' => is_array($_SESSION['difficult_question_old'] ?? null) ? $_SESSION['difficult_question_old'] : [],
+            'old' => is_array(session('difficult_question_old')) ? session('difficult_question_old') : [],
             'errorCode' => trim((string) $request->query('error', '')),
             'submitted' => $request->query->has('submitted'),
         ]);
@@ -51,7 +51,7 @@ class DifficultQuestionController extends Controller
             return redirect()->route('public.difficult-question.submit', ['error' => 'save_failed']);
         }
 
-        unset($_SESSION['difficult_question_old']);
+        session()->forget('difficult_question_old');
 
         return redirect()->route('public.difficult-question.submit', ['submitted' => 1]);
     }
@@ -59,7 +59,7 @@ class DifficultQuestionController extends Controller
     private function generatePublicId(): string
     {
         do {
-            $id = 'dq_' . bin2hex(random_bytes(4));
+            $id = 'dq_'.bin2hex(random_bytes(4));
         } while (DifficultQuestion::query()->where('public_id', $id)->exists());
 
         return $id;

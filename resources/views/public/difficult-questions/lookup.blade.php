@@ -16,6 +16,7 @@
         <p>Masukkan password yang dibuat saat mengirim pertanyaan untuk melihat status dan jawaban.</p>
       </div>
       <form method="post" action="{{ route('public.difficult-question.lookup') }}" class="form-grid public-question-form public-answer-lookup-form">
+        @csrf
         <input type="hidden" name="action" value="lookup_difficult_answer">
         <div class="public-question-password-panel public-answer-password-panel">
           <div class="public-question-password-copy"><strong>Password Pertanyaan</strong><span>Gunakan password yang sama seperti saat mengirim pertanyaan.</span></div>

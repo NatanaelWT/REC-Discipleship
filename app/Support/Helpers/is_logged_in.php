@@ -1,5 +1,8 @@
 <?php
 
-function is_logged_in(): bool {
-    return isset($_SESSION['user']) && $_SESSION['user'] !== '';
+use App\Services\Auth\CurrentUserContext;
+
+function is_logged_in(): bool
+{
+    return app(CurrentUserContext::class)->isLoggedIn();
 }

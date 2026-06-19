@@ -18,6 +18,7 @@
       </div>
 
       <form method="post" action="{{ route('developer.config.update') }}" class="developer-form-grid developer-config-form">
+        @csrf
         <label>
           <span>Nama Gereja</span>
           <input type="text" name="church_name" value="{{ $configValues['church_name'] ?? '' }}" required maxlength="120">

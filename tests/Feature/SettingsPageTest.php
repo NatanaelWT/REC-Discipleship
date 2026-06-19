@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -10,13 +11,6 @@ use Tests\TestCase;
 
 class SettingsPageTest extends TestCase
 {
-    protected function tearDown(): void
-    {
-        $this->restoreLegacySession();
-
-        parent::tearDown();
-    }
-
     public function test_legacy_settings_query_is_rejected(): void
     {
         $response = $this->get('/index.php?page=settings');
@@ -97,31 +91,8 @@ class SettingsPageTest extends TestCase
 
     private function loginAsSettingsUser(): void
     {
-        $this->startLegacySession();
+        $user = User::query()->where('username', 'admin_settings_test')->firstOrFail();
 
-        $_SESSION['user'] = 'admin_settings_test';
-        $_SESSION['cabang'] = 'kutisari';
-        $_SESSION['access_scope'] = 'branch';
-    }
-
-    private function startLegacySession(): void
-    {
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
-
-        if (session_status() === PHP_SESSION_NONE) {
-            session_id('settings-test-'.str_replace('.', '', uniqid('', true)));
-            session_start();
-        }
-    }
-
-    private function restoreLegacySession(): void
-    {
-        $_SESSION = [];
-
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
+        $this->actingAs($user);
     }
 }

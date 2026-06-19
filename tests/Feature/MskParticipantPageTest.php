@@ -20,21 +20,19 @@ class MskParticipantPageTest extends TestCase
     {
         $this->createMskTables();
 
-        $previousSession = $this->signInAsBranchUser();
+        $this->actingAsRecUser();
 
         $response = $this->get('/pemuridan/msk');
 
         $response->assertStatus(200);
         $response->assertSee('Kelas MSK');
-
-        $this->restoreSession($previousSession);
     }
 
     public function test_store_msk_participant_persists_to_laravel_tables(): void
     {
         $this->createMskTables();
 
-        $previousSession = $this->signInAsBranchUser();
+        $this->actingAsRecUser();
 
         $response = $this->post('/pemuridan/msk/peserta', [
             'action' => 'save_msk_participant',
@@ -69,37 +67,6 @@ class MskParticipantPageTest extends TestCase
             'msk_participant_id' => $participantId,
             'session_number' => 2,
         ]);
-
-        $this->restoreSession($previousSession);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function signInAsBranchUser(): array
-    {
-        $previousSession = $_SESSION ?? [];
-        if (session_status() === PHP_SESSION_NONE) {
-            session_save_path(storage_path('framework/sessions'));
-            session_id('msk-page-test-'.str_replace('.', '', uniqid('', true)));
-            session_start();
-        }
-        $_SESSION['user'] = 'tester';
-        $_SESSION['cabang'] = 'kutisari';
-        $_SESSION['access_scope'] = 'branch';
-
-        return $previousSession;
-    }
-
-    /**
-     * @param  array<string, mixed>  $previousSession
-     */
-    private function restoreSession(array $previousSession): void
-    {
-        $_SESSION = $previousSession;
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
     }
 
     private function createMskTables(): void

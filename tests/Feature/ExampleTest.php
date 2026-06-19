@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 // use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
@@ -32,6 +33,46 @@ class ExampleTest extends TestCase
         $response = $this->get('/index.php');
 
         $response->assertRedirect('/');
+    }
+
+    public function test_public_and_admin_forms_include_csrf_tokens(): void
+    {
+        $this->get('/login')
+            ->assertOk()
+            ->assertSee('name="_token"', false);
+
+        $this->actingAsRecUser();
+
+        $this->get('/pengaturan')
+            ->assertOk()
+            ->assertSee('name="_token"', false);
+    }
+
+    public function test_public_post_without_csrf_token_is_rejected_when_enabled(): void
+    {
+        $this->app->instance('env', 'local');
+
+        $this->withMiddleware(ValidateCsrfToken::class)
+            ->post('/publik/pertanyaan-sulit/kirim', [
+                'asker_name' => 'Tester',
+                'question' => 'Apakah CSRF aktif?',
+                'password' => 'secret-test',
+            ])
+            ->assertStatus(419);
+    }
+
+    public function test_admin_post_without_csrf_token_is_rejected_when_enabled(): void
+    {
+        $this->app->instance('env', 'local');
+        $this->actingAsRecUser();
+
+        $this->withMiddleware(ValidateCsrfToken::class)
+            ->post('/pengaturan', [
+                'current_password' => 'old-secret',
+                'new_password' => 'new-secret',
+                'new_password_confirm' => 'new-secret',
+            ])
+            ->assertStatus(419);
     }
 
     public function test_public_empty_menu_renders_from_laravel_view(): void

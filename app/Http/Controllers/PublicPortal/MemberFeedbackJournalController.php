@@ -4,8 +4,8 @@ namespace App\Http\Controllers\PublicPortal;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MemberFeedbackJournals\StoreMemberFeedbackJournalRequest;
-use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipFeedback;
+use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipPerson;
 use App\Services\MemberFeedbackJournals\MemberFeedbackFormData;
 use App\Services\MemberFeedbackJournals\MemberFeedbackQuestionCatalog;
@@ -44,8 +44,8 @@ class MemberFeedbackJournalController extends Controller
     ): View|RedirectResponse {
         RuntimeBootstrap::boot($request);
 
-        $old = is_array($_SESSION['public_member_feedback_old'] ?? null)
-            ? $_SESSION['public_member_feedback_old']
+        $old = is_array(session('public_member_feedback_old'))
+            ? session('public_member_feedback_old')
             : [];
         $publicBranchRaw = trim((string) $request->query('cabang', ''));
         if ($publicBranchRaw === '') {
@@ -69,8 +69,8 @@ class MemberFeedbackJournalController extends Controller
         $groupOptions = $branchFormData['groups'];
         $groupMap = $branchFormData['group_map'];
 
-        $errorMessage = trim((string) ($_SESSION['public_member_feedback_error'] ?? ''));
-        unset($_SESSION['public_member_feedback_error']);
+        $errorMessage = trim((string) session('public_member_feedback_error', ''));
+        session()->forget('public_member_feedback_error');
 
         return view('public.member-feedback.create', [
             'settings' => ['church_name' => app_church_name()],
@@ -184,7 +184,7 @@ class MemberFeedbackJournalController extends Controller
                 }
             });
         } catch (Throwable) {
-            $_SESSION['public_member_feedback_error'] = 'Jurnal umpan balik gagal disimpan. Coba ulangi lagi.';
+            session()->put('public_member_feedback_error', 'Jurnal umpan balik gagal disimpan. Coba ulangi lagi.');
 
             return redirect()->route('public.member-feedback.form', [
                 'cabang' => $publicBranch,
@@ -192,7 +192,7 @@ class MemberFeedbackJournalController extends Controller
             ]);
         }
 
-        unset($_SESSION['public_member_feedback_old'], $_SESSION['public_member_feedback_error']);
+        session()->forget(['public_member_feedback_old', 'public_member_feedback_error']);
 
         return redirect()->route('public.member-feedback.form', [
             'submitted' => 1,
@@ -206,7 +206,7 @@ class MemberFeedbackJournalController extends Controller
         do {
             $id = function_exists('generate_id')
                 ? generate_id('dg_member_feedback')
-                : 'dg_member_feedback_' . bin2hex(random_bytes(4));
+                : 'dg_member_feedback_'.bin2hex(random_bytes(4));
         } while (DiscipleshipFeedback::query()->where('public_id', $id)->exists());
 
         return $id;

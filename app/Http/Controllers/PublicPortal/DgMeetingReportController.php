@@ -54,11 +54,11 @@ class DgMeetingReportController extends Controller
         }
 
         $publicBranch = normalize_public_branch_code($branch);
-        $old = is_array($_SESSION['public_dg_report_old'] ?? null) ? $_SESSION['public_dg_report_old'] : [];
+        $old = is_array(session('public_dg_report_old')) ? session('public_dg_report_old') : [];
         $old['public_cabang'] = $publicBranch;
 
-        $publicDgReportError = trim((string) ($_SESSION['public_dg_report_error'] ?? ''));
-        unset($_SESSION['public_dg_report_error']);
+        $publicDgReportError = trim((string) session('public_dg_report_error', ''));
+        session()->forget('public_dg_report_error');
 
         $branchFormData = $formData->forBranch($publicBranch);
 
@@ -84,7 +84,7 @@ class DgMeetingReportController extends Controller
         $publicBranch = $request->publicBranch();
         $uploadResult = $photoUploader->uploadFromPhpFiles();
         if ($uploadResult['error_message'] !== '') {
-            $_SESSION['public_dg_report_error'] = $uploadResult['error_message'];
+            session()->put('public_dg_report_error', $uploadResult['error_message']);
 
             return redirect()->route('public.dg.report', ['branch' => $publicBranch]);
         }
@@ -133,6 +133,7 @@ class DgMeetingReportController extends Controller
                 if (Schema::hasColumn('discipleship_meeting_reports', 'photos')) {
                     $reportData['photos'] = array_values(array_filter(array_map(static function (array $photo): array {
                         $relativePath = sanitize_relative_upload_path((string) ($photo['path'] ?? ''));
+
                         return $relativePath === '' ? [] : [
                             'path' => $relativePath,
                             'name' => trim((string) ($photo['name'] ?? '')) ?: null,
@@ -181,12 +182,12 @@ class DgMeetingReportController extends Controller
             });
         } catch (Throwable) {
             $photoUploader->cleanup($meetingPhotos);
-            $_SESSION['public_dg_report_error'] = 'Laporan pertemuan DG gagal disimpan. Coba ulangi lagi.';
+            session()->put('public_dg_report_error', 'Laporan pertemuan DG gagal disimpan. Coba ulangi lagi.');
 
             return redirect()->route('public.dg.report', ['branch' => $publicBranch]);
         }
 
-        unset($_SESSION['public_dg_report_old'], $_SESSION['public_dg_report_error']);
+        session()->forget(['public_dg_report_old', 'public_dg_report_error']);
 
         return redirect()->route('public.dg.report', [
             'branch' => $publicBranch,
@@ -199,7 +200,7 @@ class DgMeetingReportController extends Controller
         do {
             $id = function_exists('generate_id')
                 ? generate_id('dg_report')
-                : 'dg_report_' . bin2hex(random_bytes(4));
+                : 'dg_report_'.bin2hex(random_bytes(4));
         } while ($this->publicIdExists($id));
 
         return $id;

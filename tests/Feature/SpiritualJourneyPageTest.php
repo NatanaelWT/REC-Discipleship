@@ -21,15 +21,13 @@ class SpiritualJourneyPageTest extends TestCase
         $this->createMskTables();
         $this->seedParticipant();
 
-        $previousSession = $this->signInAsBranchUser();
+        $this->actingAsRecUser();
 
         $response = $this->get('/pemuridan/spiritual-journey');
 
         $response->assertStatus(200);
         $response->assertSee('Spiritual Journey');
         $response->assertSee('Peserta Journey');
-
-        $this->restoreSession($previousSession);
     }
 
     public function test_bridge_status_update_persists_to_laravel_table(): void
@@ -37,7 +35,7 @@ class SpiritualJourneyPageTest extends TestCase
         $this->createMskTables();
         $this->seedParticipant();
 
-        $previousSession = $this->signInAsBranchUser();
+        $this->actingAsRecUser();
 
         $response = $this->post('/pemuridan/spiritual-journey/msk-journey-1/bridge-status', [
             'action' => 'save_journey_bridge_status',
@@ -51,37 +49,6 @@ class SpiritualJourneyPageTest extends TestCase
             'public_id' => 'msk-journey-1',
             'journey_bridge_status' => 'sudah_kgap',
         ]);
-
-        $this->restoreSession($previousSession);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function signInAsBranchUser(): array
-    {
-        $previousSession = $_SESSION ?? [];
-        if (session_status() === PHP_SESSION_NONE) {
-            session_save_path(storage_path('framework/sessions'));
-            session_id('spiritual-journey-test-'.str_replace('.', '', uniqid('', true)));
-            session_start();
-        }
-        $_SESSION['user'] = 'tester';
-        $_SESSION['cabang'] = 'kutisari';
-        $_SESSION['access_scope'] = 'branch';
-
-        return $previousSession;
-    }
-
-    /**
-     * @param  array<string, mixed>  $previousSession
-     */
-    private function restoreSession(array $previousSession): void
-    {
-        $_SESSION = $previousSession;
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
     }
 
     private function createMskTables(): void

@@ -12,6 +12,7 @@
     </div>
   </div>
   <form method="post" action="{{ route('worship.penatalayan.store') }}" id="worship-steward-form" class="worship-steward-form" autocomplete="off">
+    @csrf
     <input type="hidden" name="action" value="save_worship_penatalayan">
     <input type="hidden" name="month" value="{{ $selectedMonth }}">
     <div class="table-wrap worship-steward-table-wrap">
@@ -64,6 +65,7 @@
     <button class="btn" form="worship-steward-form" type="submit">Simpan Jadwal</button>
     @if ($selectedExistingSchedule !== null)
       <form method="post" action="{{ route('worship.penatalayan.destroy', ['month' => $selectedMonth]) }}" class="worship-steward-danger-form" onsubmit="return confirm('Hapus jadwal penatalayan untuk bulan ini?');">
+        @csrf
         @method('DELETE')
         <input type="hidden" name="action" value="delete_worship_penatalayan">
         <input type="hidden" name="month" value="{{ $selectedMonth }}">

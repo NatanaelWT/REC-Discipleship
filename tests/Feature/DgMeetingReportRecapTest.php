@@ -21,7 +21,7 @@ class DgMeetingReportRecapTest extends TestCase
         $this->createTables();
         $this->seedReport();
 
-        $previousSession = $this->signInAsBranchUser();
+        $this->actingAsRecUser();
 
         $response = $this->get('/pemuridan/laporan-dg');
 
@@ -29,37 +29,6 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertSee('Rekap Laporan DG');
         $response->assertSee('Pemimpin Test');
         $response->assertSee('Materi Test');
-
-        $this->restoreSession($previousSession);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function signInAsBranchUser(): array
-    {
-        $previousSession = $_SESSION ?? [];
-        if (session_status() === PHP_SESSION_NONE) {
-            session_save_path(storage_path('framework/sessions'));
-            session_id('dg-report-recap-test-'.str_replace('.', '', uniqid('', true)));
-            session_start();
-        }
-        $_SESSION['user'] = 'tester';
-        $_SESSION['cabang'] = 'kutisari';
-        $_SESSION['access_scope'] = 'branch';
-
-        return $previousSession;
-    }
-
-    /**
-     * @param  array<string, mixed>  $previousSession
-     */
-    private function restoreSession(array $previousSession): void
-    {
-        $_SESSION = $previousSession;
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
     }
 
     private function createTables(): void

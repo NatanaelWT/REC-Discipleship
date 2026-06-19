@@ -18,6 +18,8 @@ class PeopleTreePageTest extends TestCase
 
     public function test_people_tree_v2_route_redirects_to_main_tree_route(): void
     {
+        $this->actingAsRecUser();
+
         $response = $this->get('/pemuridan/pohon-v2?rekap_cabang=kutisari');
 
         $response->assertRedirect('/pemuridan/pohon?rekap_cabang=kutisari');
@@ -28,7 +30,7 @@ class PeopleTreePageTest extends TestCase
         $this->createTables();
         $this->seedPeopleTree();
 
-        $previousSession = $this->signInAsBranchUser();
+        $this->actingAsRecUser();
 
         $response = $this->get('/pemuridan/pohon');
 
@@ -37,37 +39,6 @@ class PeopleTreePageTest extends TestCase
         $response->assertSee('Leader Test');
         $response->assertSee('Anggota Test');
         $response->assertDontSee('?page=people_tree', false);
-
-        $this->restoreSession($previousSession);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function signInAsBranchUser(): array
-    {
-        $previousSession = $_SESSION ?? [];
-        if (session_status() === PHP_SESSION_NONE) {
-            session_save_path(storage_path('framework/sessions'));
-            session_id('people-tree-test-'.str_replace('.', '', uniqid('', true)));
-            session_start();
-        }
-        $_SESSION['user'] = 'tester';
-        $_SESSION['cabang'] = 'kutisari';
-        $_SESSION['access_scope'] = 'branch';
-
-        return $previousSession;
-    }
-
-    /**
-     * @param  array<string, mixed>  $previousSession
-     */
-    private function restoreSession(array $previousSession): void
-    {
-        $_SESSION = $previousSession;
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
     }
 
     private function createTables(): void

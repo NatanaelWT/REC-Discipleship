@@ -62,7 +62,7 @@ class StoreDgMeetingReportRequest extends FormRequest
             $this->merge(['public_cabang' => $routeBranch]);
         }
 
-        $_SESSION['public_dg_report_old'] = $this->all();
+        session()->put('public_dg_report_old', $this->all());
     }
 
     /**
@@ -93,7 +93,7 @@ class StoreDgMeetingReportRequest extends FormRequest
                 $this->publicBranch = normalize_public_branch_code($branchRaw);
             }
 
-            $_SESSION['public_dg_report_old']['public_cabang'] = $this->publicBranch;
+            session()->put('public_dg_report_old.public_cabang', $this->publicBranch);
 
             $formData = app(DgMeetingReportFormData::class)->forBranch($this->publicBranch);
             $groupMap = $formData['group_map'];
@@ -174,7 +174,7 @@ class StoreDgMeetingReportRequest extends FormRequest
             throw new HttpResponseException(redirect()->route('public.dg.branch', ['error' => 'invalid_branch']));
         }
 
-        $_SESSION['public_dg_report_error'] = $validator->errors()->first('public_dg_report_error');
+        session()->put('public_dg_report_error', $validator->errors()->first('public_dg_report_error'));
 
         $branch = $this->publicBranch;
         if ($branch === '') {
@@ -328,7 +328,7 @@ class StoreDgMeetingReportRequest extends FormRequest
     }
 
     /**
-     * @param array<string, mixed> $groupRow
+     * @param  array<string, mixed>  $groupRow
      * @return array<string, string>
      */
     private function memberMapForGroup(array $groupRow): array

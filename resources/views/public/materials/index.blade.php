@@ -44,6 +44,7 @@
 
       @if ($canManageMaterials)
         <form class="public-material-admin-form" method="post" action="{{ route('materials.upload', ['menu' => $menu]) }}" enctype="multipart/form-data">
+          @csrf
           <input class="public-material-admin-input" type="text" name="title" maxlength="180" placeholder="Nama file">
           <input class="public-material-admin-file" type="file" name="material_file" required>
           <button class="btn secondary" type="submit">Upload</button>

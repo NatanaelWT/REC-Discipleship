@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Settings;
 
+use App\Services\Auth\CurrentUserContext;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -13,7 +14,7 @@ class UpdateSettingsPasswordRequest extends FormRequest
     {
         RuntimeBootstrap::boot($this);
 
-        return function_exists('is_logged_in') && is_logged_in();
+        return app(CurrentUserContext::class)->isLoggedIn();
     }
 
     public function rules(): array

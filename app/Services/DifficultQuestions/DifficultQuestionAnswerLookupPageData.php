@@ -8,16 +8,14 @@ use Illuminate\Http\Request;
 
 class DifficultQuestionAnswerLookupPageData
 {
-    public function __construct(private DifficultQuestionStatusLabel $statusLabel)
-    {
-    }
+    public function __construct(private DifficultQuestionStatusLabel $statusLabel) {}
 
     /**
      * @return array<string, mixed>
      */
     public function forRequest(Request $request): array
     {
-        $lookupHash = trim((string) ($_SESSION['difficult_answer_lookup_hash'] ?? ''));
+        $lookupHash = trim((string) session('difficult_answer_lookup_hash', ''));
         $hasLookup = $request->query->has('looked') && $lookupHash !== '';
         $questions = $hasLookup
             ? DifficultQuestion::query()->forLookupHash($lookupHash)->orderByDesc('created_at')->get()

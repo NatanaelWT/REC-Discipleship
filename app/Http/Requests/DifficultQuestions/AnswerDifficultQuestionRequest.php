@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\DifficultQuestions;
 
+use App\Services\Auth\CurrentUserContext;
 use App\Services\DifficultQuestions\DifficultQuestionTextNormalizer;
 use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
@@ -14,8 +15,9 @@ class AnswerDifficultQuestionRequest extends FormRequest
     public function authorize(): bool
     {
         RuntimeBootstrap::boot($this);
+        $context = app(CurrentUserContext::class);
 
-        return function_exists('can_manage_difficult_questions') && can_manage_difficult_questions();
+        return $context->canAccessPage('difficult_questions_admin');
     }
 
     protected function prepareForValidation()
@@ -40,12 +42,10 @@ class AnswerDifficultQuestionRequest extends FormRequest
 
     protected function failedAuthorization()
     {
-        $targetPage = function_exists('branch_home_page') && function_exists('current_user_branch')
-            ? branch_home_page(current_user_branch())
-            : 'discipleship_dashboard';
+        $context = app(CurrentUserContext::class);
 
         throw new HttpResponseException(
-            redirect(AppPageRouteMap::pageUrl($targetPage, ['error' => 'access_denied'])),
+            redirect(AppPageRouteMap::pageUrl($context->homePage(), ['error' => 'access_denied'])),
         );
     }
 

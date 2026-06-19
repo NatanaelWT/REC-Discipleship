@@ -42,12 +42,6 @@ class DifficultQuestionController extends Controller
     {
         RuntimeBootstrap::boot($request);
 
-        if (trim((string) $request->input('action', '')) === 'logout') {
-            destroy_current_session();
-
-            return redirect()->route('home');
-        }
-
         if (! can_manage_difficult_questions()) {
             return redirect(AppPageRouteMap::pageUrl(
                 branch_home_page(current_user_branch()),

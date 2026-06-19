@@ -14,7 +14,7 @@ class DiscipleshipDashboardTest extends TestCase
         $this->createDashboardTables();
         $this->seedDashboardData();
 
-        $previousSession = $this->signInAsBranchUser();
+        $this->actingAsRecUser();
 
         $response = $this->get('/pemuridan/dashboard');
 
@@ -23,8 +23,6 @@ class DiscipleshipDashboardTest extends TestCase
         $response->assertSee('Belum Selesai MSK');
         $response->assertSee('Peserta MSK Dashboard');
         $response->assertDontSee('?page=discipleship_dashboard', false);
-
-        $this->restoreSession($previousSession);
     }
 
     public function test_dashboard_updates_msk_sessions_to_laravel_tables(): void
@@ -32,7 +30,7 @@ class DiscipleshipDashboardTest extends TestCase
         $this->createDashboardTables();
         $this->seedDashboardData();
 
-        $previousSession = $this->signInAsBranchUser();
+        $this->actingAsRecUser();
 
         $response = $this->post('/pemuridan/dashboard/msk-sessions', [
             'action' => 'save_msk_sessions',
@@ -52,37 +50,6 @@ class DiscipleshipDashboardTest extends TestCase
             'session_number' => 4,
         ]);
         $this->assertSame(4, DB::table('msk_participant_sessions')->where('msk_participant_id', $participantId)->count());
-
-        $this->restoreSession($previousSession);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function signInAsBranchUser(): array
-    {
-        $previousSession = $_SESSION ?? [];
-        if (session_status() === PHP_SESSION_NONE) {
-            session_save_path(storage_path('framework/sessions'));
-            session_id('dashboard-test-' . str_replace('.', '', uniqid('', true)));
-            session_start();
-        }
-        $_SESSION['user'] = 'tester';
-        $_SESSION['cabang'] = 'kutisari';
-        $_SESSION['access_scope'] = 'branch';
-
-        return $previousSession;
-    }
-
-    /**
-     * @param array<string, mixed> $previousSession
-     */
-    private function restoreSession(array $previousSession): void
-    {
-        $_SESSION = $previousSession;
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
     }
 
     private function createDashboardTables(): void

@@ -1,5 +1,8 @@
 <?php
 
-function is_superuser_session(): bool {
-    return function_exists('is_developer_session') && is_developer_session();
+use App\Services\Auth\CurrentUserContext;
+
+function is_superuser_session(): bool
+{
+    return app(CurrentUserContext::class)->isDeveloper();
 }

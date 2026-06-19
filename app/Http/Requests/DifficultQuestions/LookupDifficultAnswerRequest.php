@@ -31,7 +31,7 @@ class LookupDifficultAnswerRequest extends FormRequest
 
     protected function failedValidation(Validator $validator)
     {
-        unset($_SESSION['difficult_answer_lookup_hash']);
+        session()->forget('difficult_answer_lookup_hash');
 
         throw new HttpResponseException(
             redirect()->route('public.difficult-question.answer', ['error' => 'password_required']),

@@ -18,25 +18,12 @@ class DiscipleshipPeopleListTest extends TestCase
     public function test_people_list_page_renders_for_logged_in_branch_user(): void
     {
         $this->createDiscipleshipTables();
-
-        $previousSession = $_SESSION ?? [];
-        if (session_status() === PHP_SESSION_NONE) {
-            session_id('people-list-test');
-            session_start();
-        }
-        $_SESSION['user'] = 'tester';
-        $_SESSION['cabang'] = 'kutisari';
-        $_SESSION['access_scope'] = 'branch';
+        $this->actingAsRecUser();
 
         $response = $this->get('/pemuridan/anggota');
 
         $response->assertStatus(200);
         $response->assertSee('Daftar Anggota DG');
-
-        $_SESSION = $previousSession;
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
     }
 
     private function createDiscipleshipTables(): void

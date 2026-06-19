@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\DiscipleshipTargets;
 
+use App\Services\Auth\CurrentUserContext;
 use App\Services\DiscipleshipTargets\DiscipleshipTargetNormalizer;
 use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
@@ -13,10 +14,11 @@ class UpdateDiscipleshipTargetRequest extends FormRequest
     public function authorize(): bool
     {
         RuntimeBootstrap::boot($this);
+        $context = app(CurrentUserContext::class);
 
-        return is_logged_in()
-            && branch_can_access_page(current_user_branch(), 'discipleship_targets')
-            && branch_can_use_action(current_user_branch(), 'save_discipleship_targets');
+        return $context->isLoggedIn()
+            && $context->canAccessPage('discipleship_targets')
+            && $context->canUseAction('save_discipleship_targets');
     }
 
     protected function prepareForValidation()
@@ -64,12 +66,13 @@ class UpdateDiscipleshipTargetRequest extends FormRequest
 
     protected function failedAuthorization()
     {
-        if (! is_logged_in()) {
+        $context = app(CurrentUserContext::class);
+        if (! $context->isLoggedIn()) {
             throw new HttpResponseException(redirect()->route('auth.login'));
         }
 
         throw new HttpResponseException(
-            redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied'])),
+            redirect(AppPageRouteMap::pageUrl($context->homePage(), ['error' => 'access_denied'])),
         );
     }
 }

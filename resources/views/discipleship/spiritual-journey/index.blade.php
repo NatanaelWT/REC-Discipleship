@@ -752,7 +752,7 @@ if ($page === 'spiritual_journey') {
         $bridgeFormAction = $journeyParticipantId !== ''
             ? route('discipleship.spiritual-journey.bridge-status', ['participant' => $journeyParticipantId])
             : route('discipleship.spiritual-journey.bridge-status-form');
-        $bridgeSelect = "<span class=\"journey-track-bridge\"><form method=\"post\" action=\"" . h($bridgeFormAction) . "\" class=\"journey-bridge-form\"><input type=\"hidden\" name=\"action\" value=\"save_journey_bridge_status\"><input type=\"hidden\" name=\"id\" value=\"" . h($journeyParticipantId) . "\"><select name=\"journey_bridge_status\" class=\"journey-bridge-select " . h($bridgeStateClass) . "\" aria-label=\"Status RG atau KGAP untuk " . h($journeyName) . "\"" . $bridgeSelectAttrs . ">";
+        $bridgeSelect = "<span class=\"journey-track-bridge\"><form method=\"post\" action=\"" . h($bridgeFormAction) . "\" class=\"journey-bridge-form\">" . csrf_field() . "<input type=\"hidden\" name=\"action\" value=\"save_journey_bridge_status\"><input type=\"hidden\" name=\"id\" value=\"" . h($journeyParticipantId) . "\"><select name=\"journey_bridge_status\" class=\"journey-bridge-select " . h($bridgeStateClass) . "\" aria-label=\"Status RG atau KGAP untuk " . h($journeyName) . "\"" . $bridgeSelectAttrs . ">";
         foreach ($bridgeOptions as $bridgeValue => $bridgeLabel) {
             $selected = $journeyBridgeStatus === $bridgeValue ? ' selected' : '';
             $bridgeSelect .= "<option value=\"" . h($bridgeValue) . "\"" . $selected . ">" . h($bridgeLabel) . "</option>";

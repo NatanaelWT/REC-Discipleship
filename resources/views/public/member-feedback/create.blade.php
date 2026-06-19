@@ -69,6 +69,7 @@
         <span class="badge warning">Form Publik</span>
       </div>
       <form method="post" action="{{ route('public.member-feedback.store') }}" class="form-grid public-member-feedback-form" data-public-member-feedback-form data-feedback-hard-disabled="{{ $formDisabled ? '1' : '0' }}">
+        @csrf
         <input type="hidden" name="action" value="save_public_member_feedback">
         <input type="hidden" name="public_cabang" value="{{ $publicBranch }}">
 

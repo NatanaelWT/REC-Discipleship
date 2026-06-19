@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -11,13 +12,6 @@ use Tests\TestCase;
 
 class DeveloperAccessTest extends TestCase
 {
-    protected function tearDown(): void
-    {
-        $this->restoreLegacySession();
-
-        parent::tearDown();
-    }
-
     public function test_developer_login_redirects_to_developer_dashboard(): void
     {
         $this->createCoreTables();
@@ -29,8 +23,8 @@ class DeveloperAccessTest extends TestCase
         ]);
 
         $response->assertRedirect('/developer');
-        $this->assertSame('developer', $_SESSION['user'] ?? null);
-        $this->assertSame('developer', $_SESSION['access_scope'] ?? null);
+        $this->assertAuthenticatedAs(User::query()->where('username', 'developer')->firstOrFail());
+        $this->assertSame('developer', current_auth_access_scope());
         $this->assertSame('kutisari', current_user_branch());
     }
 
@@ -38,18 +32,18 @@ class DeveloperAccessTest extends TestCase
     {
         $this->createCoreTables();
         $this->seedUser('branch_user', 'branch_user@rec.local', 'branch');
-        $this->loginAs('branch_user', 'branch');
+        $this->loginAs('branch_user');
 
-        $this->get('/developer')->assertForbidden();
-        $this->get('/developer/users')->assertForbidden();
-        $this->get('/developer/config')->assertForbidden();
+        $this->get('/developer')->assertRedirect('/pemuridan/dashboard?error=access_denied');
+        $this->get('/developer/users')->assertRedirect('/pemuridan/dashboard?error=access_denied');
+        $this->get('/developer/config')->assertRedirect('/pemuridan/dashboard?error=access_denied');
     }
 
     public function test_developer_bypasses_existing_access_gates(): void
     {
         $this->createCoreTables();
         $this->seedDeveloper();
-        $this->loginAs('developer', 'developer');
+        $this->loginAs('developer');
         RuntimeBootstrap::load();
 
         $this->assertTrue(branch_can_access_page(current_user_branch(), 'discipleship_dashboard'));
@@ -64,12 +58,12 @@ class DeveloperAccessTest extends TestCase
     {
         $this->createCoreTables();
         $this->seedDeveloper();
-        $this->loginAs('developer', 'developer');
+        $this->loginAs('developer');
 
         $this->post('/developer/branch', ['branch_code' => 'gm'])
             ->assertRedirect('/developer?branch_changed=1');
 
-        $this->assertSame('gm', $_SESSION['developer_branch'] ?? null);
+        $this->assertSame('gm', session('developer_branch'));
         $this->assertSame('gm', current_user_branch());
     }
 
@@ -77,7 +71,7 @@ class DeveloperAccessTest extends TestCase
     {
         $this->createCoreTables();
         $this->seedDeveloper();
-        $this->loginAs('developer', 'developer');
+        $this->loginAs('developer');
 
         $this->post('/developer/users', [
             'username' => 'managed_user',
@@ -94,7 +88,7 @@ class DeveloperAccessTest extends TestCase
         $this->assertTrue(Hash::check('new-secret', $storedPassword));
 
         $managedUserId = (int) DB::table('users')->where('username', 'managed_user')->value('id');
-        $this->post('/developer/users/' . $managedUserId, [
+        $this->post('/developer/users/'.$managedUserId, [
             'name' => 'Managed User Updated',
             'email' => 'managed_user_updated@rec.local',
             'branch_code' => 'darmo',
@@ -111,7 +105,7 @@ class DeveloperAccessTest extends TestCase
             'is_active' => false,
         ]);
 
-        $this->post('/developer/users/' . $managedUserId . '/password', [
+        $this->post('/developer/users/'.$managedUserId.'/password', [
             'password' => 'reset-secret',
         ])->assertRedirect('/developer/users?status=password_reset');
 
@@ -123,9 +117,9 @@ class DeveloperAccessTest extends TestCase
     {
         $this->createCoreTables();
         $developerId = $this->seedDeveloper();
-        $this->loginAs('developer', 'developer');
+        $this->loginAs('developer');
 
-        $this->post('/developer/users/' . $developerId, [
+        $this->post('/developer/users/'.$developerId, [
             'name' => 'Developer',
             'email' => 'developer@rec.local',
             'branch_code' => 'kutisari',
@@ -133,7 +127,7 @@ class DeveloperAccessTest extends TestCase
             'is_active' => '0',
         ])->assertRedirect('/developer/users?error=self_deactivate');
 
-        $this->post('/developer/users/' . $developerId, [
+        $this->post('/developer/users/'.$developerId, [
             'name' => 'Developer',
             'email' => 'developer@rec.local',
             'branch_code' => 'kutisari',
@@ -152,7 +146,7 @@ class DeveloperAccessTest extends TestCase
     {
         $this->createCoreTables();
         $this->seedDeveloper();
-        $this->loginAs('developer', 'developer');
+        $this->loginAs('developer');
 
         $this->post('/developer/config', [
             'church_name' => 'REC Internal',
@@ -250,7 +244,7 @@ class DeveloperAccessTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $overrides
+     * @param  array<string, mixed>  $overrides
      */
     private function seedUser(string $username, string $email, string $scope, array $overrides = []): int
     {
@@ -267,33 +261,10 @@ class DeveloperAccessTest extends TestCase
         ], $overrides));
     }
 
-    private function loginAs(string $username, string $scope): void
+    private function loginAs(string $username): void
     {
-        $this->startLegacySession();
+        $user = User::query()->where('username', $username)->firstOrFail();
 
-        $_SESSION['user'] = $username;
-        $_SESSION['cabang'] = 'kutisari';
-        $_SESSION['access_scope'] = $scope;
-    }
-
-    private function startLegacySession(): void
-    {
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
-
-        if (session_status() === PHP_SESSION_NONE) {
-            session_id('developer-test-' . str_replace('.', '', uniqid('', true)));
-            session_start();
-        }
-    }
-
-    private function restoreLegacySession(): void
-    {
-        $_SESSION = [];
-
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
+        $this->actingAs($user);
     }
 }

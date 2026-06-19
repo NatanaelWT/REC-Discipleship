@@ -792,6 +792,7 @@ if ($page === 'people_tree') {
     echo "  <div class=\"tree-v2-toolbar\">\n";
     echo "    <div class=\"tree-v2-search\">\n";
     echo "      <form method=\"post\" action=\"" . h($peopleTreeExportDotUrl) . "\" class=\"tree-v2-export-form\">\n";
+    echo "        " . csrf_field() . "\n";
     echo "        <input type=\"hidden\" name=\"action\" value=\"export_pohon_pemuridan_dot\">\n";
     echo "        <input type=\"hidden\" name=\"export_cabang\" value=\"" . h($dotExportBranch) . "\">\n";
     $dotExportButtonAttrs = $dotExportDisabled ? ' disabled aria-disabled="true" title="Pilih satu cabang dulu"' : ' title="Export .dot"';
@@ -892,6 +893,7 @@ if ($page === 'people_tree') {
         echo "    </div>\n";
         echo "    <div class=\"modal-body\">\n";
         echo "      <form method=\"post\" action=\"" . h($peopleTreeSavePersonUrl) . "\" class=\"modal-form\" data-modal-form=\"add\">\n";
+        echo "        " . csrf_field() . "\n";
         echo "        <input type=\"hidden\" name=\"action\" value=\"save_person\">\n";
         echo "        <input type=\"hidden\" name=\"return_page\" value=\"people_tree\">\n";
         echo "        <input type=\"hidden\" name=\"group_id\" value=\"\">\n";
@@ -928,6 +930,7 @@ if ($page === 'people_tree') {
         echo "      </form>\n";
 
         echo "      <form method=\"post\" action=\"" . h($peopleTreeSavePersonUrl) . "\" class=\"modal-form is-hidden\" data-modal-form=\"edit\">\n";
+        echo "        " . csrf_field() . "\n";
         echo "        <input type=\"hidden\" name=\"action\" value=\"save_person\">\n";
         echo "        <input type=\"hidden\" name=\"return_page\" value=\"people_tree\">\n";
         echo "        <input type=\"hidden\" name=\"id\" value=\"\">\n";
@@ -1067,6 +1070,7 @@ if ($page === 'people_tree') {
         echo "    </div>\n";
         echo "    <div class=\"modal-body\">\n";
         echo "      <form method=\"post\" action=\"" . h($peopleTreeSaveGroupUrl) . "\" class=\"modal-form\" data-group-form=\"add\">\n";
+        echo "        " . csrf_field() . "\n";
         echo "        <input type=\"hidden\" name=\"action\" value=\"save_group\">\n";
         echo "        <input type=\"hidden\" name=\"return_page\" value=\"people_tree\">\n";
         echo "        <input type=\"hidden\" name=\"id\" value=\"\">\n";
@@ -1101,6 +1105,7 @@ if ($page === 'people_tree') {
         echo "      </form>\n";
 
         echo "      <form method=\"post\" action=\"" . h($peopleTreeSaveGroupUrl) . "\" class=\"modal-form is-hidden\" data-group-form=\"edit\">\n";
+        echo "        " . csrf_field() . "\n";
         echo "        <input type=\"hidden\" name=\"action\" value=\"save_group\">\n";
         echo "        <input type=\"hidden\" name=\"return_page\" value=\"people_tree\">\n";
         echo "        <input type=\"hidden\" name=\"id\" value=\"\">\n";
@@ -1199,22 +1204,26 @@ if ($page === 'people_tree') {
         echo "<button class=\"is-hidden\" type=\"button\" data-tree-v2-proxy=\"view-history\" data-tree-v2-history-open=\"\"></button>\n";
         echo "<button class=\"is-hidden\" type=\"button\" data-tree-v2-proxy=\"view-person-journey\" data-spiritual-journey-view-open=\"\"></button>\n";
         echo "<form method=\"post\" action=\"" . h($peopleTreeLeaveGroupUrl) . "\" class=\"is-hidden\" data-tree-v2-leave-form>\n";
+        echo "  " . csrf_field() . "\n";
         echo "  <input type=\"hidden\" name=\"action\" value=\"leave_person_group\">\n";
         echo "  <input type=\"hidden\" name=\"return_page\" value=\"people_tree\">\n";
         echo "  <input type=\"hidden\" name=\"id\" value=\"\">\n";
         echo "  <input type=\"hidden\" name=\"group_id\" value=\"\">\n";
         echo "</form>\n";
         echo "<form method=\"post\" action=\"" . h($peopleTreeDeletePersonUrl) . "\" class=\"is-hidden\" data-tree-v2-delete-person-form>\n";
+        echo "  " . csrf_field() . "\n";
         echo "  <input type=\"hidden\" name=\"action\" value=\"delete_person\">\n";
         echo "  <input type=\"hidden\" name=\"return_page\" value=\"people_tree\">\n";
         echo "  <input type=\"hidden\" name=\"id\" value=\"\">\n";
         echo "</form>\n";
         echo "<form method=\"post\" action=\"" . h($peopleTreeCompleteGroupUrl) . "\" class=\"is-hidden\" data-tree-v2-complete-group-form>\n";
+        echo "  " . csrf_field() . "\n";
         echo "  <input type=\"hidden\" name=\"action\" value=\"complete_group\">\n";
         echo "  <input type=\"hidden\" name=\"return_page\" value=\"people_tree\">\n";
         echo "  <input type=\"hidden\" name=\"id\" value=\"\">\n";
         echo "</form>\n";
         echo "<form method=\"post\" action=\"" . h($peopleTreeReactivateGroupUrl) . "\" class=\"is-hidden\" data-tree-v2-reactivate-group-form>\n";
+        echo "  " . csrf_field() . "\n";
         echo "  <input type=\"hidden\" name=\"action\" value=\"reactivate_group\">\n";
         echo "  <input type=\"hidden\" name=\"return_page\" value=\"people_tree\">\n";
         echo "  <input type=\"hidden\" name=\"id\" value=\"\">\n";

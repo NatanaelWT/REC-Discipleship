@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\DiscipleshipDashboard\UpdateDashboardMskSessionsRequest;
 use App\Services\DiscipleshipDashboard\DashboardMskSessionUpdater;
 use App\Services\DiscipleshipDashboard\DashboardPageData;
-use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,20 +49,6 @@ class DashboardController extends Controller
     private function guardPageAccess(Request $request): ?RedirectResponse
     {
         RuntimeBootstrap::boot($request);
-
-        if (trim((string) $request->input('action', '')) === 'logout') {
-            destroy_current_session();
-
-            return redirect()->route('home');
-        }
-
-        if (! is_logged_in()) {
-            return redirect()->route('auth.login');
-        }
-
-        if (! branch_can_access_page(current_user_branch(), 'discipleship_dashboard')) {
-            return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
-        }
 
         return null;
     }

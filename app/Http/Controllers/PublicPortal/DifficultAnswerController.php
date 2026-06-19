@@ -24,9 +24,9 @@ class DifficultAnswerController extends Controller
         LookupDifficultAnswerRequest $request,
         DifficultQuestionPasswordService $passwordService,
     ): RedirectResponse {
-        $_SESSION['difficult_answer_lookup_hash'] = $passwordService->lookupHash(
+        session()->put('difficult_answer_lookup_hash', $passwordService->lookupHash(
             (string) $request->input('question_password', ''),
-        );
+        ));
 
         return redirect()->route('public.difficult-question.answer', ['looked' => 1]);
     }

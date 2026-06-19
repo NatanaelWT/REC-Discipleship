@@ -23,10 +23,10 @@ class StoreDifficultQuestionRequest extends FormRequest
         $askerName = $normalizer->normalize((string) $this->input('asker_name', ''), 120);
         $questionText = $normalizer->normalize((string) $this->input('question_text', ''), 6000);
 
-        $_SESSION['difficult_question_old'] = [
+        session()->put('difficult_question_old', [
             'asker_name' => $askerName,
             'question_text' => $questionText,
-        ];
+        ]);
 
         $this->merge([
             'asker_name' => $askerName,

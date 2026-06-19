@@ -237,6 +237,7 @@ if ($page === 'msk_classes') {
 
         ob_start();
         echo "<form method=\"post\" action=\"" . h($mskStoreAction) . "\" enctype=\"multipart/form-data\" class=\"form-grid msk-participant-form\" data-msk-form>\n";
+        echo csrf_field() . "\n";
         echo "  <input type=\"hidden\" name=\"action\" value=\"save_msk_participant\">\n";
         echo "  <input type=\"hidden\" name=\"id\" value=\"" . h($participantId) . "\">\n";
         echo "  <input type=\"hidden\" name=\"batch_month\" value=\"" . h($batchMonth) . "\">\n";
@@ -499,12 +500,14 @@ if ($page === 'msk_classes') {
     if (!$centralReadOnly) {
         echo "      <button class=\"btn tiny icon-btn\" type=\"button\" data-msk-create-open aria-label=\"Tambah Peserta MSK\" title=\"Tambah Peserta MSK\">" . icon_svg('plus') . "</button>\n";
         echo "      <form method=\"post\" action=\"" . h($mskImportAction) . "\" enctype=\"multipart/form-data\" class=\"msk-import-inline-form\">\n";
+        echo "        " . csrf_field() . "\n";
         echo "        <input type=\"hidden\" name=\"action\" value=\"import_pemuridan_excel\">\n";
         echo "        <input type=\"hidden\" name=\"return_page\" value=\"msk_classes\">\n";
         echo "        <input type=\"hidden\" name=\"batch_month\" value=\"" . h($batchMonthFilterParam) . "\">\n";
         echo "        <label class=\"btn tiny msk-import-trigger\" aria-label=\"Import Data Kelas MSK\" title=\"Import Data Kelas MSK\">Import MSK<input class=\"msk-import-input\" type=\"file\" name=\"import_pemuridan_excel\" accept=\".xlsx\" onchange=\"this.form.submit()\"></label>\n";
         echo "      </form>\n";
         echo "      <form method=\"post\" action=\"" . h($mskExportAction) . "\" class=\"msk-export-inline-form\">\n";
+        echo "        " . csrf_field() . "\n";
         echo "        <input type=\"hidden\" name=\"action\" value=\"export_pemuridan_excel\">\n";
         echo "        <input type=\"hidden\" name=\"batch_month\" value=\"" . h($batchMonthFilterParam) . "\">\n";
         echo "        <button class=\"btn tiny ghost\" type=\"submit\">Export MSK</button>\n";
@@ -605,6 +608,7 @@ if ($page === 'msk_classes') {
             $toggleIcon = $participantStatus === 'inactive' ? icon_svg('check') : icon_svg('trash');
             echo "<button class=\"btn tiny icon-btn\" type=\"button\" data-msk-edit-open=\"" . h($participantId) . "\" aria-label=\"Edit\" title=\"Edit\">" . icon_svg('edit') . "</button>";
             echo "<form method=\"post\" action=\"" . h($toggleRoute) . "\" class=\"inline\" onsubmit=\"return confirm('" . h($toggleConfirm) . "');\">";
+            echo csrf_field();
             echo "<input type=\"hidden\" name=\"action\" value=\"" . h($toggleAction) . "\">";
             echo "<input type=\"hidden\" name=\"id\" value=\"" . h($participantId) . "\">";
             echo "<input type=\"hidden\" name=\"batch_month\" value=\"" . h($batchMonthFilterParam) . "\">";

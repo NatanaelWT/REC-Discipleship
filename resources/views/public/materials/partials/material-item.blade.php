@@ -33,6 +33,7 @@
     </div>
     @if (! empty($canManageMaterials))
       <form class="public-material-rename-form" method="post" action="{{ route('materials.rename', ['menu' => $menu, 'churchFile' => $fileId]) }}">
+        @csrf
         <input class="public-material-rename-input" type="text" name="title" value="{{ $title }}" maxlength="180" required>
         <button class="btn tiny" type="submit">Simpan nama</button>
       </form>

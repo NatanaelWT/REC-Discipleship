@@ -27,6 +27,7 @@
               <a class="btn tiny secondary icon-btn" href="{{ route('worship.penatalayan', ['month' => $scheduleMonth]) }}" aria-label="Buka" title="Buka">{!! icon_svg('eye') !!}</a>
               <a class="btn tiny ghost icon-btn" href="{{ route('worship.penatalayan.image', ['month' => $scheduleMonth]) }}" aria-label="Cetak" title="Cetak">{!! icon_svg('print') !!}</a>
               <form method="post" action="{{ route('worship.penatalayan.destroy', ['month' => $scheduleMonth]) }}" class="inline" onsubmit="return confirm('Hapus jadwal penatalayan bulan ini?');">
+                @csrf
                 @method('DELETE')
                 <input type="hidden" name="action" value="delete_worship_penatalayan">
                 <input type="hidden" name="month" value="{{ $scheduleMonth }}">

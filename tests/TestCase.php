@@ -2,25 +2,27 @@
 
 namespace Tests;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
-    protected function setUp(): void
+    protected function actingAsRecUser(string $username = 'tester', string $branch = 'kutisari', string $scope = 'branch'): User
     {
-        parent::setUp();
+        $user = new User;
+        $user->forceFill([
+            'id' => 999999,
+            'username' => $username,
+            'name' => $username,
+            'email' => $username.'@rec.local',
+            'branch_code' => $branch,
+            'access_scope' => $scope,
+            'is_active' => true,
+        ]);
+        $user->exists = true;
 
-        $_SESSION = [];
-    }
+        $this->actingAs($user);
 
-    protected function tearDown(): void
-    {
-        $_SESSION = [];
-
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
-
-        parent::tearDown();
+        return $user;
     }
 }

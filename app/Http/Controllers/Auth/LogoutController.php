@@ -13,7 +13,7 @@ class LogoutController extends Controller
     public function destroy(Request $request, SessionAuthenticator $sessions): RedirectResponse
     {
         RuntimeBootstrap::boot($request);
-        $sessions->logout();
+        $sessions->logout($request);
 
         return redirect()->route('home');
     }

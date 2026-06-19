@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Worship;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\WorshipServiceSchedules\DeleteWorshipServiceScheduleRequest;
 use App\Http\Requests\WorshipServiceSchedules\StoreWorshipServiceScheduleRequest;
-use App\Services\Routing\AppPageRouteMap;
 use App\Services\WorshipServiceSchedules\WorshipServiceScheduleBuilder;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
@@ -14,17 +13,9 @@ use Illuminate\View\View;
 
 class ServiceScheduleController extends Controller
 {
-    public function index(Request $request, WorshipServiceScheduleBuilder $scheduleBuilder): RedirectResponse|View
+    public function index(Request $request, WorshipServiceScheduleBuilder $scheduleBuilder): View
     {
         RuntimeBootstrap::boot($request);
-
-        if (! is_logged_in()) {
-            return redirect()->route('auth.login');
-        }
-
-        if (! branch_can_access_page(current_user_branch(), 'worship_penatalayan')) {
-            return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
-        }
 
         $selectedMonth = normalize_month_value((string) $request->query('month', date('Y-m')));
         $schedules = $scheduleBuilder->allRecords();

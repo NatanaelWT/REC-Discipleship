@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Services\Auth\AuthCredentialService;
+use App\Services\Auth\CurrentUserContext;
 use App\Services\Auth\LoginAttemptLimiter;
 use App\Services\Auth\SessionAuthenticator;
 use App\Services\Routing\AppPageRouteMap;
@@ -12,22 +13,23 @@ use App\Support\RuntimeBootstrap;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class LoginController extends Controller
 {
-    public function show(Request $request, AuthCredentialService $credentials, SessionAuthenticator $sessions): RedirectResponse|View
+    public function show(Request $request, CurrentUserContext $context, SessionAuthenticator $sessions): RedirectResponse|View
     {
         RuntimeBootstrap::boot($request);
 
-        if (function_exists('is_logged_in') && is_logged_in()) {
-            if (! $credentials->findByUsername(current_username())) {
-                $sessions->logout();
+        if (Auth::check() && ! $context->isLoggedIn()) {
+            $sessions->logout($request);
 
-                return redirect()->route('auth.login', ['account_removed' => 1]);
-            }
+            return redirect()->route('auth.login', ['account_removed' => 1]);
+        }
 
-            return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch())));
+        if ($context->isLoggedIn()) {
+            return redirect(AppPageRouteMap::pageUrl($context->homePage()));
         }
 
         return view('auth.login', $this->viewData($request));
@@ -56,9 +58,9 @@ class LoginController extends Controller
         if ($user !== null) {
             $limiter->clear($ip);
             $credentials->updateLastLogin($user, $now);
-            $sessions->login($user, $now, $credentials);
+            $sessions->login($request, $user);
 
-            return redirect(AppPageRouteMap::pageUrl(branch_home_page((string) ($_SESSION['cabang'] ?? 'kutisari'))));
+            return redirect(AppPageRouteMap::pageUrl(app(CurrentUserContext::class)->homePage()));
         }
 
         $waitSeconds = $limiter->registerFailure($ip, $now);

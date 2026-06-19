@@ -83,6 +83,7 @@
           <div class="login-sub">Gunakan akun untuk mengakses dashboard internal, data pemuridan, dan modul pelayanan REC.</div>
         </div>
         <form method="post" action="{{ route('auth.login.store') }}" class="form-grid login-form">
+          @csrf
           <input type="hidden" name="action" value="login">
           <label class="login-field">Username<input type="text" name="username" required autocomplete="username" placeholder="Masukkan username" autofocus spellcheck="false"></label>
           <label class="login-field">Password<input type="password" name="password" required autocomplete="current-password" placeholder="Masukkan password"></label>

@@ -47,6 +47,7 @@ $centralReadOnly = is_effective_central_discipleship_readonly();
 
         ob_start();
         echo "<form method=\"post\" action=\"" . h(route('discipleship.dashboard.msk-sessions')) . "\" class=\"form-grid\">\n";
+        echo csrf_field() . "\n";
         echo "  <div class=\"panel-note\" style=\"grid-column:1/-1;\">Peserta: <strong>" . h($participantName) . "</strong><br>Batch Mulai MSK: " . h($mskMonthLabel) . "<br>Progress Saat Ini: " . h($progressLabel) . "</div>\n";
         echo "  <fieldset class=\"dg-checklist msk-session-checklist\" style=\"grid-column:1/-1;\">\n";
         echo "    <legend>Edit Checklist 12 Sesi MSK</legend>\n";

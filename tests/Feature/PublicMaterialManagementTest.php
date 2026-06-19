@@ -30,11 +30,6 @@ class PublicMaterialManagementTest extends TestCase
     {
         $this->deleteTestUploadFolders();
         config(['public_materials.base_path' => 'msk-dg']);
-        $_SESSION = [];
-
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
 
         parent::tearDown();
     }
@@ -79,8 +74,8 @@ class PublicMaterialManagementTest extends TestCase
         $this->assertNotNull($row);
         $this->assertSame(PublicMaterialMenuKey::MateriDg1->value, $row->menu);
         $this->assertSame('Materi Baru Pusat.pdf', $row->original_file_name);
-        $this->assertStringStartsWith($this->testRelativeFolder(PublicMaterialMenuKey::MateriDg1) . '/file_', (string) $row->relative_path);
-        $this->assertFileExists(storage_path('app/public/' . (string) $row->relative_path));
+        $this->assertStringStartsWith($this->test_relative_folder(PublicMaterialMenuKey::MateriDg1).'/file_', (string) $row->relative_path);
+        $this->assertFileExists(storage_path('app/public/'.(string) $row->relative_path));
         $this->assertFileDoesNotExist(rec_runtime_path((string) $row->relative_path));
     }
 
@@ -123,7 +118,7 @@ class PublicMaterialManagementTest extends TestCase
 
         $this->assertSame(1, $exitCode);
         $this->assertStringContainsString('File fisik hilang', $output);
-        $this->assertStringContainsString($this->testRelativeFolder(PublicMaterialMenuKey::MateriDg1) . '/file_missing_20260617000000.pdf', $output);
+        $this->assertStringContainsString($this->test_relative_folder(PublicMaterialMenuKey::MateriDg1).'/file_missing_20260617000000.pdf', $output);
     }
 
     public function test_materials_audit_reports_unregistered_public_files(): void
@@ -136,7 +131,7 @@ class PublicMaterialManagementTest extends TestCase
 
         $this->assertSame(1, $exitCode);
         $this->assertStringContainsString('File fisik belum terdaftar', $output);
-        $this->assertStringContainsString($this->testRelativeFolder(PublicMaterialMenuKey::MateriDg1) . '/' . $fileName, $output);
+        $this->assertStringContainsString($this->test_relative_folder(PublicMaterialMenuKey::MateriDg1).'/'.$fileName, $output);
     }
 
     public function test_materials_sync_adds_enum_folder_files_only(): void
@@ -144,19 +139,19 @@ class PublicMaterialManagementTest extends TestCase
         $fileName = 'file_sync_20260617000000.pdf';
         $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Sync material');
 
-        $ignoredDir = storage_path('app/public/' . $this->testBasePath . '/Materi-MSK');
+        $ignoredDir = storage_path('app/public/'.$this->testBasePath.'/Materi-MSK');
         File::ensureDirectoryExists($ignoredDir);
-        File::put($ignoredDir . '/file_ignored_20260617000000.pdf', 'Ignored material');
+        File::put($ignoredDir.'/file_ignored_20260617000000.pdf', 'Ignored material');
 
         $exitCode = Artisan::call('materials:sync-files');
 
         $this->assertSame(0, $exitCode);
         $this->assertDatabaseHas('public_material_files', [
             'menu' => PublicMaterialMenuKey::MateriDg1->value,
-            'relative_path' => $this->testRelativeFolder(PublicMaterialMenuKey::MateriDg1) . '/' . $fileName,
+            'relative_path' => $this->test_relative_folder(PublicMaterialMenuKey::MateriDg1).'/'.$fileName,
         ]);
         $this->assertDatabaseMissing('public_material_files', [
-            'relative_path' => $this->testBasePath . '/Materi-MSK/file_ignored_20260617000000.pdf',
+            'relative_path' => $this->testBasePath.'/Materi-MSK/file_ignored_20260617000000.pdf',
         ]);
     }
 
@@ -180,10 +175,7 @@ class PublicMaterialManagementTest extends TestCase
 
     public function test_branch_user_cannot_upload_public_material_file(): void
     {
-        $this->startLegacySession();
-        $_SESSION['user'] = 'admin_cabang';
-        $_SESSION['cabang'] = 'kutisari';
-        $_SESSION['access_scope'] = 'branch';
+        $this->actingAsRecUser('admin_cabang');
 
         $response = $this->post('/materi/materi_dg_1/upload', [
             'title' => 'Tidak Boleh',
@@ -223,7 +215,7 @@ class PublicMaterialManagementTest extends TestCase
         $this->insertMaterialFileWithPath(
             'church_file_test',
             'Nama Lama',
-            $this->testRelativeFolder(PublicMaterialMenuKey::MateriDg1) . '/' . $fileName,
+            $this->test_relative_folder(PublicMaterialMenuKey::MateriDg1).'/'.$fileName,
             'Nama Lama.pdf',
             PublicMaterialMenuKey::MateriDg1,
         );
@@ -238,8 +230,8 @@ class PublicMaterialManagementTest extends TestCase
         $this->insertMaterialFileWithPath(
             $publicId,
             $title,
-            $this->testRelativeFolder($menu) . '/' . $fileName,
-            $title . '.pdf',
+            $this->test_relative_folder($menu).'/'.$fileName,
+            $title.'.pdf',
             $menu,
         );
     }
@@ -268,37 +260,21 @@ class PublicMaterialManagementTest extends TestCase
     {
         $fullDir = public_material_folder_full_path($menu->folder());
         File::ensureDirectoryExists($fullDir);
-        File::put($fullDir . '/' . $fileName, $contents);
+        File::put($fullDir.'/'.$fileName, $contents);
     }
 
-    private function testRelativeFolder(PublicMaterialMenuKey $menu): string
+    private function test_relative_folder(PublicMaterialMenuKey $menu): string
     {
         return public_material_folder_relative_path($menu->folder());
     }
 
     private function loginAsCentralUser(): void
     {
-        $this->startLegacySession();
-
-        $_SESSION['user'] = 'recpusat';
-        $_SESSION['cabang'] = 'pusat';
-        $_SESSION['access_scope'] = 'central_discipleship_readonly';
-    }
-
-    private function startLegacySession(): void
-    {
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
-
-        if (session_status() === PHP_SESSION_NONE) {
-            session_id('public-material-test-' . str_replace('.', '', uniqid('', true)));
-            session_start();
-        }
+        $this->actingAsRecUser('recpusat', 'pusat', 'central_discipleship_readonly');
     }
 
     private function deleteTestUploadFolders(): void
     {
-        File::deleteDirectory(storage_path('app/public/' . $this->testBasePath));
+        File::deleteDirectory(storage_path('app/public/'.$this->testBasePath));
     }
 }

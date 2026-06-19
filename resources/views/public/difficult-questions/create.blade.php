@@ -29,6 +29,7 @@
         <p>Buat password pribadi saat mengirim pertanyaan. Password ini dipakai untuk membuka jawaban setelah admin pusat menjawab.</p>
       </div>
       <form method="post" action="{{ route('public.difficult-question.store') }}" class="form-grid public-question-form">
+        @csrf
         <input type="hidden" name="action" value="submit_difficult_question">
         <label class="public-question-field">Nama (opsional)<input type="text" name="asker_name" maxlength="120" value="{{ (string) ($old['asker_name'] ?? '') }}" placeholder="Boleh dikosongkan"></label>
         <label class="public-question-field public-question-field-full">Pertanyaan <span class="required-mark">*</span><textarea name="question_text" rows="7" maxlength="6000" required placeholder="Tulis pertanyaan yang ingin dijawab...">{{ (string) ($old['question_text'] ?? '') }}</textarea></label>

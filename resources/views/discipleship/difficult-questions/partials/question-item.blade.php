@@ -15,6 +15,7 @@
   @endif
   @if ($questionItem['publicId'] !== '')
     <form method="post" action="{{ route('discipleship.difficult-questions.answer', $questionItem['model']) }}" class="form-grid difficult-question-answer-form">
+      @csrf
       <input type="hidden" name="action" value="save_difficult_question_answer">
       <input type="hidden" name="id" value="{{ $questionItem['publicId'] }}">
       <label>Jawaban<textarea name="answer_text" rows="5" maxlength="8000" required placeholder="Tulis jawaban untuk pertanyaan ini...">{{ $questionItem['answerText'] }}</textarea></label>

@@ -51,7 +51,7 @@ class StoreMemberFeedbackJournalRequest extends FormRequest
     protected function prepareForValidation()
     {
         RuntimeBootstrap::boot($this);
-        $_SESSION['public_member_feedback_old'] = $this->all();
+        session()->put('public_member_feedback_old', $this->all());
     }
 
     /**
@@ -82,7 +82,7 @@ class StoreMemberFeedbackJournalRequest extends FormRequest
                 $this->publicBranch = normalize_public_branch_code($branchRaw);
             }
 
-            $_SESSION['public_member_feedback_old']['public_cabang'] = $this->publicBranch;
+            session()->put('public_member_feedback_old.public_cabang', $this->publicBranch);
 
             $formData = app(MemberFeedbackFormData::class)->forBranch($this->publicBranch);
             $groupMap = $formData['group_map'];
@@ -178,7 +178,7 @@ class StoreMemberFeedbackJournalRequest extends FormRequest
             throw new HttpResponseException(redirect()->route('public.member-feedback.branch', ['error' => 'invalid_branch']));
         }
 
-        $_SESSION['public_member_feedback_error'] = $validator->errors()->first('public_member_feedback_error');
+        session()->put('public_member_feedback_error', $validator->errors()->first('public_member_feedback_error'));
 
         $params = [];
         $branch = $this->publicBranch !== '' ? $this->publicBranch : trim((string) $this->input('public_cabang', ''));
@@ -194,7 +194,7 @@ class StoreMemberFeedbackJournalRequest extends FormRequest
     }
 
     /**
-     * @param array<string, mixed> $groupRow
+     * @param  array<string, mixed>  $groupRow
      * @return array<string, string>
      */
     private function groupMemberMap(array $groupRow): array

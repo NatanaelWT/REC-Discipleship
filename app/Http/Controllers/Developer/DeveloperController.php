@@ -45,8 +45,7 @@ class DeveloperController extends Controller
             return redirect()->route('developer.dashboard', ['branch_error' => 'branch_invalid']);
         }
 
-        $_SESSION['developer_branch'] = $branch;
-        $_SESSION['cabang'] = $branch;
+        $request->session()->put('developer_branch', $branch);
 
         return redirect()->route('developer.dashboard', ['branch_changed' => 1]);
     }

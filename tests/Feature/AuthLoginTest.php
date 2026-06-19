@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -9,17 +10,6 @@ use Tests\TestCase;
 
 class AuthLoginTest extends TestCase
 {
-    protected function tearDown(): void
-    {
-        $_SESSION = [];
-
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
-
-        parent::tearDown();
-    }
-
     public function test_login_page_renders_from_laravel_view(): void
     {
         $this->createAuthTables();
@@ -42,13 +32,40 @@ class AuthLoginTest extends TestCase
         ]);
 
         $response->assertRedirect('/pemuridan/dashboard');
-        $this->assertSame('auth_user_test', $_SESSION['user'] ?? null);
-        $this->assertSame('kutisari', $_SESSION['cabang'] ?? null);
-        $this->assertSame('branch', $_SESSION['access_scope'] ?? null);
+        $this->assertAuthenticatedAs(User::query()->where('username', 'auth_user_test')->firstOrFail());
+        $this->assertSame('auth_user_test', current_username());
+        $this->assertSame('kutisari', current_user_branch());
+        $this->assertSame('branch', current_auth_access_scope());
         $this->assertDatabaseHas('users', [
             'username' => 'auth_user_test',
             'branch_code' => 'kutisari',
         ]);
+    }
+
+    public function test_logout_invalidates_laravel_auth_session(): void
+    {
+        $this->createAuthTables();
+        $this->seedUser();
+
+        $this->actingAs(User::query()->where('username', 'auth_user_test')->firstOrFail());
+
+        $response = $this->post('/logout');
+
+        $response->assertRedirect('/');
+        $this->assertGuest();
+    }
+
+    public function test_inactive_authenticated_user_is_logged_out_from_login_page(): void
+    {
+        $this->createAuthTables();
+        $this->seedUser(['is_active' => false]);
+
+        $this->actingAs(User::query()->where('username', 'auth_user_test')->firstOrFail());
+
+        $response = $this->get('/login');
+
+        $response->assertRedirect('/login?account_removed=1');
+        $this->assertGuest();
     }
 
     public function test_inactive_user_cannot_login(): void
@@ -62,7 +79,7 @@ class AuthLoginTest extends TestCase
         ]);
 
         $response->assertRedirect('/login?error=1');
-        $this->assertArrayNotHasKey('user', $_SESSION);
+        $this->assertGuest();
     }
 
     public function test_invalid_login_is_rate_limited_after_five_failures(): void
@@ -119,7 +136,7 @@ class AuthLoginTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $overrides
+     * @param  array<string, mixed>  $overrides
      */
     private function seedUser(array $overrides = []): void
     {

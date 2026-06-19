@@ -9,13 +9,6 @@ use Tests\TestCase;
 
 class DifficultQuestionAdminTest extends TestCase
 {
-    protected function tearDown(): void
-    {
-        $this->restoreLegacySession();
-
-        parent::tearDown();
-    }
-
     public function test_legacy_difficult_question_query_is_rejected(): void
     {
         $response = $this->get('/pemuridan/pertanyaan-sulit?page=discipleship_targets');
@@ -84,9 +77,8 @@ class DifficultQuestionAdminTest extends TestCase
     public function test_public_answer_lookup_renders_matched_question(): void
     {
         $this->createDifficultQuestionsTable();
-        $this->startLegacySession();
 
-        $_SESSION['difficult_answer_lookup_hash'] = 'lookup-public';
+        session()->put('difficult_answer_lookup_hash', 'lookup-public');
 
         DB::table('difficult_questions')->insert([
             'public_id' => 'dq_public_1',
@@ -131,31 +123,6 @@ class DifficultQuestionAdminTest extends TestCase
 
     private function loginAsCentralDiscipleshipAdmin(): void
     {
-        $this->startLegacySession();
-
-        $_SESSION['user'] = 'admin_pusat';
-        $_SESSION['cabang'] = 'pusat';
-        $_SESSION['access_scope'] = 'central_discipleship_readonly';
-    }
-
-    private function startLegacySession(): void
-    {
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
-
-        if (session_status() === PHP_SESSION_NONE) {
-            session_id('difficult-question-test-'.str_replace('.', '', uniqid('', true)));
-            session_start();
-        }
-    }
-
-    private function restoreLegacySession(): void
-    {
-        $_SESSION = [];
-
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
+        $this->actingAsRecUser('admin_pusat', 'pusat', 'central_discipleship_readonly');
     }
 }

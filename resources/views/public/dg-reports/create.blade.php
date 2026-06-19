@@ -76,6 +76,7 @@
         <h2>Jurnal Temu DG - {{ $publicBranchLabel }}</h2>
       </div>
       <form method="post" action="{{ route('public.dg.report.store', ['branch' => $publicBranch]) }}" enctype="multipart/form-data" class="form-grid dg-public-report-form" data-dg-public-form data-dg-hard-disabled="{{ $formDisabled ? '1' : '0' }}">
+        @csrf
         <input type="hidden" name="action" value="save_public_dg_report">
         <input type="hidden" name="public_cabang" value="{{ $publicBranch }}">
 

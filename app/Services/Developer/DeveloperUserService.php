@@ -7,9 +7,7 @@ use Illuminate\Support\Facades\Hash;
 
 class DeveloperUserService
 {
-    public function __construct(private readonly DeveloperBranchService $branches)
-    {
-    }
+    public function __construct(private readonly DeveloperBranchService $branches) {}
 
     /**
      * @return array<string, string>
@@ -25,7 +23,7 @@ class DeveloperUserService
     }
 
     /**
-     * @param array<string, mixed> $input
+     * @param  array<string, mixed>  $input
      */
     public function create(array $input): ?string
     {
@@ -73,7 +71,7 @@ class DeveloperUserService
     }
 
     /**
-     * @param array<string, mixed> $input
+     * @param  array<string, mixed>  $input
      */
     public function update(User $user, array $input, string $actorUsername): ?string
     {
@@ -113,10 +111,10 @@ class DeveloperUserService
         ])->save();
 
         if ($isSelf) {
-            $_SESSION['cabang'] = $branch;
-            $_SESSION['access_scope'] = $scope;
             if ($scope !== 'developer') {
-                unset($_SESSION['developer_branch']);
+                session()->forget('developer_branch');
+            } else {
+                session()->put('developer_branch', $branch);
             }
         }
 
@@ -145,7 +143,7 @@ class DeveloperUserService
     {
         $password = trim((string) env('DEVELOPER_PASSWORD', ''));
         $username = $this->normalizeUsername((string) env('DEVELOPER_USERNAME', 'developer'));
-        $email = $this->normalizeEmail((string) env('DEVELOPER_EMAIL', $username . '@rec.local'));
+        $email = $this->normalizeEmail((string) env('DEVELOPER_EMAIL', $username.'@rec.local'));
 
         if ($password === '') {
             return ['status' => 'missing_password', 'username' => $username, 'email' => $email];
@@ -154,7 +152,7 @@ class DeveloperUserService
             $username = 'developer';
         }
         if ($email === '') {
-            $email = $username . '@rec.local';
+            $email = $username.'@rec.local';
         }
 
         User::query()->updateOrCreate(

@@ -1,19 +1,8 @@
 <?php
 
-function current_user_branch(): string {
-    if (function_exists('is_developer_session') && is_developer_session()) {
-        $developerBranch = trim((string) ($_SESSION['developer_branch'] ?? ''));
-        if ($developerBranch !== '') {
-            return normalize_user_branch($developerBranch);
-        }
+use App\Services\Auth\CurrentUserContext;
 
-        return normalize_user_branch('kutisari');
-    }
-
-    $sessionBranch = trim((string) ($_SESSION['cabang'] ?? ''));
-    if ($sessionBranch !== '') {
-        return normalize_user_branch($sessionBranch);
-    }
-    // Backward compatibility for old session key before migration to "cabang".
-    return normalize_user_branch((string) ($_SESSION['role'] ?? 'kutisari'));
+function current_user_branch(): string
+{
+    return app(CurrentUserContext::class)->branch();
 }

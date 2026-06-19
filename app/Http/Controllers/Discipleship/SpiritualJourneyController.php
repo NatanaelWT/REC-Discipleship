@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Discipleship;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SpiritualJourney\UpdateSpiritualJourneyBridgeStatusRequest;
 use App\Models\MskParticipant;
-use App\Services\Routing\AppPageRouteMap;
 use App\Services\SpiritualJourney\SpiritualJourneyBridgeStatusService;
 use App\Services\SpiritualJourney\SpiritualJourneyPageData;
 use App\Support\RuntimeBootstrap;
@@ -15,23 +14,9 @@ use Illuminate\Http\Response;
 
 class SpiritualJourneyController extends Controller
 {
-    public function index(Request $request, SpiritualJourneyPageData $pageData): RedirectResponse|Response
+    public function index(Request $request, SpiritualJourneyPageData $pageData): Response
     {
         RuntimeBootstrap::boot($request);
-
-        if (trim((string) $request->input('action', '')) === 'logout') {
-            destroy_current_session();
-
-            return redirect()->route('home');
-        }
-
-        if (! is_logged_in()) {
-            return redirect()->route('auth.login');
-        }
-
-        if (! branch_can_access_page(current_user_branch(), 'spiritual_journey')) {
-            return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
-        }
 
         return response(view('discipleship.spiritual-journey.index', $pageData->forCurrentContext($request))->render());
     }

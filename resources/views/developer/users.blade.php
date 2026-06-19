@@ -21,6 +21,7 @@
         <h2>Buat User</h2>
       </div>
       <form method="post" action="{{ route('developer.users.store') }}" class="developer-form-grid">
+        @csrf
         <label>
           <span>Username</span>
           <input type="text" name="username" required maxlength="120" autocomplete="off">
@@ -85,6 +86,7 @@
             </div>
 
             <form method="post" action="{{ route('developer.users.update', $user) }}" class="developer-user-edit-form">
+              @csrf
               <label>
                 <span>Nama</span>
                 <input type="text" name="name" value="{{ $user->name }}" required maxlength="120">
@@ -123,6 +125,7 @@
             </form>
 
             <form method="post" action="{{ route('developer.users.password', $user) }}" class="developer-password-form">
+              @csrf
               <label>
                 <span>Password Baru</span>
                 <input type="password" name="password" minlength="6" @if (! $isSelf) required @endif @if ($isSelf) disabled aria-disabled="true" @endif autocomplete="new-password">

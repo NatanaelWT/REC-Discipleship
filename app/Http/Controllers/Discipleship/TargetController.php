@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Discipleship;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DiscipleshipTargets\UpdateDiscipleshipTargetRequest;
 use App\Services\DiscipleshipTargets\DiscipleshipTargetReader;
-use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,17 +12,9 @@ use Illuminate\View\View;
 
 class TargetController extends Controller
 {
-    public function index(Request $request, DiscipleshipTargetReader $targetReader): RedirectResponse|View
+    public function index(Request $request, DiscipleshipTargetReader $targetReader): View
     {
         RuntimeBootstrap::boot($request);
-
-        if (! is_logged_in()) {
-            return redirect()->route('auth.login');
-        }
-
-        if (! branch_can_access_page(current_user_branch(), 'discipleship_targets')) {
-            return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
-        }
 
         $centralReadOnly = is_effective_central_discipleship_readonly();
         $currentBranch = current_user_branch();

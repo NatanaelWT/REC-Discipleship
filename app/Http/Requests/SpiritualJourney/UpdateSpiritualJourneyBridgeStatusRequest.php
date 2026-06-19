@@ -3,6 +3,7 @@
 namespace App\Http\Requests\SpiritualJourney;
 
 use App\Models\MskParticipant;
+use App\Services\Auth\CurrentUserContext;
 use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
@@ -13,11 +14,12 @@ class UpdateSpiritualJourneyBridgeStatusRequest extends FormRequest
     public function authorize(): bool
     {
         RuntimeBootstrap::boot($this);
+        $context = app(CurrentUserContext::class);
 
-        return is_logged_in()
-            && branch_can_access_page(current_user_branch(), 'spiritual_journey')
-            && branch_can_use_action(current_user_branch(), 'save_journey_bridge_status')
-            && ! is_effective_central_discipleship_readonly();
+        return $context->isLoggedIn()
+            && $context->canAccessPage('spiritual_journey')
+            && $context->canUseAction('save_journey_bridge_status')
+            && ! $context->isCentralDiscipleshipReadonly();
     }
 
     /**
@@ -52,12 +54,13 @@ class UpdateSpiritualJourneyBridgeStatusRequest extends FormRequest
 
     protected function failedAuthorization(): void
     {
-        if (! is_logged_in()) {
+        $context = app(CurrentUserContext::class);
+        if (! $context->isLoggedIn()) {
             throw new HttpResponseException(redirect()->route('auth.login'));
         }
 
         throw new HttpResponseException(
-            redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied'])),
+            redirect(AppPageRouteMap::pageUrl($context->homePage(), ['error' => 'access_denied'])),
         );
     }
 }

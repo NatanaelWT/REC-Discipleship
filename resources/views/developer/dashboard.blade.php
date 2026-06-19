@@ -19,6 +19,7 @@
           <p class="developer-muted">Scope: developer. Cabang aktif: {{ user_branch_label($activeBranch) }}.</p>
         </div>
         <form method="post" action="{{ route('developer.branch') }}" class="developer-branch-form">
+          @csrf
           <label>
             <span>Cabang Aktif</span>
             <select name="branch_code">

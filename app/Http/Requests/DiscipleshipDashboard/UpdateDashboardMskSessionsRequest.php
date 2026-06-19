@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\DiscipleshipDashboard;
 
+use App\Services\Auth\CurrentUserContext;
 use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
@@ -12,11 +13,12 @@ class UpdateDashboardMskSessionsRequest extends FormRequest
     public function authorize(): bool
     {
         RuntimeBootstrap::boot($this);
+        $context = app(CurrentUserContext::class);
 
-        return is_logged_in()
-            && ! is_effective_central_discipleship_readonly()
-            && branch_can_access_page(current_user_branch(), 'discipleship_dashboard')
-            && branch_can_use_action(current_user_branch(), 'save_msk_sessions');
+        return $context->isLoggedIn()
+            && ! $context->isCentralDiscipleshipReadonly()
+            && $context->canAccessPage('discipleship_dashboard')
+            && $context->canUseAction('save_msk_sessions');
     }
 
     /**
@@ -45,12 +47,13 @@ class UpdateDashboardMskSessionsRequest extends FormRequest
 
     protected function failedAuthorization(): void
     {
-        if (! is_logged_in()) {
+        $context = app(CurrentUserContext::class);
+        if (! $context->isLoggedIn()) {
             throw new HttpResponseException(redirect()->route('auth.login'));
         }
 
         throw new HttpResponseException(
-            redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied'])),
+            redirect(AppPageRouteMap::pageUrl($context->homePage(), ['error' => 'access_denied'])),
         );
     }
 }

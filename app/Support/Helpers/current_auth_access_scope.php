@@ -1,5 +1,8 @@
 <?php
 
-function current_auth_access_scope(): string {
-    return normalize_auth_access_scope((string) ($_SESSION['access_scope'] ?? 'branch'));
+use App\Services\Auth\CurrentUserContext;
+
+function current_auth_access_scope(): string
+{
+    return app(CurrentUserContext::class)->accessScope();
 }
