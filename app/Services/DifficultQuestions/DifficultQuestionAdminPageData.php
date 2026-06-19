@@ -21,7 +21,7 @@ class DifficultQuestionAdminPageData
         $questionItems = $questions->map(fn (DifficultQuestion $question): array => $this->adminItem($question));
 
         return [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'questionItems' => $questionItems,
             'pendingQuestionCount' => $questions->where('status', DifficultQuestion::STATUS_PENDING)->count(),
             'answeredQuestionCount' => $questions->where('status', DifficultQuestion::STATUS_ANSWERED)->count(),

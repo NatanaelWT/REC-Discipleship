@@ -32,7 +32,7 @@ class DgMeetingReportRecapPageData
         $people = $this->people($branchCodes, $centralReadOnly, $branchLabels);
 
         return [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'page' => 'dg_reports_recap',
             'people' => array_values($people),
             'groups' => $this->groups($branchCodes, $centralReadOnly, $branchLabels, $people),

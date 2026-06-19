@@ -853,7 +853,7 @@ class DiscipleshipPeopleListData
         }
 
         return [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'people' => $peopleRows,
             'totalPeopleRows' => count($peopleRows),
             'peopleInDg1Count' => $peopleInDg1Count,

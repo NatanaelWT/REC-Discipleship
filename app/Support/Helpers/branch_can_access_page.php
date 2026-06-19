@@ -2,6 +2,9 @@
 
 function branch_can_access_page(string $branch, string $page): bool {
     $page = trim($page);
+    if (function_exists('is_superuser_session') && is_superuser_session()) {
+        return true;
+    }
     if (is_worship_page($page)) {
         return current_user_can_access_worship();
     }

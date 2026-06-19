@@ -40,7 +40,7 @@ class MaterialController extends Controller
         $materialRows = $catalog->filesForMenu($menu);
 
         return view('public.materials.index', [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'menu' => $menu->value,
             'menuLabel' => $menu->label(),
             'menuSubtitle' => $menu->subtitle(),

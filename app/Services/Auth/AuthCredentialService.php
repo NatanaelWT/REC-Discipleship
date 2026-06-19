@@ -15,6 +15,10 @@ class AuthCredentialService
             return null;
         }
 
+        if (! (bool) ($user->is_active ?? true)) {
+            return null;
+        }
+
         return $this->passwordMatches((string) $user->password, $password) ? $user : null;
     }
 
@@ -76,6 +80,6 @@ class AuthCredentialService
     {
         return function_exists('normalize_auth_access_scope')
             ? normalize_auth_access_scope($scope)
-            : (in_array(strtolower(trim($scope)), ['branch', 'worship_only', 'central_discipleship_readonly'], true) ? strtolower(trim($scope)) : 'branch');
+            : (in_array(strtolower(trim($scope)), ['branch', 'worship_only', 'central_discipleship_readonly', 'developer'], true) ? strtolower(trim($scope)) : 'branch');
     }
 }

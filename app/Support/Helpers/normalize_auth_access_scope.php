@@ -2,6 +2,9 @@
 
 function normalize_auth_access_scope(string $scope): string {
     $scope = strtolower(trim($scope));
+    if ($scope === 'developer') {
+        return $scope;
+    }
     if ($scope === 'worship_only') {
         return $scope;
     }

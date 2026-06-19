@@ -2,6 +2,7 @@
 
 function page_header_active_group(string $currentPage): string {
     $groupPages = [
+        'developer' => ['developer_dashboard', 'developer_users', 'developer_config'],
         'pemuridan' => array_merge(array_keys(discipleship_page_map()), ['discipleship_targets', 'difficult_questions_admin']),
         'worship' => ['worship_penatalayan'],
     ];

@@ -5,6 +5,9 @@ function branch_can_use_action(string $branch, string $action): bool {
     if ($action === '') {
         return true;
     }
+    if (function_exists('is_superuser_session') && is_superuser_session()) {
+        return true;
+    }
     if (is_worship_action($action)) {
         return current_user_can_access_worship();
     }

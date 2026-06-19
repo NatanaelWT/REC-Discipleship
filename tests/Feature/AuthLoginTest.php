@@ -51,6 +51,20 @@ class AuthLoginTest extends TestCase
         ]);
     }
 
+    public function test_inactive_user_cannot_login(): void
+    {
+        $this->createAuthTables();
+        $this->seedUser(['is_active' => false]);
+
+        $response = $this->post('/login', [
+            'username' => 'auth_user_test',
+            'password' => 'secret-test',
+        ]);
+
+        $response->assertRedirect('/login?error=1');
+        $this->assertArrayNotHasKey('user', $_SESSION);
+    }
+
     public function test_invalid_login_is_rate_limited_after_five_failures(): void
     {
         $this->createAuthTables();
@@ -88,6 +102,7 @@ class AuthLoginTest extends TestCase
             $table->rememberToken();
             $table->string('branch_code', 40)->default('kutisari')->index();
             $table->string('access_scope', 80)->default('branch');
+            $table->boolean('is_active')->default(true);
             $table->timestamp('last_login_at')->nullable();
             $table->timestamps();
         });
@@ -103,17 +118,21 @@ class AuthLoginTest extends TestCase
         });
     }
 
-    private function seedUser(): void
+    /**
+     * @param array<string, mixed> $overrides
+     */
+    private function seedUser(array $overrides = []): void
     {
-        DB::table('users')->insert([
+        DB::table('users')->insert(array_merge([
             'username' => 'auth_user_test',
             'name' => 'auth_user_test',
             'email' => 'auth_user_test@rec.local',
             'password' => 'secret-test',
             'branch_code' => 'kutisari',
             'access_scope' => 'branch',
+            'is_active' => true,
             'created_at' => '2026-06-14 08:00:00',
             'updated_at' => '2026-06-14 08:00:00',
-        ]);
+        ], $overrides));
     }
 }

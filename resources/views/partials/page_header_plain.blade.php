@@ -1,7 +1,7 @@
 <?php
 
 function page_header_plain(string $title, array $settings, string $bodyClass = ''): void {
-    $app = h($settings['church_name'] ?? CHURCH_NAME);
+    $app = h($settings['church_name'] ?? app_church_name());
     $bodyClasses = ['app-page'];
     append_body_classes($bodyClasses, $bodyClass);
     $classAttr = body_class_attr($bodyClasses);

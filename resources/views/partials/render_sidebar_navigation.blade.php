@@ -1,7 +1,20 @@
 <?php
 
 function render_sidebar_navigation(string $currentPage, string $currentBranch, bool $discipleshipOnlyAccess, bool $worshipOnlyAccess, string $activeGroup, bool $hideMemberDataFeatures = false, bool $worshipScopeWithoutFeature = false): void {
-    if ($worshipOnlyAccess) {
+    $developerAccess = function_exists('is_developer_session') && is_developer_session();
+    if ($developerAccess) {
+        render_sidebar_nav_group('Developer', 'developer', [
+            ['label' => 'Dashboard', 'page' => 'developer_dashboard', 'href' => route('developer.dashboard')],
+            ['label' => 'User', 'page' => 'developer_users', 'href' => route('developer.users')],
+            ['label' => 'Config', 'page' => 'developer_config', 'href' => route('developer.config')],
+        ], $currentPage, $activeGroup);
+
+        render_sidebar_nav_group('Ibadah Umum', 'worship', [
+            ['label' => 'Penatalayan', 'page' => 'worship_penatalayan', 'href' => route('worship.penatalayan')],
+        ], $currentPage, $activeGroup);
+    }
+
+    if (! $developerAccess && $worshipOnlyAccess) {
         render_sidebar_nav_group('Ibadah Umum', 'worship', [
             ['label' => 'Penatalayan', 'page' => 'worship_penatalayan', 'href' => route('worship.penatalayan')],
         ], $currentPage, $activeGroup);

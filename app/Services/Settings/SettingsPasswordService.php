@@ -4,6 +4,7 @@ namespace App\Services\Settings;
 
 use App\Models\User;
 use App\Services\Auth\AuthCredentialService;
+use Illuminate\Support\Facades\Hash;
 
 class SettingsPasswordService
 {
@@ -27,7 +28,7 @@ class SettingsPasswordService
             return 'pw_wrong';
         }
 
-        $user->password = $newPassword;
+        $user->password = Hash::make($newPassword);
         if (! $user->save()) {
             return 'pw_save_failed';
         }

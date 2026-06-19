@@ -2,8 +2,10 @@
 
 namespace App\Support;
 
+use App\Services\AppConfig\AppConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Throwable;
 
 class RuntimeBootstrap
 {
@@ -21,11 +23,12 @@ class RuntimeBootstrap
             return;
         }
 
+        $runtimeSettings = self::runtimeSettings();
         if (! defined('APP_TIMEZONE')) {
-            define('APP_TIMEZONE', 'Asia/Jakarta');
+            define('APP_TIMEZONE', $runtimeSettings['app_timezone']);
         }
         if (! defined('CHURCH_NAME')) {
-            define('CHURCH_NAME', 'Reformed Exodus Community');
+            define('CHURCH_NAME', $runtimeSettings['church_name']);
         }
         if (! defined('DISCIPLESHIP_GROUPS_DATA_NAME')) {
             define('DISCIPLESHIP_GROUPS_DATA_NAME', 'discipleship_groups');
@@ -40,7 +43,10 @@ class RuntimeBootstrap
             define('REC_PUBLIC_PATH', public_path());
         }
 
-        date_default_timezone_set(APP_TIMEZONE);
+        if (function_exists('config')) {
+            config(['app.timezone' => $runtimeSettings['app_timezone']]);
+        }
+        date_default_timezone_set($runtimeSettings['app_timezone']);
         self::ensureRuntimeFilesystem();
 
         foreach (glob(app_path('Support/Helpers/*.php')) ?: [] as $supportFile) {
@@ -86,6 +92,18 @@ class RuntimeBootstrap
     {
         foreach (['assets', 'data', 'templates', 'uploads'] as $directory) {
             File::ensureDirectoryExists(REC_RUNTIME_PATH . DIRECTORY_SEPARATOR . $directory);
+        }
+    }
+
+    /**
+     * @return array{church_name:string,app_timezone:string,developer_debug_banner:string}
+     */
+    private static function runtimeSettings(): array
+    {
+        try {
+            return AppConfigService::runtimeValues();
+        } catch (Throwable) {
+            return AppConfigService::DEFAULTS;
         }
     }
 }

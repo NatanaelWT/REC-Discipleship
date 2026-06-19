@@ -568,7 +568,7 @@ class DiscipleshipGroupIndexData
         return [
             'centralReadOnly' => $centralReadOnly,
             'selectedBranch' => $selectedBranch,
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'groups' => $groupRowsPrepared,
             'totalGroupRows' => count($groupRowsPrepared),
             'groupsInDg1Count' => $groupsInDg1Count,

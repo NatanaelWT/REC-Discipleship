@@ -54,7 +54,7 @@ class ServiceScheduleController extends Controller
             : 'Belum ada';
 
         return view('worship.service-schedules.index', [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'saved' => $request->query->has('saved'),
             'deleted' => $request->query->has('deleted'),
             'errorCode' => trim((string) $request->query('error', '')),

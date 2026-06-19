@@ -16,6 +16,9 @@ return [
 
         'login' => '/login',
         'settings' => '/pengaturan',
+        'developer_dashboard' => '/developer',
+        'developer_users' => '/developer/users',
+        'developer_config' => '/developer/config',
 
         'discipleship_dashboard' => '/pemuridan/dashboard',
         'groups_list' => '/pemuridan/kelompok',

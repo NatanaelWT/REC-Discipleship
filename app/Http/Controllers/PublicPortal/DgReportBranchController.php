@@ -16,7 +16,7 @@ class DgReportBranchController extends Controller
         $branchOptions = public_dg_branch_options();
 
         return view('public.dg-reports.select-branch', [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'errorCode' => trim((string) $request->query('error', '')),
             'branchOptions' => $branchOptions,
             'branchCount' => count($branchOptions),

@@ -52,7 +52,7 @@ class MskParticipantPageData
         $totalParticipantsFiltered = count($participantsFilteredByBatch);
 
         return [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'page' => 'msk_classes',
             'centralReadOnly' => $centralReadOnly,
             'members' => [],

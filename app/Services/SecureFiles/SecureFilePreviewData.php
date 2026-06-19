@@ -17,7 +17,7 @@ class SecureFilePreviewData
     public function forRequest(ShowSecureFileRequest $request, SecureFile $file): array
     {
         return [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'title' => $file->isPdf() ? 'Preview PDF' : 'Preview File',
             'bodyClass' => $file->isPdf() ? 'page-file-preview-standalone' : 'page-file-preview',
             'file' => $file,

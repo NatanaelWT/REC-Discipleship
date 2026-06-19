@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\PublicMaterialMenuKey;
+use App\Services\Developer\DeveloperUserService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -10,6 +11,21 @@ use Symfony\Component\Console\Command\Command;
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Artisan::command('developer:ensure-user', function (DeveloperUserService $users): int {
+    \App\Support\RuntimeBootstrap::load();
+
+    $result = $users->ensureDeveloperUserFromEnvironment();
+    if ($result['status'] === 'missing_password') {
+        $this->error('DEVELOPER_PASSWORD belum diisi.');
+
+        return Command::FAILURE;
+    }
+
+    $this->info('Developer user ensured: ' . $result['username'] . ' <' . $result['email'] . '>');
+
+    return Command::SUCCESS;
+})->purpose('Create or update the developer superuser from DEVELOPER_* environment variables');
 
 /**
  * @return array<int, string>

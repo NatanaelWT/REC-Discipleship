@@ -39,7 +39,7 @@ class CompatibilityController extends Controller
      */
     private function homeViewData(): array
     {
-        $churchName = defined('CHURCH_NAME') ? trim((string) CHURCH_NAME) : 'Reformed Exodus Community';
+        $churchName = function_exists('app_church_name') ? app_church_name() : (defined('CHURCH_NAME') ? trim((string) CHURCH_NAME) : 'Reformed Exodus Community');
         if ($churchName === '') {
             $churchName = 'Reformed Exodus Community';
         }

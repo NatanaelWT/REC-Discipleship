@@ -15,7 +15,7 @@ class SettingsPageData
         RuntimeBootstrap::boot($request);
 
         return [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'currentUsername' => current_username(),
             'centralReadOnly' => function_exists('is_central_discipleship_readonly_session') && is_central_discipleship_readonly_session(),
             'errorCode' => trim((string) $request->query('error', '')),

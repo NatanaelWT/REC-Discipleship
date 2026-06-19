@@ -34,7 +34,7 @@ class TargetController extends Controller
         $currentBranch = current_user_branch();
 
         return view('discipleship.targets.index', [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'saved' => $request->query->has('saved'),
             'centralReadOnly' => $centralReadOnly,
             'targets' => $targetReader->formValuesForBranch($currentBranch),

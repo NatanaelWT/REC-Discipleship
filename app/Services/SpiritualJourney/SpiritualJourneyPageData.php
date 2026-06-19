@@ -41,7 +41,7 @@ class SpiritualJourneyPageData
         $relationships = $this->loadRelationships($branchCodes);
 
         return [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'page' => 'spiritual_journey',
             'people' => array_values($peopleById),
             'peopleById' => $peopleById,

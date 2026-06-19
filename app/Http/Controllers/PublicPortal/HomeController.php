@@ -31,7 +31,7 @@ class HomeController extends Controller
         RuntimeBootstrap::boot($request);
 
         return view('public.links.empty', [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'menuLabel' => $catalog->emptyMenuLabel((string) $request->query('menu', '')),
         ]);
     }
@@ -41,7 +41,7 @@ class HomeController extends Controller
      */
     private function homeViewData(PublicMenuCatalog $catalog): array
     {
-        $churchName = trim((string) (CHURCH_NAME));
+        $churchName = trim(app_church_name());
         if ($churchName === '') {
             $churchName = 'Reformed Exodus Community';
         }

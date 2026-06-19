@@ -63,7 +63,7 @@ class DgMeetingReportController extends Controller
         $branchFormData = $formData->forBranch($publicBranch);
 
         return view('public.dg-reports.create', [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'old' => $old,
             'publicBranch' => $publicBranch,
             'publicBranchLabel' => public_branch_label($publicBranch),

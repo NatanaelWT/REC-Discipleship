@@ -1,7 +1,7 @@
 <?php
 
 function page_header(string $title, array $settings, string $currentPage, bool $showTitle = true, string $bodyClass = ''): void {
-    $app = h($settings['church_name'] ?? CHURCH_NAME);
+    $app = h($settings['church_name'] ?? app_church_name());
     $currentBranch = current_user_branch();
     $currentScope = current_auth_access_scope();
     $isCentralReadonlySession = is_effective_central_discipleship_readonly();
@@ -43,6 +43,9 @@ function page_header(string $title, array $settings, string $currentPage, bool $
     echo "  </aside>\n";
     echo "  <div class=\"app-main\">\n";
     echo "    <main class=\"container\">\n";
+    if (function_exists('is_developer_session') && is_developer_session() && function_exists('developer_debug_banner_enabled') && developer_debug_banner_enabled()) {
+        echo "  <div class=\"developer-debug-banner\">Developer debug aktif &middot; cabang " . h(user_branch_label($currentBranch)) . "</div>\n";
+    }
     $showCentralToolbarBeforeTitle = $isCentralReadonlySession && $showTitle;
     if ($showTitle && !$showCentralToolbarBeforeTitle) {
         echo "  <h1>" . h($title) . "</h1>\n";

@@ -24,7 +24,7 @@ class DifficultQuestionAnswerLookupPageData
             : collect();
 
         return [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'errorCode' => trim((string) $request->query('error', '')),
             'hasLookup' => $hasLookup,
             'matchedQuestionItems' => $questions->map(fn (DifficultQuestion $question): array => $this->lookupItem($question)),

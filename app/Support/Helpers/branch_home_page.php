@@ -1,6 +1,9 @@
 <?php
 
 function branch_home_page(string $branch): string {
+    if (function_exists('is_developer_session') && is_developer_session()) {
+        return 'developer_dashboard';
+    }
     if (current_user_can_access_worship()) {
         return 'worship_penatalayan';
     }

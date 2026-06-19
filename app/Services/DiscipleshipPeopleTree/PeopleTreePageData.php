@@ -29,7 +29,7 @@ class PeopleTreePageData
         $groups = $this->modelStore->groupsForModel($discipleshipV2Model, $people, $centralReadOnly);
 
         return [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'page' => 'people_tree',
             'centralReadOnly' => $centralReadOnly,
             'centralSelectedBranch' => $selectedBranch,

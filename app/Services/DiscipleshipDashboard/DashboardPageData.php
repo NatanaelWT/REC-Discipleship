@@ -32,7 +32,7 @@ class DashboardPageData
         $groups = $this->modelStore->groupsForModel($discipleshipV2Model, $people, $centralReadOnly);
 
         return [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'page' => 'discipleship_dashboard',
             'centralReadOnly' => $centralReadOnly,
             'centralSelectedBranch' => $selectedBranch,

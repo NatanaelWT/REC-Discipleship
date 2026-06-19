@@ -75,7 +75,7 @@ class LoginController extends Controller
     private function viewData(Request $request): array
     {
         return [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'errorCode' => trim((string) $request->query('error', '')),
             'waitSeconds' => max(0, (int) $request->query('wait', 0)),
             'expired' => $request->query->has('expired'),

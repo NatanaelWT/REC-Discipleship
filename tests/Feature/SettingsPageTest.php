@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -47,10 +48,9 @@ class SettingsPageTest extends TestCase
         ]);
 
         $response->assertRedirect('/pengaturan?pw_changed=1');
-        $this->assertDatabaseHas('users', [
-            'username' => 'admin_settings_test',
-            'password' => 'new-secret',
-        ]);
+        $storedPassword = (string) DB::table('users')->where('username', 'admin_settings_test')->value('password');
+        $this->assertNotSame('new-secret', $storedPassword);
+        $this->assertTrue(Hash::check('new-secret', $storedPassword));
     }
 
     private function seedUserAccount(): void
@@ -65,6 +65,7 @@ class SettingsPageTest extends TestCase
                 'password' => 'old-secret',
                 'branch_code' => 'kutisari',
                 'access_scope' => 'branch',
+                'is_active' => true,
                 'last_login_at' => null,
                 'created_at' => '2026-06-13 08:00:00',
                 'updated_at' => '2026-06-13 08:00:00',
@@ -88,6 +89,7 @@ class SettingsPageTest extends TestCase
             $table->rememberToken();
             $table->string('branch_code', 40)->default('kutisari')->index();
             $table->string('access_scope', 80)->default('branch');
+            $table->boolean('is_active')->default(true);
             $table->timestamp('last_login_at')->nullable();
             $table->timestamps();
         });

@@ -29,7 +29,7 @@ class MemberFeedbackJournalController extends Controller
         $branchOptions = public_dg_branch_options();
 
         return view('public.member-feedback.select-branch', [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'errorCode' => trim((string) $request->query('error', '')),
             'feedbackSessionParam' => $feedbackSessionParam,
             'branchOptions' => $branchOptions,
@@ -73,7 +73,7 @@ class MemberFeedbackJournalController extends Controller
         unset($_SESSION['public_member_feedback_error']);
 
         return view('public.member-feedback.create', [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'old' => $old,
             'publicBranch' => $publicBranch,
             'publicBranchLabel' => public_branch_label($publicBranch),

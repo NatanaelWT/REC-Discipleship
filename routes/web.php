@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\Developer\DeveloperConfigController;
+use App\Http\Controllers\Developer\DeveloperController;
+use App\Http\Controllers\Developer\DeveloperUserController;
 use App\Http\Controllers\Files\SecureFileController;
 use App\Http\Controllers\Compatibility\CompatibilityController;
 use App\Http\Controllers\Discipleship\GroupController as DiscipleshipGroupController;
@@ -45,6 +48,17 @@ Route::withoutMiddleware($statelessRouteMiddleware)->group(function (): void {
     Route::post('/logout', [LogoutController::class, 'destroy'])->name('auth.logout');
     Route::get('/pengaturan', [SettingsController::class, 'index'])->name('settings');
     Route::post('/pengaturan', [SettingsController::class, 'update'])->name('settings.update');
+
+    Route::prefix('developer')->name('developer.')->group(function (): void {
+        Route::get('/', [DeveloperController::class, 'index'])->name('dashboard');
+        Route::post('/branch', [DeveloperController::class, 'switchBranch'])->name('branch');
+        Route::get('/users', [DeveloperUserController::class, 'index'])->name('users');
+        Route::post('/users', [DeveloperUserController::class, 'store'])->name('users.store');
+        Route::post('/users/{user}', [DeveloperUserController::class, 'update'])->name('users.update');
+        Route::post('/users/{user}/password', [DeveloperUserController::class, 'resetPassword'])->name('users.password');
+        Route::get('/config', [DeveloperConfigController::class, 'index'])->name('config');
+        Route::post('/config', [DeveloperConfigController::class, 'update'])->name('config.update');
+    });
 
     Route::prefix('publik')->name('public.')->group(function (): void {
         Route::get('/jurnal-dg', [PublicDgReportBranchController::class, 'index'])->name('dg.branch');

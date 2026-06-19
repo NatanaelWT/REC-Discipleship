@@ -96,7 +96,7 @@
             </div>
             <div class="settings-target-meta">
               <span class="settings-target-badge is-branch">Cabang {{ $activeBranchLabel }}</span>
-              <span class="settings-target-badge">{{ CHURCH_NAME }}</span>
+              <span class="settings-target-badge">{{ app_church_name() }}</span>
             </div>
           </div>
           <form method="post" action="{{ route('discipleship.targets.update') }}" class="settings-target-form">

@@ -19,7 +19,7 @@ class DifficultQuestionController extends Controller
         RuntimeBootstrap::boot($request);
 
         return view('public.difficult-questions.create', [
-            'settings' => ['church_name' => CHURCH_NAME],
+            'settings' => ['church_name' => app_church_name()],
             'old' => is_array($_SESSION['difficult_question_old'] ?? null) ? $_SESSION['difficult_question_old'] : [],
             'errorCode' => trim((string) $request->query('error', '')),
             'submitted' => $request->query->has('submitted'),

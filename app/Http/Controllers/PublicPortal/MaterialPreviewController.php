@@ -85,7 +85,7 @@ class MaterialPreviewController extends Controller
             }
 
             return view('public.materials.preview', [
-                'settings' => ['church_name' => CHURCH_NAME],
+                'settings' => ['church_name' => app_church_name()],
                 'previewTitle' => $previewTitle,
                 'rawUrl' => route('materials.preview', [
                     'menu' => $menu->value,

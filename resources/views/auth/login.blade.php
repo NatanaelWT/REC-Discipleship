@@ -6,9 +6,9 @@
 
 @section('content')
     @php
-        $churchName = trim((string) ($settings['church_name'] ?? CHURCH_NAME));
+        $churchName = trim((string) ($settings['church_name'] ?? app_church_name()));
         if ($churchName === '') {
-            $churchName = CHURCH_NAME;
+            $churchName = app_church_name();
         }
         $loginPillars = [
             [
