@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Worship;
 
 use App\Http\Controllers\Controller;
-use App\Services\Routing\CompatibilityRouteMap;
+use App\Services\Routing\AppPageRouteMap;
 use App\Services\WorshipServiceSchedules\WorshipServiceScheduleBuilder;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
@@ -14,11 +14,6 @@ class ServiceScheduleImageController extends Controller
 {
     public function download(Request $request, WorshipServiceScheduleBuilder $scheduleBuilder): RedirectResponse|Response
     {
-        $pageQuery = trim((string) $request->query('page', ''));
-        if ($pageQuery !== '' && CompatibilityRouteMap::hasPage($pageQuery)) {
-            return redirect()->away($request->getSchemeAndHttpHost() . CompatibilityRouteMap::pageUrl($pageQuery, $request->query()));
-        }
-
         RuntimeBootstrap::boot($request);
 
         if (! is_logged_in()) {
@@ -26,7 +21,7 @@ class ServiceScheduleImageController extends Controller
         }
 
         if (! branch_can_access_page(current_user_branch(), 'worship_penatalayan_image')) {
-            return redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
+            return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
         }
 
         $selectedMonth = normalize_month_value((string) $request->query('month', date('Y-m')));
@@ -47,7 +42,7 @@ class ServiceScheduleImageController extends Controller
             ]);
         }
 
-        $downloadName = 'penatalayan-ibadah-umum-' . $selectedMonth . '.png';
+        $downloadName = 'penatalayan-ibadah-umum-'.$selectedMonth.'.png';
         $downloadName = preg_replace('/[\x00-\x1F\x7F"\\\\]+/', '_', $downloadName) ?? 'penatalayan-ibadah.png';
         if ($downloadName === '') {
             $downloadName = 'penatalayan-ibadah.png';
@@ -64,7 +59,7 @@ class ServiceScheduleImageController extends Controller
             'Cache-Control' => 'private, no-store, no-cache, must-revalidate',
             'Pragma' => 'no-cache',
             'Expires' => '0',
-            'Content-Disposition' => 'attachment; filename="' . $asciiDownloadName . '"; filename*=UTF-8\'\'' . rawurlencode($downloadName),
+            'Content-Disposition' => 'attachment; filename="'.$asciiDownloadName.'"; filename*=UTF-8\'\''.rawurlencode($downloadName),
         ]);
     }
 }

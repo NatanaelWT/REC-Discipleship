@@ -9,11 +9,11 @@ use Tests\TestCase;
 
 class MskParticipantPageTest extends TestCase
 {
-    public function test_legacy_msk_query_redirects_to_clean_route(): void
+    public function test_legacy_msk_query_is_rejected(): void
     {
         $response = $this->get('/pemuridan/msk?page=msk_classes');
 
-        $response->assertRedirect('/pemuridan/msk');
+        $response->assertNotFound();
     }
 
     public function test_msk_page_renders_for_logged_in_branch_user(): void
@@ -81,7 +81,7 @@ class MskParticipantPageTest extends TestCase
         $previousSession = $_SESSION ?? [];
         if (session_status() === PHP_SESSION_NONE) {
             session_save_path(storage_path('framework/sessions'));
-            session_id('msk-page-test-' . str_replace('.', '', uniqid('', true)));
+            session_id('msk-page-test-'.str_replace('.', '', uniqid('', true)));
             session_start();
         }
         $_SESSION['user'] = 'tester';
@@ -92,7 +92,7 @@ class MskParticipantPageTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $previousSession
+     * @param  array<string, mixed>  $previousSession
      */
     private function restoreSession(array $previousSession): void
     {

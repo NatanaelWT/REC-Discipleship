@@ -1,8 +1,11 @@
 <?php
 
-function secure_upload_url(string $path, bool $download = false, string $downloadName = ''): string {
+use App\Services\Routing\AppPageRouteMap;
+
+function secure_upload_url(string $path, bool $download = false, string $downloadName = ''): string
+{
     $safePath = sanitize_relative_upload_path($path);
-    if ($safePath === '' || !is_upload_path($safePath)) {
+    if ($safePath === '' || ! is_upload_path($safePath)) {
         return '';
     }
     $query = [
@@ -17,7 +20,7 @@ function secure_upload_url(string $path, bool $download = false, string $downloa
     }
     try {
         return route('secure-file.show', $query, false);
-    } catch (\Throwable) {
-        return \App\Services\Routing\CompatibilityRouteMap::pageUrl('secure_file', $query);
+    } catch (Throwable) {
+        return AppPageRouteMap::pageUrl('secure_file', $query);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\DifficultQuestions;
 
 use App\Services\DifficultQuestions\DifficultQuestionTextNormalizer;
+use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -44,7 +45,7 @@ class AnswerDifficultQuestionRequest extends FormRequest
             : 'discipleship_dashboard';
 
         throw new HttpResponseException(
-            redirect(\App\Services\Routing\CompatibilityRouteMap::pageUrl($targetPage, ['error' => 'access_denied'])),
+            redirect(AppPageRouteMap::pageUrl($targetPage, ['error' => 'access_denied'])),
         );
     }
 

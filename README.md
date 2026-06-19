@@ -62,12 +62,6 @@ php artisan migrate:status
 php artisan route:list --except-vendor
 ```
 
-URL lama dengan query `?page=...` tetap diterima hanya sebagai kompatibilitas dan diarahkan ke route Laravel bersih. Contoh:
-
-```text
-/?page=public_materials&menu=materi_dg_1 -> /materi?menu=materi_dg_1
-/?page=login -> /login
-/?page=discipleship_dashboard -> /pemuridan/dashboard
-```
+URL lama berbasis parameter halaman legacy sudah tidak didukung. Gunakan route Laravel bersih seperti `/materi`, `/login`, dan `/pemuridan/dashboard`.
 
 Modul jemaat lama, ulang tahun bulanan, kelengkapan data, dashboard utama, akses akun, dan halaman kutisari sudah dihapus. Semua entitas orang diperlakukan sebagai peserta MSK atau anggota pemuridan.

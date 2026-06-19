@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\PublicPortal;
 
 use App\Http\Controllers\Controller;
-use App\Services\Routing\CompatibilityRouteMap;
 use App\Services\PublicPortal\PublicMenuCatalog;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
@@ -17,11 +16,6 @@ class HomeController extends Controller
         PublicMenuCatalog $catalog,
     ): RedirectResponse|View {
         RuntimeBootstrap::boot($request);
-
-        $pageQuery = trim((string) $request->query('page', ''));
-        if ($pageQuery !== '' && CompatibilityRouteMap::hasPage($pageQuery)) {
-            return redirect()->away($request->getSchemeAndHttpHost() . CompatibilityRouteMap::pageUrl($pageQuery, $request->query()));
-        }
 
         return view('public.links.index', $this->homeViewData($catalog));
     }

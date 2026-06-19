@@ -17,11 +17,11 @@ class SettingsPageTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_legacy_settings_query_redirects_to_clean_route(): void
+    public function test_legacy_settings_query_is_rejected(): void
     {
         $response = $this->get('/index.php?page=settings');
 
-        $response->assertRedirect('/pengaturan');
+        $response->assertNotFound();
     }
 
     public function test_settings_page_renders_for_logged_in_user(): void
@@ -111,7 +111,7 @@ class SettingsPageTest extends TestCase
         }
 
         if (session_status() === PHP_SESSION_NONE) {
-            session_id('settings-test-' . str_replace('.', '', uniqid('', true)));
+            session_id('settings-test-'.str_replace('.', '', uniqid('', true)));
             session_start();
         }
     }

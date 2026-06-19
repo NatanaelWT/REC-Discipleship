@@ -3,19 +3,19 @@
 namespace App\Http\Controllers\Discipleship;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MskParticipants\DeactivateMskParticipantRequest;
 use App\Http\Requests\MskParticipants\ExportMskParticipantsRequest;
 use App\Http\Requests\MskParticipants\ImportMskParticipantsRequest;
 use App\Http\Requests\MskParticipants\MskParticipantWriteRequest;
+use App\Http\Requests\MskParticipants\ReactivateMskParticipantRequest;
 use App\Http\Requests\MskParticipants\StoreMskParticipantRequest;
 use App\Http\Requests\MskParticipants\UpdateMskParticipantRequest;
 use App\Http\Requests\MskParticipants\UpdateMskParticipantSessionsRequest;
-use App\Http\Requests\MskParticipants\DeactivateMskParticipantRequest;
-use App\Http\Requests\MskParticipants\ReactivateMskParticipantRequest;
 use App\Models\MskParticipant;
-use App\Services\Routing\CompatibilityRouteMap;
 use App\Services\MskParticipants\MskParticipantPageData;
 use App\Services\MskParticipants\MskParticipantTableData;
 use App\Services\MskParticipants\MskParticipantWriter;
+use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,17 +26,12 @@ class MskParticipantController extends Controller
 {
     public function index(Request $request, MskParticipantPageData $pageData): RedirectResponse|Response
     {
-        $pageQuery = trim((string) $request->query('page', ''));
-        if ($pageQuery !== '' && CompatibilityRouteMap::hasPage($pageQuery)) {
-            return redirect()->away($request->getSchemeAndHttpHost() . CompatibilityRouteMap::pageUrl($pageQuery, $request->query()));
-        }
-
         RuntimeBootstrap::boot($request);
 
         if (trim((string) $request->input('action', '')) === 'logout') {
             destroy_current_session();
 
-            return redirect('/index.php');
+            return redirect()->route('home');
         }
 
         if (! is_logged_in()) {
@@ -44,7 +39,7 @@ class MskParticipantController extends Controller
         }
 
         if (! branch_can_access_page(current_user_branch(), 'msk_classes')) {
-            return redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
+            return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
         }
 
         return response(view('discipleship.msk-participants.index', $pageData->forCurrentContext($request))->render());
@@ -177,7 +172,7 @@ class MskParticipantController extends Controller
         $requiredMskHeaders = ['full_name', 'msk_month', 'session_numbers'];
         foreach ($requiredMskHeaders as $requiredHeader) {
             if (! isset($mskHeaderMap[$requiredHeader])) {
-                $importErrors[] = 'Sheet Kelas MSK: kolom wajib "' . $requiredHeader . '" tidak ditemukan.';
+                $importErrors[] = 'Sheet Kelas MSK: kolom wajib "'.$requiredHeader.'" tidak ditemukan.';
             }
         }
 
@@ -214,12 +209,14 @@ class MskParticipantController extends Controller
                 $notes = trim(import_row_value($row, $mskHeaderMap, ['notes', 'keterangan']));
 
                 if ($fullName === '') {
-                    $importErrors[] = 'Kelas MSK baris ' . $excelRowNumber . ': full_name wajib diisi.';
+                    $importErrors[] = 'Kelas MSK baris '.$excelRowNumber.': full_name wajib diisi.';
+
                     continue;
                 }
                 $mskMonth = import_normalize_month_strict($mskMonthRaw);
                 if ($mskMonth === '') {
-                    $importErrors[] = 'Kelas MSK baris ' . $excelRowNumber . ': msk_month wajib format YYYY-MM.';
+                    $importErrors[] = 'Kelas MSK baris '.$excelRowNumber.': msk_month wajib format YYYY-MM.';
+
                     continue;
                 }
                 $sessionTokens = import_split_csv_tokens($sessionRaw);
@@ -239,32 +236,37 @@ class MskParticipantController extends Controller
                     }
                 }
                 if ($invalidSession) {
-                    $importErrors[] = 'Kelas MSK baris ' . $excelRowNumber . ': session_numbers harus angka 1-12 dipisah koma.';
+                    $importErrors[] = 'Kelas MSK baris '.$excelRowNumber.': session_numbers harus angka 1-12 dipisah koma.';
+
                     continue;
                 }
                 $gender = import_normalize_gender_value($genderRaw);
                 if ($genderRaw !== '' && $gender === '') {
-                    $importErrors[] = 'Kelas MSK baris ' . $excelRowNumber . ': gender tidak valid.';
+                    $importErrors[] = 'Kelas MSK baris '.$excelRowNumber.': gender tidak valid.';
+
                     continue;
                 }
                 $birthDate = '';
                 if ($birthDateRaw !== '') {
                     $birthDate = normalize_ymd_date($birthDateRaw);
                     if ($birthDate === '') {
-                        $importErrors[] = 'Kelas MSK baris ' . $excelRowNumber . ': birth_date harus format YYYY-MM-DD.';
+                        $importErrors[] = 'Kelas MSK baris '.$excelRowNumber.': birth_date harus format YYYY-MM-DD.';
+
                         continue;
                     }
                 }
                 $email = strtolower(trim($emailRaw));
                 if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-                    $importErrors[] = 'Kelas MSK baris ' . $excelRowNumber . ': email tidak valid.';
+                    $importErrors[] = 'Kelas MSK baris '.$excelRowNumber.': email tidak valid.';
+
                     continue;
                 }
 
                 $identityKey = discipleship_unified_identity_key($fullName, $whatsapp);
-                $rowIdentityKey = $participantIdInput !== '' ? ('id:' . $participantIdInput) : ('identity:' . $identityKey);
+                $rowIdentityKey = $participantIdInput !== '' ? ('id:'.$participantIdInput) : ('identity:'.$identityKey);
                 if ($rowIdentityKey !== '' && isset($seenMskRowKeys[$rowIdentityKey])) {
-                    $importErrors[] = 'Kelas MSK baris ' . $excelRowNumber . ': data peserta duplikat di file import.';
+                    $importErrors[] = 'Kelas MSK baris '.$excelRowNumber.': data peserta duplikat di file import.';
+
                     continue;
                 }
                 if ($rowIdentityKey !== '') {
@@ -277,7 +279,8 @@ class MskParticipantController extends Controller
                 } elseif ($identityKey !== '' && isset($mskIndexByIdentity[$identityKey])) {
                     $candidateIndexes = array_values(array_unique(array_map('intval', $mskIndexByIdentity[$identityKey])));
                     if (count($candidateIndexes) > 1) {
-                        $importErrors[] = 'Kelas MSK baris ' . $excelRowNumber . ': nama/whatsapp ambigu. Gunakan participant_id dari hasil export atau rapikan data peserta MSK yang duplikat terlebih dahulu.';
+                        $importErrors[] = 'Kelas MSK baris '.$excelRowNumber.': nama/whatsapp ambigu. Gunakan participant_id dari hasil export atau rapikan data peserta MSK yang duplikat terlebih dahulu.';
+
                         continue;
                     }
                     if (count($candidateIndexes) === 1) {
@@ -291,7 +294,8 @@ class MskParticipantController extends Controller
                     $participantId = generate_id('msk');
                 }
                 if ($participantIdInput !== '' && $existingIndex === null && isset($mskIndexById[$participantId])) {
-                    $importErrors[] = 'Kelas MSK baris ' . $excelRowNumber . ': participant_id sudah dipakai peserta lain.';
+                    $importErrors[] = 'Kelas MSK baris '.$excelRowNumber.': participant_id sudah dipakai peserta lain.';
+
                     continue;
                 }
 
@@ -376,7 +380,7 @@ class MskParticipantController extends Controller
 
         $branchLabel = sanitize_file_name_component((string) current_user_branch(), 'cabang');
         $filterLabel = $batchMonth === 'all' ? 'semua-batch' : ($batchMonth !== '' ? $batchMonth : 'semua-data');
-        $downloadName = 'kelas-msk-' . $branchLabel . '-' . $filterLabel . '.xlsx';
+        $downloadName = 'kelas-msk-'.$branchLabel.'-'.$filterLabel.'.xlsx';
         $downloadName = preg_replace('/[\x00-\x1F\x7F"\\\\]+/', '_', $downloadName) ?? 'kelas-msk.xlsx';
         if ($downloadName === '') {
             $downloadName = 'kelas-msk.xlsx';
@@ -385,6 +389,7 @@ class MskParticipantController extends Controller
         if ($asciiDownloadName === '') {
             $asciiDownloadName = 'kelas-msk.xlsx';
         }
+
         return response()
             ->download($xlsxPath, $asciiDownloadName, [
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -392,7 +397,7 @@ class MskParticipantController extends Controller
                 'Cache-Control' => 'private, no-store, no-cache, must-revalidate',
                 'Pragma' => 'no-cache',
                 'Expires' => '0',
-                'Content-Disposition' => 'attachment; filename="' . $asciiDownloadName . '"; filename*=UTF-8\'\'' . rawurlencode($downloadName),
+                'Content-Disposition' => 'attachment; filename="'.$asciiDownloadName.'"; filename*=UTF-8\'\''.rawurlencode($downloadName),
             ])
             ->deleteFileAfterSend(true);
     }
@@ -429,7 +434,7 @@ class MskParticipantController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
     private function baseRedirectParams(string $id, string $batchMonth): array
@@ -463,5 +468,4 @@ class MskParticipantController extends Controller
 
         return $batchMonth !== '' ? ['batch_month' => $batchMonth] : [];
     }
-
 }

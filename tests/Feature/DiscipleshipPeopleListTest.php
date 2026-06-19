@@ -8,11 +8,11 @@ use Tests\TestCase;
 
 class DiscipleshipPeopleListTest extends TestCase
 {
-    public function test_legacy_people_list_query_redirects_to_clean_route(): void
+    public function test_legacy_people_list_query_is_rejected(): void
     {
         $response = $this->get('/pemuridan/anggota?page=people_list');
 
-        $response->assertRedirect('/pemuridan/anggota');
+        $response->assertNotFound();
     }
 
     public function test_people_list_page_renders_for_logged_in_branch_user(): void

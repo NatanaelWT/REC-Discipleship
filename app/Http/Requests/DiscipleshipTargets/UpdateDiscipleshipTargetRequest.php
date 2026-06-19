@@ -3,7 +3,7 @@
 namespace App\Http\Requests\DiscipleshipTargets;
 
 use App\Services\DiscipleshipTargets\DiscipleshipTargetNormalizer;
-use App\Services\Routing\CompatibilityRouteMap;
+use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -69,7 +69,7 @@ class UpdateDiscipleshipTargetRequest extends FormRequest
         }
 
         throw new HttpResponseException(
-            redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied'])),
+            redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied'])),
         );
     }
 }

@@ -20,11 +20,18 @@ class ExampleTest extends TestCase
         $response->assertSee('/publik/pertanyaan-sulit/jawaban', false);
     }
 
-    public function test_legacy_page_query_redirects_to_clean_laravel_route(): void
+    public function test_legacy_page_query_is_rejected(): void
     {
         $response = $this->get('/?page=public_materials&menu=materi_dg_1');
 
-        $response->assertRedirect('/materi?menu=materi_dg_1');
+        $response->assertNotFound();
+    }
+
+    public function test_index_php_without_page_query_redirects_home(): void
+    {
+        $response = $this->get('/index.php');
+
+        $response->assertRedirect('/');
     }
 
     public function test_public_empty_menu_renders_from_laravel_view(): void
@@ -38,10 +45,10 @@ class ExampleTest extends TestCase
         $response->assertDontSee('?page=', false);
     }
 
-    public function test_legacy_public_empty_menu_query_redirects_to_clean_route(): void
+    public function test_legacy_public_empty_menu_query_is_rejected(): void
     {
         $response = $this->get('/index.php?page=public_menu_empty&menu=materi_dg_1');
 
-        $response->assertRedirect('/publik/menu-kosong?menu=materi_dg_1');
+        $response->assertNotFound();
     }
 }

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Worship;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\WorshipServiceSchedules\DeleteWorshipServiceScheduleRequest;
 use App\Http\Requests\WorshipServiceSchedules\StoreWorshipServiceScheduleRequest;
-use App\Services\Routing\CompatibilityRouteMap;
+use App\Services\Routing\AppPageRouteMap;
 use App\Services\WorshipServiceSchedules\WorshipServiceScheduleBuilder;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
@@ -16,11 +16,6 @@ class ServiceScheduleController extends Controller
 {
     public function index(Request $request, WorshipServiceScheduleBuilder $scheduleBuilder): RedirectResponse|View
     {
-        $pageQuery = trim((string) $request->query('page', ''));
-        if ($pageQuery !== '' && CompatibilityRouteMap::hasPage($pageQuery)) {
-            return redirect()->away($request->getSchemeAndHttpHost() . CompatibilityRouteMap::pageUrl($pageQuery, $request->query()));
-        }
-
         RuntimeBootstrap::boot($request);
 
         if (! is_logged_in()) {
@@ -28,7 +23,7 @@ class ServiceScheduleController extends Controller
         }
 
         if (! branch_can_access_page(current_user_branch(), 'worship_penatalayan')) {
-            return redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
+            return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
         }
 
         $selectedMonth = normalize_month_value((string) $request->query('month', date('Y-m')));
@@ -50,7 +45,7 @@ class ServiceScheduleController extends Controller
         $lastUpdatedAt = trim((string) ($selectedSchedule['updated_at'] ?? ''));
         $lastUpdatedDateValue = normalize_ymd_date($lastUpdatedAt);
         $lastUpdatedStatLabel = $lastUpdatedDateValue !== ''
-            ? (format_short_indo_date($lastUpdatedDateValue) . ' ' . substr($lastUpdatedDateValue, 0, 4))
+            ? (format_short_indo_date($lastUpdatedDateValue).' '.substr($lastUpdatedDateValue, 0, 4))
             : 'Belum ada';
 
         return view('worship.service-schedules.index', [
@@ -97,7 +92,7 @@ class ServiceScheduleController extends Controller
     }
 
     /**
-     * @param array<int, array<string, mixed>> $records
+     * @param  array<int, array<string, mixed>>  $records
      * @return array<string, mixed>|null
      */
     private function recordByMonth(array $records, string $month): ?array
@@ -112,8 +107,8 @@ class ServiceScheduleController extends Controller
     }
 
     /**
-     * @param array<int, string> $historicalNames
-     * @param array<string, int> $serviceCounts
+     * @param  array<int, string>  $historicalNames
+     * @param  array<string, int>  $serviceCounts
      * @return array<int, string>
      */
     private function displayStewardNames(array $historicalNames, array $serviceCounts): array

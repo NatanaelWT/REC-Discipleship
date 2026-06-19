@@ -9,11 +9,11 @@ use Tests\TestCase;
 
 class SpiritualJourneyPageTest extends TestCase
 {
-    public function test_legacy_spiritual_journey_query_redirects_to_clean_route(): void
+    public function test_legacy_spiritual_journey_query_is_rejected(): void
     {
         $response = $this->get('/pemuridan/spiritual-journey?page=spiritual_journey');
 
-        $response->assertRedirect('/pemuridan/spiritual-journey');
+        $response->assertNotFound();
     }
 
     public function test_spiritual_journey_page_renders_for_logged_in_branch_user(): void
@@ -63,7 +63,7 @@ class SpiritualJourneyPageTest extends TestCase
         $previousSession = $_SESSION ?? [];
         if (session_status() === PHP_SESSION_NONE) {
             session_save_path(storage_path('framework/sessions'));
-            session_id('spiritual-journey-test-' . str_replace('.', '', uniqid('', true)));
+            session_id('spiritual-journey-test-'.str_replace('.', '', uniqid('', true)));
             session_start();
         }
         $_SESSION['user'] = 'tester';
@@ -74,7 +74,7 @@ class SpiritualJourneyPageTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $previousSession
+     * @param  array<string, mixed>  $previousSession
      */
     private function restoreSession(array $previousSession): void
     {

@@ -21,11 +21,10 @@ function render_central_rekap_toolbar(string $currentPage): void {
             'rekap_cabang' => $branchCode,
         ], $preservedQueryParams);
 
-        if (class_exists(\App\Services\Routing\CompatibilityRouteMap::class) && \App\Services\Routing\CompatibilityRouteMap::hasPage($currentPage)) {
-            return \App\Services\Routing\CompatibilityRouteMap::pageUrl($currentPage, $params);
+        if (class_exists(\App\Services\Routing\AppPageRouteMap::class) && \App\Services\Routing\AppPageRouteMap::hasPage($currentPage)) {
+            return \App\Services\Routing\AppPageRouteMap::pageUrl($currentPage, $params);
         }
 
-        $params['page'] = $currentPage;
         return '?' . http_build_query($params);
     };
 

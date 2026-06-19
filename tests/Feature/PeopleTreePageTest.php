@@ -9,11 +9,11 @@ use Tests\TestCase;
 
 class PeopleTreePageTest extends TestCase
 {
-    public function test_legacy_people_tree_query_redirects_to_clean_route(): void
+    public function test_legacy_people_tree_query_is_rejected(): void
     {
         $response = $this->get('/pemuridan/pohon?page=people_tree');
 
-        $response->assertRedirect('/pemuridan/pohon');
+        $response->assertNotFound();
     }
 
     public function test_people_tree_v2_route_redirects_to_main_tree_route(): void
@@ -49,7 +49,7 @@ class PeopleTreePageTest extends TestCase
         $previousSession = $_SESSION ?? [];
         if (session_status() === PHP_SESSION_NONE) {
             session_save_path(storage_path('framework/sessions'));
-            session_id('people-tree-test-' . str_replace('.', '', uniqid('', true)));
+            session_id('people-tree-test-'.str_replace('.', '', uniqid('', true)));
             session_start();
         }
         $_SESSION['user'] = 'tester';
@@ -60,7 +60,7 @@ class PeopleTreePageTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $previousSession
+     * @param  array<string, mixed>  $previousSession
      */
     private function restoreSession(array $previousSession): void
     {

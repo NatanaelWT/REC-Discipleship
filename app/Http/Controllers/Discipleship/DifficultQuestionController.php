@@ -7,7 +7,7 @@ use App\Http\Requests\DifficultQuestions\AnswerDifficultQuestionRequest;
 use App\Models\DifficultQuestion;
 use App\Services\DifficultQuestions\DifficultQuestionAdminPageData;
 use App\Services\DifficultQuestions\DifficultQuestionTextNormalizer;
-use App\Services\Routing\CompatibilityRouteMap;
+use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,15 +17,10 @@ class DifficultQuestionController extends Controller
 {
     public function index(Request $request, DifficultQuestionAdminPageData $pageData): RedirectResponse|View
     {
-        $pageQuery = trim((string) $request->query('page', ''));
-        if ($pageQuery !== '' && CompatibilityRouteMap::hasPage($pageQuery)) {
-            return redirect()->away($request->getSchemeAndHttpHost() . CompatibilityRouteMap::pageUrl($pageQuery, $request->query()));
-        }
-
         RuntimeBootstrap::boot($request);
 
         if (! can_manage_difficult_questions()) {
-            return redirect(CompatibilityRouteMap::pageUrl(
+            return redirect(AppPageRouteMap::pageUrl(
                 branch_home_page(current_user_branch()),
                 ['error' => 'access_denied'],
             ));
@@ -50,11 +45,11 @@ class DifficultQuestionController extends Controller
         if (trim((string) $request->input('action', '')) === 'logout') {
             destroy_current_session();
 
-            return redirect('/index.php');
+            return redirect()->route('home');
         }
 
         if (! can_manage_difficult_questions()) {
-            return redirect(CompatibilityRouteMap::pageUrl(
+            return redirect(AppPageRouteMap::pageUrl(
                 branch_home_page(current_user_branch()),
                 ['error' => 'access_denied'],
             ));

@@ -15,6 +15,6 @@ class LogoutController extends Controller
         RuntimeBootstrap::boot($request);
         $sessions->logout();
 
-        return redirect('/index.php');
+        return redirect()->route('home');
     }
 }

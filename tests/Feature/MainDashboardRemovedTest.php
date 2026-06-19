@@ -11,12 +11,10 @@ class MainDashboardRemovedTest extends TestCase
         $this->get('/dashboard')->assertNotFound();
     }
 
-    public function test_legacy_dashboard_page_no_longer_opens_main_dashboard_or_account_access(): void
+    public function test_legacy_dashboard_page_query_is_rejected(): void
     {
         $response = $this->get('/index.php?page=dashboard');
 
-        $response->assertOk();
-        $response->assertDontSee('Dashboard Utama');
-        $response->assertDontSee('Akun Tersedia');
+        $response->assertNotFound();
     }
 }

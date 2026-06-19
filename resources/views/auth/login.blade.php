@@ -88,7 +88,7 @@
           <label class="login-field">Password<input type="password" name="password" required autocomplete="current-password" placeholder="Masukkan password"></label>
           <div class="form-actions login-actions">
             <button class="btn" type="submit">Masuk</button>
-            <a class="btn ghost" href="index.php">Kembali</a>
+            <a class="btn ghost" href="{{ route('home', [], false) }}">Kembali</a>
           </div>
           <p class="login-note">Halaman ini ditujukan untuk akun internal yang sudah terdaftar.</p>
         </form>

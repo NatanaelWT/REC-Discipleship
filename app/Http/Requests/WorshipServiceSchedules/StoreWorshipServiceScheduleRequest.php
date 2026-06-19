@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\WorshipServiceSchedules;
 
-use App\Services\Routing\CompatibilityRouteMap;
+use App\Services\Routing\AppPageRouteMap;
 use App\Services\WorshipServiceSchedules\WorshipServiceScheduleNormalizer;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
@@ -63,7 +63,7 @@ class StoreWorshipServiceScheduleRequest extends FormRequest
         }
 
         throw new HttpResponseException(
-            redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied'])),
+            redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied'])),
         );
     }
 }

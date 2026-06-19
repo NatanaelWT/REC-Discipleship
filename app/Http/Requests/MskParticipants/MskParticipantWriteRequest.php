@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\MskParticipants;
 
-use App\Services\Routing\CompatibilityRouteMap;
+use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -51,7 +51,6 @@ abstract class MskParticipantWriteRequest extends FormRequest
     }
 
     /**
-     * @param mixed $value
      * @return array<int, string>
      */
     private function normalizedPhotoPaths(mixed $value): array
@@ -78,7 +77,7 @@ abstract class MskParticipantWriteRequest extends FormRequest
         }
 
         throw new HttpResponseException(
-            redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied'])),
+            redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied'])),
         );
     }
 

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Discipleship;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SpiritualJourney\UpdateSpiritualJourneyBridgeStatusRequest;
 use App\Models\MskParticipant;
-use App\Services\Routing\CompatibilityRouteMap;
+use App\Services\Routing\AppPageRouteMap;
 use App\Services\SpiritualJourney\SpiritualJourneyBridgeStatusService;
 use App\Services\SpiritualJourney\SpiritualJourneyPageData;
 use App\Support\RuntimeBootstrap;
@@ -17,17 +17,12 @@ class SpiritualJourneyController extends Controller
 {
     public function index(Request $request, SpiritualJourneyPageData $pageData): RedirectResponse|Response
     {
-        $pageQuery = trim((string) $request->query('page', ''));
-        if ($pageQuery !== '' && CompatibilityRouteMap::hasPage($pageQuery)) {
-            return redirect()->away($request->getSchemeAndHttpHost() . CompatibilityRouteMap::pageUrl($pageQuery, $request->query()));
-        }
-
         RuntimeBootstrap::boot($request);
 
         if (trim((string) $request->input('action', '')) === 'logout') {
             destroy_current_session();
 
-            return redirect('/index.php');
+            return redirect()->route('home');
         }
 
         if (! is_logged_in()) {
@@ -35,7 +30,7 @@ class SpiritualJourneyController extends Controller
         }
 
         if (! branch_can_access_page(current_user_branch(), 'spiritual_journey')) {
-            return redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
+            return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
         }
 
         return response(view('discipleship.spiritual-journey.index', $pageData->forCurrentContext($request))->render());
@@ -71,5 +66,4 @@ class SpiritualJourneyController extends Controller
 
         return redirect()->route('discipleship.spiritual-journey', ['saved' => 1]);
     }
-
 }

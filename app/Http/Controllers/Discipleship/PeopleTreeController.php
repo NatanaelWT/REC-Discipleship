@@ -13,7 +13,7 @@ use App\Http\Requests\DiscipleshipPeopleTree\SavePeopleTreeGroupRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\SavePeopleTreePersonRequest;
 use App\Services\DiscipleshipPeopleTree\PeopleTreePageData;
 use App\Services\DiscipleshipPeopleTree\PeopleTreeWriter;
-use App\Services\Routing\CompatibilityRouteMap;
+use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,11 +24,6 @@ class PeopleTreeController extends Controller
 {
     public function index(Request $request, PeopleTreePageData $pageData): RedirectResponse|View
     {
-        $pageQuery = trim((string) $request->query('page', ''));
-        if ($pageQuery !== '' && CompatibilityRouteMap::hasPage($pageQuery)) {
-            return redirect()->away($request->getSchemeAndHttpHost() . CompatibilityRouteMap::pageUrl($pageQuery, $request->query()));
-        }
-
         $redirect = $this->guardPageAccess($request);
         if ($redirect !== null) {
             return $redirect;
@@ -129,7 +124,7 @@ class PeopleTreeController extends Controller
         if (trim((string) $request->input('action', '')) === 'logout') {
             destroy_current_session();
 
-            return redirect('/index.php');
+            return redirect()->route('home');
         }
 
         if (! is_logged_in()) {
@@ -137,7 +132,7 @@ class PeopleTreeController extends Controller
         }
 
         if (! branch_can_access_page(current_user_branch(), 'people_tree')) {
-            return redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
+            return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
         }
 
         return null;

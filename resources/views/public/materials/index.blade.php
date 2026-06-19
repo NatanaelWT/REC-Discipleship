@@ -59,7 +59,7 @@
       @endif
 
       <div class="form-actions public-material-footer">
-        <a class="btn ghost" href="{{ url('/index.php') }}">Kembali</a>
+        <a class="btn ghost" href="{{ route('home', [], false) }}">Kembali</a>
       </div>
     </section>
 @endsection

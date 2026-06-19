@@ -14,13 +14,13 @@ function render_sidebar_nav_href(string $href): string {
 
     parse_str(ltrim($href, '?'), $params);
     $page = trim((string) ($params['page'] ?? ''));
-    if ($page === '' || !class_exists(\App\Services\Routing\CompatibilityRouteMap::class)) {
+    if ($page === '' || !class_exists(\App\Services\Routing\AppPageRouteMap::class)) {
         return $href;
     }
 
-    if (!\App\Services\Routing\CompatibilityRouteMap::hasPage($page)) {
+    if (!\App\Services\Routing\AppPageRouteMap::hasPage($page)) {
         return $href;
     }
 
-    return \App\Services\Routing\CompatibilityRouteMap::pageUrl($page, $params);
+    return \App\Services\Routing\AppPageRouteMap::pageUrl($page, $params);
 }

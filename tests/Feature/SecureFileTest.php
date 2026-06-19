@@ -42,22 +42,25 @@ class SecureFileTest extends TestCase
             File::deleteDirectory($this->testUploadDirectory);
         }
         File::deleteDirectory(public_path('uploads/secure-test-legacy'));
+        if (File::isDirectory(public_path('uploads')) && count(File::files(public_path('uploads'))) === 0 && count(File::directories(public_path('uploads'))) === 0) {
+            File::deleteDirectory(public_path('uploads'));
+        }
 
         parent::tearDown();
     }
 
-    public function test_legacy_secure_file_query_redirects_to_clean_route(): void
+    public function test_legacy_secure_file_query_is_rejected(): void
     {
-        $response = $this->get('/index.php?page=secure_file&path=' . rawurlencode($this->imagePath));
+        $response = $this->get('/index.php?page=secure_file&path='.rawurlencode($this->imagePath));
 
-        $response->assertRedirect('/file-aman?path=uploads%2Fsecure-test%2Fpreview.png');
+        $response->assertNotFound();
     }
 
     public function test_secure_file_preview_renders_same_preview_shell_for_top_level_navigation(): void
     {
         $response = $this
             ->withHeaders(['Sec-Fetch-Dest' => 'document'])
-            ->get('/file-aman?path=' . rawurlencode($this->imagePath));
+            ->get('/file-aman?path='.rawurlencode($this->imagePath));
 
         $response->assertOk();
         $response->assertSee('Preview File');
@@ -68,7 +71,7 @@ class SecureFileTest extends TestCase
 
     public function test_secure_file_raw_streams_inline_file(): void
     {
-        $response = $this->get('/file-aman?path=' . rawurlencode($this->textPath) . '&raw=1');
+        $response = $this->get('/file-aman?path='.rawurlencode($this->textPath).'&raw=1');
 
         $response->assertOk();
         $response->assertHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -78,7 +81,7 @@ class SecureFileTest extends TestCase
 
     public function test_secure_file_streams_legacy_public_upload_file(): void
     {
-        $response = $this->get('/file-aman?path=' . rawurlencode($this->legacyTextPath) . '&raw=1');
+        $response = $this->get('/file-aman?path='.rawurlencode($this->legacyTextPath).'&raw=1');
 
         $response->assertOk();
         $response->assertHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -87,7 +90,7 @@ class SecureFileTest extends TestCase
 
     public function test_secure_file_download_streams_attachment(): void
     {
-        $response = $this->get('/file-aman?path=' . rawurlencode($this->imagePath) . '&download=1&name=Foto Pertemuan.png');
+        $response = $this->get('/file-aman?path='.rawurlencode($this->imagePath).'&download=1&name=Foto Pertemuan.png');
 
         $response->assertOk();
         $response->assertHeader('Content-Type', 'image/png');
@@ -97,7 +100,7 @@ class SecureFileTest extends TestCase
 
     public function test_secure_file_rejects_paths_outside_uploads(): void
     {
-        $response = $this->get('/file-aman?path=' . rawurlencode('templates/file.txt'));
+        $response = $this->get('/file-aman?path='.rawurlencode('templates/file.txt'));
 
         $response->assertNotFound();
         $response->assertSee('File tidak ditemukan.');
@@ -105,7 +108,7 @@ class SecureFileTest extends TestCase
 
     public function test_secure_file_rejects_disallowed_extensions(): void
     {
-        $response = $this->get('/file-aman?path=' . rawurlencode($this->blockedPath));
+        $response = $this->get('/file-aman?path='.rawurlencode($this->blockedPath));
 
         $response->assertForbidden();
         $response->assertSee('Tipe file tidak diizinkan.');

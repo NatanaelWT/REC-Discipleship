@@ -9,11 +9,11 @@ use Tests\TestCase;
 
 class DgMeetingReportRecapTest extends TestCase
 {
-    public function test_legacy_dg_report_recap_query_redirects_to_clean_route(): void
+    public function test_legacy_dg_report_recap_query_is_rejected(): void
     {
         $response = $this->get('/pemuridan/laporan-dg?page=dg_reports_recap');
 
-        $response->assertRedirect('/pemuridan/laporan-dg');
+        $response->assertNotFound();
     }
 
     public function test_dg_report_recap_renders_from_laravel_tables(): void
@@ -41,7 +41,7 @@ class DgMeetingReportRecapTest extends TestCase
         $previousSession = $_SESSION ?? [];
         if (session_status() === PHP_SESSION_NONE) {
             session_save_path(storage_path('framework/sessions'));
-            session_id('dg-report-recap-test-' . str_replace('.', '', uniqid('', true)));
+            session_id('dg-report-recap-test-'.str_replace('.', '', uniqid('', true)));
             session_start();
         }
         $_SESSION['user'] = 'tester';
@@ -52,7 +52,7 @@ class DgMeetingReportRecapTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $previousSession
+     * @param  array<string, mixed>  $previousSession
      */
     private function restoreSession(array $previousSession): void
     {

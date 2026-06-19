@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Developer\DeveloperBranchService;
 use App\Services\Developer\DeveloperUserService;
-use App\Services\Routing\CompatibilityRouteMap;
+use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,7 +64,7 @@ class DeveloperUserController extends Controller
         }
 
         if (! can_manage_users()) {
-            return redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch())));
+            return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch())));
         }
 
         return redirect()->route('developer.users', ['status' => 'updated']);

@@ -5,30 +5,31 @@ use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Developer\DeveloperConfigController;
 use App\Http\Controllers\Developer\DeveloperController;
 use App\Http\Controllers\Developer\DeveloperUserController;
-use App\Http\Controllers\Files\SecureFileController;
-use App\Http\Controllers\Compatibility\CompatibilityController;
-use App\Http\Controllers\Discipleship\GroupController as DiscipleshipGroupController;
 use App\Http\Controllers\Discipleship\DashboardController as DiscipleshipDashboardController;
-use App\Http\Controllers\Settings\SettingsController;
+use App\Http\Controllers\Discipleship\DifficultQuestionController as DiscipleshipDifficultQuestionController;
+use App\Http\Controllers\Discipleship\GroupController as DiscipleshipGroupController;
+use App\Http\Controllers\Discipleship\MeetingReportRecapController as DiscipleshipMeetingReportRecapController;
+use App\Http\Controllers\Discipleship\MskParticipantController as DiscipleshipMskParticipantController;
 use App\Http\Controllers\Discipleship\PeopleListController as DiscipleshipPeopleListController;
+use App\Http\Controllers\Discipleship\PeopleTreeController as DiscipleshipPeopleTreeController;
+use App\Http\Controllers\Discipleship\SpiritualJourneyController as DiscipleshipSpiritualJourneyController;
+use App\Http\Controllers\Discipleship\TargetController as DiscipleshipTargetController;
+use App\Http\Controllers\Files\SecureFileController;
 use App\Http\Controllers\PublicPortal\DgMeetingReportController as PublicDgMeetingReportController;
 use App\Http\Controllers\PublicPortal\DgReportBranchController as PublicDgReportBranchController;
 use App\Http\Controllers\PublicPortal\DifficultAnswerController as PublicDifficultAnswerController;
 use App\Http\Controllers\PublicPortal\DifficultQuestionController as PublicDifficultQuestionController;
-use App\Http\Controllers\Discipleship\DifficultQuestionController as DiscipleshipDifficultQuestionController;
-use App\Http\Controllers\Discipleship\MeetingReportRecapController as DiscipleshipMeetingReportRecapController;
-use App\Http\Controllers\Discipleship\MskParticipantController as DiscipleshipMskParticipantController;
-use App\Http\Controllers\Discipleship\PeopleTreeController as DiscipleshipPeopleTreeController;
-use App\Http\Controllers\Discipleship\SpiritualJourneyController as DiscipleshipSpiritualJourneyController;
-use App\Http\Controllers\Discipleship\TargetController as DiscipleshipTargetController;
+use App\Http\Controllers\PublicPortal\HomeController as PublicHomeController;
 use App\Http\Controllers\PublicPortal\MaterialController as PublicMaterialController;
 use App\Http\Controllers\PublicPortal\MaterialDownloadController as PublicMaterialDownloadController;
 use App\Http\Controllers\PublicPortal\MaterialPreviewController as PublicMaterialPreviewController;
 use App\Http\Controllers\PublicPortal\MemberFeedbackJournalController as PublicMemberFeedbackJournalController;
-use App\Http\Controllers\PublicPortal\HomeController as PublicHomeController;
+use App\Http\Controllers\Settings\SettingsController;
 use App\Http\Controllers\Worship\ServiceScheduleController as WorshipServiceScheduleController;
 use App\Http\Controllers\Worship\ServiceScheduleImageController as WorshipServiceScheduleImageController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
@@ -41,7 +42,7 @@ $statelessRouteMiddleware = [
 
 Route::withoutMiddleware($statelessRouteMiddleware)->group(function (): void {
     Route::match(['GET', 'POST'], '/', [PublicHomeController::class, 'index'])->name('home');
-    Route::match(['GET', 'POST'], '/index.php', CompatibilityController::class)->name('compat.index');
+    Route::get('/index.php', static fn (): RedirectResponse => redirect()->route('home'))->name('index.redirect');
 
     Route::get('/login', [LoginController::class, 'show'])->name('auth.login');
     Route::post('/login', [LoginController::class, 'store'])->name('auth.login.store');
@@ -95,7 +96,7 @@ Route::withoutMiddleware($statelessRouteMiddleware)->group(function (): void {
         Route::get('/dashboard', [DiscipleshipDashboardController::class, 'index'])->name('dashboard');
         Route::post('/dashboard/msk-sessions', [DiscipleshipDashboardController::class, 'updateMskSessions'])->name('dashboard.msk-sessions');
         Route::match(['GET', 'POST'], '/kelompok', [DiscipleshipGroupController::class, 'index'])->name('groups');
-        Route::match(['GET', 'POST'], '/orang', static function (\Illuminate\Http\Request $request): \Illuminate\Http\RedirectResponse {
+        Route::match(['GET', 'POST'], '/orang', static function (Request $request): RedirectResponse {
             return redirect()->route('discipleship.tree', $request->query());
         })->name('people');
         Route::match(['GET', 'POST'], '/anggota', [DiscipleshipPeopleListController::class, 'index'])->name('people-list');

@@ -16,11 +16,11 @@ class DifficultQuestionAdminTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_legacy_difficult_question_query_redirects_to_clean_route(): void
+    public function test_legacy_difficult_question_query_is_rejected(): void
     {
         $response = $this->get('/pemuridan/pertanyaan-sulit?page=discipleship_targets');
 
-        $response->assertRedirect('/pemuridan/target');
+        $response->assertNotFound();
     }
 
     public function test_admin_page_renders_for_central_discipleship_user(): void
@@ -145,7 +145,7 @@ class DifficultQuestionAdminTest extends TestCase
         }
 
         if (session_status() === PHP_SESSION_NONE) {
-            session_id('difficult-question-test-' . str_replace('.', '', uniqid('', true)));
+            session_id('difficult-question-test-'.str_replace('.', '', uniqid('', true)));
             session_start();
         }
     }

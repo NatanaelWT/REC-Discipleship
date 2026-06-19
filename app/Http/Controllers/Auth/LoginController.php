@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Services\Auth\AuthCredentialService;
-use App\Services\Auth\SessionAuthenticator;
 use App\Services\Auth\LoginAttemptLimiter;
-use App\Services\Routing\CompatibilityRouteMap;
+use App\Services\Auth\SessionAuthenticator;
+use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -27,7 +27,7 @@ class LoginController extends Controller
                 return redirect()->route('auth.login', ['account_removed' => 1]);
             }
 
-            return redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch())));
+            return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch())));
         }
 
         return view('auth.login', $this->viewData($request));
@@ -58,7 +58,7 @@ class LoginController extends Controller
             $credentials->updateLastLogin($user, $now);
             $sessions->login($user, $now, $credentials);
 
-            return redirect(CompatibilityRouteMap::pageUrl(branch_home_page((string) ($_SESSION['cabang'] ?? 'kutisari'))));
+            return redirect(AppPageRouteMap::pageUrl(branch_home_page((string) ($_SESSION['cabang'] ?? 'kutisari'))));
         }
 
         $waitSeconds = $limiter->registerFailure($ip, $now);

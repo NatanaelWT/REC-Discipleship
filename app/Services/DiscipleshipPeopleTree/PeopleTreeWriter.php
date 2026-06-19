@@ -2,7 +2,7 @@
 
 namespace App\Services\DiscipleshipPeopleTree;
 
-use App\Services\Routing\CompatibilityRouteMap;
+use App\Services\Routing\AppPageRouteMap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -11,8 +11,7 @@ class PeopleTreeWriter
 {
     public function __construct(
         private readonly PeopleTreeModelStore $modelStore,
-    ) {
-    }
+    ) {}
 
     public function savePerson(Request $request): RedirectResponse
     {
@@ -87,7 +86,7 @@ class PeopleTreeWriter
         }
 
         $branchLabel = sanitize_file_name_component($targetBranch, 'cabang');
-        $downloadName = preg_replace('/[\x00-\x1F\x7F"\\\\]+/', '_', 'pohon_pemuridan_' . $branchLabel . '.dot') ?? 'pohon_pemuridan.dot';
+        $downloadName = preg_replace('/[\x00-\x1F\x7F"\\\\]+/', '_', 'pohon_pemuridan_'.$branchLabel.'.dot') ?? 'pohon_pemuridan.dot';
         if ($downloadName === '') {
             $downloadName = 'pohon_pemuridan.dot';
         }
@@ -102,7 +101,7 @@ class PeopleTreeWriter
             'Cache-Control' => 'private, no-store, no-cache, must-revalidate',
             'Pragma' => 'no-cache',
             'Expires' => '0',
-            'Content-Disposition' => 'attachment; filename="' . $asciiDownloadName . '"; filename*=UTF-8\'\'' . rawurlencode($downloadName),
+            'Content-Disposition' => 'attachment; filename="'.$asciiDownloadName.'"; filename*=UTF-8\'\''.rawurlencode($downloadName),
             'Content-Length' => (string) strlen($dotContent),
         ]);
     }
@@ -118,7 +117,7 @@ class PeopleTreeWriter
         }
 
         if (! branch_can_use_action(current_user_branch(), $action)) {
-            return redirect(CompatibilityRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
+            return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
         }
 
         $branchCode = normalize_public_branch_code(current_user_branch());
@@ -184,7 +183,7 @@ class PeopleTreeWriter
     }
 
     /**
-     * @param array<string, mixed> $params
+     * @param  array<string, mixed>  $params
      */
     private function redirectToReturnPage(Request $request, array $params): RedirectResponse
     {
@@ -201,7 +200,7 @@ class PeopleTreeWriter
             return redirect()->route('discipleship.tree', $params);
         }
 
-        return redirect(CompatibilityRouteMap::pageUrl($returnPage, $params));
+        return redirect(AppPageRouteMap::pageUrl($returnPage, $params));
     }
 
     private function validPostRequest(): bool

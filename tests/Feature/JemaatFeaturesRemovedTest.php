@@ -19,7 +19,7 @@ class JemaatFeaturesRemovedTest extends TestCase
         }
     }
 
-    public function test_legacy_jemaat_pages_no_longer_open_jemaat_features(): void
+    public function test_legacy_jemaat_page_queries_are_rejected(): void
     {
         foreach ([
             'member_dashboard',
@@ -28,14 +28,9 @@ class JemaatFeaturesRemovedTest extends TestCase
             'member_families',
             'member_birthdays',
         ] as $page) {
-            $response = $this->get('/index.php?page=' . $page);
+            $response = $this->get('/index.php?page='.$page);
 
-            $response->assertOk();
-            $response->assertDontSee('Data Jemaat');
-            $response->assertDontSee('Pendataan Jemaat');
-            $response->assertDontSee('Kelengkapan Data Jemaat');
-            $response->assertDontSee('List Keluarga Jemaat');
-            $response->assertDontSee('Ulang Tahun Jemaat Bulanan');
+            $response->assertNotFound();
         }
     }
 }
