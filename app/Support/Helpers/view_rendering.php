@@ -173,7 +173,8 @@ function render_pemuridan_import_feedback(): void
 
 function render_central_rekap_toolbar(string $currentPage): void
 {
-    if (! is_effective_central_discipleship_readonly()) {
+    if (! is_effective_central_discipleship_readonly()
+        || page_header_active_group($currentPage) !== 'pemuridan') {
         return;
     }
     $selectedBranch = central_recap_selected_branch();
@@ -983,6 +984,7 @@ function page_header(string $title, array $settings, string $currentPage, bool $
     append_body_classes($bodyClasses, $bodyClass);
     $classAttr = body_class_attr($bodyClasses);
     $activeGroup = page_header_active_group($currentPage);
+    $showCentralToolbar = $isCentralReadonlySession && $activeGroup === 'pemuridan';
     render_app_document_head($app);
     echo '<body'.$classAttr.">\n";
     echo "<div class=\"app-shell\">\n";
@@ -1010,11 +1012,11 @@ function page_header(string $title, array $settings, string $currentPage, bool $
     if (function_exists('is_developer_session') && is_developer_session() && function_exists('developer_debug_banner_enabled') && developer_debug_banner_enabled()) {
         echo '  <div class="developer-debug-banner">Developer debug aktif &middot; cabang '.h(user_branch_label($currentBranch))."</div>\n";
     }
-    $showCentralToolbarBeforeTitle = $isCentralReadonlySession && $showTitle;
+    $showCentralToolbarBeforeTitle = $showCentralToolbar && $showTitle;
     if ($showTitle && ! $showCentralToolbarBeforeTitle) {
         echo '  <h1>'.h($title)."</h1>\n";
     }
-    if ($isCentralReadonlySession) {
+    if ($showCentralToolbar) {
         render_central_rekap_toolbar($currentPage);
     }
     if ($showCentralToolbarBeforeTitle) {

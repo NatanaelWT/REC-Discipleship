@@ -47,6 +47,22 @@ class SettingsPageTest extends TestCase
         $this->assertTrue(Hash::check('new-secret', $storedPassword));
     }
 
+    public function test_central_discipleship_toolbar_is_hidden_outside_discipleship_pages(): void
+    {
+        $this->seedUserAccount();
+        DB::table('users')->where('username', 'admin_settings_test')->update([
+            'branch_id' => null,
+            'access_scope' => 'pemuridan_pusat',
+        ]);
+        $this->loginAsSettingsUser();
+
+        $this->get('/pengaturan')
+            ->assertOk()
+            ->assertDontSee('Mode Pusat')
+            ->assertDontSee('Rekap aktif:')
+            ->assertDontSee('Semua Cabang');
+    }
+
     private function seedUserAccount(): void
     {
         $this->createUsersTable();

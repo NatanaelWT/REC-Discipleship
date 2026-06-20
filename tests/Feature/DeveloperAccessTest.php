@@ -70,7 +70,9 @@ class DeveloperAccessTest extends TestCase
             ->assertOk()
             ->assertSee('Pemuridan lintas cabang hanya lihat')
             ->assertDontSee('Cabang Aktif')
-            ->assertDontSee('Pakai');
+            ->assertDontSee('Pakai')
+            ->assertDontSee('Mode Pusat')
+            ->assertDontSee('Semua Cabang');
 
         $this->post('/developer/branch', ['branch_id' => 2])->assertNotFound();
 

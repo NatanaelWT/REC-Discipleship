@@ -39,7 +39,9 @@ class DgMeetingReportRecapTest extends TestCase
 
         $this->get('/pemuridan/laporan-dg?rekap_cabang=all')
             ->assertOk()
-            ->assertSee('Materi Test');
+            ->assertSee('Materi Test')
+            ->assertSee('Mode Pusat')
+            ->assertSee('Semua Cabang');
 
         $this->get('/pemuridan/laporan-dg?rekap_cabang=gm')
             ->assertOk()
