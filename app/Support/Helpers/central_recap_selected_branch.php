@@ -41,7 +41,5 @@ function central_recap_selected_branch(): string
         }
     }
 
-    session()->put('central_rekap_branch_id', 'all');
-
     return 'all';
 }

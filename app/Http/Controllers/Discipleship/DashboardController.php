@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\DiscipleshipDashboard\UpdateDashboardMskSessionsRequest;
 use App\Services\DiscipleshipDashboard\DashboardMskSessionUpdater;
 use App\Services\DiscipleshipDashboard\DashboardPageData;
+use App\Services\DiscipleshipDashboard\DashboardSectionData;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,18 @@ class DashboardController extends Controller
         }
 
         return redirect()->route('discipleship.dashboard', $redirectParams);
+    }
+
+    public function section(Request $request, string $section, DashboardSectionData $sections): View
+    {
+        RuntimeBootstrap::boot($request);
+
+        return match ($section) {
+            'incomplete-msk' => view('discipleship.dashboard.sections.incomplete-msk', $sections->incompleteMsk($request)),
+            'overdue-groups' => view('discipleship.dashboard.sections.overdue-groups', $sections->overdueGroups($request)),
+            'branch-breakdown' => view('discipleship.dashboard.sections.branch-breakdown', $sections->branchBreakdown()),
+            default => abort(404),
+        };
     }
 
     private function guardPageAccess(Request $request): ?RedirectResponse

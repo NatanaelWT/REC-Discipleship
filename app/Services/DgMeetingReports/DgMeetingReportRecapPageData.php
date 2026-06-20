@@ -86,7 +86,10 @@ class DgMeetingReportRecapPageData
     {
         $people = [];
         try {
-            $records = DiscipleshipPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get();
+            $records = DiscipleshipPerson::query()
+                ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+                ->orderBy('id')
+                ->get(['id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'created_at', 'updated_at']);
         } catch (Throwable) {
             return [];
         }
@@ -142,7 +145,7 @@ class DgMeetingReportRecapPageData
             $groups = DiscipleshipGroup::query()
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
                 ->orderBy('id')
-                ->get();
+                ->get(['id', 'branch_id', 'name', 'status', 'start_stage', 'current_stage', 'created_at', 'updated_at']);
         } catch (Throwable) {
             return [];
         }
@@ -197,7 +200,7 @@ class DgMeetingReportRecapPageData
             $records = DiscipleshipGroupPerson::query()
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
                 ->orderBy('id')
-                ->get();
+                ->get(['id', 'branch_id', 'discipleship_group_id', 'person_id', 'role', 'stage', 'status', 'started_on', 'ended_on', 'end_reason']);
         } catch (Throwable) {
             return [$leaderships, $memberships];
         }
@@ -303,6 +306,13 @@ class DgMeetingReportRecapPageData
     {
         try {
             $reports = DiscipleshipMeetingReport::query()
+                ->select([
+                    'id', 'branch_id', 'leader_person_id', 'leader_name_snapshot', 'discipleship_group_id',
+                    'group_name_snapshot', 'meeting_date', 'material_topic', 'group_progress_snapshot',
+                    'absence_reason', 'absences', 'meditation_sharers', 'photos', 'additional_notes',
+                    'meditation_min_times', 'sharing_openness_score', 'prepared_material', 'prayed_for_members',
+                    'shared_meditation', 'relationally_contacted', 'source', 'created_at', 'updated_at',
+                ])
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
                 ->orderByDesc('meeting_date')
                 ->orderByDesc('created_at')

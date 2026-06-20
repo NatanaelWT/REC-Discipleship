@@ -15,7 +15,7 @@ class RequireRecAuthentication
      */
     public function handle(Request $request, Closure $next): Response
     {
-        RuntimeBootstrap::load();
+        RuntimeBootstrap::boot($request);
 
         if (! app(CurrentUserContext::class)->isLoggedIn()) {
             return redirect()->route('auth.login');

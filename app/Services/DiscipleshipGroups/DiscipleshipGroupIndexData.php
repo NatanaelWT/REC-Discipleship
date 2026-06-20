@@ -5,515 +5,134 @@ namespace App\Services\DiscipleshipGroups;
 use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipPerson;
-use App\Services\Discipleship\DiscipleshipReadCache;
-use App\Support\ArrayPaginator;
+use App\Services\Discipleship\CurrentDiscipleshipScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class DiscipleshipGroupIndexData
 {
-    public function __construct(
-        private readonly ArrayPaginator $paginator,
-        private readonly DiscipleshipReadCache $cache,
-    ) {}
+    public function __construct(private readonly CurrentDiscipleshipScope $scope) {}
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function forCurrentContext(Request $request): array
     {
-        $centralReadOnly = is_effective_central_discipleship_readonly();
-        $selectedBranch = $centralReadOnly
-            ? normalize_central_recap_branch(central_recap_selected_branch())
-            : normalize_public_branch_code(current_user_branch());
-
-        $branchCodes = $this->branchCodes($selectedBranch, $centralReadOnly);
-        $branchLabels = $this->branchLabels();
-
-        $data = $this->cache->remember('group-list', [...$branchCodes, $centralReadOnly ? 'central' : 'branch'], function () use ($branchCodes, $centralReadOnly, $selectedBranch, $branchLabels): array {
-            $groupPeople = $this->loadGroupPeople($branchCodes);
-
-            return $this->prepareRows([
-                'central_readonly' => $centralReadOnly,
-                'selected_branch' => $selectedBranch,
-                'branch_codes' => $branchCodes,
-                'branch_labels' => $branchLabels,
-                'people' => $this->loadPeople($branchCodes, $centralReadOnly, $branchLabels),
-                'groups' => $this->loadGroups($branchCodes, $centralReadOnly, $branchLabels),
-                'leaderships' => array_values(array_filter($groupPeople, static fn (array $row): bool => ($row['role'] ?? '') !== 'member')),
-                'memberships' => array_values(array_filter($groupPeople, static fn (array $row): bool => ($row['role'] ?? '') === 'member')),
-            ]);
-        });
-        $data['settings'] = ['church_name' => app_church_name()];
-
         $search = strtolower(trim((string) $request->query('q', '')));
         $status = trim((string) $request->query('status', 'all'));
-        $filteredRows = array_values(array_filter($data['groups'], static function (array $row) use ($search, $status): bool {
-            if ($search !== '' && ! str_contains((string) ($row['search_text'] ?? ''), $search)) {
-                return false;
-            }
+        $base = DiscipleshipGroup::query()->whereIn('branch_id', $this->scope->branchIds());
+        $stats = (clone $base)
+            ->selectRaw("COUNT(*) AS total,
+                SUM(CASE WHEN current_stage = 'DG 1' THEN 1 ELSE 0 END) AS dg1,
+                SUM(CASE WHEN current_stage = 'DG 2' THEN 1 ELSE 0 END) AS dg2,
+                SUM(CASE WHEN current_stage = 'DG 3' THEN 1 ELSE 0 END) AS dg3")
+            ->first();
 
-            return $status === 'all' || ($row['row_status'] ?? '') === $status;
-        }));
-        $pagination = $this->paginator->paginate($filteredRows, $request);
-        $data['groups'] = $pagination->items();
-        $data['groupsPagination'] = $pagination;
-        $data['filteredGroupRows'] = $pagination->total();
-        $data['groupsSearch'] = $search;
-        $data['groupsStatusFilter'] = $status;
-
-        return $data;
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function branchCodes(string $selectedBranch, bool $centralReadOnly): array
-    {
-        if ($centralReadOnly && $selectedBranch === 'all') {
-            return array_map(static fn (array $option): string => normalize_public_branch_code((string) ($option['code'] ?? 'kutisari')), public_dg_branch_options());
+        $query = (clone $base)->select([
+            'id', 'branch_id', 'name', 'status', 'start_stage', 'current_stage', 'created_at',
+        ]);
+        if (in_array($status, ['active', 'inactive'], true)) {
+            $query->where('status', $status);
+        } else {
+            $status = 'all';
         }
-
-        return [$selectedBranch];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function branchLabels(): array
-    {
-        $labels = [];
-        foreach (public_dg_branch_options() as $option) {
-            $branchCode = normalize_public_branch_code((string) ($option['code'] ?? 'kutisari'));
-            $label = trim((string) ($option['label'] ?? strtoupper($branchCode)));
-            $labels[$branchCode] = $label !== '' ? $label : strtoupper($branchCode);
-        }
-
-        return $labels;
-    }
-
-    /**
-     * @param  array<int, string>  $branchCodes
-     * @param  array<string, string>  $branchLabels
-     * @return array<string, array<string, mixed>>
-     */
-    private function loadPeople(array $branchCodes, bool $centralReadOnly, array $branchLabels): array
-    {
-        $peopleById = [];
-
-        $people = DiscipleshipPerson::query()
-            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-            ->orderBy('id')
-            ->get();
-
-        foreach ($people as $person) {
-            $branchCode = normalize_public_branch_code((string) $person->branch_code);
-            $effectiveId = $this->effectiveId($branchCode, (string) $person->getKey());
-            if ($effectiveId === '') {
-                continue;
-            }
-
-            $displayName = trim((string) ($person->full_name ?? ''));
-            if ($centralReadOnly) {
-                $displayName = append_branch_suffix($displayName, $branchLabels[$branchCode] ?? strtoupper($branchCode));
-            }
-
-            $peopleById[$effectiveId] = [
-                'id' => $effectiveId,
-                'name' => $displayName !== '' ? $displayName : '-',
-                'phone' => trim((string) ($person->phone ?? '')),
-                'gender' => trim((string) ($person->gender ?? '')),
-                'status' => trim((string) ($person->status ?? 'active')) ?: 'active',
-                'notes' => trim((string) ($person->notes ?? '')),
-                'campus' => trim((string) ($person->campus ?? '')),
-                'major' => trim((string) ($person->major ?? '')),
-                'occupation' => trim((string) ($person->occupation ?? '')),
-                'branch_code' => $branchCode,
-                'branch_label' => $branchLabels[$branchCode] ?? strtoupper($branchCode),
-                'member_id' => $effectiveId,
-                'created_at' => $this->stringTimestamp($person->created_at ?? null),
-                'updated_at' => $this->stringTimestamp($person->updated_at ?? null),
-            ];
-        }
-
-        return $peopleById;
-    }
-
-    /**
-     * @param  array<int, string>  $branchCodes
-     * @param  array<string, string>  $branchLabels
-     * @return array<string, array<string, mixed>>
-     */
-    private function loadGroups(array $branchCodes, bool $centralReadOnly, array $branchLabels): array
-    {
-        $groupsById = [];
-
-        $groups = DiscipleshipGroup::query()
-            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-            ->orderBy('id')
-            ->get();
-
-        foreach ($groups as $group) {
-            $branchCode = normalize_public_branch_code((string) $group->branch_code);
-            $effectiveId = $this->effectiveId($branchCode, (string) $group->getKey());
-            if ($effectiveId === '') {
-                continue;
-            }
-
-            $groupsById[$effectiveId] = [
-                'id' => $effectiveId,
-                'branch_code' => $branchCode,
-                'branch_label' => $branchLabels[$branchCode] ?? strtoupper($branchCode),
-                'name' => trim((string) ($group->name ?? 'Kelompok')) ?: 'Kelompok',
-                'status' => strtolower(trim((string) ($group->status ?? 'active'))) ?: 'active',
-                'start_stage' => normalize_dg_progress_value((string) ($group->start_stage ?? '')),
-                'current_stage' => normalize_dg_progress_value((string) ($group->current_stage ?? '')),
-                'parent_group_id' => $group->parent_group_id !== null
-                    ? $this->effectiveId($branchCode, (string) $group->parent_group_id)
-                    : '',
-                'notes' => trim((string) ($group->notes ?? '')),
-                'created_at' => $this->stringTimestamp($group->created_at ?? null),
-                'updated_at' => $this->stringTimestamp($group->updated_at ?? null),
-            ];
-        }
-
-        return $groupsById;
-    }
-
-    /**
-     * @param  array<int, string>  $branchCodes
-     * @return array<int, array<string, mixed>>
-     */
-    private function loadGroupPeople(array $branchCodes): array
-    {
-        $rows = [];
-
-        foreach (DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get() as $row) {
-            $branchCode = normalize_public_branch_code((string) $row->branch_code);
-            $groupId = $this->effectiveId($branchCode, (string) $row->discipleship_group_id);
-            $personId = $this->effectiveId($branchCode, (string) $row->person_id);
-            if ($groupId === '' || $personId === '') {
-                continue;
-            }
-
-            $rows[] = [
-                'id' => (string) $row->getKey(),
-                'branch_code' => $branchCode,
-                'group_id' => $groupId,
-                'person_id' => $personId,
-                'leader_person_id' => $personId,
-                'role' => strtolower(trim((string) ($row->role ?? 'member'))) ?: 'member',
-                'stage' => normalize_dg_progress_value((string) ($row->stage ?? '')),
-                'status' => strtolower(trim((string) ($row->status ?? 'active'))) ?: 'active',
-                'start_date' => $this->dateString($row->started_on ?? null),
-                'end_date' => $this->dateString($row->ended_on ?? null),
-                'reason_change' => trim((string) ($row->end_reason ?? '')),
-                'reason_end' => trim((string) ($row->end_reason ?? '')),
-                'created_at' => $this->stringTimestamp($row->created_at ?? null),
-                'updated_at' => $this->stringTimestamp($row->updated_at ?? null),
-            ];
-        }
-
-        return $rows;
-    }
-
-    /**
-     * @param  array<string, mixed>  $context
-     * @return array<string, mixed>
-     */
-    private function prepareRows(array $context): array
-    {
-        $centralReadOnly = (bool) ($context['central_readonly'] ?? false);
-        $selectedBranch = (string) ($context['selected_branch'] ?? '');
-        $branchLabels = is_array($context['branch_labels'] ?? null) ? $context['branch_labels'] : [];
-        $peopleById = is_array($context['people'] ?? null) ? $context['people'] : [];
-        $groupsById = is_array($context['groups'] ?? null) ? $context['groups'] : [];
-        $leaderships = is_array($context['leaderships'] ?? null) ? $context['leaderships'] : [];
-        $memberships = is_array($context['memberships'] ?? null) ? $context['memberships'] : [];
-
-        $extractFirstName = static function (string $fullName): string {
-            $fullName = trim($fullName);
-            if ($fullName === '') {
-                return '';
-            }
-            $parts = preg_split('/\s+/', $fullName);
-            if (! is_array($parts) || count($parts) === 0) {
-                return '';
-            }
-
-            return trim((string) $parts[0]);
-        };
-
-        $allPeopleLabelsById = [];
-        foreach ($peopleById as $personId => $personRow) {
-            $personId = trim((string) $personId);
-            if ($personId === '') {
-                continue;
-            }
-            $personName = trim((string) ($personRow['name'] ?? ''));
-            $allPeopleLabelsById[$personId] = $personName !== '' ? $personName : '-';
-        }
-
-        $groupsSorted = [];
-        foreach ($groupsById as $groupId => $groupRow) {
-            $groupId = trim((string) $groupId);
-            if ($groupId === '') {
-                continue;
-            }
-
-            $leaderId = '';
-            $assistantId = '';
-            $latestLeaderSort = '';
-            $latestAssistantSort = '';
-            foreach ($leaderships as $leadershipRecord) {
-                if (! is_array($leadershipRecord)) {
-                    continue;
-                }
-                if (trim((string) ($leadershipRecord['group_id'] ?? '')) !== $groupId) {
-                    continue;
-                }
-                $leaderPersonId = trim((string) ($leadershipRecord['leader_person_id'] ?? ''));
-                if ($leaderPersonId === '') {
-                    continue;
-                }
-                $leadershipRole = strtolower(trim((string) ($leadershipRecord['role'] ?? 'leader')));
-                $leadershipSort = trim((string) ($leadershipRecord['end_date'] ?? ''));
-                if ($leadershipSort === '') {
-                    $leadershipSort = trim((string) ($leadershipRecord['start_date'] ?? ''));
-                }
-                if ($leadershipSort === '') {
-                    $leadershipSort = trim((string) ($leadershipRecord['updated_at'] ?? $leadershipRecord['created_at'] ?? ''));
-                }
-                if ($leadershipRole === 'co_leader' || $leadershipRole === 'assistant') {
-                    if ($assistantId === '' || strcmp($leadershipSort, $latestAssistantSort) > 0) {
-                        $assistantId = $leaderPersonId;
-                        $latestAssistantSort = $leadershipSort;
-                    }
-                } else {
-                    if ($leaderId === '' || strcmp($leadershipSort, $latestLeaderSort) > 0) {
-                        $leaderId = $leaderPersonId;
-                        $latestLeaderSort = $leadershipSort;
-                    }
-                }
-            }
-
-            $activeMemberIds = [];
-            $historyMemberIds = [];
-            $historyMemberSortById = [];
-            foreach ($memberships as $membershipRecord) {
-                if (! is_array($membershipRecord)) {
-                    continue;
-                }
-                if (trim((string) ($membershipRecord['group_id'] ?? '')) !== $groupId) {
-                    continue;
-                }
-                $memberPersonId = trim((string) ($membershipRecord['person_id'] ?? ''));
-                if ($memberPersonId === '') {
-                    continue;
-                }
-                $historySort = trim((string) ($membershipRecord['end_date'] ?? ''));
-                if ($historySort === '') {
-                    $historySort = trim((string) ($membershipRecord['start_date'] ?? ''));
-                }
-                if ($historySort === '') {
-                    $historySort = trim((string) ($membershipRecord['updated_at'] ?? $membershipRecord['created_at'] ?? ''));
-                }
-                if (! isset($historyMemberSortById[$memberPersonId]) || strcmp($historySort, (string) $historyMemberSortById[$memberPersonId]) > 0) {
-                    $historyMemberSortById[$memberPersonId] = $historySort;
-                }
-                if (! in_array($memberPersonId, $historyMemberIds, true)) {
-                    $historyMemberIds[] = $memberPersonId;
-                }
-                if (dgv2_is_current_period($membershipRecord) && ! in_array($memberPersonId, $activeMemberIds, true)) {
-                    $activeMemberIds[] = $memberPersonId;
-                }
-            }
-
-            usort($historyMemberIds, static function (string $a, string $b) use ($activeMemberIds, $historyMemberSortById): int {
-                $aActive = in_array($a, $activeMemberIds, true) ? 1 : 0;
-                $bActive = in_array($b, $activeMemberIds, true) ? 1 : 0;
-                if ($aActive !== $bActive) {
-                    return $bActive <=> $aActive;
-                }
-                $aSort = (string) ($historyMemberSortById[$a] ?? '');
-                $bSort = (string) ($historyMemberSortById[$b] ?? '');
-                if ($aSort !== $bSort) {
-                    return strcmp($bSort, $aSort);
-                }
-
-                return strcmp($a, $b);
+        if ($search !== '') {
+            $query->where(function (Builder $builder) use ($search): void {
+                $builder->whereRaw('LOWER(name) LIKE ?', ['%'.$search.'%'])
+                    ->orWhereExists(function ($subquery) use ($search): void {
+                        $subquery->selectRaw('1')
+                            ->from('discipleship_group_people as search_gp')
+                            ->join('discipleship_people as search_person', 'search_person.id', '=', 'search_gp.person_id')
+                            ->whereColumn('search_gp.discipleship_group_id', 'discipleship_groups.id')
+                            ->whereRaw('LOWER(search_person.full_name) LIKE ?', ['%'.$search.'%']);
+                    });
             });
-
-            $groupsSorted[] = [
-                'id' => $groupId,
-                'leader_id' => $leaderId,
-                'assistant_id' => $assistantId,
-                'name' => trim((string) ($groupRow['name'] ?? 'Kelompok')) ?: 'Kelompok',
-                'member_ids' => $activeMemberIds,
-                'history_member_ids' => $historyMemberIds,
-                'progress' => normalize_dg_progress_value((string) ($groupRow['current_stage'] ?? $groupRow['start_stage'] ?? '')) ?: 'DG 1',
-                'status' => strtolower(trim((string) ($groupRow['status'] ?? 'active'))) ?: 'active',
-                'notes' => trim((string) ($groupRow['notes'] ?? '')),
-                'created_at' => trim((string) ($groupRow['created_at'] ?? '')),
-                'updated_at' => trim((string) ($groupRow['updated_at'] ?? '')),
-            ];
         }
 
-        usort($groupsSorted, function (array $a, array $b) use ($peopleById): int {
-            $progressRank = static function (string $progress): int {
-                $normalized = normalize_dg_progress_value($progress);
-                if (stripos($normalized, 'DG 1') !== false) {
-                    return 1;
-                }
-                if (stripos($normalized, 'DG 2') !== false) {
-                    return 2;
-                }
-                if (stripos($normalized, 'DG 3') !== false) {
-                    return 3;
-                }
+        $paginator = $query->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
+            ->orderBy('name')
+            ->paginate(min(100, max(1, $request->integer('per_page', 50))))
+            ->withQueryString();
+        $groups = collect($paginator->items());
+        $groupIds = $groups->pluck('id')->map(static fn ($id): int => (int) $id)->all();
+        $links = $this->groupPeople($groupIds);
+        $people = $this->people($links->pluck('person_id')->filter()->unique()->all());
+        $branchOptions = $this->scope->optionsById();
 
-                return 9;
-            };
-
-            $rankA = $progressRank((string) ($a['progress'] ?? ''));
-            $rankB = $progressRank((string) ($b['progress'] ?? ''));
-            if ($rankA !== $rankB) {
-                return $rankA <=> $rankB;
-            }
-            $statusA = strtolower(trim((string) ($a['status'] ?? 'active')));
-            $statusB = strtolower(trim((string) ($b['status'] ?? 'active')));
-            $activeA = $statusA === 'active' ? 1 : 0;
-            $activeB = $statusB === 'active' ? 1 : 0;
-            if ($activeA !== $activeB) {
-                return $activeB <=> $activeA;
-            }
-            $leaderA = person_label($peopleById, (string) ($a['leader_id'] ?? ''), '');
-            $leaderB = person_label($peopleById, (string) ($b['leader_id'] ?? ''), '');
-            $cmp = strcasecmp($leaderA, $leaderB);
-            if ($cmp !== 0) {
-                return $cmp;
-            }
-            $aTime = (string) ($a['created_at'] ?? '');
-            $bTime = (string) ($b['created_at'] ?? '');
-            if ($aTime !== $bTime) {
-                return strcmp($aTime, $bTime);
+        $rows = $groups->map(function (DiscipleshipGroup $group) use ($links, $people, $branchOptions): array {
+            $groupLinks = $links->where('discipleship_group_id', $group->id);
+            $leaders = $groupLinks->where('role', '!=', 'member')->sortByDesc('id');
+            $primary = $leaders->first(static fn (DiscipleshipGroupPerson $link): bool => ! in_array($link->role, ['co_leader', 'assistant', 'pendamping'], true));
+            $primary ??= $leaders->first();
+            $leaderName = $primary !== null ? ($people[(int) $primary->person_id] ?? '-') : '-';
+            $assistants = $leaders
+                ->reject(static fn (DiscipleshipGroupPerson $link): bool => $primary !== null && $link->id === $primary->id)
+                ->map(static fn (DiscipleshipGroupPerson $link): string => $people[(int) $link->person_id] ?? '')
+                ->filter()->unique()->values()->all();
+            $members = $groupLinks->where('role', 'member')
+                ->map(static fn (DiscipleshipGroupPerson $link): string => $people[(int) $link->person_id] ?? '')
+                ->filter()->unique()->values()->all();
+            $progress = normalize_dg_progress_value((string) ($group->current_stage ?: $group->start_stage)) ?: '-';
+            $branchLabel = $branchOptions[(int) $group->branch_id]['label'] ?? 'Tanpa cabang';
+            if ($this->scope->includesAllBranches()) {
+                $leaderName = append_branch_suffix($leaderName, $branchLabel);
             }
 
-            return strcmp((string) ($a['id'] ?? ''), (string) ($b['id'] ?? ''));
-        });
-
-        $groupRowsPrepared = [];
-        $groupsInDg1Count = 0;
-        $groupsInDg2Count = 0;
-        $groupsInDg3Count = 0;
-
-        foreach ($groupsSorted as $grp) {
-            $leaderId = (string) ($grp['leader_id'] ?? '');
-            $assistantId = (string) ($grp['assistant_id'] ?? '');
-            $leaderName = person_label($peopleById, $leaderId, '-');
-            $assistantName = $assistantId !== '' ? person_label($peopleById, $assistantId, '-') : '-';
-            $progressLabel = trim((string) ($grp['progress'] ?? ''));
-            if ($progressLabel === '') {
-                $progressLabel = '-';
-            }
-            $groupName = trim((string) ($grp['name'] ?? 'Kelompok'));
-            if ($groupName === '') {
-                $groupName = 'Kelompok';
-            }
-            $groupStatus = strtolower(trim((string) ($grp['status'] ?? 'active')));
-            $isActiveGroup = $groupStatus === 'active';
-            $memberIds = $isActiveGroup ? ($grp['member_ids'] ?? []) : ($grp['history_member_ids'] ?? ($grp['member_ids'] ?? []));
-            if (! is_array($memberIds)) {
-                $memberIds = [];
-            }
-            $memberFirstNames = [];
-            $memberCount = 0;
-            $seenMemberIds = [];
-            foreach ($memberIds as $mid) {
-                $memberId = trim((string) $mid);
-                if ($memberId === '' || isset($seenMemberIds[$memberId])) {
-                    continue;
-                }
-                $seenMemberIds[$memberId] = true;
-                $memberName = trim((string) ($allPeopleLabelsById[$memberId] ?? ($peopleById[$memberId]['name'] ?? '')));
-                if ($memberName === '') {
-                    continue;
-                }
-                $memberCount++;
-                $memberFirstName = $extractFirstName($memberName);
-                if ($memberFirstName === '') {
-                    continue;
-                }
-                $memberFirstNames[] = $memberFirstName;
-            }
-            $memberLabel = count($memberFirstNames) > 0 ? implode(', ', $memberFirstNames) : '-';
-            $leaderSummary = $assistantId !== '' && $assistantName !== '-' ? 'Pendamping: '.$assistantName : 'Tanpa pendamping';
-            $progressToneClass = 'is-neutral';
-            if (stripos($progressLabel, 'DG 1') !== false) {
-                $progressToneClass = 'is-dg1';
-                $groupsInDg1Count++;
-            } elseif (stripos($progressLabel, 'DG 2') !== false) {
-                $progressToneClass = 'is-dg2';
-                $groupsInDg2Count++;
-            } elseif (stripos($progressLabel, 'DG 3') !== false) {
-                $progressToneClass = 'is-dg3';
-                $groupsInDg3Count++;
-            }
-            $memberSummary = $memberCount > 0 ? $memberLabel : 'Belum ada peserta';
-            $progressKey = 'none';
-            if (stripos($progressLabel, 'DG 1') !== false) {
-                $progressKey = 'dg1';
-            } elseif (stripos($progressLabel, 'DG 2') !== false) {
-                $progressKey = 'dg2';
-            } elseif (stripos($progressLabel, 'DG 3') !== false) {
-                $progressKey = 'dg3';
-            }
-
-            $groupRowsPrepared[] = [
-                'row_class' => $isActiveGroup ? 'is-group-active' : 'is-group-inactive',
-                'row_status' => $isActiveGroup ? 'active' : 'inactive',
-                'row_progress' => $progressKey,
+            return [
+                'id' => (int) $group->id,
+                'row_status' => strtolower((string) $group->status) === 'active' ? 'active' : 'inactive',
+                'row_progress' => strtolower(str_replace(' ', '', $progress)),
+                'row_class' => strtolower((string) $group->status) === 'active' ? '' : 'is-inactive',
                 'leader_name' => $leaderName,
-                'leader_summary' => $leaderSummary,
-                'group_status_class' => $isActiveGroup ? 'is-active' : 'is-inactive',
-                'progress_tone_class' => $progressToneClass,
-                'progress_label' => $progressLabel,
-                'member_count' => $memberCount,
-                'member_summary' => $memberSummary,
-                'member_first_names' => $memberFirstNames,
-                'member_helper_text' => $memberCount > 0
-                    ? ($isActiveGroup ? 'Nama depan peserta aktif dalam kelompok' : 'Riwayat nama depan peserta kelompok')
-                    : ($isActiveGroup ? 'Tambahkan peserta dari pohon DG' : 'Belum ada riwayat anggota'),
-                'progress_helper_text' => $memberCount > 0
-                    ? ($memberCount.($isActiveGroup ? ' peserta aktif' : ' peserta riwayat'))
-                    : ($isActiveGroup ? 'Belum ada peserta aktif' : 'Belum ada riwayat peserta'),
-                'search_text' => strtolower($leaderName.' '.$assistantName.' '.$progressLabel.' '.$memberSummary),
+                'leader_summary' => $assistants !== [] ? 'Pendamping: '.implode(', ', $assistants) : 'Tanpa pendamping',
+                'group_status_class' => strtolower((string) $group->status) === 'active' ? 'is-active' : 'is-inactive',
+                'progress_tone_class' => match ($progress) {
+                    'DG 1' => 'is-dg1', 'DG 2' => 'is-dg2', 'DG 3' => 'is-dg3', default => 'is-neutral',
+                },
+                'progress_label' => $progress,
+                'progress_helper_text' => trim((string) $group->name).($this->scope->includesAllBranches() ? ' - '.$branchLabel : ''),
+                'member_summary' => $members !== [] ? implode(', ', array_slice($members, 0, 8)) : 'Belum ada peserta',
+                'member_helper_text' => count($members).' peserta aktif',
+                'member_count' => count($members),
             ];
-        }
+        })->values();
+        $paginator->setCollection($rows);
 
         return [
-            'centralReadOnly' => $centralReadOnly,
-            'selectedBranch' => $selectedBranch,
             'settings' => ['church_name' => app_church_name()],
-            'groups' => $groupRowsPrepared,
-            'totalGroupRows' => count($groupRowsPrepared),
-            'groupsInDg1Count' => $groupsInDg1Count,
-            'groupsInDg2Count' => $groupsInDg2Count,
-            'groupsInDg3Count' => $groupsInDg3Count,
+            'groups' => $rows->all(),
+            'groupsPagination' => $paginator,
+            'filteredGroupRows' => $paginator->total(),
+            'totalGroupRows' => (int) ($stats->total ?? 0),
+            'groupsInDg1Count' => (int) ($stats->dg1 ?? 0),
+            'groupsInDg2Count' => (int) ($stats->dg2 ?? 0),
+            'groupsInDg3Count' => (int) ($stats->dg3 ?? 0),
+            'groupsSearch' => $search,
+            'groupsStatusFilter' => $status,
         ];
     }
 
-    private function effectiveId(string $branchCode, string $id): string
+    private function groupPeople(array $groupIds)
     {
-        return trim($id);
+        if ($groupIds === []) {
+            return collect();
+        }
+
+        return DiscipleshipGroupPerson::query()
+            ->whereIn('discipleship_group_id', $groupIds)
+            ->where('status', 'active')
+            ->whereNull('ended_on')
+            ->get(['id', 'discipleship_group_id', 'person_id', 'role']);
     }
 
-    private function stringTimestamp(mixed $value): string
+    private function people(array $personIds): array
     {
-        return trim((string) $value);
-    }
+        if ($personIds === []) {
+            return [];
+        }
 
-    private function dateString(mixed $value): string
-    {
-        return trim((string) $value);
+        return DiscipleshipPerson::query()
+            ->whereIn('id', $personIds)
+            ->pluck('full_name', 'id')
+            ->map(static fn ($name): string => trim((string) $name))
+            ->all();
     }
 }

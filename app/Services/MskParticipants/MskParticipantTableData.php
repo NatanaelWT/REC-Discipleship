@@ -43,6 +43,7 @@ class MskParticipantTableData
 
         try {
             return MskParticipant::query()
+                ->select(MskParticipant::VIEW_COLUMNS)
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
                 ->orderBy('full_name')
                 ->orderBy('id')

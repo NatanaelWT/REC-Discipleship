@@ -1,7 +1,9 @@
 <?php
 
 use App\Enums\PublicMaterialMenuKey;
+use App\Services\Branches\BranchCatalog;
 use App\Services\Developer\DeveloperUserService;
+use App\Services\DiscipleshipDashboard\DiscipleshipDashboardSummaryQuery;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -12,6 +14,18 @@ use Symfony\Component\Console\Command\Command;
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Artisan::command('discipleship:cache-warm', function (BranchCatalog $branches, DiscipleshipDashboardSummaryQuery $summary): int {
+    RuntimeBootstrap::load();
+    $branchIds = array_map(static fn (array $option): int => $option['id'], $branches->options());
+    foreach ($branchIds as $branchId) {
+        $summary->warm([$branchId]);
+    }
+    $summary->warm($branchIds);
+    $this->info('Cache dashboard Pemuridan telah dipanaskan untuk '.count($branchIds).' cabang dan Semua Cabang.');
+
+    return 0;
+})->purpose('Warm cached dashboard summaries for all discipleship branch scopes');
 
 Artisan::command('developer:ensure-user', function (DeveloperUserService $users): int {
     RuntimeBootstrap::load();

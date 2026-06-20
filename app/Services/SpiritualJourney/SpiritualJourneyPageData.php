@@ -7,349 +7,187 @@ use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipPerson;
 use App\Models\DiscipleshipRelationship;
 use App\Models\MskParticipant;
-use App\Services\Discipleship\DiscipleshipReadCache;
+use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DiscipleshipTargets\DiscipleshipTargetReader;
-use DateTimeInterface;
 use Illuminate\Http\Request;
-use Throwable;
 
 class SpiritualJourneyPageData
 {
     public function __construct(
         private readonly DiscipleshipTargetReader $targetReader,
-        private readonly DiscipleshipReadCache $cache,
+        private readonly CurrentDiscipleshipScope $scope,
     ) {}
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function forCurrentContext(Request $request): array
     {
-        $centralReadOnly = is_effective_central_discipleship_readonly();
-        $selectedBranch = $centralReadOnly
-            ? normalize_central_recap_branch(central_recap_selected_branch())
-            : normalize_public_branch_code(current_user_branch());
-
-        $branchCodes = $this->branchCodes($selectedBranch, $centralReadOnly);
-        $structure = $this->cache->remember('spiritual-structure', [...$branchCodes, $centralReadOnly ? 'central' : 'branch'], function () use ($branchCodes, $centralReadOnly, $selectedBranch): array {
-            $branchLabels = $this->branchLabels();
-            $groupPeople = $this->loadGroupPeople($branchCodes);
-
-            return [
-                'people' => $this->loadPeople($branchCodes, $centralReadOnly, $branchLabels),
-                'groups' => $this->loadGroups($branchCodes, $branchLabels),
-                'memberships' => array_values(array_filter($groupPeople, static fn (array $row): bool => ($row['role'] ?? '') === 'member')),
-                'leaderships' => array_values(array_filter($groupPeople, static fn (array $row): bool => ($row['role'] ?? '') !== 'member')),
-                'relationships' => $this->loadRelationships($branchCodes),
-                'targets' => $this->targetValues($branchCodes, $selectedBranch),
-            ];
-        });
-        $peopleById = $structure['people'];
         $search = strtolower(trim((string) $request->query('q', '')));
-        $perPage = max(1, min(100, (int) $request->query('per_page', 50)));
         $pagination = MskParticipant::query()
-            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+            ->select([
+                'id', 'branch_id', 'discipleship_person_id', 'full_name', 'gender', 'birth_date', 'birth_day_month',
+                'birth_place', 'address', 'email', 'whatsapp', 'batch_month', 'notes', 'completed_at',
+                'journey_bridge_status', 'status', 'session_numbers', 'photos', 'created_at', 'updated_at',
+            ])
+            ->whereIn('branch_id', $this->scope->branchIds())
             ->when($search !== '', static function ($query) use ($search): void {
                 $query->where(static function ($searchQuery) use ($search): void {
-                    $like = '%'.$search.'%';
-                    $searchQuery->whereRaw('LOWER(full_name) LIKE ?', [$like])
-                        ->orWhereRaw('LOWER(whatsapp) LIKE ?', [$like]);
+                    $searchQuery->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%'])
+                        ->orWhereRaw('LOWER(whatsapp) LIKE ?', ['%'.$search.'%']);
                 });
             })
-            ->orderBy('full_name')
-            ->orderBy('id')
-            ->paginate($perPage)
+            ->orderBy('full_name')->orderBy('id')
+            ->paginate(min(100, max(1, $request->integer('per_page', 50))))
             ->withQueryString();
-        $participantRows = $pagination->getCollection()
-            ->map(static function (MskParticipant $participant): array {
-                $row = $participant->toViewArray();
-                $row['branch_code'] = normalize_public_branch_code((string) $participant->branch_code);
 
-                return $row;
-            })
-            ->values()
-            ->all();
+        $participants = $pagination->getCollection();
+        $personIds = $participants->pluck('discipleship_person_id')->filter()->map(static fn ($id): int => (int) $id)->unique()->all();
+        $people = $this->people($personIds);
+        $groupPeople = $this->groupPeople($personIds);
+        $groupIds = $groupPeople->pluck('discipleship_group_id')->filter()->map(static fn ($id): int => (int) $id)->unique()->all();
+        $groups = $this->groups($groupIds);
+        $relationships = $this->relationships($personIds);
+        $branches = $this->scope->optionsById();
+
+        $participantRows = $participants->map(static function (MskParticipant $participant) use ($branches): array {
+            $row = $participant->toViewArray();
+            $row['branch_code'] = $branches[(int) $participant->branch_id]['slug'] ?? '';
+
+            return $row;
+        })->values()->all();
 
         return [
             'settings' => ['church_name' => app_church_name()],
             'page' => 'spiritual_journey',
-            'people' => array_values($peopleById),
-            'peopleById' => $peopleById,
+            'people' => array_values($people),
+            'peopleById' => $people,
             'mskClasses' => $participantRows,
             'spiritualJourneyPagination' => $pagination,
             'spiritualJourneySearch' => $search,
             'spiritualJourneyTotalParticipants' => $pagination->total(),
-            'discipleshipTargets' => $structure['targets'],
+            'discipleshipTargets' => $this->targets(),
             'discipleshipV2Model' => [
-                'discipleship_persons' => array_values($peopleById),
-                'discipleship_groups' => array_values($structure['groups']),
-                'group_memberships' => $structure['memberships'],
-                'group_leaderships' => $structure['leaderships'],
-                'discipleship_relations' => $structure['relationships'],
+                'discipleship_persons' => array_values($people),
+                'discipleship_groups' => array_values($groups),
+                'group_memberships' => array_values(array_filter($groupPeople->map(fn ($row): array => $this->groupPersonRow($row))->all(), static fn (array $row): bool => $row['role'] === 'member')),
+                'group_leaderships' => array_values(array_filter($groupPeople->map(fn ($row): array => $this->groupPersonRow($row))->all(), static fn (array $row): bool => $row['role'] !== 'member')),
+                'discipleship_relations' => $relationships,
             ],
         ];
     }
 
-    /**
-     * @return array<int, string>
-     */
-    private function branchCodes(string $selectedBranch, bool $centralReadOnly): array
+    private function people(array $personIds): array
     {
-        if ($centralReadOnly && $selectedBranch === 'all') {
-            return array_values(array_filter(array_map(
-                static fn (array $option): string => normalize_public_branch_code((string) ($option['code'] ?? '')),
-                public_dg_branch_options(),
-            ), static fn (string $branchCode): bool => $branchCode !== ''));
-        }
-
-        return [$selectedBranch];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function branchLabels(): array
-    {
-        $labels = [];
-        foreach (public_dg_branch_options() as $option) {
-            $branchCode = normalize_public_branch_code((string) ($option['code'] ?? ''));
-            if ($branchCode === '') {
-                continue;
-            }
-            $label = trim((string) ($option['label'] ?? strtoupper($branchCode)));
-            $labels[$branchCode] = $label !== '' ? $label : strtoupper($branchCode);
-        }
-
-        return $labels;
-    }
-
-    /**
-     * @param  array<int, string>  $branchCodes
-     * @param  array<string, string>  $branchLabels
-     * @return array<string, array<string, mixed>>
-     */
-    private function loadPeople(array $branchCodes, bool $centralReadOnly, array $branchLabels): array
-    {
-        $rows = [];
-        try {
-            $records = DiscipleshipPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get();
-        } catch (Throwable) {
+        if ($personIds === []) {
             return [];
         }
-        foreach ($records as $person) {
-            $branchCode = normalize_public_branch_code((string) $person->branch_code);
-            $effectiveId = $this->effectiveId($branchCode, (string) $person->getKey());
-            if ($effectiveId === '') {
-                continue;
+        $branches = $this->scope->optionsById();
+        $rows = [];
+        foreach (DiscipleshipPerson::query()->whereIn('id', $personIds)->get([
+            'id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'campus', 'major', 'occupation', 'created_at', 'updated_at',
+        ]) as $person) {
+            $name = trim((string) $person->full_name) ?: '-';
+            $branch = $branches[(int) $person->branch_id] ?? ['slug' => '', 'label' => 'Tanpa cabang'];
+            if ($this->scope->includesAllBranches()) {
+                $name = append_branch_suffix($name, $branch['label']);
             }
-
-            $displayName = trim((string) ($person->full_name ?? ''));
-            if ($centralReadOnly) {
-                $displayName = append_branch_suffix($displayName, $branchLabels[$branchCode] ?? strtoupper($branchCode));
-            }
-
-            $rows[$effectiveId] = [
-                'id' => $effectiveId,
-                'branch_code' => $branchCode,
-                'branch_label' => $branchLabels[$branchCode] ?? strtoupper($branchCode),
-                'member_id' => $effectiveId,
-                'name' => $displayName !== '' ? $displayName : '-',
-                'full_name' => $displayName !== '' ? $displayName : '-',
-                'phone' => trim((string) ($person->phone ?? '')),
-                'gender' => trim((string) ($person->gender ?? '')),
-                'status' => trim((string) ($person->status ?? 'active')) ?: 'active',
-                'notes' => trim((string) ($person->notes ?? '')),
-                'campus' => trim((string) ($person->campus ?? '')),
-                'major' => trim((string) ($person->major ?? '')),
-                'occupation' => trim((string) ($person->occupation ?? '')),
-                'created_at' => $this->timestampString($person->created_at ?? null),
-                'updated_at' => $this->timestampString($person->updated_at ?? null),
+            $rows[(string) $person->id] = [
+                'id' => (string) $person->id, 'member_id' => (string) $person->id,
+                'branch_code' => $branch['slug'], 'branch_label' => $branch['label'],
+                'name' => $name, 'full_name' => $name, 'phone' => trim((string) $person->phone),
+                'gender' => trim((string) $person->gender), 'status' => (string) $person->status,
+                'notes' => trim((string) $person->notes), 'campus' => trim((string) $person->campus),
+                'major' => trim((string) $person->major), 'occupation' => trim((string) $person->occupation),
+                'created_at' => (string) $person->created_at, 'updated_at' => (string) $person->updated_at,
             ];
         }
 
         return $rows;
     }
 
-    /**
-     * @param  array<int, string>  $branchCodes
-     * @param  array<string, string>  $branchLabels
-     * @return array<string, array<string, mixed>>
-     */
-    private function loadGroups(array $branchCodes, array $branchLabels): array
+    private function groupPeople(array $personIds)
     {
-        $rows = [];
-        try {
-            $records = DiscipleshipGroup::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get();
-        } catch (Throwable) {
+        if ($personIds === []) {
+            return collect();
+        }
+
+        return DiscipleshipGroupPerson::query()->whereIn('person_id', $personIds)->get([
+            'id', 'branch_id', 'discipleship_group_id', 'person_id', 'role', 'stage', 'status', 'started_on', 'ended_on', 'end_reason', 'created_at', 'updated_at',
+        ]);
+    }
+
+    private function groups(array $groupIds): array
+    {
+        if ($groupIds === []) {
             return [];
         }
-        foreach ($records as $group) {
-            $branchCode = normalize_public_branch_code((string) $group->branch_code);
-            $effectiveId = $this->effectiveId($branchCode, (string) $group->getKey());
-            if ($effectiveId === '') {
-                continue;
-            }
-
-            $rows[$effectiveId] = [
-                'id' => $effectiveId,
-                'branch_code' => $branchCode,
-                'branch_label' => $branchLabels[$branchCode] ?? strtoupper($branchCode),
-                'name' => trim((string) ($group->name ?? 'Kelompok')) ?: 'Kelompok',
-                'status' => strtolower(trim((string) ($group->status ?? 'active'))) ?: 'active',
-                'start_stage' => normalize_dg_progress_value((string) ($group->start_stage ?? '')),
-                'current_stage' => normalize_dg_progress_value((string) ($group->current_stage ?? '')),
-                'progress' => normalize_dg_progress_value((string) ($group->current_stage ?? $group->start_stage ?? '')),
-                'parent_group_id' => $group->parent_group_id !== null
-                    ? $this->effectiveId($branchCode, (string) $group->parent_group_id)
-                    : '',
-                'notes' => trim((string) ($group->notes ?? '')),
-                'created_at' => $this->timestampString($group->created_at ?? null),
-                'updated_at' => $this->timestampString($group->updated_at ?? null),
+        $branches = $this->scope->optionsById();
+        $rows = [];
+        foreach (DiscipleshipGroup::query()->whereIn('id', $groupIds)->get([
+            'id', 'branch_id', 'name', 'status', 'start_stage', 'current_stage', 'parent_group_id', 'notes', 'created_at', 'updated_at',
+        ]) as $group) {
+            $branch = $branches[(int) $group->branch_id] ?? ['slug' => '', 'label' => 'Tanpa cabang'];
+            $rows[(string) $group->id] = [
+                'id' => (string) $group->id, 'branch_code' => $branch['slug'], 'branch_label' => $branch['label'],
+                'name' => trim((string) $group->name) ?: 'Kelompok', 'status' => (string) $group->status,
+                'start_stage' => normalize_dg_progress_value((string) $group->start_stage),
+                'current_stage' => normalize_dg_progress_value((string) $group->current_stage),
+                'progress' => normalize_dg_progress_value((string) ($group->current_stage ?: $group->start_stage)),
+                'parent_group_id' => $group->parent_group_id !== null ? (string) $group->parent_group_id : '',
+                'notes' => trim((string) $group->notes), 'created_at' => (string) $group->created_at, 'updated_at' => (string) $group->updated_at,
             ];
         }
 
         return $rows;
     }
 
-    /**
-     * @param  array<int, string>  $branchCodes
-     * @return array<int, array<string, mixed>>
-     */
-    private function loadGroupPeople(array $branchCodes): array
+    private function relationships(array $personIds): array
     {
-        $rows = [];
-        try {
-            $records = DiscipleshipGroupPerson::query()
-                ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-                ->orderBy('id')
-                ->get();
-        } catch (Throwable) {
+        if ($personIds === []) {
             return [];
         }
 
-        foreach ($records as $record) {
-            $branchCode = normalize_public_branch_code((string) $record->branch_code);
-            $groupId = $this->effectiveId($branchCode, (string) $record->discipleship_group_id);
-            $personId = $this->effectiveId($branchCode, (string) $record->person_id);
-            if ($groupId === '' || $personId === '') {
-                continue;
-            }
-
-            $role = strtolower(trim((string) ($record->role ?? 'member'))) ?: 'member';
-            $rows[] = [
-                'id' => (string) $record->getKey(),
-                'branch_code' => $branchCode,
-                'group_id' => $groupId,
-                'person_id' => $personId,
-                'role' => $role,
-                'leader_person_id' => $personId,
-                'stage' => normalize_dg_progress_value((string) ($record->stage ?? '')),
-                'status' => strtolower(trim((string) ($record->status ?? 'active'))) ?: 'active',
-                'start_date' => $this->dateString($record->started_on ?? null),
-                'end_date' => $this->dateString($record->ended_on ?? null),
-                'reason_end' => trim((string) ($record->end_reason ?? '')),
-                'reason_change' => trim((string) ($record->end_reason ?? '')),
-                'created_at' => $this->timestampString($record->created_at ?? null),
-                'updated_at' => $this->timestampString($record->updated_at ?? null),
-            ];
-        }
-
-        return $rows;
+        return DiscipleshipRelationship::query()
+            ->where(function ($query) use ($personIds): void {
+                $query->whereIn('mentor_person_id', $personIds)->orWhereIn('disciple_person_id', $personIds);
+            })
+            ->get(['id', 'branch_id', 'mentor_person_id', 'disciple_person_id', 'context_group_id', 'relation_type', 'stage_at_start', 'status', 'start_date', 'end_date', 'reason_end', 'notes', 'created_at', 'updated_at'])
+            ->map(static fn (DiscipleshipRelationship $row): array => [
+                'id' => (string) $row->id, 'mentor_person_id' => (string) $row->mentor_person_id,
+                'disciple_person_id' => (string) $row->disciple_person_id,
+                'context_group_id' => $row->context_group_id !== null ? (string) $row->context_group_id : '',
+                'relation_type' => (string) $row->relation_type, 'stage_at_start' => (string) $row->stage_at_start,
+                'status' => (string) $row->status, 'start_date' => (string) $row->start_date,
+                'end_date' => (string) $row->end_date, 'reason_end' => (string) $row->reason_end,
+                'notes' => (string) $row->notes, 'created_at' => (string) $row->created_at, 'updated_at' => (string) $row->updated_at,
+            ])->all();
     }
 
-    /**
-     * @param  array<int, string>  $branchCodes
-     * @return array<int, array<string, mixed>>
-     */
-    private function loadRelationships(array $branchCodes): array
+    private function groupPersonRow(DiscipleshipGroupPerson $row): array
     {
-        $rows = [];
-        try {
-            $records = DiscipleshipRelationship::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get();
-        } catch (Throwable) {
-            return [];
-        }
-        foreach ($records as $relationship) {
-            $branchCode = normalize_public_branch_code((string) $relationship->branch_code);
-            $mentorId = $this->effectiveId($branchCode, (string) $relationship->mentor_person_id);
-            $discipleId = $this->effectiveId($branchCode, (string) $relationship->disciple_person_id);
-            if ($mentorId === '' || $discipleId === '') {
-                continue;
-            }
-
-            $rows[] = [
-                'id' => (string) $relationship->getKey(),
-                'branch_code' => $branchCode,
-                'mentor_person_id' => $mentorId,
-                'disciple_person_id' => $discipleId,
-                'context_group_id' => $relationship->context_group_id !== null
-                    ? $this->effectiveId($branchCode, (string) $relationship->context_group_id)
-                    : '',
-                'relation_type' => trim((string) ($relationship->relation_type ?? 'mentor')),
-                'stage_at_start' => normalize_dg_progress_value((string) ($relationship->stage_at_start ?? '')),
-                'status' => strtolower(trim((string) ($relationship->status ?? 'active'))) ?: 'active',
-                'start_date' => $this->dateString($relationship->start_date ?? null),
-                'end_date' => $this->dateString($relationship->end_date ?? null),
-                'reason_end' => trim((string) ($relationship->reason_end ?? '')),
-                'notes' => trim((string) ($relationship->notes ?? '')),
-                'created_at' => $this->timestampString($relationship->created_at ?? null),
-                'updated_at' => $this->timestampString($relationship->updated_at ?? null),
-            ];
-        }
-
-        return $rows;
-    }
-
-    /**
-     * @param  array<int, string>  $branchCodes
-     * @return array<string, int>
-     */
-    private function targetValues(array $branchCodes, string $selectedBranch): array
-    {
-        $targetsByBranch = $this->targetReader->formValuesForBranches($branchCodes);
-        if ($selectedBranch !== 'all' || count($branchCodes) <= 1) {
-            return $targetsByBranch[$branchCodes[0] ?? ''] ?? default_discipleship_targets();
-        }
-
-        $totals = [
-            'dg_total_people' => 0,
-            'msk_completed' => 0,
-            'dg1_people' => 0,
-            'dg2_people' => 0,
-            'dg3_people' => 0,
+        return [
+            'id' => (string) $row->id, 'group_id' => (string) $row->discipleship_group_id,
+            'person_id' => (string) $row->person_id, 'leader_person_id' => (string) $row->person_id,
+            'role' => strtolower((string) $row->role), 'stage' => normalize_dg_progress_value((string) $row->stage),
+            'status' => (string) $row->status, 'start_date' => (string) $row->started_on,
+            'end_date' => (string) $row->ended_on, 'reason_end' => (string) $row->end_reason,
+            'reason_change' => (string) $row->end_reason, 'created_at' => (string) $row->created_at, 'updated_at' => (string) $row->updated_at,
         ];
+    }
 
-        foreach ($targetsByBranch as $targets) {
-            foreach ($targets as $key => $value) {
-                if (array_key_exists($key, $totals)) {
-                    $totals[$key] += (int) $value;
-                }
+    private function targets(): array
+    {
+        $slugs = array_values(array_filter(array_map(fn (int $id): string => $this->scope->optionsById()[$id]['slug'] ?? '', $this->scope->branchIds())));
+        $byBranch = $this->targetReader->formValuesForBranches($slugs);
+        if (count($slugs) === 1) {
+            return $byBranch[$slugs[0]] ?? default_discipleship_targets();
+        }
+        $total = ['dg_total_people' => 0, 'msk_completed' => 0, 'dg1_people' => 0, 'dg2_people' => 0, 'dg3_people' => 0];
+        foreach ($byBranch as $targets) {
+            foreach ($total as $key => $value) {
+                $total[$key] += (int) ($targets[$key] ?? 0);
             }
         }
 
-        return $totals;
-    }
-
-    private function effectiveId(string $branchCode, string $id): string
-    {
-        return trim($id);
-    }
-
-    private function timestampString(mixed $value): string
-    {
-        if ($value instanceof DateTimeInterface) {
-            return $value->format(DateTimeInterface::ATOM);
-        }
-
-        return trim((string) $value);
-    }
-
-    private function dateString(mixed $value): string
-    {
-        if ($value instanceof DateTimeInterface) {
-            return $value->format('Y-m-d');
-        }
-
-        return trim((string) $value);
+        return $total;
     }
 }

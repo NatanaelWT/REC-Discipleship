@@ -6,7 +6,6 @@ use App\Enums\UserAccessRole;
 use App\Models\User;
 use App\Services\Branches\BranchCatalog;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Session;
 
 class CurrentUserContext
 {
@@ -59,8 +58,6 @@ class CurrentUserContext
     public function branchId(): ?int
     {
         if ($this->isDeveloper()) {
-            Session::forget(['developer_branch', 'developer_branch_id']);
-
             return null;
         }
 

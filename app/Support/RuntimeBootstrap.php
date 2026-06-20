@@ -8,16 +8,33 @@ use Throwable;
 
 class RuntimeBootstrap
 {
-    private static bool $loaded = false;
+    private static bool $runtimeLoaded = false;
+
+    /** @var array<string, true> */
+    private static array $loadedHelpers = [];
 
     public static function boot(?Request $request = null): void
     {
-        self::load();
+        self::loadRuntime();
+        self::loadHelpers(HelperManifest::forPath(trim((string) ($request?->path() ?? ''), '/')));
     }
 
     public static function load(): void
     {
-        if (self::$loaded) {
+        self::loadRuntime();
+        if (app()->runningInConsole()) {
+            self::loadHelpers(HelperManifest::all());
+
+            return;
+        }
+
+        $request = app()->bound('request') ? app('request') : null;
+        self::loadHelpers(HelperManifest::forPath($request instanceof Request ? trim($request->path(), '/') : ''));
+    }
+
+    private static function loadRuntime(): void
+    {
+        if (self::$runtimeLoaded) {
             return;
         }
 
@@ -45,11 +62,22 @@ class RuntimeBootstrap
             config(['app.timezone' => $runtimeSettings['app_timezone']]);
         }
         date_default_timezone_set($runtimeSettings['app_timezone']);
-        foreach (glob(app_path('Support/Helpers/*.php')) ?: [] as $supportFile) {
-            require_once $supportFile;
-        }
+        self::$runtimeLoaded = true;
+    }
 
-        self::$loaded = true;
+    /** @param array<int, string> $helpers */
+    private static function loadHelpers(array $helpers): void
+    {
+        foreach ($helpers as $helper) {
+            if (isset(self::$loadedHelpers[$helper])) {
+                continue;
+            }
+            $path = app_path('Support/Helpers/'.$helper.'.php');
+            if (is_file($path)) {
+                require_once $path;
+                self::$loadedHelpers[$helper] = true;
+            }
+        }
     }
 
     /**

@@ -10,6 +10,12 @@ class MskParticipant extends Model
 {
     use ResolvesBranchSlug;
 
+    public const VIEW_COLUMNS = [
+        'id', 'branch_id', 'discipleship_person_id', 'full_name', 'gender', 'birth_date', 'birth_day_month',
+        'birth_place', 'address', 'email', 'whatsapp', 'batch_month', 'notes', 'completed_at',
+        'journey_bridge_status', 'status', 'session_numbers', 'photos', 'created_at', 'updated_at',
+    ];
+
     protected $fillable = [
         'branch_id',
         'discipleship_person_id',

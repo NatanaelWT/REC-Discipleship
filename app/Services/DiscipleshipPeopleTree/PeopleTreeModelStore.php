@@ -98,6 +98,10 @@ class PeopleTreeModelStore
 
         try {
             return MskParticipant::query()
+                ->select([
+                    'id', 'branch_id', 'discipleship_person_id', 'full_name', 'whatsapp', 'batch_month',
+                    'completed_at', 'journey_bridge_status', 'status', 'session_numbers', 'created_at', 'updated_at',
+                ])
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
                 ->orderBy('full_name')
                 ->orderBy('id')
@@ -200,6 +204,13 @@ class PeopleTreeModelStore
 
         try {
             return DiscipleshipMeetingReport::query()
+                ->select([
+                    'id', 'branch_id', 'leader_person_id', 'leader_name_snapshot', 'discipleship_group_id',
+                    'group_name_snapshot', 'meeting_date', 'material_topic', 'group_progress_snapshot',
+                    'absence_reason', 'absences', 'meditation_sharers', 'photos', 'additional_notes',
+                    'meditation_min_times', 'sharing_openness_score', 'prepared_material', 'prayed_for_members',
+                    'shared_meditation', 'relationally_contacted', 'source', 'created_at', 'updated_at',
+                ])
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
                 ->orderByDesc('meeting_date')
                 ->orderByDesc('created_at')
@@ -275,6 +286,10 @@ class PeopleTreeModelStore
     private function peopleRows(array $branchIds): array
     {
         return DiscipleshipPerson::query()
+            ->select([
+                'id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'campus', 'major',
+                'occupation', 'created_at', 'updated_at',
+            ])
             ->whereIn('branch_id', $branchIds)
             ->orderBy('id')
             ->get()
@@ -301,6 +316,10 @@ class PeopleTreeModelStore
     private function groupRows(array $branchIds): array
     {
         return DiscipleshipGroup::query()
+            ->select([
+                'id', 'branch_id', 'name', 'status', 'start_stage', 'current_stage', 'parent_group_id',
+                'source_group_id', 'initiated_by_person_id', 'multiplied_at', 'notes', 'created_at', 'updated_at',
+            ])
             ->whereIn('branch_id', $branchIds)
             ->orderBy('id')
             ->get()
@@ -327,6 +346,10 @@ class PeopleTreeModelStore
     private function relationshipRows(array $branchIds): array
     {
         return DiscipleshipRelationship::query()
+            ->select([
+                'id', 'branch_id', 'mentor_person_id', 'disciple_person_id', 'context_group_id', 'relation_type',
+                'stage_at_start', 'status', 'start_date', 'end_date', 'reason_end', 'notes', 'created_at', 'updated_at',
+            ])
             ->whereIn('branch_id', $branchIds)
             ->orderBy('id')
             ->get()
@@ -354,6 +377,10 @@ class PeopleTreeModelStore
     private function groupPeopleRows(array $branchIds): array
     {
         return DiscipleshipGroupPerson::query()
+            ->select([
+                'id', 'branch_id', 'discipleship_group_id', 'person_id', 'role', 'stage', 'status',
+                'started_on', 'ended_on', 'end_reason', 'created_at', 'updated_at',
+            ])
             ->whereIn('branch_id', $branchIds)
             ->orderBy('id')
             ->get()

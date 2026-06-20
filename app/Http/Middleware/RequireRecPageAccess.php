@@ -16,7 +16,7 @@ class RequireRecPageAccess
      */
     public function handle(Request $request, Closure $next, string $pageKey): Response
     {
-        RuntimeBootstrap::load();
+        RuntimeBootstrap::boot($request);
 
         $context = app(CurrentUserContext::class);
         if (! $context->isLoggedIn()) {

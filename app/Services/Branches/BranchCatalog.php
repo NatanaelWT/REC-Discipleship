@@ -93,9 +93,8 @@ class BranchCatalog
         }
 
         try {
-            $options = Cache::store($this->cacheStore())->remember(
+            $options = Cache::store($this->cacheStore())->rememberForever(
                 self::CACHE_KEY,
-                now()->addMinutes(5),
                 fn (): array => $this->databaseOptions(),
             );
         } catch (Throwable) {
@@ -151,6 +150,14 @@ class BranchCatalog
             'slug' => $option['slug'],
             'label' => $option['label'],
         ];
+    }
+
+    /** @return array<int, array{id:int,slug:string,label:string}> */
+    public function activeOptionsById(): array
+    {
+        $this->load();
+
+        return array_column($this->activeOptions, null, 'id');
     }
 
     private function cacheStore(): string

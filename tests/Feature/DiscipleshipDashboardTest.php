@@ -21,8 +21,13 @@ class DiscipleshipDashboardTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Dashboard Pemuridan');
         $response->assertSee('Belum Selesai MSK');
-        $response->assertSee('Peserta MSK Dashboard');
+        $response->assertDontSee('Peserta MSK Dashboard');
         $response->assertDontSee('?page=discipleship_dashboard', false);
+
+        $section = $this->get('/pemuridan/dashboard/sections/incomplete-msk');
+        $section->assertOk();
+        $section->assertSee('Peserta MSK Dashboard');
+        $section->assertSee('name="_token"', false);
     }
 
     public function test_dashboard_updates_msk_sessions_to_laravel_tables(): void
@@ -60,11 +65,61 @@ class DiscipleshipDashboardTest extends TestCase
 
         $sessions = json_decode((string) DB::table('msk_participants')->where('id', $participantId)->value('session_numbers'), true);
         $this->assertSame([1, 2], $sessions);
+
+        $this->get('/pemuridan/dashboard/sections/incomplete-msk')
+            ->assertOk()
+            ->assertSee('Peserta MSK Dashboard')
+            ->assertDontSee('data-msk-edit-open', false);
+    }
+
+    public function test_dashboard_initial_response_uses_aggregate_queries_and_bounded_html(): void
+    {
+        $this->createDashboardTables();
+        $this->seedDashboardData();
+        $this->actingAsRecUser();
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $response = $this->get('/pemuridan/dashboard');
+        $queries = DB::getQueryLog();
+
+        $response->assertOk();
+        $this->assertLessThanOrEqual(10, count($queries));
+        $this->assertLessThan(100 * 1024, strlen((string) $response->getContent()));
+        foreach ($queries as $query) {
+            $this->assertStringNotContainsString('select *', strtolower((string) $query['query']));
+        }
+    }
+
+    public function test_incomplete_msk_section_caps_page_size_at_fifty(): void
+    {
+        $this->createDashboardTables();
+        $this->seedDashboardData();
+        $rows = [];
+        for ($index = 1; $index <= 60; $index++) {
+            $rows[] = [
+                'branch_id' => 1,
+                'full_name' => sprintf('Peserta Batas %03d', $index),
+                'status' => 'active',
+                'session_numbers' => json_encode([1]),
+                'photos' => json_encode([]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+        DB::table('msk_participants')->insert($rows);
+        $this->actingAsRecUser();
+
+        $response = $this->get('/pemuridan/dashboard/sections/incomplete-msk?per_page=500');
+
+        $response->assertOk()->assertSee('Halaman 1 dari 2');
+        $this->assertSame(50, substr_count((string) $response->getContent(), 'data-msk-edit-open='));
     }
 
     private function createDashboardTables(): void
     {
         Schema::dropIfExists('msk_participants');
+        Schema::dropIfExists('discipleship_meeting_reports');
         Schema::dropIfExists('discipleship_group_people');
         Schema::dropIfExists('discipleship_relationships');
         Schema::dropIfExists('discipleship_groups');
@@ -160,6 +215,31 @@ class DiscipleshipDashboardTest extends TestCase
             $table->string('status')->default('active');
             $table->json('session_numbers')->nullable();
             $table->json('photos')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('discipleship_meeting_reports', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->unsignedBigInteger('leader_person_id')->nullable();
+            $table->string('leader_name_snapshot')->nullable();
+            $table->unsignedBigInteger('discipleship_group_id')->nullable();
+            $table->string('group_name_snapshot')->nullable();
+            $table->date('meeting_date');
+            $table->string('material_topic')->nullable();
+            $table->string('group_progress_snapshot')->nullable();
+            $table->text('absence_reason')->nullable();
+            $table->json('absences')->nullable();
+            $table->json('meditation_sharers')->nullable();
+            $table->json('photos')->nullable();
+            $table->text('additional_notes')->nullable();
+            $table->unsignedInteger('meditation_min_times')->default(0);
+            $table->unsignedInteger('sharing_openness_score')->nullable();
+            $table->boolean('prepared_material')->default(false);
+            $table->boolean('prayed_for_members')->default(false);
+            $table->boolean('shared_meditation')->default(false);
+            $table->boolean('relationally_contacted')->default(false);
+            $table->string('source')->nullable();
             $table->timestamps();
         });
     }

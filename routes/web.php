@@ -84,6 +84,10 @@ Route::group([], function (): void {
 
     Route::prefix('pemuridan')->name('discipleship.')->middleware('rec.auth')->group(function (): void {
         Route::get('/dashboard', [DiscipleshipDashboardController::class, 'index'])->middleware('rec.page:discipleship_dashboard')->name('dashboard');
+        Route::get('/dashboard/sections/{section}', [DiscipleshipDashboardController::class, 'section'])
+            ->whereIn('section', ['incomplete-msk', 'overdue-groups', 'branch-breakdown'])
+            ->middleware('rec.page:discipleship_dashboard')
+            ->name('dashboard.section');
         Route::post('/dashboard/msk-sessions', [DiscipleshipDashboardController::class, 'updateMskSessions'])->middleware('rec.page:discipleship_dashboard')->name('dashboard.msk-sessions');
         Route::get('/kelompok', [DiscipleshipGroupController::class, 'index'])->middleware('rec.page:groups_list')->name('groups');
         Route::get('/orang', static function (Request $request): RedirectResponse {

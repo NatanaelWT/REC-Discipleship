@@ -45,6 +45,7 @@ class MskParticipantPageData
         $batchMonthFilterLabel = $batchMonthFilterIsAll ? 'Semua Batch' : format_indo_month($batchMonthFilter);
         $search = strtolower(trim((string) $request->query('q', '')));
         $filteredQuery = MskParticipant::query()
+            ->select(MskParticipant::VIEW_COLUMNS)
             ->whereIn('branch_id', $branchIds)
             ->when(! $batchMonthFilterIsAll, static fn ($query) => $query->where('batch_month', $batchMonthFilter))
             ->when($search !== '', static function ($query) use ($search): void {
@@ -74,6 +75,7 @@ class MskParticipantPageData
                 continue;
             }
             $selected = MskParticipant::query()
+                ->select(MskParticipant::VIEW_COLUMNS)
                 ->whereIn('branch_id', $branchIds)
                 ->whereKey((int) $selectedId)
                 ->first();
