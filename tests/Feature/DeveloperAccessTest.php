@@ -61,10 +61,11 @@ class DeveloperAccessTest extends TestCase
         $this->seedDeveloper();
         $this->loginAs('developer');
 
-        $this->post('/developer/branch', ['branch_code' => 'gm'])
+        $this->post('/developer/branch', ['branch_id' => 2])
             ->assertRedirect('/developer?branch_changed=1');
 
-        $this->assertSame('gm', session('developer_branch'));
+        $this->assertSame(2, session('developer_branch_id'));
+        $this->assertNull(session('developer_branch'));
         $this->assertSame('gm', current_user_branch());
     }
 
@@ -79,7 +80,7 @@ class DeveloperAccessTest extends TestCase
             'name' => 'Managed User',
             'email' => 'managed_user@rec.local',
             'password' => 'new-secret',
-            'branch_code' => 'gm',
+            'branch_id' => 2,
             'access_scope' => 'pemuridan_cabang',
             'is_active' => '1',
         ])->assertRedirect('/developer/users?status=created');
@@ -100,7 +101,7 @@ class DeveloperAccessTest extends TestCase
             'username' => 'managed_user',
             'name' => 'Managed User Updated',
             'email' => 'managed_user_updated@rec.local',
-            'branch_code' => null,
+            'branch_id' => null,
             'access_scope' => 'pelayan',
             'is_active' => false,
         ]);
@@ -129,7 +130,7 @@ class DeveloperAccessTest extends TestCase
         $this->post('/developer/users/'.$developerId, [
             'name' => 'Developer',
             'email' => 'developer@rec.local',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'access_scope' => 'pemuridan_cabang',
             'is_active' => '1',
         ])->assertRedirect('/developer/users?error=last_active_developer');
@@ -192,17 +193,13 @@ class DeveloperAccessTest extends TestCase
 
         DB::table('branches')->insert([
             [
-                'code' => 'pusat',
                 'label' => 'Pusat',
-                'sort_order' => 90,
                 'is_active' => true,
                 'created_at' => '2026-06-19 08:00:00',
                 'updated_at' => '2026-06-19 08:00:00',
             ],
             [
-                'code' => 'inactive',
                 'label' => 'Inactive',
-                'sort_order' => 91,
                 'is_active' => false,
                 'created_at' => '2026-06-19 08:00:00',
                 'updated_at' => '2026-06-19 08:00:00',
@@ -217,7 +214,7 @@ class DeveloperAccessTest extends TestCase
     public function test_steward_has_no_branch_and_cannot_access_discipleship_or_developer(): void
     {
         $this->createCoreTables();
-        $this->seedUser('keziaae', 'keziaae@rec.local', 'pelayan', ['branch_code' => null]);
+        $this->seedUser('keziaae', 'keziaae@rec.local', 'pelayan', ['branch_id' => null]);
         $this->loginAs('keziaae');
         RuntimeBootstrap::load();
 
@@ -262,7 +259,7 @@ class DeveloperAccessTest extends TestCase
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
-            $table->string('branch_code', 40)->nullable()->index();
+            $table->unsignedBigInteger('branch_id')->nullable()->index();
             $table->string('access_scope', 80)->default('pemuridan_cabang');
             $table->boolean('is_active')->default(true);
             $table->timestamp('last_login_at')->nullable();
@@ -281,9 +278,7 @@ class DeveloperAccessTest extends TestCase
 
         Schema::create('branches', function (Blueprint $table): void {
             $table->id();
-            $table->string('code', 40)->unique();
-            $table->string('label');
-            $table->unsignedSmallInteger('sort_order')->default(0);
+            $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
@@ -296,15 +291,9 @@ class DeveloperAccessTest extends TestCase
             $table->timestamps();
         });
 
-        foreach ([
-            ['kutisari', 'Kutisari', 0],
-            ['gm', 'GM', 1],
-            ['darmo', 'Darmo', 2],
-        ] as [$code, $label, $sortOrder]) {
+        foreach (['Kutisari', 'GM', 'Darmo'] as $label) {
             DB::table('branches')->insert([
-                'code' => $code,
                 'label' => $label,
-                'sort_order' => $sortOrder,
                 'is_active' => true,
                 'created_at' => '2026-06-19 08:00:00',
                 'updated_at' => '2026-06-19 08:00:00',
@@ -316,7 +305,7 @@ class DeveloperAccessTest extends TestCase
     {
         return $this->seedUser('developer', 'developer@rec.local', 'developer', [
             'password' => Hash::make('secret-dev'),
-            'branch_code' => null,
+            'branch_id' => null,
         ]);
     }
 
@@ -330,7 +319,7 @@ class DeveloperAccessTest extends TestCase
             'name' => ucfirst(str_replace('_', ' ', $username)),
             'email' => $email,
             'password' => 'secret-test',
-            'branch_code' => $scope === 'pemuridan_cabang' ? 'kutisari' : null,
+            'branch_id' => $scope === 'pemuridan_cabang' ? 1 : null,
             'access_scope' => $scope,
             'is_active' => true,
             'created_at' => '2026-06-19 08:00:00',

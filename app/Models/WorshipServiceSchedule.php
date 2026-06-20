@@ -11,8 +11,6 @@ class WorshipServiceSchedule extends Model
         'month',
         'title',
         'update_note',
-        'branch_id',
-        'branch_code',
     ];
 
     public function getRouteKeyName(): string

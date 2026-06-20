@@ -159,7 +159,7 @@ class DeveloperDiagnosticsService
         try {
             return Branch::query()
                 ->where('is_active', true)
-                ->where('code', '!=', 'pusat')
+                ->where('label', '!=', 'Pusat')
                 ->count();
         } catch (Throwable) {
             return 0;

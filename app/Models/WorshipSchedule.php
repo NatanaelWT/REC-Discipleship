@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WorshipSchedule extends Model
 {
@@ -11,8 +10,6 @@ class WorshipSchedule extends Model
         'month',
         'title',
         'update_note',
-        'branch_id',
-        'branch_code',
         'rows',
     ];
 
@@ -25,8 +22,4 @@ class WorshipSchedule extends Model
         return 'month';
     }
 
-    public function branch(): BelongsTo
-    {
-        return $this->belongsTo(Branch::class);
-    }
 }

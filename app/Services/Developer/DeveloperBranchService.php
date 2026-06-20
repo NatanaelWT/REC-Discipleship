@@ -2,99 +2,36 @@
 
 namespace App\Services\Developer;
 
-use App\Models\Branch;
-use Illuminate\Support\Facades\Schema;
-use Throwable;
+use App\Services\Branches\BranchCatalog;
 
 class DeveloperBranchService
 {
+    public function __construct(private readonly BranchCatalog $branches) {}
+
     /**
-     * @return array<int, array{code:string,label:string}>
+     * @return array<int, array{id:int|null,code:string,label:string}>
      */
     public function options(): array
     {
-        $options = [];
-
-        try {
-            if (Schema::hasTable('branches')) {
-                $options = Branch::query()
-                    ->where('is_active', true)
-                    ->where('code', '!=', 'pusat')
-                    ->orderBy('sort_order')
-                    ->orderBy('label')
-                    ->get(['code', 'label'])
-                    ->map(static fn (Branch $branch): array => [
-                        'code' => normalize_user_branch((string) $branch->code),
-                        'label' => trim((string) $branch->label) ?: user_branch_label((string) $branch->code),
-                    ])
-                    ->all();
-            }
-        } catch (Throwable) {
-            $options = [];
-        }
-
-        $seen = [];
-        $merged = [];
-        foreach (array_merge($options, $this->fallbackOptions()) as $option) {
-            $code = normalize_user_branch((string) ($option['code'] ?? ''));
-            if ($code === '' || isset($seen[$code])) {
-                continue;
-            }
-            $seen[$code] = true;
-            $merged[] = [
-                'code' => $code,
-                'label' => trim((string) ($option['label'] ?? '')) ?: user_branch_label($code),
-            ];
-        }
-
-        return $merged;
+        return array_map(static fn (array $option): array => [
+            'id' => $option['id'],
+            'code' => $option['slug'],
+            'label' => $option['label'],
+        ], $this->branches->options());
     }
 
-    public function isAllowed(string $branch): bool
+    public function normalizeAllowedId(mixed $branchId): ?int
     {
-        return $this->normalizeAllowed($branch) !== null;
-    }
-
-    public function idForCode(?string $branch): ?int
-    {
-        $branch = $branch !== null ? $this->normalizeAllowed($branch) : null;
-        if ($branch === null || ! Schema::hasTable('branches')) {
+        $branchId = filter_var($branchId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($branchId === false || ! $this->branches->isActiveId($branchId)) {
             return null;
         }
 
-        try {
-            $id = Branch::query()->where('code', $branch)->where('is_active', true)->value('id');
-
-            return $id === null ? null : (int) $id;
-        } catch (Throwable) {
-            return null;
-        }
+        return $branchId;
     }
 
-    public function normalizeAllowed(string $branch): ?string
+    public function defaultId(): ?int
     {
-        $branch = strtolower(trim($branch));
-        foreach ($this->options() as $option) {
-            if ($option['code'] === $branch) {
-                return $option['code'];
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * @return array<int, array{code:string,label:string}>
-     */
-    private function fallbackOptions(): array
-    {
-        return [
-            ['code' => 'kutisari', 'label' => 'Kutisari'],
-            ['code' => 'gm', 'label' => 'GM'],
-            ['code' => 'darmo', 'label' => 'Darmo'],
-            ['code' => 'merr', 'label' => 'Merr'],
-            ['code' => 'batam', 'label' => 'Batam'],
-            ['code' => 'nginden', 'label' => 'Nginden'],
-        ];
+        return $this->branches->defaultId();
     }
 }

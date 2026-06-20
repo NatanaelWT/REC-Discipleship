@@ -102,7 +102,7 @@ class SpiritualJourneyPageData
         }
 
         $rows = [];
-        foreach (DiscipleshipPerson::query()->whereIn('branch_code', $branchCodes)->orderBy('id')->get() as $person) {
+        foreach (DiscipleshipPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get() as $person) {
             $branchCode = normalize_public_branch_code((string) $person->branch_code);
             $effectiveId = $this->effectiveId($branchCode, (string) $person->public_id);
             if ($effectiveId === '') {
@@ -150,7 +150,7 @@ class SpiritualJourneyPageData
         }
 
         $rows = [];
-        foreach (DiscipleshipGroup::query()->whereIn('branch_code', $branchCodes)->orderBy('id')->get() as $group) {
+        foreach (DiscipleshipGroup::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get() as $group) {
             $branchCode = normalize_public_branch_code((string) $group->branch_code);
             $effectiveId = $this->effectiveId($branchCode, (string) $group->public_id);
             if ($effectiveId === '') {
@@ -190,8 +190,8 @@ class SpiritualJourneyPageData
 
         $rows = [];
         $query = Schema::hasTable('discipleship_group_people')
-            ? DiscipleshipGroupPerson::query()->whereIn('branch_code', $branchCodes)->where('role', 'member')->orderBy('id')
-            : DiscipleshipGroupMembership::query()->whereIn('branch_code', $branchCodes)->orderBy('id');
+            ? DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', 'member')->orderBy('id')
+            : DiscipleshipGroupMembership::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id');
 
         foreach ($query->get() as $membership) {
             $branchCode = normalize_public_branch_code((string) $membership->branch_code);
@@ -232,8 +232,8 @@ class SpiritualJourneyPageData
 
         $rows = [];
         $query = Schema::hasTable('discipleship_group_people')
-            ? DiscipleshipGroupPerson::query()->whereIn('branch_code', $branchCodes)->where('role', '!=', 'member')->orderBy('id')
-            : DiscipleshipGroupLeadership::query()->whereIn('branch_code', $branchCodes)->orderBy('id');
+            ? DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', '!=', 'member')->orderBy('id')
+            : DiscipleshipGroupLeadership::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id');
 
         foreach ($query->get() as $leadership) {
             $branchCode = normalize_public_branch_code((string) $leadership->branch_code);
@@ -273,7 +273,7 @@ class SpiritualJourneyPageData
         }
 
         $rows = [];
-        foreach (DiscipleshipRelationship::query()->whereIn('branch_code', $branchCodes)->orderBy('id')->get() as $relationship) {
+        foreach (DiscipleshipRelationship::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get() as $relationship) {
             $branchCode = normalize_public_branch_code((string) $relationship->branch_code);
             $mentorId = $this->effectiveId($branchCode, (string) $relationship->mentor_person_public_id);
             $discipleId = $this->effectiveId($branchCode, (string) $relationship->disciple_person_public_id);

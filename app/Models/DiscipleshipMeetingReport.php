@@ -2,16 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ResolvesBranchSlug;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Schema;
 
 class DiscipleshipMeetingReport extends Model
 {
+    use ResolvesBranchSlug;
+
     protected $fillable = [
         'public_id',
         'branch_id',
-        'branch_code',
         'leader_person_id',
         'leader_person_public_id',
         'leader_name_snapshot',

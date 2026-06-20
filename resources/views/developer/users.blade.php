@@ -40,9 +40,9 @@
         </label>
         <label data-user-branch-field>
           <span>Cabang Pemuridan</span>
-          <select name="branch_code" data-user-branch-select required>
+          <select name="branch_id" data-user-branch-select required>
             @foreach ($branchOptions as $branch)
-              <option value="{{ $branch['code'] }}">{{ $branch['label'] }}</option>
+              <option value="{{ $branch['id'] }}">{{ $branch['label'] }}</option>
             @endforeach
           </select>
           <span class="developer-muted" data-user-no-branch hidden>Tanpa cabang</span>
@@ -79,7 +79,8 @@
             $active = (bool) ($user->is_active ?? true);
             $scope = normalize_auth_access_scope((string) ($user->access_scope ?? 'pemuridan_cabang'));
             $requiresBranch = $scope === 'pemuridan_cabang';
-            $branchCode = normalize_user_branch((string) ($user->branch_code ?? ''));
+            $branchId = $user->branch_id !== null ? (int) $user->branch_id : null;
+            $branchCode = branch_slug_from_id($branchId);
           @endphp
           <div class="developer-user-row">
             <div class="developer-user-meta">
@@ -99,9 +100,9 @@
               </label>
               <label data-user-branch-field>
                 <span>Cabang Pemuridan</span>
-                <select name="branch_code" data-user-branch-select @if (! $requiresBranch) hidden disabled @else required @endif>
+                <select name="branch_id" data-user-branch-select @if (! $requiresBranch) hidden disabled @else required @endif>
                   @foreach ($branchOptions as $branch)
-                    <option value="{{ $branch['code'] }}" @selected($branch['code'] === $branchCode)>{{ $branch['label'] }}</option>
+                    <option value="{{ $branch['id'] }}" @selected($branch['id'] === $branchId)>{{ $branch['label'] }}</option>
                   @endforeach
                 </select>
                 <span class="developer-muted" data-user-no-branch @if ($requiresBranch) hidden @endif>Tanpa cabang</span>

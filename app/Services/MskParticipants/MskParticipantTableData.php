@@ -28,7 +28,7 @@ class MskParticipantTableData
                 return 0;
             }
 
-            $query->whereIn('branch_code', $branchCodes);
+            $query->whereIn('branch_id', branch_ids_from_slugs($branchCodes));
         }
 
         return (int) $query->count();
@@ -50,7 +50,7 @@ class MskParticipantTableData
         }
 
         $query = MskParticipant::query()
-            ->whereIn('branch_code', $branchCodes)
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
             ->orderBy('full_name')
             ->orderBy('id');
 
@@ -97,7 +97,7 @@ class MskParticipantTableData
 
         DB::transaction(function () use ($branchCode, $participants, $deleteMissing, &$counts): void {
             $existingIdsByPublicId = MskParticipant::query()
-                ->where('branch_code', $branchCode)
+                ->where('branch_id', branch_id_from_slug($branchCode))
                 ->pluck('id', 'public_id')
                 ->all();
 
@@ -133,7 +133,7 @@ class MskParticipantTableData
             if ($participantRows !== []) {
                 DB::table('msk_participants')->upsert(
                     $participantRows,
-                    ['branch_code', 'public_id'],
+                    ['branch_id', 'public_id'],
                     [
                         'member_public_id',
                         'full_name',
@@ -155,7 +155,7 @@ class MskParticipantTableData
             }
 
             $participantIdsByPublicId = MskParticipant::query()
-                ->where('branch_code', $branchCode)
+                ->where('branch_id', branch_id_from_slug($branchCode))
                 ->whereIn('public_id', $seenPublicIds)
                 ->pluck('id', 'public_id')
                 ->all();
@@ -222,7 +222,7 @@ class MskParticipantTableData
 
             if ($deleteMissing) {
                 MskParticipant::query()
-                    ->where('branch_code', $branchCode)
+                    ->where('branch_id', branch_id_from_slug($branchCode))
                     ->when($seenPublicIds !== [], static fn ($query) => $query->whereNotIn('public_id', $seenPublicIds))
                     ->delete();
             }
@@ -268,7 +268,7 @@ class MskParticipantTableData
         $photos = extract_msk_participant_photos($row);
 
         $data = [
-            'branch_code' => $branchCode,
+            'branch_id' => branch_id_from_slug($branchCode),
             'public_id' => $publicId,
             'member_public_id' => $this->nullableString($row['member_id'] ?? null),
             'full_name' => $this->nullableString($row['full_name'] ?? null),

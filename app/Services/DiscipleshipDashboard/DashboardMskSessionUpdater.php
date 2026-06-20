@@ -24,7 +24,7 @@ class DashboardMskSessionUpdater
         }
 
         $participant = MskParticipant::query()
-            ->where('branch_code', normalize_public_branch_code(current_user_branch()))
+            ->where('branch_id', current_user_branch_id())
             ->where('public_id', $participantPublicId)
             ->first();
 

@@ -50,7 +50,7 @@ class MskParticipantPageTest extends TestCase
 
         $response->assertRedirect('/pemuridan/msk?batch_month=2026-06&saved=1');
         $this->assertDatabaseHas('msk_participants', [
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'full_name' => 'Peserta MSK Baru',
             'batch_month' => '2026-06',
         ]);
@@ -78,7 +78,7 @@ class MskParticipantPageTest extends TestCase
         Schema::create('msk_participants', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id');
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->string('member_public_id')->nullable();
             $table->string('full_name')->nullable();
             $table->string('gender')->nullable();

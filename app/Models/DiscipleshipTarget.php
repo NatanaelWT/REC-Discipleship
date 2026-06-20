@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ResolvesBranchSlug;
 use Illuminate\Database\Eloquent\Model;
 
 class DiscipleshipTarget extends Model
 {
+    use ResolvesBranchSlug;
+
     protected $fillable = [
         'branch_id',
-        'branch_code',
         'camp_gap_participant_target',
         'msk_completion_target',
         'dg1_completion_target',
@@ -26,6 +28,6 @@ class DiscipleshipTarget extends Model
 
     public function getRouteKeyName(): string
     {
-        return 'branch_code';
+        return 'branch_id';
     }
 }

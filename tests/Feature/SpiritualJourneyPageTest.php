@@ -45,7 +45,7 @@ class SpiritualJourneyPageTest extends TestCase
 
         $response->assertRedirect('/pemuridan/spiritual-journey?saved=1');
         $this->assertDatabaseHas('msk_participants', [
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'public_id' => 'msk-journey-1',
             'journey_bridge_status' => 'sudah_kgap',
         ]);
@@ -60,7 +60,7 @@ class SpiritualJourneyPageTest extends TestCase
         Schema::create('msk_participants', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id');
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->string('member_public_id')->nullable();
             $table->string('full_name')->nullable();
             $table->string('gender')->nullable();
@@ -98,7 +98,7 @@ class SpiritualJourneyPageTest extends TestCase
     {
         $participantId = DB::table('msk_participants')->insertGetId([
             'public_id' => 'msk-journey-1',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'member_public_id' => null,
             'full_name' => 'Peserta Journey',
             'batch_month' => '2026-06',

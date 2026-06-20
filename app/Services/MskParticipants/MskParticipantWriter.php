@@ -176,13 +176,13 @@ class MskParticipantWriter
         return DB::transaction(function () use ($branchCode, $participantData): MskParticipant {
             $participant = $this->participantForBranch($branchCode, (string) $participantData['id']);
             $participant ??= new MskParticipant([
-                'branch_code' => $branchCode,
+                'branch_id' => branch_id_from_slug($branchCode),
                 'public_id' => (string) $participantData['id'],
             ]);
 
             $birthDate = normalize_ymd_date((string) ($participantData['birth_date'] ?? ''));
             $fill = [
-                'branch_code' => $branchCode,
+                'branch_id' => branch_id_from_slug($branchCode),
                 'public_id' => (string) $participantData['id'],
                 'member_public_id' => $this->nullableString($participantData['member_id'] ?? null),
                 'full_name' => $this->nullableString($participantData['full_name'] ?? null),
@@ -383,7 +383,7 @@ class MskParticipantWriter
         }
 
         return MskParticipant::query()
-            ->where('branch_code', $branchCode)
+            ->where('branch_id', branch_id_from_slug($branchCode))
             ->where('member_public_id', $memberPublicId)
             ->where('public_id', '!=', $publicId)
             ->exists();
@@ -392,7 +392,7 @@ class MskParticipantWriter
     private function participantForBranch(string $branchCode, string $publicId): ?MskParticipant
     {
         $query = MskParticipant::query()
-            ->where('branch_code', $branchCode)
+            ->where('branch_id', branch_id_from_slug($branchCode))
             ->where('public_id', $publicId);
 
         $relations = $this->refreshRelations();
@@ -409,7 +409,7 @@ class MskParticipantWriter
     private function participantsForBranch(string $branchCode): array
     {
         $query = MskParticipant::query()
-            ->where('branch_code', $branchCode)
+            ->where('branch_id', branch_id_from_slug($branchCode))
             ->orderBy('full_name')
             ->orderBy('id');
 

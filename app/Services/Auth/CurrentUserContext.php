@@ -4,11 +4,14 @@ namespace App\Services\Auth;
 
 use App\Enums\UserAccessRole;
 use App\Models\User;
+use App\Services\Branches\BranchCatalog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 
 class CurrentUserContext
 {
+    public function __construct(private readonly BranchCatalog $branches) {}
+
     public function user(): ?User
     {
         $user = Auth::user();
@@ -48,22 +51,37 @@ class CurrentUserContext
 
     public function branch(): ?string
     {
+        $branch = $this->branches->slugForId($this->branchId());
+
+        return $branch !== '' ? $branch : null;
+    }
+
+    public function branchId(): ?int
+    {
         if ($this->isDeveloper()) {
-            $developerBranch = normalize_user_branch((string) Session::get('developer_branch', ''));
-            if ($developerBranch === '') {
-                $developerBranch = 'kutisari';
+            $branchId = filter_var(Session::get('developer_branch_id'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($branchId !== false && $this->branches->isActiveId($branchId)) {
+                return $branchId;
             }
 
-            return $developerBranch;
+            $legacySlug = normalize_user_branch((string) Session::get('developer_branch', ''));
+            $branchId = $legacySlug !== '' ? $this->branches->idForSlug($legacySlug) : null;
+            $branchId ??= $this->branches->defaultId();
+            if ($branchId !== null) {
+                Session::put('developer_branch_id', $branchId);
+            }
+            Session::forget('developer_branch');
+
+            return $branchId;
         }
 
         if (! $this->isDiscipleshipBranch()) {
             return null;
         }
 
-        $branch = normalize_user_branch((string) ($this->user()?->branch_code ?? ''));
+        $branchId = $this->user()?->branch_id;
 
-        return $branch !== '' ? $branch : null;
+        return is_numeric($branchId) && (int) $branchId > 0 ? (int) $branchId : null;
     }
 
     public function accessScope(): string

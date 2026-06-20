@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ResolvesBranchSlug;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DiscipleshipRelationship extends Model
 {
+    use ResolvesBranchSlug;
+
     protected $fillable = [
         'public_id',
         'branch_id',
-        'branch_code',
         'mentor_person_id',
         'mentor_person_public_id',
         'disciple_person_id',

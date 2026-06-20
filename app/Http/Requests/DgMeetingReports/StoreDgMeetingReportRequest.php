@@ -384,7 +384,7 @@ class StoreDgMeetingReportRequest extends FormRequest
         }
 
         $id = DiscipleshipPerson::query()
-            ->where('branch_code', $this->publicBranch)
+            ->where('branch_id', branch_id_from_slug($this->publicBranch))
             ->where(static function ($query) use ($publicId): void {
                 $query->where('public_id', $publicId)
                     ->orWhere('member_public_id', $publicId);
@@ -402,7 +402,7 @@ class StoreDgMeetingReportRequest extends FormRequest
         }
 
         $id = DiscipleshipGroup::query()
-            ->where('branch_code', $this->publicBranch)
+            ->where('branch_id', branch_id_from_slug($this->publicBranch))
             ->where('public_id', $publicId)
             ->value('id');
 

@@ -79,7 +79,7 @@ class DiscipleshipGroupIndexData
         $peopleById = [];
 
         $people = DiscipleshipPerson::query()
-            ->whereIn('branch_code', $branchCodes)
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
             ->orderBy('id')
             ->get();
 
@@ -127,7 +127,7 @@ class DiscipleshipGroupIndexData
         $groupsById = [];
 
         $groups = DiscipleshipGroup::query()
-            ->whereIn('branch_code', $branchCodes)
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
             ->orderBy('id')
             ->get();
 
@@ -167,7 +167,7 @@ class DiscipleshipGroupIndexData
         $rows = [];
 
         if (Schema::hasTable('discipleship_group_people')) {
-            foreach (DiscipleshipGroupPerson::query()->whereIn('branch_code', $branchCodes)->where('role', '!=', 'member')->orderBy('id')->get() as $leadership) {
+            foreach (DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', '!=', 'member')->orderBy('id')->get() as $leadership) {
                 $branchCode = normalize_public_branch_code((string) $leadership->branch_code);
                 $groupId = $this->effectiveId($branchCode, (string) $leadership->group_public_id);
                 $personId = $this->effectiveId($branchCode, (string) $leadership->person_public_id);
@@ -194,7 +194,7 @@ class DiscipleshipGroupIndexData
         }
 
         $leaderships = DiscipleshipGroupLeadership::query()
-            ->whereIn('branch_code', $branchCodes)
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
             ->orderBy('id')
             ->get();
 
@@ -233,7 +233,7 @@ class DiscipleshipGroupIndexData
         $rows = [];
 
         if (Schema::hasTable('discipleship_group_people')) {
-            foreach (DiscipleshipGroupPerson::query()->whereIn('branch_code', $branchCodes)->where('role', 'member')->orderBy('id')->get() as $membership) {
+            foreach (DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', 'member')->orderBy('id')->get() as $membership) {
                 $branchCode = normalize_public_branch_code((string) $membership->branch_code);
                 $groupId = $this->effectiveId($branchCode, (string) $membership->group_public_id);
                 $personId = $this->effectiveId($branchCode, (string) $membership->person_public_id);
@@ -261,7 +261,7 @@ class DiscipleshipGroupIndexData
         }
 
         $memberships = DiscipleshipGroupMembership::query()
-            ->whereIn('branch_code', $branchCodes)
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
             ->orderBy('id')
             ->get();
 

@@ -86,7 +86,7 @@ class DgMeetingReportRecapPageData
         }
 
         $people = [];
-        foreach (DiscipleshipPerson::query()->whereIn('branch_code', $branchCodes)->orderBy('id')->get() as $person) {
+        foreach (DiscipleshipPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get() as $person) {
             $branchCode = normalize_public_branch_code((string) $person->branch_code);
             $effectiveId = $this->effectiveId($branchCode, (string) $person->public_id);
             if ($effectiveId === '') {
@@ -135,7 +135,7 @@ class DgMeetingReportRecapPageData
         }
 
         $groups = DiscipleshipGroup::query()
-            ->whereIn('branch_code', $branchCodes)
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
             ->orderBy('id')
             ->get();
 
@@ -193,8 +193,8 @@ class DgMeetingReportRecapPageData
 
         $rows = [];
         $query = Schema::hasTable('discipleship_group_people')
-            ? DiscipleshipGroupPerson::query()->whereIn('branch_code', $branchCodes)->where('role', '!=', 'member')->orderBy('id')
-            : DiscipleshipGroupLeadership::query()->whereIn('branch_code', $branchCodes)->orderBy('id');
+            ? DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', '!=', 'member')->orderBy('id')
+            : DiscipleshipGroupLeadership::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id');
 
         foreach ($query->get() as $leadership) {
             $groupPublicId = trim((string) ($leadership->group_public_id ?? ''));
@@ -218,8 +218,8 @@ class DgMeetingReportRecapPageData
 
         $rows = [];
         $query = Schema::hasTable('discipleship_group_people')
-            ? DiscipleshipGroupPerson::query()->whereIn('branch_code', $branchCodes)->where('role', 'member')->orderBy('id')
-            : DiscipleshipGroupMembership::query()->whereIn('branch_code', $branchCodes)->orderBy('id');
+            ? DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', 'member')->orderBy('id')
+            : DiscipleshipGroupMembership::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id');
 
         foreach ($query->get() as $membership) {
             $groupPublicId = trim((string) ($membership->group_public_id ?? ''));
@@ -321,7 +321,7 @@ class DgMeetingReportRecapPageData
         }
 
         $reports = DiscipleshipMeetingReport::query()
-            ->whereIn('branch_code', $branchCodes)
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
             ->orderByDesc('meeting_date')
             ->orderByDesc('created_at')
             ->orderByDesc('id')

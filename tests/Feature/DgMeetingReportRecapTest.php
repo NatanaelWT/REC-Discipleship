@@ -60,7 +60,7 @@ class DgMeetingReportRecapTest extends TestCase
         Schema::create('discipleship_people', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id');
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->string('member_public_id')->nullable();
             $table->string('full_name')->nullable();
             $table->string('phone')->nullable();
@@ -76,7 +76,7 @@ class DgMeetingReportRecapTest extends TestCase
         Schema::create('discipleship_groups', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id');
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->string('name');
             $table->string('status')->default('active');
             $table->string('start_stage')->nullable();
@@ -90,7 +90,7 @@ class DgMeetingReportRecapTest extends TestCase
         Schema::create('discipleship_group_leaderships', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id');
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('discipleship_group_id');
             $table->string('group_public_id');
             $table->unsignedBigInteger('person_id')->nullable();
@@ -106,7 +106,7 @@ class DgMeetingReportRecapTest extends TestCase
         Schema::create('discipleship_group_memberships', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id');
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('discipleship_group_id');
             $table->string('group_public_id');
             $table->unsignedBigInteger('person_id')->nullable();
@@ -123,7 +123,7 @@ class DgMeetingReportRecapTest extends TestCase
         Schema::create('discipleship_meeting_reports', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id');
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('leader_person_id')->nullable();
             $table->string('leader_person_public_id')->nullable();
             $table->string('leader_name_snapshot')->nullable();
@@ -177,7 +177,7 @@ class DgMeetingReportRecapTest extends TestCase
     {
         $leaderId = DB::table('discipleship_people')->insertGetId([
             'public_id' => 'person-leader',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'full_name' => 'Pemimpin Test',
             'status' => 'active',
             'created_at' => now(),
@@ -186,7 +186,7 @@ class DgMeetingReportRecapTest extends TestCase
 
         $memberId = DB::table('discipleship_people')->insertGetId([
             'public_id' => 'person-member',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'full_name' => 'Anggota Test',
             'status' => 'active',
             'created_at' => now(),
@@ -195,7 +195,7 @@ class DgMeetingReportRecapTest extends TestCase
 
         $groupId = DB::table('discipleship_groups')->insertGetId([
             'public_id' => 'group-test',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'name' => 'Kelompok Test',
             'status' => 'active',
             'start_stage' => 'DG 1',
@@ -206,7 +206,7 @@ class DgMeetingReportRecapTest extends TestCase
 
         DB::table('discipleship_group_leaderships')->insert([
             'public_id' => 'leadership-test',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'group_public_id' => 'group-test',
             'person_id' => $leaderId,
@@ -220,7 +220,7 @@ class DgMeetingReportRecapTest extends TestCase
 
         DB::table('discipleship_group_memberships')->insert([
             'public_id' => 'membership-test',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'group_public_id' => 'group-test',
             'person_id' => $memberId,
@@ -235,7 +235,7 @@ class DgMeetingReportRecapTest extends TestCase
 
         $reportId = DB::table('discipleship_meeting_reports')->insertGetId([
             'public_id' => 'report-test',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'leader_person_id' => $leaderId,
             'leader_person_public_id' => 'person-leader',
             'leader_name_snapshot' => 'Pemimpin Test',

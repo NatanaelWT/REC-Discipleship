@@ -22,7 +22,7 @@ class DiscipleshipPeopleListTest extends TestCase
         DB::table('discipleship_people')->insert([
             [
                 'public_id' => 'person-kutisari',
-                'branch_code' => 'kutisari',
+                'branch_id' => 1,
                 'full_name' => 'Anggota Kutisari',
                 'status' => 'active',
                 'created_at' => now(),
@@ -30,7 +30,7 @@ class DiscipleshipPeopleListTest extends TestCase
             ],
             [
                 'public_id' => 'person-gm',
-                'branch_code' => 'gm',
+                'branch_id' => 2,
                 'full_name' => 'Anggota GM Rahasia',
                 'status' => 'active',
                 'created_at' => now(),
@@ -58,7 +58,7 @@ class DiscipleshipPeopleListTest extends TestCase
         Schema::create('discipleship_people', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id')->nullable();
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->string('member_public_id')->nullable();
             $table->string('full_name')->nullable();
             $table->string('phone')->nullable();
@@ -69,7 +69,7 @@ class DiscipleshipPeopleListTest extends TestCase
         Schema::create('discipleship_groups', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id')->nullable();
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->string('name')->nullable();
             $table->string('status', 40)->default('active');
             $table->string('start_stage', 40)->nullable();
@@ -83,7 +83,7 @@ class DiscipleshipPeopleListTest extends TestCase
         Schema::create('discipleship_relationships', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id')->nullable();
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('mentor_person_id')->nullable();
             $table->string('mentor_person_public_id')->nullable();
             $table->unsignedBigInteger('disciple_person_id')->nullable();
@@ -103,7 +103,7 @@ class DiscipleshipPeopleListTest extends TestCase
         Schema::create('discipleship_group_memberships', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id')->nullable();
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('discipleship_group_id')->nullable();
             $table->string('group_public_id')->nullable();
             $table->unsignedBigInteger('person_id')->nullable();
@@ -120,7 +120,7 @@ class DiscipleshipPeopleListTest extends TestCase
         Schema::create('discipleship_group_leaderships', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id')->nullable();
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('discipleship_group_id')->nullable();
             $table->string('group_public_id')->nullable();
             $table->unsignedBigInteger('person_id')->nullable();

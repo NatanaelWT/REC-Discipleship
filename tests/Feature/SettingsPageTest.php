@@ -57,7 +57,7 @@ class SettingsPageTest extends TestCase
                 'name' => 'admin_settings_test',
                 'email' => 'admin_settings_test@rec.local',
                 'password' => 'old-secret',
-                'branch_code' => 'kutisari',
+                'branch_id' => 1,
                 'access_scope' => 'pemuridan_cabang',
                 'is_active' => true,
                 'last_login_at' => null,
@@ -81,7 +81,7 @@ class SettingsPageTest extends TestCase
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password', 255);
             $table->rememberToken();
-            $table->string('branch_code', 40)->nullable()->index();
+            $table->unsignedBigInteger('branch_id')->nullable()->index();
             $table->string('access_scope', 80)->default('pemuridan_cabang');
             $table->boolean('is_active')->default(true);
             $table->timestamp('last_login_at')->nullable();

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ResolvesBranchSlug;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,10 +10,11 @@ use Illuminate\Support\Facades\Schema;
 
 class DiscipleshipFeedback extends Model
 {
+    use ResolvesBranchSlug;
+
     protected $fillable = [
         'public_id',
         'branch_id',
-        'branch_code',
         'feedback_session',
         'discipleship_group_id',
         'leader_person_id',

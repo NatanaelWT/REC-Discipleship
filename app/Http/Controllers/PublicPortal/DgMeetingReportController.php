@@ -95,7 +95,7 @@ class DgMeetingReportController extends Controller
             DB::transaction(function () use ($request, $meetingPhotos): void {
                 $reportData = [
                     'public_id' => $this->generatePublicId(),
-                    'branch_code' => $request->publicBranch(),
+                    'branch_id' => branch_id_from_slug($request->publicBranch()),
                     'leader_person_id' => $request->leaderPersonId(),
                     'leader_person_public_id' => $request->leaderPublicId(),
                     'leader_name_snapshot' => $request->leaderName(),

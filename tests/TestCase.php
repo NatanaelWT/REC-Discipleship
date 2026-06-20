@@ -15,7 +15,15 @@ abstract class TestCase extends BaseTestCase
             'username' => $username,
             'name' => $username,
             'email' => $username.'@rec.local',
-            'branch_code' => $branch,
+            'branch_id' => match ($branch) {
+                'kutisari' => 1,
+                'gm' => 2,
+                'darmo' => 3,
+                'merr' => 4,
+                'batam' => 5,
+                'nginden' => 6,
+                default => null,
+            },
             'access_scope' => $scope,
             'is_active' => true,
         ]);

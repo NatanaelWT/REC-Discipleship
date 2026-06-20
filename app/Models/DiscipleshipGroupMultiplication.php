@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ResolvesBranchSlug;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DiscipleshipGroupMultiplication extends Model
 {
+    use ResolvesBranchSlug;
+
     protected $fillable = [
         'public_id',
         'branch_id',
-        'branch_code',
         'initiated_by_person_id',
         'initiated_by_person_public_id',
         'source_group_id',

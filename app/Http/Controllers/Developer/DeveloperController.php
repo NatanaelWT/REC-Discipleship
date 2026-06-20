@@ -26,6 +26,7 @@ class DeveloperController extends Controller
             'settings' => ['church_name' => app_church_name()],
             'currentPage' => 'developer_dashboard',
             'activeBranch' => current_user_branch(),
+            'activeBranchId' => current_user_branch_id(),
             'branchOptions' => $branches->options(),
             'diagnostics' => $diagnostics->summary(),
             'branchChanged' => $request->query->has('branch_changed'),
@@ -40,12 +41,13 @@ class DeveloperController extends Controller
             return $guard;
         }
 
-        $branch = $branches->normalizeAllowed((string) $request->input('branch_code', 'kutisari'));
-        if ($branch === null) {
+        $branchId = $branches->normalizeAllowedId($request->input('branch_id'));
+        if ($branchId === null) {
             return redirect()->route('developer.dashboard', ['branch_error' => 'branch_invalid']);
         }
 
-        $request->session()->put('developer_branch', $branch);
+        $request->session()->put('developer_branch_id', $branchId);
+        $request->session()->forget('developer_branch');
 
         return redirect()->route('developer.dashboard', ['branch_changed' => 1]);
     }

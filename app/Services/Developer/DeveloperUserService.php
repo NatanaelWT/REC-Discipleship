@@ -5,7 +5,6 @@ namespace App\Services\Developer;
 use App\Enums\UserAccessRole;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 
 class DeveloperUserService
 {
@@ -49,10 +48,10 @@ class DeveloperUserService
             return 'role_invalid';
         }
 
-        $branch = $role->requiresBranch()
-            ? $this->branches->normalizeAllowed((string) ($input['branch_code'] ?? ''))
+        $branchId = $role->requiresBranch()
+            ? $this->branches->normalizeAllowedId($input['branch_id'] ?? null)
             : null;
-        if ($role->requiresBranch() && $branch === null) {
+        if ($role->requiresBranch() && $branchId === null) {
             return 'branch_invalid';
         }
         if (User::query()->where('username', $username)->exists()) {
@@ -69,7 +68,7 @@ class DeveloperUserService
             'password' => Hash::make($password),
             'access_scope' => $role->value,
             'is_active' => $isActive,
-        ], $this->branchAttributes($branch)));
+        ], $this->branchAttributes($branchId)));
 
         return null;
     }
@@ -93,10 +92,10 @@ class DeveloperUserService
             return 'role_invalid';
         }
 
-        $branch = $role->requiresBranch()
-            ? $this->branches->normalizeAllowed((string) ($input['branch_code'] ?? ''))
+        $branchId = $role->requiresBranch()
+            ? $this->branches->normalizeAllowedId($input['branch_id'] ?? null)
             : null;
-        if ($role->requiresBranch() && $branch === null) {
+        if ($role->requiresBranch() && $branchId === null) {
             return 'branch_invalid';
         }
         if ($isSelf && ! $isActive) {
@@ -114,14 +113,15 @@ class DeveloperUserService
             'email' => $email,
             'access_scope' => $role->value,
             'is_active' => $isActive,
-        ], $this->branchAttributes($branch)))->save();
+        ], $this->branchAttributes($branchId)))->save();
 
         if ($isSelf) {
             if ($role !== UserAccessRole::Developer) {
-                session()->forget('developer_branch');
+                session()->forget(['developer_branch', 'developer_branch_id']);
             } else {
-                $selectedBranch = $this->branches->normalizeAllowed((string) session('developer_branch', '')) ?? 'kutisari';
-                session()->put('developer_branch', $selectedBranch);
+                $selectedBranchId = $this->branches->normalizeAllowedId(session('developer_branch_id'));
+                session()->put('developer_branch_id', $selectedBranchId ?? $this->branches->defaultId());
+                session()->forget('developer_branch');
             }
         }
 
@@ -198,14 +198,9 @@ class DeveloperUserService
     /**
      * @return array<string, mixed>
      */
-    private function branchAttributes(?string $branch): array
+    private function branchAttributes(?int $branchId): array
     {
-        $attributes = ['branch_code' => $branch];
-        if (Schema::hasColumn('users', 'branch_id')) {
-            $attributes['branch_id'] = $this->branches->idForCode($branch);
-        }
-
-        return $attributes;
+        return ['branch_id' => $branchId];
     }
 
     private function normalizeUsername(string $username): string

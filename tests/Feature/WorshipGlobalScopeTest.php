@@ -17,8 +17,6 @@ class WorshipGlobalScopeTest extends TestCase
             'month' => '2026-06',
             'title' => 'Jadwal Global',
             'update_note' => null,
-            'branch_id' => null,
-            'branch_code' => null,
             'rows' => '[]',
             'created_at' => now(),
             'updated_at' => now(),
@@ -29,7 +27,7 @@ class WorshipGlobalScopeTest extends TestCase
         $this->assertSame('Jadwal Global', $builder->recordForMonth('2026-06')['title'] ?? null);
 
         $this->actingAsRecUser('developer', null, 'developer');
-        session()->put('developer_branch', 'gm');
+        session()->put('developer_branch_id', 2);
         $builder->saveRecord([
             'month' => '2026-06',
             'title' => 'Jadwal Global Diperbarui',
@@ -40,8 +38,6 @@ class WorshipGlobalScopeTest extends TestCase
         $this->assertDatabaseHas('worship_schedules', [
             'month' => '2026-06',
             'title' => 'Jadwal Global Diperbarui',
-            'branch_id' => null,
-            'branch_code' => null,
         ]);
     }
 
@@ -53,8 +49,6 @@ class WorshipGlobalScopeTest extends TestCase
             $table->string('month', 7)->unique();
             $table->string('title');
             $table->string('update_note')->nullable();
-            $table->unsignedBigInteger('branch_id')->nullable();
-            $table->string('branch_code', 40)->nullable();
             $table->json('rows')->nullable();
             $table->timestamps();
         });

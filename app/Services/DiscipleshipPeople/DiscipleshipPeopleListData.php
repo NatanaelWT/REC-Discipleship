@@ -74,7 +74,7 @@ class DiscipleshipPeopleListData
             ->select([
                 'id',
                 'public_id',
-                'branch_code',
+                'branch_id',
                 'member_public_id',
                 'full_name',
                 'phone',
@@ -82,7 +82,7 @@ class DiscipleshipPeopleListData
                 'created_at',
                 'updated_at',
             ])
-            ->whereIn('branch_code', $branchCodes)
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
             ->orderBy('id')
             ->get()
             ->map(static fn (DiscipleshipPerson $person): array => $person->toArray())
@@ -100,7 +100,7 @@ class DiscipleshipPeopleListData
             ->select([
                 'id',
                 'public_id',
-                'branch_code',
+                'branch_id',
                 'name',
                 'status',
                 'start_stage',
@@ -111,7 +111,7 @@ class DiscipleshipPeopleListData
                 'created_at',
                 'updated_at',
             ])
-            ->whereIn('branch_code', $branchCodes)
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
             ->orderBy('id')
             ->get()
             ->map(static fn (DiscipleshipGroup $group): array => $group->toArray())
@@ -129,7 +129,7 @@ class DiscipleshipPeopleListData
             ->select([
                 'id',
                 'public_id',
-                'branch_code',
+                'branch_id',
                 'mentor_person_id',
                 'mentor_person_public_id',
                 'disciple_person_id',
@@ -146,7 +146,7 @@ class DiscipleshipPeopleListData
                 'created_at',
                 'updated_at',
             ])
-            ->whereIn('branch_code', $branchCodes)
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
             ->orderBy('id')
             ->get()
             ->map(static fn (DiscipleshipRelationship $relationship): array => $relationship->toArray())
@@ -165,7 +165,7 @@ class DiscipleshipPeopleListData
                 ->select([
                     'id',
                     'public_id',
-                    'branch_code',
+                    'branch_id',
                     'discipleship_group_id',
                     'group_public_id',
                     'person_id',
@@ -178,7 +178,7 @@ class DiscipleshipPeopleListData
                     'created_at',
                     'updated_at',
                 ])
-                ->whereIn('branch_code', $branchCodes)
+                ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
                 ->where('role', '!=', 'member')
                 ->orderBy('id')
                 ->get()
@@ -206,7 +206,7 @@ class DiscipleshipPeopleListData
             ->select([
                 'id',
                 'public_id',
-                'branch_code',
+                'branch_id',
                 'discipleship_group_id',
                 'group_public_id',
                 'person_id',
@@ -219,7 +219,7 @@ class DiscipleshipPeopleListData
                 'created_at',
                 'updated_at',
             ])
-            ->whereIn('branch_code', $branchCodes)
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
             ->orderBy('id')
             ->get()
             ->map(static fn (DiscipleshipGroupLeadership $leadership): array => $leadership->toArray())
@@ -238,7 +238,7 @@ class DiscipleshipPeopleListData
                 ->select([
                     'id',
                     'public_id',
-                    'branch_code',
+                    'branch_id',
                     'discipleship_group_id',
                     'group_public_id',
                     'person_id',
@@ -252,7 +252,7 @@ class DiscipleshipPeopleListData
                     'created_at',
                     'updated_at',
                 ])
-                ->whereIn('branch_code', $branchCodes)
+                ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
                 ->where('role', 'member')
                 ->orderBy('id')
                 ->get()
@@ -281,7 +281,7 @@ class DiscipleshipPeopleListData
             ->select([
                 'id',
                 'public_id',
-                'branch_code',
+                'branch_id',
                 'discipleship_group_id',
                 'group_public_id',
                 'person_id',
@@ -295,7 +295,7 @@ class DiscipleshipPeopleListData
                 'created_at',
                 'updated_at',
             ])
-            ->whereIn('branch_code', $branchCodes)
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
             ->orderBy('id')
             ->get()
             ->map(static fn (DiscipleshipGroupMembership $membership): array => $membership->toArray())

@@ -16,7 +16,7 @@ class SpiritualJourneyBridgeStatusService
 
         $branchCode = normalize_public_branch_code(current_user_branch());
         $participant = MskParticipant::query()
-            ->where('branch_code', $branchCode)
+            ->where('branch_id', branch_id_from_slug($branchCode))
             ->where('public_id', $participantPublicId)
             ->first();
 

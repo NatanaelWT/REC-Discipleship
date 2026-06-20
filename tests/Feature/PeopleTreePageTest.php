@@ -56,7 +56,7 @@ class PeopleTreePageTest extends TestCase
         Schema::create('discipleship_people', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id');
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->string('member_public_id')->nullable();
             $table->string('full_name')->nullable();
             $table->string('phone')->nullable();
@@ -72,7 +72,7 @@ class PeopleTreePageTest extends TestCase
         Schema::create('discipleship_groups', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id');
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->string('name');
             $table->string('status')->default('active');
             $table->string('start_stage')->nullable();
@@ -86,7 +86,7 @@ class PeopleTreePageTest extends TestCase
         Schema::create('discipleship_relationships', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id')->nullable();
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('mentor_person_id')->nullable();
             $table->string('mentor_person_public_id')->nullable();
             $table->unsignedBigInteger('disciple_person_id')->nullable();
@@ -106,7 +106,7 @@ class PeopleTreePageTest extends TestCase
         Schema::create('discipleship_group_memberships', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id')->nullable();
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('discipleship_group_id');
             $table->string('group_public_id');
             $table->unsignedBigInteger('person_id')->nullable();
@@ -123,7 +123,7 @@ class PeopleTreePageTest extends TestCase
         Schema::create('discipleship_group_leaderships', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id')->nullable();
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('discipleship_group_id');
             $table->string('group_public_id');
             $table->unsignedBigInteger('person_id')->nullable();
@@ -139,7 +139,7 @@ class PeopleTreePageTest extends TestCase
         Schema::create('discipleship_group_multiplications', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id')->nullable();
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('initiated_by_person_id')->nullable();
             $table->string('initiated_by_person_public_id')->nullable();
             $table->unsignedBigInteger('source_group_id')->nullable();
@@ -154,7 +154,7 @@ class PeopleTreePageTest extends TestCase
         Schema::create('msk_participants', function (Blueprint $table): void {
             $table->id();
             $table->string('public_id');
-            $table->string('branch_code', 40);
+            $table->unsignedBigInteger('branch_id');
             $table->string('member_public_id')->nullable();
             $table->string('full_name')->nullable();
             $table->string('gender')->nullable();
@@ -192,7 +192,7 @@ class PeopleTreePageTest extends TestCase
     {
         $leaderId = DB::table('discipleship_people')->insertGetId([
             'public_id' => 'person-leader',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'member_public_id' => 'member-leader',
             'full_name' => 'Leader Test',
             'phone' => '0811111111',
@@ -204,7 +204,7 @@ class PeopleTreePageTest extends TestCase
 
         $memberId = DB::table('discipleship_people')->insertGetId([
             'public_id' => 'person-member',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'member_public_id' => 'member-member',
             'full_name' => 'Anggota Test',
             'phone' => '0822222222',
@@ -216,7 +216,7 @@ class PeopleTreePageTest extends TestCase
 
         $groupId = DB::table('discipleship_groups')->insertGetId([
             'public_id' => 'group-test',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'name' => 'Kelompok Test',
             'status' => 'active',
             'start_stage' => 'DG 1',
@@ -227,7 +227,7 @@ class PeopleTreePageTest extends TestCase
 
         DB::table('discipleship_relationships')->insert([
             'public_id' => 'relation-test',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'mentor_person_id' => $leaderId,
             'mentor_person_public_id' => 'person-leader',
             'disciple_person_id' => $memberId,
@@ -244,7 +244,7 @@ class PeopleTreePageTest extends TestCase
 
         DB::table('discipleship_group_leaderships')->insert([
             'public_id' => 'leadership-test',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'group_public_id' => 'group-test',
             'person_id' => $leaderId,
@@ -258,7 +258,7 @@ class PeopleTreePageTest extends TestCase
 
         DB::table('discipleship_group_memberships')->insert([
             'public_id' => 'membership-test',
-            'branch_code' => 'kutisari',
+            'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'group_public_id' => 'group-test',
             'person_id' => $memberId,

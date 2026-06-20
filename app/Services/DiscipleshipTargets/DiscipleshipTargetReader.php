@@ -16,7 +16,7 @@ class DiscipleshipTargetReader
     public function valuesForBranch(string $branchCode): array
     {
         $branchCode = normalize_user_branch($branchCode);
-        $target = DiscipleshipTarget::query()->where('branch_code', $branchCode)->first();
+        $target = DiscipleshipTarget::query()->where('branch_id', branch_id_from_slug($branchCode))->first();
         if ($target instanceof DiscipleshipTarget) {
             return $this->normalizer->normalize($target->only([
                 'camp_gap_participant_target',
@@ -48,7 +48,7 @@ class DiscipleshipTargetReader
 
         /** @var DiscipleshipTarget $target */
         $target = DiscipleshipTarget::query()->updateOrCreate(
-            ['branch_code' => $branchCode],
+            ['branch_id' => branch_id_from_slug($branchCode)],
             $values,
         );
 

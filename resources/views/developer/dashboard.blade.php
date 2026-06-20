@@ -22,9 +22,9 @@
           @csrf
           <label>
             <span>Cabang Aktif</span>
-            <select name="branch_code">
+            <select name="branch_id">
               @foreach ($branchOptions as $branch)
-                <option value="{{ $branch['code'] }}" @selected($branch['code'] === $activeBranch)>{{ $branch['label'] }}</option>
+                <option value="{{ $branch['id'] }}" @selected($branch['id'] === $activeBranchId)>{{ $branch['label'] }}</option>
               @endforeach
             </select>
           </label>

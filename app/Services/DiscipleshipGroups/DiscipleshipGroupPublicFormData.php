@@ -27,7 +27,7 @@ class DiscipleshipGroupPublicFormData
                 'leaderships.person',
                 'memberships.person',
             ])
-            ->where('branch_code', $branchCode)
+            ->where('branch_id', branch_id_from_slug($branchCode))
             ->where('status', 'active')
             ->orderBy('current_stage')
             ->orderBy('name')

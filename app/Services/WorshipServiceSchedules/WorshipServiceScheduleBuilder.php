@@ -99,8 +99,6 @@ class WorshipServiceScheduleBuilder
                 $schedule->fill([
                     'title' => $title,
                     'update_note' => trim((string) ($record['update_note'] ?? '')),
-                    'branch_id' => null,
-                    'branch_code' => null,
                     'rows' => is_array($record['rows'] ?? null) ? normalize_worship_penatalayan_rows($record['rows'], count(worship_penatalayan_week_dates($month))) : [],
                 ]);
 
@@ -129,7 +127,6 @@ class WorshipServiceScheduleBuilder
             $schedule->fill([
                 'title' => $title,
                 'update_note' => trim((string) ($record['update_note'] ?? '')),
-                'branch_code' => null,
             ]);
 
             if ($preserveTimestamps) {
@@ -266,7 +263,6 @@ class WorshipServiceScheduleBuilder
                 : default_worship_penatalayan_title($month),
             'update_note' => trim((string) ($schedule->update_note ?? '')),
             'rows' => normalize_worship_penatalayan_rows($rows, count(worship_penatalayan_week_dates($month))),
-            'branch_code' => $this->nullableString($schedule->branch_code ?? null),
             'created_at' => $this->timestampString($schedule->created_at),
             'updated_at' => $this->timestampString($schedule->updated_at),
         ];
@@ -355,7 +351,6 @@ class WorshipServiceScheduleBuilder
             'month' => $schedule->month,
             'title' => $schedule->title,
             'update_note' => $schedule->update_note,
-            'branch_code' => $schedule->branch_code,
             'created_at' => $schedule->created_at,
             'updated_at' => $schedule->updated_at,
         ]);

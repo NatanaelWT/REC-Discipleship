@@ -116,7 +116,7 @@ class MemberFeedbackJournalController extends Controller
 
                 $journalData = [
                     'public_id' => $this->generatePublicId(),
-                    'branch_code' => $request->publicBranch(),
+                    'branch_id' => branch_id_from_slug($request->publicBranch()),
                     'feedback_session' => $request->feedbackSession(),
                     'discipleship_group_id' => $this->discipleshipGroupRecordId($groupPublicId, $request->publicBranch()),
                     'leader_person_id' => $this->peopleRecordId($leaderPublicId, $request->publicBranch()),
@@ -220,7 +220,7 @@ class MemberFeedbackJournalController extends Controller
         }
 
         $id = DiscipleshipGroup::query()
-            ->where('branch_code', normalize_public_branch_code($branchCode))
+            ->where('branch_id', branch_id_from_slug(normalize_public_branch_code($branchCode)))
             ->where('public_id', $publicId)
             ->value('id');
 
@@ -235,7 +235,7 @@ class MemberFeedbackJournalController extends Controller
         }
 
         $id = DiscipleshipPerson::query()
-            ->where('branch_code', normalize_public_branch_code($branchCode))
+            ->where('branch_id', branch_id_from_slug(normalize_public_branch_code($branchCode)))
             ->where(static function ($query) use ($publicId): void {
                 $query->where('public_id', $publicId)
                     ->orWhere('member_public_id', $publicId);
