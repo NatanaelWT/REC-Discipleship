@@ -62,6 +62,83 @@ class PeopleTreePageTest extends TestCase
             ->assertSee('Anggota Test');
     }
 
+    public function test_person_without_active_membership_stays_in_their_latest_group(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+
+        $leaderId = (int) DB::table('discipleship_people')->where('full_name', 'Leader Test')->value('id');
+        $oldGroupId = (int) DB::table('discipleship_groups')->where('name', 'Kelompok Test')->value('id');
+        $personId = DB::table('discipleship_people')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Anggota Riwayat Terakhir',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $latestGroupId = DB::table('discipleship_groups')->insertGetId([
+            'branch_id' => 1,
+            'name' => 'Kelompok Riwayat Terakhir',
+            'status' => 'active',
+            'start_stage' => 'DG 2',
+            'current_stage' => 'DG 2',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $oldGroupId,
+                'person_id' => $personId,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'completed',
+                'started_on' => '2025-01-01',
+                'ended_on' => '2025-06-01',
+                'end_reason' => 'stage_transition',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $latestGroupId,
+                'person_id' => $leaderId,
+                'role' => 'leader',
+                'stage' => null,
+                'status' => 'active',
+                'started_on' => '2025-07-01',
+                'ended_on' => null,
+                'end_reason' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $latestGroupId,
+                'person_id' => $personId,
+                'role' => 'member',
+                'stage' => 'DG 2',
+                'status' => 'completed',
+                'started_on' => '2025-07-01',
+                'ended_on' => '2026-02-01',
+                'end_reason' => 'left_group',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->actingAsRecUser();
+        $this->get('/pemuridan/pohon')->assertOk()->assertSee('Anggota Riwayat Terakhir');
+
+        $store = app(PeopleTreeModelStore::class);
+        $model = $store->modelForBranch('kutisari');
+        $people = $store->peopleForModel($model, [], [], false);
+        $groups = collect(build_people_tree_group_rows($model, index_by_id($people)))->keyBy('id');
+
+        $this->assertNotContains((string) $personId, $groups[(string) $oldGroupId]['member_ids']);
+        $this->assertContains((string) $personId, $groups[(string) $latestGroupId]['member_ids']);
+    }
+
     public function test_people_tree_write_invalidates_cached_read_model(): void
     {
         $this->createTables();
