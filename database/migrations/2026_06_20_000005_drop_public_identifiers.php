@@ -34,6 +34,8 @@ return new class extends Migration
                 continue;
             }
 
+            $this->ensureBranchIndexSurvives($table, $columns);
+
             foreach (Schema::getIndexes($table) as $index) {
                 if ($index['primary'] || array_intersect($columns, $index['columns']) === []) {
                     continue;
@@ -52,6 +54,32 @@ return new class extends Migration
                 $blueprint->dropColumn($columns);
             });
         }
+    }
+
+    /** @param array<int, string> $legacyColumns */
+    private function ensureBranchIndexSurvives(string $table, array $legacyColumns): void
+    {
+        if (! Schema::hasColumn($table, 'branch_id')) {
+            return;
+        }
+
+        $hasSurvivingBranchIndex = false;
+        foreach (Schema::getIndexes($table) as $index) {
+            $indexColumns = $index['columns'] ?? [];
+            if (($indexColumns[0] ?? null) === 'branch_id'
+                && array_intersect($legacyColumns, $indexColumns) === []) {
+                $hasSurvivingBranchIndex = true;
+                break;
+            }
+        }
+
+        if ($hasSurvivingBranchIndex) {
+            return;
+        }
+
+        Schema::table($table, static function (Blueprint $blueprint) use ($table): void {
+            $blueprint->index('branch_id', $table.'_branch_id_index');
+        });
     }
 
     public function down(): void

@@ -118,6 +118,16 @@ return new class extends Migration
                     continue;
                 }
 
+                if ($reference['table'] === 'discipleship_relationships'
+                    && $reference['foreign'] === 'mentor_person_id'
+                    && $legacyId === 'virtual_injil') {
+                    if ($row->{$reference['foreign']} !== null) {
+                        throw new RuntimeException("Virtual Injil relation {$row->id} unexpectedly has a numeric mentor.");
+                    }
+
+                    continue;
+                }
+
                 $matches = DB::table($reference['target'])
                     ->where('branch_id', $row->branch_id)
                     ->where('public_id', $legacyId)

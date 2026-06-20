@@ -59,6 +59,7 @@ Artisan::command('identifiers:audit', function (): int {
             })
             ->whereNotNull('source.'.$legacyColumn)
             ->where('source.'.$legacyColumn, '!=', '')
+            ->where('source.'.$legacyColumn, '!=', 'virtual_injil')
             ->select([
                 'source.id',
                 'source.'.$foreignColumn.' as numeric_id',
@@ -73,6 +74,118 @@ Artisan::command('identifiers:audit', function (): int {
                 || ($row->numeric_id !== null && (int) $row->numeric_id !== (int) $row->resolved_id)) {
                 $issues[] = [$table, (string) $row->id, $legacyColumn, (string) $row->match_count];
             }
+        }
+    }
+
+    $numericReferences = [
+        ['discipleship_groups', 'parent_group_id', 'discipleship_groups'],
+        ['discipleship_groups', 'source_group_id', 'discipleship_groups'],
+        ['discipleship_groups', 'initiated_by_person_id', 'discipleship_people'],
+        ['discipleship_relationships', 'mentor_person_id', 'discipleship_people'],
+        ['discipleship_relationships', 'disciple_person_id', 'discipleship_people'],
+        ['discipleship_relationships', 'context_group_id', 'discipleship_groups'],
+        ['discipleship_group_people', 'discipleship_group_id', 'discipleship_groups'],
+        ['discipleship_group_people', 'person_id', 'discipleship_people'],
+        ['discipleship_meeting_reports', 'leader_person_id', 'discipleship_people'],
+        ['discipleship_meeting_reports', 'discipleship_group_id', 'discipleship_groups'],
+        ['discipleship_feedbacks', 'discipleship_group_id', 'discipleship_groups'],
+        ['discipleship_feedbacks', 'leader_person_id', 'discipleship_people'],
+        ['discipleship_feedbacks', 'respondent_person_id', 'discipleship_people'],
+        ['msk_participants', 'discipleship_person_id', 'discipleship_people'],
+    ];
+
+    foreach ($numericReferences as [$table, $foreignColumn, $targetTable]) {
+        if (! Schema::hasTable($table)
+            || ! Schema::hasColumn($table, 'branch_id')
+            || ! Schema::hasColumn($table, $foreignColumn)
+            || ! Schema::hasTable($targetTable)
+            || ! Schema::hasColumn($targetTable, 'branch_id')) {
+            continue;
+        }
+
+        $invalidIds = DB::table($table.' as source')
+            ->leftJoin($targetTable.' as target', 'target.id', '=', 'source.'.$foreignColumn)
+            ->whereNotNull('source.'.$foreignColumn)
+            ->where(static function ($query): void {
+                $query->whereNull('target.id')
+                    ->orWhereNull('source.branch_id')
+                    ->orWhereColumn('target.branch_id', '!=', 'source.branch_id');
+            })
+            ->pluck('source.id');
+
+        foreach ($invalidIds as $invalidId) {
+            $issues[] = [$table, (string) $invalidId, $foreignColumn, 'invalid_numeric_reference'];
+        }
+    }
+
+    if (Schema::hasTable('msk_participants')
+        && Schema::hasColumn('msk_participants', 'member_public_id')
+        && Schema::hasTable('discipleship_people')
+        && Schema::hasColumn('discipleship_people', 'member_public_id')
+        && Schema::hasColumn('discipleship_people', 'public_id')) {
+        $peopleByLegacyId = [];
+        foreach (DB::table('discipleship_people')
+            ->select(['id', 'branch_id', 'public_id', 'member_public_id', 'full_name', 'phone', 'status'])
+            ->get() as $person) {
+            foreach (array_unique([(string) $person->public_id, (string) $person->member_public_id]) as $legacyId) {
+                $legacyId = trim($legacyId);
+                if ($legacyId !== '') {
+                    $peopleByLegacyId[(int) $person->branch_id.'|'.$legacyId][(int) $person->id] = $person;
+                }
+            }
+        }
+
+        $claimedPeople = [];
+        foreach (DB::table('msk_participants')
+            ->select(['id', 'branch_id', 'member_public_id', 'full_name', 'whatsapp'])
+            ->orderBy('id')
+            ->get() as $participant) {
+            $legacyId = trim((string) $participant->member_public_id);
+            if ($legacyId === '') {
+                continue;
+            }
+
+            $matches = array_values($peopleByLegacyId[(int) $participant->branch_id.'|'.$legacyId] ?? []);
+            if (count($matches) > 1) {
+                $participantPhone = trim((string) $participant->whatsapp);
+                $identityMatches = array_values(array_filter(
+                    $matches,
+                    static fn (object $person): bool => (string) $person->full_name === (string) $participant->full_name
+                        && ($participantPhone === '' || (string) $person->phone === $participantPhone),
+                ));
+                if ($identityMatches !== []) {
+                    $matches = $identityMatches;
+                }
+            }
+
+            if (count($matches) > 1) {
+                $activeMatches = array_values(array_filter(
+                    $matches,
+                    static fn (object $person): bool => (string) $person->status === 'active',
+                ));
+                if (count($activeMatches) === 1) {
+                    $matches = $activeMatches;
+                }
+            }
+
+            if ($matches === []) {
+                continue;
+            }
+
+            if (count($matches) !== 1) {
+                $issues[] = ['msk_participants', (string) $participant->id, 'member_public_id', 'ambiguous_person_match'];
+
+                continue;
+            }
+
+            $personId = (int) $matches[0]->id;
+            if (isset($claimedPeople[$personId])) {
+                $issues[] = ['msk_participants', (string) $participant->id, 'member_public_id', 'duplicate_person_link'];
+
+                continue;
+            }
+
+            $claimedPeople[$personId] = true;
         }
     }
 

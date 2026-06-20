@@ -35,6 +35,10 @@ class NumericIdentifierMigrationTest extends TestCase
         $this->assertFalse(Schema::hasColumn('discipleship_people', 'member_public_id'));
         $this->assertFalse(Schema::hasColumn('discipleship_group_people', 'person_public_id'));
         $this->assertFalse(Schema::hasColumn('discipleship_group_people', 'group_public_id'));
+        $this->assertTrue(Schema::hasIndex('discipleship_people', ['branch_id']));
+        $this->assertTrue(Schema::hasIndex('discipleship_groups', ['branch_id']));
+        $this->assertTrue(Schema::hasIndex('discipleship_relationships', ['branch_id']));
+        $this->assertTrue(Schema::hasIndex('msk_participants', ['branch_id']));
 
         $this->assertDatabaseHas('discipleship_relationships', [
             'id' => 1,
@@ -134,6 +138,23 @@ class NumericIdentifierMigrationTest extends TestCase
         (require database_path('migrations/2026_06_20_000004_prepare_numeric_identifiers.php'))->up();
     }
 
+    public function test_virtual_injil_mentor_is_preserved_as_null_numeric_reference(): void
+    {
+        $this->createLegacyTables();
+        $this->seedResolvableRows();
+        DB::table('discipleship_relationships')->where('id', 1)->update([
+            'mentor_person_id' => null,
+            'mentor_person_public_id' => 'virtual_injil',
+        ]);
+
+        (require database_path('migrations/2026_06_20_000004_prepare_numeric_identifiers.php'))->up();
+
+        $this->assertDatabaseHas('discipleship_relationships', [
+            'id' => 1,
+            'mentor_person_id' => null,
+        ]);
+    }
+
     private function createLegacyTables(): void
     {
         foreach ([
@@ -163,6 +184,8 @@ class NumericIdentifierMigrationTest extends TestCase
             $table->string('full_name')->nullable();
             $table->string('phone')->nullable();
             $table->string('status')->default('active');
+            $table->unique(['branch_id', 'public_id']);
+            $table->foreign('branch_id')->references('id')->on('branches');
         });
         Schema::create('discipleship_groups', function (Blueprint $table): void {
             $table->id();
@@ -174,6 +197,8 @@ class NumericIdentifierMigrationTest extends TestCase
             $table->string('source_group_public_id')->nullable();
             $table->unsignedBigInteger('initiated_by_person_id')->nullable();
             $table->string('initiated_by_person_public_id')->nullable();
+            $table->unique(['branch_id', 'public_id']);
+            $table->foreign('branch_id')->references('id')->on('branches');
         });
         Schema::create('discipleship_relationships', function (Blueprint $table): void {
             $table->id();
@@ -185,6 +210,8 @@ class NumericIdentifierMigrationTest extends TestCase
             $table->string('disciple_person_public_id')->nullable();
             $table->unsignedBigInteger('context_group_id')->nullable();
             $table->string('context_group_public_id')->nullable();
+            $table->unique(['branch_id', 'public_id']);
+            $table->foreign('branch_id')->references('id')->on('branches');
         });
         Schema::create('discipleship_group_people', function (Blueprint $table): void {
             $table->id();
@@ -213,6 +240,8 @@ class NumericIdentifierMigrationTest extends TestCase
             $table->string('member_public_id')->nullable();
             $table->string('full_name')->nullable();
             $table->string('whatsapp')->nullable();
+            $table->unique(['branch_id', 'public_id']);
+            $table->foreign('branch_id')->references('id')->on('branches');
         });
         Schema::create('difficult_questions', function (Blueprint $table): void {
             $table->id();
