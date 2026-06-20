@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Developer\DeveloperDiagnosticsService;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -183,6 +184,34 @@ class DeveloperAccessTest extends TestCase
             ->assertSee('value="pelayan"', false)
             ->assertSee('Tanpa cabang')
             ->assertDontSee('value="pusat"', false);
+    }
+
+    public function test_developer_diagnostics_counts_only_active_discipleship_branches(): void
+    {
+        $this->createCoreTables();
+
+        DB::table('branches')->insert([
+            [
+                'code' => 'pusat',
+                'label' => 'Pusat',
+                'sort_order' => 90,
+                'is_active' => true,
+                'created_at' => '2026-06-19 08:00:00',
+                'updated_at' => '2026-06-19 08:00:00',
+            ],
+            [
+                'code' => 'inactive',
+                'label' => 'Inactive',
+                'sort_order' => 91,
+                'is_active' => false,
+                'created_at' => '2026-06-19 08:00:00',
+                'updated_at' => '2026-06-19 08:00:00',
+            ],
+        ]);
+
+        $summary = app(DeveloperDiagnosticsService::class)->summary();
+
+        $this->assertSame(3, $summary['counts']['branches']);
     }
 
     public function test_steward_has_no_branch_and_cannot_access_discipleship_or_developer(): void

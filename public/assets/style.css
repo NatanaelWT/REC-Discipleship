@@ -12256,18 +12256,28 @@ textarea:focus-visible {
 
 .developer-user-row {
   display: grid;
-  grid-template-columns: minmax(160px, 0.75fr) minmax(0, 3fr) minmax(180px, 0.9fr);
-  align-items: end;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid rgba(203, 213, 225, 0.78);
-  border-radius: 12px;
-  background: rgba(248, 250, 252, 0.8);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+  padding: 18px 0;
+  border-top: 1px solid rgba(203, 213, 225, 0.78);
+}
+
+.developer-user-row:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.developer-user-row:last-child {
+  padding-bottom: 0;
 }
 
 .developer-user-meta {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 16px;
 }
 
 .developer-user-meta strong {
@@ -12282,31 +12292,58 @@ textarea:focus-visible {
 
 .developer-user-edit-form {
   display: grid;
-  grid-template-columns: repeat(5, minmax(110px, 1fr)) auto;
+  grid-template-columns:
+    minmax(150px, 1.1fr)
+    minmax(220px, 1.5fr)
+    minmax(150px, 1fr)
+    minmax(140px, 0.9fr)
+    minmax(120px, 0.75fr)
+    auto;
   align-items: end;
   gap: 10px;
 }
 
 .developer-password-form {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) auto;
+  grid-template-columns: minmax(220px, 320px) auto;
   align-items: end;
+  justify-content: end;
   gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(203, 213, 225, 0.9);
+}
+
+.developer-user-edit-form label,
+.developer-password-form label {
+  min-width: 0;
+}
+
+.developer-user-edit-form input,
+.developer-user-edit-form select,
+.developer-password-form input {
+  width: 100%;
+  min-width: 0;
 }
 
 .developer-config-form {
   grid-template-columns: minmax(220px, 1.4fr) minmax(220px, 1fr) minmax(180px, 0.8fr) auto;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1360px) {
   .developer-metric-grid,
   .developer-form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .developer-user-row,
-  .developer-user-edit-form,
-  .developer-password-form,
+  .developer-user-edit-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .developer-user-edit-form .btn {
+    grid-column: 2;
+    justify-self: end;
+  }
+
   .developer-config-form {
     grid-template-columns: 1fr;
   }
@@ -12314,8 +12351,23 @@ textarea:focus-visible {
 
 @media (max-width: 720px) {
   .developer-metric-grid,
-  .developer-form-grid {
+  .developer-form-grid,
+  .developer-user-edit-form,
+  .developer-password-form {
     grid-template-columns: 1fr;
+  }
+
+  .developer-user-meta {
+    display: grid;
+  }
+
+  .developer-user-edit-form .btn {
+    grid-column: auto;
+    justify-self: stretch;
+  }
+
+  .developer-password-form {
+    justify-content: stretch;
   }
 
   .developer-branch-form,

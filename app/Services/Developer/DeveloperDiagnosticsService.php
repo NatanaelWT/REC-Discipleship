@@ -6,7 +6,6 @@ use App\Enums\PublicMaterialMenuKey;
 use App\Models\Branch;
 use App\Models\PublicMaterialFile;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
 
@@ -34,7 +33,7 @@ class DeveloperDiagnosticsService
             'users' => $this->safeCount(User::class),
             'active_users' => $this->safeUserCount(true),
             'active_developers' => $this->safeActiveDeveloperCount(),
-            'branches' => $this->safeCount(Branch::class),
+            'branches' => $this->safeActiveDiscipleshipBranchCount(),
         ];
     }
 
@@ -82,6 +81,7 @@ class DeveloperDiagnosticsService
                 $path = sanitize_relative_upload_path((string) ($file->relative_path ?? ''));
                 if (! $menu instanceof PublicMaterialMenuKey || $path === '' || ! $this->materialPathBelongsToMenu($menu, $path)) {
                     $summary['invalid_paths']++;
+
                     continue;
                 }
 
@@ -122,7 +122,7 @@ class DeveloperDiagnosticsService
     }
 
     /**
-     * @param class-string $model
+     * @param  class-string  $model
      */
     private function safeCount(string $model): int
     {
@@ -154,6 +154,18 @@ class DeveloperDiagnosticsService
         }
     }
 
+    private function safeActiveDiscipleshipBranchCount(): int
+    {
+        try {
+            return Branch::query()
+                ->where('is_active', true)
+                ->where('code', '!=', 'pusat')
+                ->count();
+        } catch (Throwable) {
+            return 0;
+        }
+    }
+
     private function materialPathBelongsToMenu(PublicMaterialMenuKey $menu, string $path): bool
     {
         $path = public_material_current_relative_path($path);
@@ -163,7 +175,7 @@ class DeveloperDiagnosticsService
 
         $menuFolder = public_material_folder_relative_path($menu->folder());
 
-        return $path !== $menuFolder && str_starts_with($path, $menuFolder . '/');
+        return $path !== $menuFolder && str_starts_with($path, $menuFolder.'/');
     }
 
     /**
@@ -176,7 +188,7 @@ class DeveloperDiagnosticsService
             return [];
         }
 
-        $files = glob($folder . '/*') ?: [];
+        $files = glob($folder.'/*') ?: [];
         $files = array_values(array_filter($files, 'is_file'));
         sort($files, SORT_NATURAL | SORT_FLAG_CASE);
 

@@ -46,7 +46,7 @@
           <strong>{{ $diagnostics['counts']['active_developers'] ?? 0 }}</strong>
         </div>
         <div class="developer-metric">
-          <span>Cabang</span>
+          <span>Cabang Pemuridan</span>
           <strong>{{ $diagnostics['counts']['branches'] ?? 0 }}</strong>
         </div>
       </div>
