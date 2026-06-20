@@ -5,8 +5,8 @@ function central_readonly_action_map(): array {
     if ($actions === null) {
         $actions = [
             'logout' => true,
+            'change_password' => true,
             'export_pohon_pemuridan_dot' => true,
-            'save_difficult_question_answer' => true,
         ];
     }
     return $actions;

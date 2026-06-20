@@ -26,10 +26,7 @@ class WorshipServiceScheduleBuilder
         RuntimeBootstrap::load();
 
         if ($this->usesNewTable()) {
-            $branchCode = $this->currentBranchCode();
-
             return WorshipSchedule::query()
-                ->where('branch_code', $branchCode)
                 ->orderByDesc('month')
                 ->get()
                 ->map(fn (WorshipSchedule $schedule): array => $this->recordFromJsonModel($schedule))
@@ -55,9 +52,7 @@ class WorshipServiceScheduleBuilder
 
         $month = normalize_month_value($month);
         if ($this->usesNewTable()) {
-            $branchCode = $this->currentBranchCode();
             $schedule = WorshipSchedule::query()
-                ->where('branch_code', $branchCode)
                 ->where('month', $month)
                 ->first();
 
@@ -95,20 +90,17 @@ class WorshipServiceScheduleBuilder
         if ($title === '') {
             $title = default_worship_penatalayan_title($month);
         }
-        $branchCode = $this->recordBranchCode($record);
-
         if ($this->usesNewTable()) {
             /** @var WorshipSchedule $schedule */
-            $schedule = DB::transaction(function () use ($record, $month, $title, $branchCode, $preserveTimestamps): WorshipSchedule {
+            $schedule = DB::transaction(function () use ($record, $month, $title, $preserveTimestamps): WorshipSchedule {
                 $schedule = WorshipSchedule::query()->firstOrNew([
-                    'branch_code' => $branchCode,
                     'month' => $month,
                 ]);
                 $schedule->fill([
                     'title' => $title,
                     'update_note' => trim((string) ($record['update_note'] ?? '')),
-                    'branch_id' => $this->branchId($branchCode),
-                    'branch_code' => $branchCode,
+                    'branch_id' => null,
+                    'branch_code' => null,
                     'rows' => is_array($record['rows'] ?? null) ? normalize_worship_penatalayan_rows($record['rows'], count(worship_penatalayan_week_dates($month))) : [],
                 ]);
 
@@ -137,7 +129,7 @@ class WorshipServiceScheduleBuilder
             $schedule->fill([
                 'title' => $title,
                 'update_note' => trim((string) ($record['update_note'] ?? '')),
-                'branch_code' => $this->nullableString($record['branch_code'] ?? null),
+                'branch_code' => null,
             ]);
 
             if ($preserveTimestamps) {
@@ -167,7 +159,6 @@ class WorshipServiceScheduleBuilder
         $month = normalize_month_value($month);
         if ($this->usesNewTable()) {
             $schedule = WorshipSchedule::query()
-                ->where('branch_code', $this->currentBranchCode())
                 ->where('month', $month)
                 ->first();
             if (! $schedule instanceof WorshipSchedule) {
@@ -406,34 +397,6 @@ class WorshipServiceScheduleBuilder
         $stringValue = trim((string) $value);
 
         return $stringValue !== '' ? $stringValue : null;
-    }
-
-    private function currentBranchCode(): string
-    {
-        return normalize_public_branch_code(is_logged_in() ? current_user_branch() : 'kutisari');
-    }
-
-    /**
-     * @param array<string, mixed> $record
-     */
-    private function recordBranchCode(array $record): string
-    {
-        $branchCode = trim((string) ($record['branch_code'] ?? ''));
-
-        return normalize_public_branch_code($branchCode !== '' ? $branchCode : $this->currentBranchCode());
-    }
-
-    private function branchId(string $branchCode): ?int
-    {
-        if (! Schema::hasTable('branches')) {
-            return null;
-        }
-
-        $id = DB::table('branches')
-            ->where('code', normalize_public_branch_code($branchCode))
-            ->value('id');
-
-        return $id === null ? null : (int) $id;
     }
 
     private function parseTimestamp(string $value): ?Carbon

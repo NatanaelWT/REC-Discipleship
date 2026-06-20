@@ -52,6 +52,21 @@ class DiscipleshipDashboardTest extends TestCase
         $this->assertSame(4, DB::table('msk_participant_sessions')->where('msk_participant_id', $participantId)->count());
     }
 
+    public function test_central_discipleship_user_cannot_update_branch_data(): void
+    {
+        $this->createDashboardTables();
+        $this->seedDashboardData();
+        $this->actingAsRecUser('recpusat', null, 'pemuridan_pusat');
+
+        $this->post('/pemuridan/dashboard/msk-sessions', [
+            'id' => 'msk-dashboard',
+            'session_numbers' => ['1', '2', '3', '4'],
+        ])->assertRedirect('/pemuridan/dashboard?error=access_denied');
+
+        $participantId = (int) DB::table('msk_participants')->where('public_id', 'msk-dashboard')->value('id');
+        $this->assertSame(2, DB::table('msk_participant_sessions')->where('msk_participant_id', $participantId)->count());
+    }
+
     private function createDashboardTables(): void
     {
         Schema::dropIfExists('msk_participant_photos');

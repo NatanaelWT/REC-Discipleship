@@ -6,7 +6,7 @@ function central_recap_selected_branch(): string
         return 'all';
     }
 
-    $fromQuery = trim((string) ($_GET['rekap_cabang'] ?? ''));
+    $fromQuery = trim((string) request()->query('rekap_cabang', ''));
     if ($fromQuery !== '') {
         $selected = normalize_central_recap_branch($fromQuery);
         session()->put('central_rekap_cabang', $selected);

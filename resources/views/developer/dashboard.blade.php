@@ -16,7 +16,7 @@
       <div class="card-row">
         <div>
           <h2>Diagnostics</h2>
-          <p class="developer-muted">Scope: developer. Cabang aktif: {{ user_branch_label($activeBranch) }}.</p>
+          <p class="developer-muted">Role: Developer. Cabang pemuridan aktif: {{ user_branch_label($activeBranch) }}.</p>
         </div>
         <form method="post" action="{{ route('developer.branch') }}" class="developer-branch-form">
           @csrf

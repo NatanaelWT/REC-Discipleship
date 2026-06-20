@@ -18,6 +18,8 @@ class DeveloperBranchService
         try {
             if (Schema::hasTable('branches')) {
                 $options = Branch::query()
+                    ->where('is_active', true)
+                    ->where('code', '!=', 'pusat')
                     ->orderBy('sort_order')
                     ->orderBy('label')
                     ->get(['code', 'label'])
@@ -53,6 +55,22 @@ class DeveloperBranchService
         return $this->normalizeAllowed($branch) !== null;
     }
 
+    public function idForCode(?string $branch): ?int
+    {
+        $branch = $branch !== null ? $this->normalizeAllowed($branch) : null;
+        if ($branch === null || ! Schema::hasTable('branches')) {
+            return null;
+        }
+
+        try {
+            $id = Branch::query()->where('code', $branch)->where('is_active', true)->value('id');
+
+            return $id === null ? null : (int) $id;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
     public function normalizeAllowed(string $branch): ?string
     {
         $branch = strtolower(trim($branch));
@@ -77,7 +95,6 @@ class DeveloperBranchService
             ['code' => 'merr', 'label' => 'Merr'],
             ['code' => 'batam', 'label' => 'Batam'],
             ['code' => 'nginden', 'label' => 'Nginden'],
-            ['code' => 'pusat', 'label' => 'Pusat'],
         ];
     }
 }

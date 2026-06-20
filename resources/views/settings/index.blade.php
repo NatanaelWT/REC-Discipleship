@@ -18,7 +18,7 @@
         <div class="settings-account-meta">
           <span class="settings-account-badge">Username: {{ $currentUsername }}</span>
           @if ($centralReadOnly)
-            <span class="settings-account-badge is-muted">Mode pusat · hanya lihat</span>
+            <span class="settings-account-badge is-muted">Pusat Pemuridan · hanya lihat</span>
           @else
             <span class="settings-account-badge is-safe">Data terenkripsi</span>
           @endif

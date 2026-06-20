@@ -1,9 +1,14 @@
 <?php
 
 function user_branch_label(string $branch): string {
-    $branch = normalize_user_branch($branch);
-    if ($branch === 'pusat') {
-        return 'Pusat';
+    if (trim($branch) === '') {
+        return 'Tanpa cabang';
     }
+
+    $branch = normalize_user_branch($branch);
+    if ($branch === '') {
+        return 'Tanpa cabang';
+    }
+
     return public_branch_label($branch);
 }

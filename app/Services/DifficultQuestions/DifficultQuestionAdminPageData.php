@@ -26,6 +26,7 @@ class DifficultQuestionAdminPageData
             'pendingQuestionCount' => $questions->where('status', DifficultQuestion::STATUS_PENDING)->count(),
             'answeredQuestionCount' => $questions->where('status', DifficultQuestion::STATUS_ANSWERED)->count(),
             'totalQuestionCount' => $questions->count(),
+            'canAnswerDifficultQuestions' => can_manage_difficult_questions(),
             'errorCode' => trim((string) $request->query('error', '')),
             'errorMessages' => $this->errorMessages(),
             'answered' => $request->query->has('answered'),

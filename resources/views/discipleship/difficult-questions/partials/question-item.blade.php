@@ -13,7 +13,7 @@
       <div>{!! nl2br(e($questionItem['answerText'])) !!}</div>
     </div>
   @endif
-  @if ($questionItem['publicId'] !== '')
+  @if ($canAnswerDifficultQuestions && $questionItem['publicId'] !== '')
     <form method="post" action="{{ route('discipleship.difficult-questions.answer', $questionItem['model']) }}" class="form-grid difficult-question-answer-form">
       @csrf
       <input type="hidden" name="action" value="save_difficult_question_answer">
@@ -23,7 +23,7 @@
         <button class="btn" type="submit">{{ $questionItem['answerButtonLabel'] }}</button>
       </div>
     </form>
-  @else
+  @elseif ($canAnswerDifficultQuestions)
     <div class="panel-note">Pertanyaan ini tidak memiliki ID, jadi belum bisa dijawab.</div>
   @endif
 </article>

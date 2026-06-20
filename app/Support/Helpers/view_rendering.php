@@ -200,7 +200,7 @@ function render_central_rekap_toolbar(string $currentPage): void
         return '?'.http_build_query($params);
     };
 
-    echo "  <section class=\"central-rekap-toolbar\" aria-label=\"Filter rekap cabang pusat\">\n";
+    echo "  <section class=\"central-rekap-toolbar\" aria-label=\"Filter rekap Pusat Pemuridan\">\n";
     echo "    <div class=\"central-rekap-toolbar-body\">\n";
     echo "      <div class=\"central-rekap-head\">\n";
     echo "        <div class=\"central-rekap-title-row\">\n";
@@ -208,7 +208,7 @@ function render_central_rekap_toolbar(string $currentPage): void
     echo '          <span class="central-rekap-current">Rekap aktif: <strong>'.h($selectedBranchLabel)."</strong>. Klik nama cabang di bawah untuk ganti tampilan.</span>\n";
     echo "        </div>\n";
     echo "      </div>\n";
-    echo "      <div class=\"central-rekap-quick\" aria-label=\"Pilih cabang rekap pusat\">\n";
+    echo "      <div class=\"central-rekap-quick\" aria-label=\"Pilih cabang rekap Pusat Pemuridan\">\n";
     foreach (central_recap_branch_options() as $branchOption) {
         $branchCode = normalize_central_recap_branch((string) ($branchOption['code'] ?? 'all'));
         $branchLabel = trim((string) ($branchOption['label'] ?? $branchCode));

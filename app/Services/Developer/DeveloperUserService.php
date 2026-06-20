@@ -2,8 +2,10 @@
 
 namespace App\Services\Developer;
 
+use App\Enums\UserAccessRole;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class DeveloperUserService
 {
@@ -12,13 +14,13 @@ class DeveloperUserService
     /**
      * @return array<string, string>
      */
-    public function scopeOptions(): array
+    public function roleOptions(): array
     {
         return [
-            'branch' => 'Cabang Pemuridan',
-            'central_discipleship_readonly' => 'Pusat Pemuridan',
-            'worship_only' => 'Ibadah Umum',
-            'developer' => 'Developer',
+            UserAccessRole::DiscipleshipBranch->value => UserAccessRole::DiscipleshipBranch->label(),
+            UserAccessRole::DiscipleshipCentral->value => UserAccessRole::DiscipleshipCentral->label(),
+            UserAccessRole::Steward->value => UserAccessRole::Steward->label(),
+            UserAccessRole::Developer->value => UserAccessRole::Developer->label(),
         ];
     }
 
@@ -31,8 +33,7 @@ class DeveloperUserService
         $name = $this->normalizeText((string) ($input['name'] ?? ''), 120);
         $email = $this->normalizeEmail((string) ($input['email'] ?? ''));
         $password = (string) ($input['password'] ?? '');
-        $branch = $this->branches->normalizeAllowed((string) ($input['branch_code'] ?? 'kutisari'));
-        $scope = normalize_auth_access_scope((string) ($input['access_scope'] ?? 'branch'));
+        $role = UserAccessRole::tryFrom(strtolower(trim((string) ($input['access_scope'] ?? ''))));
         $isActive = $this->boolFromInput($input['is_active'] ?? '1');
 
         if ($username === '' || $name === '' || $email === '' || trim($password) === '') {
@@ -44,10 +45,14 @@ class DeveloperUserService
         if (strlen($password) < 6) {
             return 'password_short';
         }
-        if (! isset($this->scopeOptions()[$scope])) {
-            return 'scope_invalid';
+        if (! $role instanceof UserAccessRole) {
+            return 'role_invalid';
         }
-        if ($branch === null) {
+
+        $branch = $role->requiresBranch()
+            ? $this->branches->normalizeAllowed((string) ($input['branch_code'] ?? ''))
+            : null;
+        if ($role->requiresBranch() && $branch === null) {
             return 'branch_invalid';
         }
         if (User::query()->where('username', $username)->exists()) {
@@ -57,15 +62,14 @@ class DeveloperUserService
             return 'email_taken';
         }
 
-        User::query()->create([
+        User::query()->create(array_merge([
             'username' => $username,
             'name' => $name,
             'email' => $email,
             'password' => Hash::make($password),
-            'branch_code' => $branch,
-            'access_scope' => $scope,
+            'access_scope' => $role->value,
             'is_active' => $isActive,
-        ]);
+        ], $this->branchAttributes($branch)));
 
         return null;
     }
@@ -77,8 +81,7 @@ class DeveloperUserService
     {
         $name = $this->normalizeText((string) ($input['name'] ?? ''), 120);
         $email = $this->normalizeEmail((string) ($input['email'] ?? ''));
-        $branch = $this->branches->normalizeAllowed((string) ($input['branch_code'] ?? 'kutisari'));
-        $scope = normalize_auth_access_scope((string) ($input['access_scope'] ?? 'branch'));
+        $role = UserAccessRole::tryFrom(strtolower(trim((string) ($input['access_scope'] ?? ''))));
         $isActive = $this->boolFromInput($input['is_active'] ?? '0');
         $actorUsername = trim($actorUsername);
         $isSelf = $actorUsername !== '' && hash_equals($actorUsername, (string) $user->username);
@@ -86,10 +89,14 @@ class DeveloperUserService
         if ($name === '' || $email === '') {
             return 'missing_required';
         }
-        if (! isset($this->scopeOptions()[$scope])) {
-            return 'scope_invalid';
+        if (! $role instanceof UserAccessRole) {
+            return 'role_invalid';
         }
-        if ($branch === null) {
+
+        $branch = $role->requiresBranch()
+            ? $this->branches->normalizeAllowed((string) ($input['branch_code'] ?? ''))
+            : null;
+        if ($role->requiresBranch() && $branch === null) {
             return 'branch_invalid';
         }
         if ($isSelf && ! $isActive) {
@@ -98,23 +105,23 @@ class DeveloperUserService
         if (User::query()->where('email', $email)->whereKeyNot($user->getKey())->exists()) {
             return 'email_taken';
         }
-        if ($this->wouldRemoveLastActiveDeveloper($user, $scope, $isActive)) {
+        if ($this->wouldRemoveLastActiveDeveloper($user, $role, $isActive)) {
             return 'last_active_developer';
         }
 
-        $user->forceFill([
+        $user->forceFill(array_merge([
             'name' => $name,
             'email' => $email,
-            'branch_code' => $branch,
-            'access_scope' => $scope,
+            'access_scope' => $role->value,
             'is_active' => $isActive,
-        ])->save();
+        ], $this->branchAttributes($branch)))->save();
 
         if ($isSelf) {
-            if ($scope !== 'developer') {
+            if ($role !== UserAccessRole::Developer) {
                 session()->forget('developer_branch');
             } else {
-                session()->put('developer_branch', $branch);
+                $selectedBranch = $this->branches->normalizeAllowed((string) session('developer_branch', '')) ?? 'kutisari';
+                session()->put('developer_branch', $selectedBranch);
             }
         }
 
@@ -155,26 +162,27 @@ class DeveloperUserService
             $email = $username.'@rec.local';
         }
 
+        $attributes = [
+            'name' => 'Developer',
+            'email' => $email,
+            'password' => Hash::make($password),
+            'access_scope' => UserAccessRole::Developer->value,
+            'is_active' => true,
+        ];
+
         User::query()->updateOrCreate(
             ['username' => $username],
-            [
-                'name' => 'Developer',
-                'email' => $email,
-                'password' => Hash::make($password),
-                'branch_code' => 'kutisari',
-                'access_scope' => 'developer',
-                'is_active' => true,
-            ],
+            array_merge($attributes, $this->branchAttributes(null)),
         );
 
         return ['status' => 'ensured', 'username' => $username, 'email' => $email];
     }
 
-    private function wouldRemoveLastActiveDeveloper(User $user, string $newScope, bool $newIsActive): bool
+    private function wouldRemoveLastActiveDeveloper(User $user, UserAccessRole $newRole, bool $newIsActive): bool
     {
-        $wasActiveDeveloper = normalize_auth_access_scope((string) $user->access_scope) === 'developer'
+        $wasActiveDeveloper = UserAccessRole::fromStoredValue((string) $user->access_scope) === UserAccessRole::Developer
             && (bool) ($user->is_active ?? true);
-        $willBeActiveDeveloper = $newScope === 'developer' && $newIsActive;
+        $willBeActiveDeveloper = $newRole === UserAccessRole::Developer && $newIsActive;
 
         if (! $wasActiveDeveloper || $willBeActiveDeveloper) {
             return false;
@@ -185,6 +193,19 @@ class DeveloperUserService
             ->where('is_active', true)
             ->whereKeyNot($user->getKey())
             ->exists();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function branchAttributes(?string $branch): array
+    {
+        $attributes = ['branch_code' => $branch];
+        if (Schema::hasColumn('users', 'branch_id')) {
+            $attributes['branch_id'] = $this->branches->idForCode($branch);
+        }
+
+        return $attributes;
     }
 
     private function normalizeUsername(string $username): string

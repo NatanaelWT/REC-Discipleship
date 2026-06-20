@@ -59,9 +59,9 @@ class PublicMaterialManagementTest extends TestCase
         ]);
     }
 
-    public function test_central_user_can_upload_public_material_file(): void
+    public function test_developer_can_upload_public_material_file(): void
     {
-        $this->loginAsCentralUser();
+        $this->loginAsMaterialManager();
 
         $response = $this->post('/materi/materi_dg_1/upload', [
             'title' => 'Materi Baru Pusat',
@@ -155,9 +155,9 @@ class PublicMaterialManagementTest extends TestCase
         ]);
     }
 
-    public function test_central_user_can_rename_public_material_file(): void
+    public function test_developer_can_rename_public_material_file(): void
     {
-        $this->loginAsCentralUser();
+        $this->loginAsMaterialManager();
         $this->seedExistingMaterialFile();
 
         $response = $this->post('/materi/materi_dg_1/church_file_test/rename', [
@@ -185,6 +185,20 @@ class PublicMaterialManagementTest extends TestCase
         $response->assertForbidden();
         $this->assertDatabaseMissing('public_material_files', [
             'title' => 'Tidak Boleh',
+        ]);
+    }
+
+    public function test_central_discipleship_user_cannot_upload_public_material_file(): void
+    {
+        $this->actingAsRecUser('recpusat', null, 'pemuridan_pusat');
+
+        $this->post('/materi/materi_dg_1/upload', [
+            'title' => 'Tidak Boleh Pusat',
+            'material_file' => UploadedFile::fake()->create('tidak-boleh-pusat.pdf', 12, 'application/pdf'),
+        ])->assertForbidden();
+
+        $this->assertDatabaseMissing('public_material_files', [
+            'title' => 'Tidak Boleh Pusat',
         ]);
     }
 
@@ -268,9 +282,9 @@ class PublicMaterialManagementTest extends TestCase
         return public_material_folder_relative_path($menu->folder());
     }
 
-    private function loginAsCentralUser(): void
+    private function loginAsMaterialManager(): void
     {
-        $this->actingAsRecUser('recpusat', 'pusat', 'central_discipleship_readonly');
+        $this->actingAsRecUser('developer', null, 'developer');
     }
 
     private function deleteTestUploadFolders(): void

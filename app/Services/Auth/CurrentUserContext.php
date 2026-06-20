@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Enums\UserAccessRole;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -27,42 +28,86 @@ class CurrentUserContext
         return $this->isLoggedIn() ? trim((string) $this->user()?->username) : '';
     }
 
-    public function branch(): string
+    public function role(): UserAccessRole
     {
-        if ($this->isDeveloper()) {
-            $developerBranch = trim((string) Session::get('developer_branch', ''));
-            if ($developerBranch !== '') {
-                return normalize_user_branch($developerBranch);
-            }
+        if (! $this->isLoggedIn()) {
+            return UserAccessRole::DiscipleshipBranch;
         }
 
-        $branch = $this->isLoggedIn() ? (string) ($this->user()?->branch_code ?? 'kutisari') : 'kutisari';
+        return UserAccessRole::fromStoredValue((string) ($this->user()?->access_scope ?? ''));
+    }
 
-        return normalize_user_branch($branch);
+    public function featureRole(): string
+    {
+        return match ($this->role()) {
+            UserAccessRole::Developer => 'developer',
+            UserAccessRole::Steward => 'pelayan',
+            UserAccessRole::DiscipleshipBranch, UserAccessRole::DiscipleshipCentral => 'pemuridan',
+        };
+    }
+
+    public function branch(): ?string
+    {
+        if ($this->isDeveloper()) {
+            $developerBranch = normalize_user_branch((string) Session::get('developer_branch', ''));
+            if ($developerBranch === '') {
+                $developerBranch = 'kutisari';
+            }
+
+            return $developerBranch;
+        }
+
+        if (! $this->isDiscipleshipBranch()) {
+            return null;
+        }
+
+        $branch = normalize_user_branch((string) ($this->user()?->branch_code ?? ''));
+
+        return $branch !== '' ? $branch : null;
     }
 
     public function accessScope(): string
     {
         if (! $this->isLoggedIn()) {
-            return 'branch';
+            return UserAccessRole::DiscipleshipBranch->value;
         }
 
-        return normalize_auth_access_scope((string) ($this->user()?->access_scope ?? 'branch'));
+        return $this->role()->value;
     }
 
     public function isDeveloper(): bool
     {
-        return $this->isLoggedIn() && $this->accessScope() === 'developer';
+        return $this->isLoggedIn() && $this->role() === UserAccessRole::Developer;
+    }
+
+    public function isDiscipleshipBranch(): bool
+    {
+        return $this->isLoggedIn() && $this->role() === UserAccessRole::DiscipleshipBranch;
+    }
+
+    public function isDiscipleshipCentral(): bool
+    {
+        return $this->isLoggedIn() && $this->role() === UserAccessRole::DiscipleshipCentral;
+    }
+
+    public function isSteward(): bool
+    {
+        return $this->isLoggedIn() && $this->role() === UserAccessRole::Steward;
     }
 
     public function isCentralDiscipleshipReadonly(): bool
     {
-        return $this->isLoggedIn() && $this->accessScope() === 'central_discipleship_readonly';
+        return $this->isDiscipleshipCentral();
+    }
+
+    public function canAccessStewardship(): bool
+    {
+        return $this->isLoggedIn() && $this->role()->canAccessStewardship();
     }
 
     public function canAccessWorship(): bool
     {
-        return $this->isLoggedIn() && username_can_access_worship($this->username());
+        return $this->canAccessStewardship();
     }
 
     public function canAccessPage(string $page): bool
@@ -77,19 +122,18 @@ class CurrentUserContext
         }
 
         if (is_worship_page($page)) {
-            return $this->canAccessWorship();
+            return $this->canAccessStewardship();
         }
 
-        $scope = $this->accessScope();
-        if (is_worship_only_scope($scope)) {
+        if ($this->isSteward()) {
             return isset(worship_only_page_map()[$page]);
         }
 
-        if (is_discipleship_branch_scope($scope)) {
+        if ($this->isDiscipleshipBranch()) {
             return isset(restricted_branch_page_map()[$page]);
         }
 
-        if ($this->isCentralDiscipleshipReadonly()) {
+        if ($this->isDiscipleshipCentral()) {
             return isset(central_readonly_page_map()[$page]);
         }
 
@@ -108,23 +152,18 @@ class CurrentUserContext
         }
 
         if (is_worship_action($action)) {
-            return $this->canAccessWorship();
+            return $this->canAccessStewardship();
         }
 
-        if ($this->isCentralDiscipleshipReadonly() && is_discipleship_action($action)) {
-            return false;
-        }
-
-        $scope = $this->accessScope();
-        if (is_worship_only_scope($scope)) {
+        if ($this->isSteward()) {
             return isset(worship_only_action_map()[$action]);
         }
 
-        if (is_discipleship_branch_scope($scope)) {
+        if ($this->isDiscipleshipBranch()) {
             return isset(restricted_branch_action_map()[$action]);
         }
 
-        if ($this->isCentralDiscipleshipReadonly()) {
+        if ($this->isDiscipleshipCentral()) {
             return isset(central_readonly_action_map()[$action]);
         }
 
@@ -157,7 +196,7 @@ class CurrentUserContext
             return 'developer_dashboard';
         }
 
-        if ($this->canAccessWorship()) {
+        if ($this->canAccessStewardship()) {
             return 'worship_penatalayan';
         }
 
@@ -169,12 +208,11 @@ class CurrentUserContext
      */
     private function secureUploadPrefixes(): array
     {
-        $scope = $this->accessScope();
-        if (is_worship_only_scope($scope)) {
+        if ($this->isSteward()) {
             return [];
         }
 
-        if (is_discipleship_branch_scope($scope) || $this->isCentralDiscipleshipReadonly()) {
+        if ($this->isDiscipleshipBranch() || $this->isDiscipleshipCentral()) {
             return restricted_secure_upload_prefixes();
         }
 

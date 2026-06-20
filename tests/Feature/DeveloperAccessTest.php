@@ -31,7 +31,7 @@ class DeveloperAccessTest extends TestCase
     public function test_non_developer_cannot_open_developer_routes(): void
     {
         $this->createCoreTables();
-        $this->seedUser('branch_user', 'branch_user@rec.local', 'branch');
+        $this->seedUser('branch_user', 'branch_user@rec.local', 'pemuridan_cabang');
         $this->loginAs('branch_user');
 
         $this->get('/developer')->assertRedirect('/pemuridan/dashboard?error=access_denied');
@@ -79,7 +79,7 @@ class DeveloperAccessTest extends TestCase
             'email' => 'managed_user@rec.local',
             'password' => 'new-secret',
             'branch_code' => 'gm',
-            'access_scope' => 'branch',
+            'access_scope' => 'pemuridan_cabang',
             'is_active' => '1',
         ])->assertRedirect('/developer/users?status=created');
 
@@ -91,8 +91,7 @@ class DeveloperAccessTest extends TestCase
         $this->post('/developer/users/'.$managedUserId, [
             'name' => 'Managed User Updated',
             'email' => 'managed_user_updated@rec.local',
-            'branch_code' => 'darmo',
-            'access_scope' => 'worship_only',
+            'access_scope' => 'pelayan',
             'is_active' => '0',
         ])->assertRedirect('/developer/users?status=updated');
 
@@ -100,8 +99,8 @@ class DeveloperAccessTest extends TestCase
             'username' => 'managed_user',
             'name' => 'Managed User Updated',
             'email' => 'managed_user_updated@rec.local',
-            'branch_code' => 'darmo',
-            'access_scope' => 'worship_only',
+            'branch_code' => null,
+            'access_scope' => 'pelayan',
             'is_active' => false,
         ]);
 
@@ -122,7 +121,6 @@ class DeveloperAccessTest extends TestCase
         $this->post('/developer/users/'.$developerId, [
             'name' => 'Developer',
             'email' => 'developer@rec.local',
-            'branch_code' => 'kutisari',
             'access_scope' => 'developer',
             'is_active' => '0',
         ])->assertRedirect('/developer/users?error=self_deactivate');
@@ -131,7 +129,7 @@ class DeveloperAccessTest extends TestCase
             'name' => 'Developer',
             'email' => 'developer@rec.local',
             'branch_code' => 'kutisari',
-            'access_scope' => 'branch',
+            'access_scope' => 'pemuridan_cabang',
             'is_active' => '1',
         ])->assertRedirect('/developer/users?error=last_active_developer');
 
@@ -171,6 +169,55 @@ class DeveloperAccessTest extends TestCase
             ->assertSee('Developer debug aktif');
     }
 
+    public function test_user_management_uses_roles_and_has_no_central_branch_option(): void
+    {
+        $this->createCoreTables();
+        $this->seedDeveloper();
+        $this->loginAs('developer');
+
+        $this->get('/developer/users')
+            ->assertOk()
+            ->assertSee('Role')
+            ->assertSee('value="pemuridan_cabang"', false)
+            ->assertSee('value="pemuridan_pusat"', false)
+            ->assertSee('value="pelayan"', false)
+            ->assertSee('Tanpa cabang')
+            ->assertDontSee('value="pusat"', false);
+    }
+
+    public function test_steward_has_no_branch_and_cannot_access_discipleship_or_developer(): void
+    {
+        $this->createCoreTables();
+        $this->seedUser('keziaae', 'keziaae@rec.local', 'pelayan', ['branch_code' => null]);
+        $this->loginAs('keziaae');
+        RuntimeBootstrap::load();
+
+        $this->assertSame('', current_user_branch());
+        $this->assertTrue(current_user_can_access_worship());
+        $this->assertFalse(branch_can_access_page('', 'discipleship_dashboard'));
+        $this->assertTrue(branch_can_access_page('', 'worship_penatalayan'));
+        $this->get('/pemuridan/dashboard')->assertRedirect('/ibadah/penatalayan?error=access_denied');
+        $this->get('/developer')->assertRedirect('/ibadah/penatalayan?error=access_denied');
+    }
+
+    public function test_discipleship_branch_role_requires_a_branch(): void
+    {
+        $this->createCoreTables();
+        $this->seedDeveloper();
+        $this->loginAs('developer');
+
+        $this->post('/developer/users', [
+            'username' => 'missing_branch',
+            'name' => 'Missing Branch',
+            'email' => 'missing-branch@rec.local',
+            'password' => 'new-secret',
+            'access_scope' => 'pemuridan_cabang',
+            'is_active' => '1',
+        ])->assertRedirect('/developer/users?error=branch_invalid');
+
+        $this->assertDatabaseMissing('users', ['username' => 'missing_branch']);
+    }
+
     private function createCoreTables(): void
     {
         Schema::dropIfExists('app_configs');
@@ -186,8 +233,8 @@ class DeveloperAccessTest extends TestCase
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
-            $table->string('branch_code', 40)->default('kutisari')->index();
-            $table->string('access_scope', 80)->default('branch');
+            $table->string('branch_code', 40)->nullable()->index();
+            $table->string('access_scope', 80)->default('pemuridan_cabang');
             $table->boolean('is_active')->default(true);
             $table->timestamp('last_login_at')->nullable();
             $table->timestamps();
@@ -240,6 +287,7 @@ class DeveloperAccessTest extends TestCase
     {
         return $this->seedUser('developer', 'developer@rec.local', 'developer', [
             'password' => Hash::make('secret-dev'),
+            'branch_code' => null,
         ]);
     }
 
@@ -253,7 +301,7 @@ class DeveloperAccessTest extends TestCase
             'name' => ucfirst(str_replace('_', ' ', $username)),
             'email' => $email,
             'password' => 'secret-test',
-            'branch_code' => 'kutisari',
+            'branch_code' => $scope === 'pemuridan_cabang' ? 'kutisari' : null,
             'access_scope' => $scope,
             'is_active' => true,
             'created_at' => '2026-06-19 08:00:00',

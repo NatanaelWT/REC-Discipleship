@@ -7,7 +7,6 @@ use App\Http\Requests\DifficultQuestions\AnswerDifficultQuestionRequest;
 use App\Models\DifficultQuestion;
 use App\Services\DifficultQuestions\DifficultQuestionAdminPageData;
 use App\Services\DifficultQuestions\DifficultQuestionTextNormalizer;
-use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,16 +14,9 @@ use Illuminate\View\View;
 
 class DifficultQuestionController extends Controller
 {
-    public function index(Request $request, DifficultQuestionAdminPageData $pageData): RedirectResponse|View
+    public function index(Request $request, DifficultQuestionAdminPageData $pageData): View
     {
         RuntimeBootstrap::boot($request);
-
-        if (! can_manage_difficult_questions()) {
-            return redirect(AppPageRouteMap::pageUrl(
-                branch_home_page(current_user_branch()),
-                ['error' => 'access_denied'],
-            ));
-        }
 
         return view('discipleship.difficult-questions.index', $pageData->forRequest($request));
     }
@@ -43,10 +35,7 @@ class DifficultQuestionController extends Controller
         RuntimeBootstrap::boot($request);
 
         if (! can_manage_difficult_questions()) {
-            return redirect(AppPageRouteMap::pageUrl(
-                branch_home_page(current_user_branch()),
-                ['error' => 'access_denied'],
-            ));
+            return redirect()->route('discipleship.difficult-questions', ['error' => 'access_denied']);
         }
 
         $publicId = trim((string) $request->input('id', ''));

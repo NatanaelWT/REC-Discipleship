@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -18,12 +19,32 @@ class DiscipleshipPeopleListTest extends TestCase
     public function test_people_list_page_renders_for_logged_in_branch_user(): void
     {
         $this->createDiscipleshipTables();
+        DB::table('discipleship_people')->insert([
+            [
+                'public_id' => 'person-kutisari',
+                'branch_code' => 'kutisari',
+                'full_name' => 'Anggota Kutisari',
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'public_id' => 'person-gm',
+                'branch_code' => 'gm',
+                'full_name' => 'Anggota GM Rahasia',
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
         $this->actingAsRecUser();
 
         $response = $this->get('/pemuridan/anggota');
 
         $response->assertStatus(200);
         $response->assertSee('Daftar Anggota DG');
+        $response->assertSee('Anggota Kutisari');
+        $response->assertDontSee('Anggota GM Rahasia');
     }
 
     private function createDiscipleshipTables(): void

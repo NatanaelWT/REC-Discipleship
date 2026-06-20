@@ -7,7 +7,7 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
-    protected function actingAsRecUser(string $username = 'tester', string $branch = 'kutisari', string $scope = 'branch'): User
+    protected function actingAsRecUser(string $username = 'tester', ?string $branch = 'kutisari', string $scope = 'pemuridan_cabang'): User
     {
         $user = new User;
         $user->forceFill([

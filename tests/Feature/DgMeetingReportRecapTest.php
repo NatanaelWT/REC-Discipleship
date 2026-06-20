@@ -31,6 +31,21 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertSee('Materi Test');
     }
 
+    public function test_central_discipleship_user_can_view_and_filter_all_branches(): void
+    {
+        $this->createTables();
+        $this->seedReport();
+        $this->actingAsRecUser('recpusat', null, 'pemuridan_pusat');
+
+        $this->get('/pemuridan/laporan-dg?rekap_cabang=all')
+            ->assertOk()
+            ->assertSee('Materi Test');
+
+        $this->get('/pemuridan/laporan-dg?rekap_cabang=gm')
+            ->assertOk()
+            ->assertDontSee('Materi Test');
+    }
+
     private function createTables(): void
     {
         Schema::dropIfExists('discipleship_meeting_report_photos');

@@ -40,12 +40,13 @@ class DifficultQuestionAdminTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Pertanyaan Sulit');
         $response->assertSee('Apa arti pemuridan?');
+        $response->assertDontSee('name="answer_text"', false);
     }
 
     public function test_admin_can_save_answer_through_laravel_route(): void
     {
         $this->createDifficultQuestionsTable();
-        $this->loginAsCentralDiscipleshipAdmin();
+        $this->actingAsRecUser('developer', null, 'developer');
 
         DB::table('difficult_questions')->insert([
             'public_id' => 'dq_test_2',
@@ -70,7 +71,7 @@ class DifficultQuestionAdminTest extends TestCase
             'public_id' => 'dq_test_2',
             'status' => 'answered',
             'answer' => 'Jawaban dari admin.',
-            'answered_by_username' => 'admin_pusat',
+            'answered_by_username' => 'developer',
         ]);
     }
 
@@ -102,6 +103,36 @@ class DifficultQuestionAdminTest extends TestCase
         $response->assertSee('Jawaban publik tersedia.');
     }
 
+    public function test_central_discipleship_user_cannot_save_an_answer(): void
+    {
+        $this->createDifficultQuestionsTable();
+        $this->loginAsCentralDiscipleshipAdmin();
+
+        $questionId = DB::table('difficult_questions')->insertGetId([
+            'public_id' => 'dq_readonly',
+            'asker_name' => 'Tester',
+            'question' => 'Pertanyaan read only',
+            'password_hash' => null,
+            'password_lookup_hash' => 'lookup-readonly',
+            'status' => 'pending',
+            'answer' => null,
+            'answered_by_username' => null,
+            'answered_at' => null,
+            'created_at' => '2026-06-13 08:00:00',
+            'updated_at' => '2026-06-13 08:00:00',
+        ]);
+
+        $this->post('/pemuridan/pertanyaan-sulit/dq_readonly/jawaban', [
+            'answer_text' => 'Tidak boleh disimpan.',
+        ])->assertRedirect('/pemuridan/dashboard?error=access_denied');
+
+        $this->assertDatabaseHas('difficult_questions', [
+            'id' => $questionId,
+            'status' => 'pending',
+            'answer' => null,
+        ]);
+    }
+
     private function createDifficultQuestionsTable(): void
     {
         Schema::dropIfExists('difficult_questions');
@@ -123,6 +154,6 @@ class DifficultQuestionAdminTest extends TestCase
 
     private function loginAsCentralDiscipleshipAdmin(): void
     {
-        $this->actingAsRecUser('admin_pusat', 'pusat', 'central_discipleship_readonly');
+        $this->actingAsRecUser('admin_pusat', null, 'pemuridan_pusat');
     }
 }

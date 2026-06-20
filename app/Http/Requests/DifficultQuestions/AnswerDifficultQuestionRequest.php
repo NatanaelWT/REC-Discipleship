@@ -17,7 +17,8 @@ class AnswerDifficultQuestionRequest extends FormRequest
         RuntimeBootstrap::boot($this);
         $context = app(CurrentUserContext::class);
 
-        return $context->canAccessPage('difficult_questions_admin');
+        return $context->canAccessPage('difficult_questions_admin')
+            && $context->canUseAction('save_difficult_question_answer');
     }
 
     protected function prepareForValidation()

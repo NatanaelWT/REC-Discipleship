@@ -26,7 +26,7 @@
       <div class="public-question-head">
         <span class="public-question-kicker">Pertanyaan Sulit</span>
         <h2>Unggah Pertanyaan Sulit</h2>
-        <p>Buat password pribadi saat mengirim pertanyaan. Password ini dipakai untuk membuka jawaban setelah admin pusat menjawab.</p>
+        <p>Buat password pribadi saat mengirim pertanyaan. Password ini dipakai untuk membuka jawaban setelah tim pengelola menjawab.</p>
       </div>
       <form method="post" action="{{ route('public.difficult-question.store') }}" class="form-grid public-question-form">
         @csrf

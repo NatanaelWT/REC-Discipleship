@@ -4,6 +4,6 @@
   @if ($questionItem['status'] === 'answered' && $questionItem['answerText'] !== '')
     <div class="public-answer-response"><strong>Jawaban</strong><div>{!! nl2br(e($questionItem['answerText'])) !!}</div>@if ($questionItem['answeredLabel'] !== '')<span>Dijawab: {{ $questionItem['answeredLabel'] }}</span>@endif</div>
   @else
-    <div class="panel-note">Pertanyaan ini belum dijawab oleh admin pusat.</div>
+    <div class="panel-note">Pertanyaan ini belum dijawab oleh tim pengelola.</div>
   @endif
 </article>
