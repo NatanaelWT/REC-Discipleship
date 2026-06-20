@@ -46,6 +46,19 @@ class DgMeetingReportRecapTest extends TestCase
             ->assertDontSee('Materi Test');
     }
 
+    public function test_public_dg_form_normalizes_numeric_ids_for_javascript_selects(): void
+    {
+        $this->createTables();
+        $this->seedReport();
+
+        $this->get('/publik/jurnal-dg/kutisari/laporan')
+            ->assertOk()
+            ->assertSee('Pemimpin Test')
+            ->assertSee("groupRow.id = String(groupRow.id || '');", false)
+            ->assertSee("groupRow.leader_id = String(groupRow.leader_id || '');", false)
+            ->assertSee("memberRow.id = String(memberRow.id || '');", false);
+    }
+
     private function createTables(): void
     {
         Schema::dropIfExists('discipleship_meeting_reports');

@@ -194,7 +194,20 @@
     (function () {
       var form = document.querySelector('[data-public-member-feedback-form]');
       if (!form) { return; }
-      var groups = {!! \Illuminate\Support\Js::from($groupOptions) !!};
+      var rawGroups = {!! \Illuminate\Support\Js::from($groupOptions) !!};
+      var groups = rawGroups.map(function (groupRow) {
+        if (!groupRow || typeof groupRow !== 'object') { return groupRow; }
+        groupRow.id = String(groupRow.id || '');
+        groupRow.leader_id = String(groupRow.leader_id || '');
+        if (Array.isArray(groupRow.members)) {
+          groupRow.members.forEach(function (memberRow) {
+            if (memberRow && typeof memberRow === 'object') {
+              memberRow.id = String(memberRow.id || '');
+            }
+          });
+        }
+        return groupRow;
+      });
       var groupSelect = form.querySelector('[data-feedback-group]');
       var respondentSelect = form.querySelector('[data-feedback-respondent]');
       var sessionSelect = form.querySelector('[data-feedback-session]');

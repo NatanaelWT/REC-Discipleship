@@ -181,7 +181,20 @@
     (function () {
       var form = document.querySelector('[data-dg-public-form]');
       if (!form) { return; }
-      var groups = {!! \Illuminate\Support\Js::from($groupOptions) !!};
+      var rawGroups = {!! \Illuminate\Support\Js::from($groupOptions) !!};
+      var groups = rawGroups.map(function (groupRow) {
+        if (!groupRow || typeof groupRow !== 'object') { return groupRow; }
+        groupRow.id = String(groupRow.id || '');
+        groupRow.leader_id = String(groupRow.leader_id || '');
+        if (Array.isArray(groupRow.members)) {
+          groupRow.members.forEach(function (memberRow) {
+            if (memberRow && typeof memberRow === 'object') {
+              memberRow.id = String(memberRow.id || '');
+            }
+          });
+        }
+        return groupRow;
+      });
       var selectedAbsent = new Set({!! \Illuminate\Support\Js::from($oldAbsentMemberIds) !!});
       var selectedSharer = new Set({!! \Illuminate\Support\Js::from($oldMeditationSharerIds) !!});
       var leaderSelect = form.querySelector('[data-dg-leader]');
