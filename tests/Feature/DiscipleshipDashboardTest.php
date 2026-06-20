@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\DiscipleshipDashboard\DiscipleshipDashboardSummaryQuery;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -89,6 +90,69 @@ class DiscipleshipDashboardTest extends TestCase
         foreach ($queries as $query) {
             $this->assertStringNotContainsString('select *', strtolower((string) $query['query']));
         }
+    }
+
+    public function test_dashboard_summary_preserves_historical_achievements_and_mentor_leaders(): void
+    {
+        $this->createDashboardTables();
+        $this->seedDashboardData();
+
+        $memberId = (int) DB::table('discipleship_people')->where('full_name', 'Anggota Dashboard')->value('id');
+        $groupId = (int) DB::table('discipleship_groups')->where('name', 'Kelompok Dashboard')->value('id');
+        $mentorId = DB::table('discipleship_people')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Mentor Tanpa Kelompok',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('msk_participants')->insert([
+            'branch_id' => 1,
+            'discipleship_person_id' => $memberId,
+            'full_name' => 'Alumni MSK Dashboard',
+            'journey_bridge_status' => 'sudah_kgap',
+            'status' => 'inactive',
+            'session_numbers' => json_encode(range(1, 12)),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            'branch_id' => 1,
+            'discipleship_group_id' => $groupId,
+            'person_id' => $memberId,
+            'role' => 'member',
+            'stage' => 'DG 1',
+            'status' => 'completed',
+            'started_on' => '2026-01-01',
+            'ended_on' => '2026-05-01',
+            'end_reason' => 'stage_transition',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_relationships')->insert([
+            'branch_id' => 1,
+            'mentor_person_id' => $mentorId,
+            'disciple_person_id' => $memberId,
+            'context_group_id' => $groupId,
+            'relation_type' => 'discipleship',
+            'status' => 'active',
+            'start_date' => '2026-01-01',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAsRecUser();
+        $summary = app(DiscipleshipDashboardSummaryQuery::class)->get();
+        $journey = collect($summary['journeyProgressRows'])->keyBy('label');
+        $stats = collect($summary['summaryStats'])->keyBy('label');
+
+        $this->assertSame(1, $journey['Selesai MSK']['value']);
+        $this->assertSame(1, $journey['Selesai DG 1']['value']);
+        $this->assertSame(1, $journey['Selesai Kamp GAP']['value']);
+        $this->assertSame(2, $stats['Pemimpin Aktif']['value']);
+        $this->assertSame(1, $stats['Belum Selesai MSK']['value']);
     }
 
     public function test_incomplete_msk_section_caps_page_size_at_fifty(): void

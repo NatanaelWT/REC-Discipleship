@@ -44,6 +44,7 @@ class DiscipleshipDashboardSummaryQuery
             $this->mergeRows($metrics, $this->peopleRows($branchIds));
             $this->mergeRows($metrics, $this->groupRows($branchIds));
             $this->mergeRows($metrics, $this->groupPeopleRows($branchIds));
+            $this->mergeRows($metrics, $this->leaderRows($branchIds));
             $this->mergeRows($metrics, $this->meetingRows($branchIds));
             $this->mergeRows($metrics, $this->mskRows($branchIds));
             $this->mergeRows($metrics, $this->completedJourneyRows($branchIds));
@@ -136,9 +137,35 @@ class DiscipleshipDashboardSummaryQuery
             ->where('gp.status', 'active')
             ->whereNull('gp.ended_on')
             ->selectRaw("gp.branch_id,
-                COUNT(DISTINCT CASE WHEN gp.role = 'member' THEN gp.person_id END) AS active_people_count,
-                COUNT(DISTINCT CASE WHEN gp.role <> 'member' THEN gp.person_id END) AS leader_count")
+                COUNT(DISTINCT CASE WHEN gp.role = 'member' THEN gp.person_id END) AS active_people_count")
             ->groupBy('gp.branch_id')->get());
+    }
+
+    /** @param array<int, int> $branchIds */
+    private function leaderRows(array $branchIds): Collection
+    {
+        return $this->query(static fn () => DB::table('discipleship_people as p')
+            ->leftJoin('discipleship_group_people as gp', function ($join): void {
+                $join->on('gp.person_id', '=', 'p.id')
+                    ->on('gp.branch_id', '=', 'p.branch_id')
+                    ->where('gp.role', '<>', 'member')
+                    ->whereNotIn('gp.status', ['inactive', 'archived', 'closed', 'completed'])
+                    ->whereNull('gp.ended_on');
+            })
+            ->leftJoin('discipleship_relationships as relationship', function ($join): void {
+                $join->on('relationship.mentor_person_id', '=', 'p.id')
+                    ->on('relationship.branch_id', '=', 'p.branch_id')
+                    ->whereNotIn('relationship.status', ['inactive', 'archived', 'closed', 'completed'])
+                    ->whereNull('relationship.end_date');
+            })
+            ->whereIn('p.branch_id', $branchIds)
+            ->where('p.status', 'active')
+            ->where(function ($query): void {
+                $query->whereNotNull('gp.id')
+                    ->orWhereNotNull('relationship.id');
+            })
+            ->selectRaw('p.branch_id, COUNT(DISTINCT p.id) AS leader_count')
+            ->groupBy('p.branch_id')->get());
     }
 
     /** @param array<int, int> $branchIds */
@@ -162,10 +189,10 @@ class DiscipleshipDashboardSummaryQuery
             ->whereIn('branch_id', $branchIds)
             ->selectRaw("branch_id,
                 SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS msk_active_count,
-                SUM(CASE WHEN status = 'active' AND {$sessions} >= 12 THEN 1 ELSE 0 END) AS completed_msk_count,
+                SUM(CASE WHEN {$sessions} >= 12 THEN 1 ELSE 0 END) AS completed_msk_count,
                 SUM(CASE WHEN status = 'active' AND {$sessions} < 12 THEN 1 ELSE 0 END) AS incomplete_msk_count,
-                SUM(CASE WHEN status = 'active' AND journey_bridge_status IN ('sudah_kgap', 'ikut_keduanya') THEN 1 ELSE 0 END) AS following_kgap_count,
-                SUM(CASE WHEN status = 'active' AND journey_bridge_status IN ('sudah_rg', 'ikut_keduanya') THEN 1 ELSE 0 END) AS following_rg_count")
+                SUM(CASE WHEN journey_bridge_status IN ('sudah_kgap', 'ikut_keduanya') THEN 1 ELSE 0 END) AS following_kgap_count,
+                SUM(CASE WHEN journey_bridge_status IN ('sudah_rg', 'ikut_keduanya') THEN 1 ELSE 0 END) AS following_rg_count")
             ->groupBy('branch_id')->get());
     }
 
@@ -180,12 +207,11 @@ class DiscipleshipDashboardSummaryQuery
                     ->on('mp.branch_id', '=', 'gp.branch_id');
             })
             ->whereIn('gp.branch_id', $branchIds)
-            ->where('mp.status', 'active')
             ->where('gp.role', 'member')
             ->selectRaw("gp.branch_id,
-                COUNT(DISTINCT CASE WHEN gp.stage IN ('DG 2', 'DG 3') OR (gp.stage = 'DG 1' AND gp.end_reason IN ({$reasons})) THEN gp.person_id END) AS completed_dg1_count,
-                COUNT(DISTINCT CASE WHEN gp.stage = 'DG 3' OR (gp.stage = 'DG 2' AND gp.end_reason IN ({$reasons})) THEN gp.person_id END) AS completed_dg2_count,
-                COUNT(DISTINCT CASE WHEN gp.stage = 'DG 3' AND gp.end_reason IN ({$reasons}) THEN gp.person_id END) AS completed_dg3_count")
+                COUNT(DISTINCT CASE WHEN gp.stage IN ('DG 2', 'DG 3') OR (gp.stage = 'DG 1' AND gp.end_reason IN ({$reasons})) THEN mp.id END) AS completed_dg1_count,
+                COUNT(DISTINCT CASE WHEN gp.stage = 'DG 3' OR (gp.stage = 'DG 2' AND gp.end_reason IN ({$reasons})) THEN mp.id END) AS completed_dg2_count,
+                COUNT(DISTINCT CASE WHEN gp.stage = 'DG 3' AND gp.end_reason IN ({$reasons}) THEN mp.id END) AS completed_dg3_count")
             ->groupBy('gp.branch_id')->get());
     }
 
