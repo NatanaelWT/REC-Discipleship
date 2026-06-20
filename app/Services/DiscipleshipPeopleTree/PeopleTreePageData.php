@@ -22,11 +22,8 @@ class PeopleTreePageData
             ? normalize_central_recap_branch(central_recap_selected_branch())
             : normalize_public_branch_code(current_user_branch());
 
-        $deferAllBranches = $centralReadOnly && $selectedBranch === 'all';
-        $branchCodes = $deferAllBranches
-            ? []
-            : $this->modelStore->branchCodesForSelection($selectedBranch, $centralReadOnly);
-        $data = $this->cache->remember('people-tree', [...$branchCodes, $centralReadOnly ? 'central' : 'branch'], function () use ($branchCodes, $centralReadOnly, $selectedBranch, $deferAllBranches): array {
+        $branchCodes = $this->modelStore->branchCodesForSelection($selectedBranch, $centralReadOnly);
+        $data = $this->cache->remember('people-tree', [...$branchCodes, $centralReadOnly ? 'central' : 'branch'], function () use ($branchCodes, $centralReadOnly, $selectedBranch): array {
             $members = [];
             $mskClasses = $this->modelStore->participantsForBranches($branchCodes, $centralReadOnly);
             $discipleshipV2Model = $this->modelStore->modelForContext($branchCodes, $centralReadOnly);
@@ -36,7 +33,6 @@ class PeopleTreePageData
                 'page' => 'people_tree',
                 'centralReadOnly' => $centralReadOnly,
                 'centralSelectedBranch' => $selectedBranch,
-                'peopleTreeDeferredAllBranches' => $deferAllBranches,
                 'members' => $members,
                 'mskClasses' => $mskClasses,
                 'people' => $people,

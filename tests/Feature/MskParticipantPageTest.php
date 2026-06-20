@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\MskParticipants\MskParticipantExportService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -36,6 +37,63 @@ class MskParticipantPageTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Kelas MSK');
+    }
+
+    public function test_central_and_developer_see_export_without_import_controls(): void
+    {
+        $this->createMskTables();
+
+        $this->actingAsRecUser('central_reader', null, 'pemuridan_pusat');
+        $this->get('/pemuridan/msk?branch_id=all')
+            ->assertOk()
+            ->assertSee('Export MSK')
+            ->assertDontSee('Import MSK')
+            ->assertDontSee('data-msk-create-open', false);
+
+        $this->actingAsRecUser('developer', null, 'developer');
+        $this->get('/pemuridan/msk?branch_id=all')
+            ->assertOk()
+            ->assertSee('Export MSK')
+            ->assertDontSee('Import MSK')
+            ->assertDontSee('data-msk-create-open', false);
+    }
+
+    public function test_central_can_export_but_cannot_import_msk_data(): void
+    {
+        $this->createMskTables();
+        $this->mock(MskParticipantExportService::class)
+            ->shouldReceive('export')
+            ->once()
+            ->andReturn(redirect('/pemuridan/msk?exported=1'));
+        $this->actingAsRecUser('central_reader', null, 'pemuridan_pusat');
+
+        $this->post('/pemuridan/msk/ekspor', [
+            'action' => 'export_pemuridan_excel',
+            'batch_month' => 'all',
+        ])->assertRedirect('/pemuridan/msk?exported=1');
+
+        $this->post('/pemuridan/msk/impor', [
+            'action' => 'import_pemuridan_excel',
+        ])->assertRedirect('/pemuridan/dashboard?error=access_denied');
+    }
+
+    public function test_developer_can_export_but_cannot_import_msk_data(): void
+    {
+        $this->createMskTables();
+        $this->mock(MskParticipantExportService::class)
+            ->shouldReceive('export')
+            ->once()
+            ->andReturn(redirect('/pemuridan/msk?exported=1'));
+        $this->actingAsRecUser('developer', null, 'developer');
+
+        $this->post('/pemuridan/msk/ekspor', [
+            'action' => 'export_pemuridan_excel',
+            'batch_month' => 'all',
+        ])->assertRedirect('/pemuridan/msk?exported=1');
+
+        $this->post('/pemuridan/msk/impor', [
+            'action' => 'import_pemuridan_excel',
+        ])->assertRedirect('/developer?error=access_denied');
     }
 
     public function test_msk_page_paginates_large_participant_lists(): void

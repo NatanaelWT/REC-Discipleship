@@ -507,13 +507,13 @@ if ($page === 'msk_classes') {
         echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
         echo "        <label class=\"btn tiny msk-import-trigger\" aria-label=\"Import Data Kelas MSK\" title=\"Import Data Kelas MSK\">Import MSK<input class=\"msk-import-input\" type=\"file\" name=\"import_pemuridan_excel\" accept=\".xlsx\" onchange=\"this.form.submit()\"></label>\n";
         echo "      </form>\n";
-        echo '      <form method="post" action="'.h($mskExportAction)."\" class=\"msk-export-inline-form\">\n";
-        echo '        '.csrf_field()."\n";
-        echo "        <input type=\"hidden\" name=\"action\" value=\"export_pemuridan_excel\">\n";
-        echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
-        echo "        <button class=\"btn tiny ghost\" type=\"submit\">Export MSK</button>\n";
-        echo "      </form>\n";
     }
+    echo '      <form method="post" action="'.h($mskExportAction)."\" class=\"msk-export-inline-form\">\n";
+    echo '        '.csrf_field()."\n";
+    echo "        <input type=\"hidden\" name=\"action\" value=\"export_pemuridan_excel\">\n";
+    echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
+    echo "        <button class=\"btn tiny ghost\" type=\"submit\">Export MSK</button>\n";
+    echo "      </form>\n";
     if (count($batchMonthOptions) > 0) {
         echo '      <form method="get" action="'.h($mskIndexAction)."\" class=\"form-row cash-filter-form\">\n";
         if (request()->filled('branch_id')) {

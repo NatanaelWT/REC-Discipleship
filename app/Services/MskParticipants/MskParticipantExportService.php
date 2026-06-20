@@ -3,6 +3,7 @@
 namespace App\Services\MskParticipants;
 
 use App\Http\Requests\MskParticipants\ExportMskParticipantsRequest;
+use App\Services\Discipleship\CurrentDiscipleshipScope;
 use Illuminate\Http\RedirectResponse;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -10,6 +11,7 @@ class MskParticipantExportService
 {
     public function __construct(
         private readonly MskParticipantTableData $tableData,
+        private readonly CurrentDiscipleshipScope $scope,
     ) {}
 
     public function export(ExportMskParticipantsRequest $request): BinaryFileResponse|RedirectResponse
@@ -17,7 +19,14 @@ class MskParticipantExportService
         $batchMonth = $request->batchMonth();
         $batchMonthParam = $batchMonth !== '' ? ['batch_month' => $batchMonth] : [];
 
-        $participantsToExport = $this->tableData->participantsForBranches([normalize_public_branch_code(current_user_branch())]);
+        $branchCodes = [];
+        foreach ($this->scope->branchIds() as $branchId) {
+            $branchCode = $this->scope->optionsById()[$branchId]['slug'] ?? '';
+            if ($branchCode !== '') {
+                $branchCodes[] = $branchCode;
+            }
+        }
+        $participantsToExport = $this->tableData->participantsForBranches($branchCodes);
         usort($participantsToExport, static function ($a, $b): int {
             return strcasecmp((string) ($a['full_name'] ?? ''), (string) ($b['full_name'] ?? ''));
         });
@@ -36,7 +45,7 @@ class MskParticipantExportService
             return redirect()->route('discipleship.msk-classes', $batchMonthParam + ['error' => $error]);
         }
 
-        $branchLabel = sanitize_file_name_component((string) current_user_branch(), 'cabang');
+        $branchLabel = sanitize_file_name_component($this->scope->selectedSlug(), 'cabang');
         $filterLabel = $batchMonth === 'all' ? 'semua-batch' : ($batchMonth !== '' ? $batchMonth : 'semua-data');
         $downloadName = 'kelas-msk-'.$branchLabel.'-'.$filterLabel.'.xlsx';
         $downloadName = preg_replace('/[\x00-\x1F\x7F"\\\\]+/', '_', $downloadName) ?? 'kelas-msk.xlsx';

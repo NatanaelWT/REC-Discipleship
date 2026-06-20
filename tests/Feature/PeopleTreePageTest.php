@@ -42,7 +42,7 @@ class PeopleTreePageTest extends TestCase
         $response->assertDontSee('?page=people_tree', false);
     }
 
-    public function test_central_all_branch_tree_defers_people_until_a_branch_is_selected(): void
+    public function test_central_all_branch_tree_renders_people_from_every_branch(): void
     {
         $this->createTables();
         $this->seedPeopleTree();
@@ -53,8 +53,8 @@ class PeopleTreePageTest extends TestCase
         $allBranches->assertOk()
             ->assertSee('Semua Cabang')
             ->assertSee('Kutisari')
-            ->assertDontSee('Leader Test');
-        $this->assertLessThan(100 * 1024, strlen((string) $allBranches->getContent()));
+            ->assertSee('Leader Test')
+            ->assertSee('Anggota Test');
 
         $this->get('/pemuridan/pohon?branch_id=1')
             ->assertOk()
