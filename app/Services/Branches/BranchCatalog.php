@@ -3,133 +3,168 @@
 namespace App\Services\Branches;
 
 use App\Models\Branch;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Throwable;
 
 class BranchCatalog
 {
+    private const CACHE_KEY = 'rec.branch-catalog.v2';
+
+    /** @var array<int, array{id:int,slug:string,label:string,active:bool}>|null */
+    private ?array $allOptions = null;
+
+    /** @var array<int, array{id:int,slug:string,label:string}> */
+    private array $activeOptions = [];
+
+    /** @var array<int, array{id:int,slug:string,label:string,active:bool}> */
+    private array $optionsById = [];
+
+    /** @var array<string, array{id:int,slug:string,label:string,active:bool}> */
+    private array $activeOptionsBySlug = [];
+
     /**
      * @return array<int, array{id:int|null,slug:string,label:string}>
      */
     public function options(bool $activeOnly = true): array
     {
-        try {
-            if (Schema::hasTable('branches')) {
-                $query = Branch::query()->orderBy('label');
-                if ($activeOnly && Schema::hasColumn('branches', 'is_active')) {
-                    $query->where('is_active', true);
-                }
+        $this->load();
 
-                $columns = ['id', 'label'];
-                if (Schema::hasColumn('branches', 'code')) {
-                    $columns[] = 'code';
-                }
-
-                $options = $query->get($columns)
-                    ->map(fn (Branch $branch): array => [
-                        'id' => (int) $branch->id,
-                        'slug' => $this->slugForBranch($branch),
-                        'label' => trim((string) $branch->label),
-                    ])
-                    ->filter(static fn (array $option): bool => $option['slug'] !== '' && $option['slug'] !== 'pusat')
-                    ->values()
-                    ->all();
-
-                if ($options !== []) {
-                    return $options;
-                }
-            }
-        } catch (Throwable) {
-            // Database-less test and install flows use the canonical fallback below.
+        if ($activeOnly) {
+            return $this->activeOptions;
         }
 
-        return self::fallbackOptions();
+        return array_map($this->publicOption(...), $this->allOptions ?? []);
     }
 
     public function idForSlug(string $slug): ?int
     {
-        $slug = $this->normalizeSlug($slug);
-        if ($slug === '') {
-            return null;
-        }
+        $this->load();
+        $slug = Str::slug(trim($slug));
 
-        foreach ($this->options() as $option) {
-            if ($option['slug'] === $slug && $option['id'] !== null) {
-                return $option['id'];
-            }
-        }
-
-        return null;
+        return $this->activeOptionsBySlug[$slug]['id'] ?? null;
     }
 
     public function slugForId(int|string|null $branchId): string
     {
+        $this->load();
         $branchId = filter_var($branchId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        if ($branchId === false) {
-            return '';
-        }
 
-        foreach ($this->options(false) as $option) {
-            if ($option['id'] === $branchId) {
-                return $option['slug'];
-            }
-        }
-
-        return '';
+        return $branchId !== false ? ($this->optionsById[$branchId]['slug'] ?? '') : '';
     }
 
     public function labelForId(int|string|null $branchId): string
     {
+        $this->load();
         $branchId = filter_var($branchId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        if ($branchId === false) {
-            return 'Tanpa cabang';
-        }
 
-        foreach ($this->options(false) as $option) {
-            if ($option['id'] === $branchId) {
-                return $option['label'];
-            }
-        }
-
-        return 'Tanpa cabang';
+        return $branchId !== false ? ($this->optionsById[$branchId]['label'] ?? 'Tanpa cabang') : 'Tanpa cabang';
     }
 
     public function isActiveId(int|string|null $branchId): bool
     {
+        $this->load();
         $branchId = filter_var($branchId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        if ($branchId === false) {
-            return false;
-        }
 
-        foreach ($this->options() as $option) {
-            if ($option['id'] === $branchId) {
-                return true;
-            }
-        }
-
-        return false;
+        return $branchId !== false && ($this->optionsById[$branchId]['active'] ?? false);
     }
 
     public function normalizeSlug(string $slug): string
     {
+        $this->load();
         $slug = Str::slug(trim($slug));
-        foreach ($this->options() as $option) {
-            if ($option['slug'] === $slug) {
-                return $slug;
-            }
-        }
 
-        return '';
+        return isset($this->activeOptionsBySlug[$slug]) ? $slug : '';
     }
 
-    private function slugForBranch(Branch $branch): string
+    public function clearCache(): void
     {
-        $storedCode = Schema::hasColumn('branches', 'code')
-            ? trim((string) $branch->getAttribute('code'))
-            : '';
+        Cache::store($this->cacheStore())->forget(self::CACHE_KEY);
+        $this->allOptions = null;
+        $this->activeOptions = [];
+        $this->optionsById = [];
+        $this->activeOptionsBySlug = [];
+    }
 
-        return Str::slug($storedCode !== '' ? $storedCode : (string) $branch->label);
+    private function load(): void
+    {
+        if ($this->allOptions !== null) {
+            return;
+        }
+
+        try {
+            $options = Cache::store($this->cacheStore())->remember(
+                self::CACHE_KEY,
+                now()->addMinutes(5),
+                fn (): array => $this->databaseOptions(),
+            );
+        } catch (Throwable) {
+            $options = self::fallbackOptionsWithState();
+        }
+
+        if (! is_array($options) || $options === []) {
+            $options = self::fallbackOptionsWithState();
+        }
+
+        $this->allOptions = array_values($options);
+        foreach ($this->allOptions as $option) {
+            $this->optionsById[$option['id']] = $option;
+            if (! $option['active']) {
+                continue;
+            }
+
+            $publicOption = $this->publicOption($option);
+            $this->activeOptions[] = $publicOption;
+            $this->activeOptionsBySlug[$option['slug']] = $option;
+        }
+    }
+
+    /** @return array<int, array{id:int,slug:string,label:string,active:bool}> */
+    private function databaseOptions(): array
+    {
+        return Branch::query()
+            ->orderBy('label')
+            ->get(['id', 'label', 'is_active'])
+            ->map(static function (Branch $branch): array {
+                $label = trim((string) $branch->label);
+
+                return [
+                    'id' => (int) $branch->id,
+                    'slug' => Str::slug($label),
+                    'label' => $label,
+                    'active' => (bool) $branch->is_active,
+                ];
+            })
+            ->filter(static fn (array $option): bool => $option['slug'] !== '' && $option['slug'] !== 'pusat')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array{id:int,slug:string,label:string,active:bool}  $option
+     * @return array{id:int,slug:string,label:string}
+     */
+    private function publicOption(array $option): array
+    {
+        return [
+            'id' => $option['id'],
+            'slug' => $option['slug'],
+            'label' => $option['label'],
+        ];
+    }
+
+    private function cacheStore(): string
+    {
+        return app()->environment('testing') ? 'array' : 'file';
+    }
+
+    /** @return array<int, array{id:int,slug:string,label:string,active:bool}> */
+    private static function fallbackOptionsWithState(): array
+    {
+        return array_map(
+            static fn (array $option): array => [...$option, 'active' => true],
+            self::fallbackOptions(),
+        );
     }
 
     /**

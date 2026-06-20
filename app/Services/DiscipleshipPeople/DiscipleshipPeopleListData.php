@@ -6,16 +6,23 @@ use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipPerson;
 use App\Models\DiscipleshipRelationship;
+use App\Services\Discipleship\DiscipleshipReadCache;
 use App\Services\MskParticipants\MskParticipantTableData;
+use App\Support\ArrayPaginator;
+use Illuminate\Http\Request;
 
 class DiscipleshipPeopleListData
 {
-    public function __construct(private readonly MskParticipantTableData $mskParticipantTableData) {}
+    public function __construct(
+        private readonly MskParticipantTableData $mskParticipantTableData,
+        private readonly ArrayPaginator $paginator,
+        private readonly DiscipleshipReadCache $cache,
+    ) {}
 
     /**
      * @return array<string, mixed>
      */
-    public function forCurrentContext(): array
+    public function forCurrentContext(Request $request): array
     {
         $centralReadOnly = is_effective_central_discipleship_readonly();
         $selectedBranch = $centralReadOnly
@@ -24,24 +31,41 @@ class DiscipleshipPeopleListData
 
         $branchCodes = $this->branchCodes($selectedBranch, $centralReadOnly);
 
-        $people = $this->loadPeople($branchCodes);
-        $groups = $this->loadGroups($branchCodes);
-        $relationships = $this->loadRelationships($branchCodes);
-        $leaderships = $this->loadLeaderships($branchCodes);
-        $memberships = $this->loadMemberships($branchCodes);
-        $mskClasses = $this->loadMskClasses($branchCodes);
+        $data = $this->cache->remember('people-list', [...$branchCodes, $centralReadOnly ? 'central' : 'branch'], function () use ($branchCodes, $centralReadOnly, $selectedBranch): array {
+            $groupPeople = $this->loadGroupPeople($branchCodes);
 
-        return $this->prepareRows([
-            'central_readonly' => $centralReadOnly,
-            'selected_branch' => $selectedBranch,
-            'branch_codes' => $branchCodes,
-            'people' => $people,
-            'groups' => $groups,
-            'relationships' => $relationships,
-            'leaderships' => $leaderships,
-            'memberships' => $memberships,
-            'msk_classes' => $mskClasses,
-        ]);
+            return $this->prepareRows([
+                'central_readonly' => $centralReadOnly,
+                'selected_branch' => $selectedBranch,
+                'branch_codes' => $branchCodes,
+                'people' => $this->loadPeople($branchCodes),
+                'groups' => $this->loadGroups($branchCodes),
+                'relationships' => $this->loadRelationships($branchCodes),
+                'leaderships' => array_values(array_filter($groupPeople, static fn (array $row): bool => ($row['role'] ?? '') !== 'member')),
+                'memberships' => array_values(array_filter($groupPeople, static fn (array $row): bool => ($row['role'] ?? '') === 'member')),
+                'msk_classes' => $this->loadMskClasses($branchCodes),
+            ]);
+        });
+        $data['settings'] = ['church_name' => app_church_name()];
+
+        $search = strtolower(trim((string) $request->query('q', '')));
+        $progress = trim((string) $request->query('progress', 'all'));
+        $filteredRows = array_values(array_filter($data['people'], static function (array $row) use ($search, $progress): bool {
+            if ($search !== '' && ! str_contains((string) ($row['search_text'] ?? ''), $search)) {
+                return false;
+            }
+
+            return $progress === 'all'
+                || in_array($progress, preg_split('/\s+/', (string) ($row['row_filter_state'] ?? '')) ?: [], true);
+        }));
+        $pagination = $this->paginator->paginate($filteredRows, $request);
+        $data['people'] = $pagination->items();
+        $data['peoplePagination'] = $pagination;
+        $data['filteredPeopleRows'] = $pagination->total();
+        $data['peopleSearch'] = $search;
+        $data['peopleProgressFilter'] = $progress;
+
+        return $data;
     }
 
     /**
@@ -145,48 +169,7 @@ class DiscipleshipPeopleListData
      * @param  array<int, string>  $branchCodes
      * @return array<int, array<string, mixed>>
      */
-    private function loadLeaderships(array $branchCodes): array
-    {
-        return DiscipleshipGroupPerson::query()
-            ->select([
-                'id',
-                'branch_id',
-                'discipleship_group_id',
-                'person_id',
-                'role',
-                'status',
-                'started_on',
-                'ended_on',
-                'end_reason',
-                'created_at',
-                'updated_at',
-            ])
-            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-            ->where('role', '!=', 'member')
-            ->orderBy('id')
-            ->get()
-            ->map(static fn (DiscipleshipGroupPerson $leadership): array => [
-                'id' => $leadership->id,
-                'branch_code' => $leadership->branch_code,
-                'discipleship_group_id' => $leadership->discipleship_group_id,
-                'person_id' => $leadership->person_id,
-                'role' => $leadership->role,
-                'status' => $leadership->status,
-                'start_date' => $leadership->started_on,
-                'end_date' => $leadership->ended_on,
-                'reason_change' => $leadership->end_reason,
-                'created_at' => $leadership->created_at,
-                'updated_at' => $leadership->updated_at,
-            ])
-            ->values()
-            ->all();
-    }
-
-    /**
-     * @param  array<int, string>  $branchCodes
-     * @return array<int, array<string, mixed>>
-     */
-    private function loadMemberships(array $branchCodes): array
+    private function loadGroupPeople(array $branchCodes): array
     {
         return DiscipleshipGroupPerson::query()
             ->select([
@@ -204,22 +187,22 @@ class DiscipleshipPeopleListData
                 'updated_at',
             ])
             ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-            ->where('role', 'member')
             ->orderBy('id')
             ->get()
-            ->map(static fn (DiscipleshipGroupPerson $membership): array => [
-                'id' => $membership->id,
-                'branch_code' => $membership->branch_code,
-                'discipleship_group_id' => $membership->discipleship_group_id,
-                'person_id' => $membership->person_id,
-                'role' => $membership->role,
-                'stage' => $membership->stage,
-                'status' => $membership->status,
-                'start_date' => $membership->started_on,
-                'end_date' => $membership->ended_on,
-                'reason_end' => $membership->end_reason,
-                'created_at' => $membership->created_at,
-                'updated_at' => $membership->updated_at,
+            ->map(static fn (DiscipleshipGroupPerson $row): array => [
+                'id' => $row->id,
+                'branch_code' => $row->branch_code,
+                'discipleship_group_id' => $row->discipleship_group_id,
+                'person_id' => $row->person_id,
+                'role' => $row->role,
+                'stage' => $row->stage,
+                'status' => $row->status,
+                'start_date' => $row->started_on,
+                'end_date' => $row->ended_on,
+                'reason_change' => $row->end_reason,
+                'reason_end' => $row->end_reason,
+                'created_at' => $row->created_at,
+                'updated_at' => $row->updated_at,
             ])
             ->values()
             ->all();

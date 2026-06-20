@@ -2,6 +2,7 @@
 
 namespace App\Services\DiscipleshipPeopleTree;
 
+use App\Services\Branches\BranchCatalog;
 use App\Services\Routing\AppPageRouteMap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,7 @@ class PeopleTreeWriter
 {
     public function __construct(
         private readonly PeopleTreeModelStore $modelStore,
+        private readonly BranchCatalog $branches,
     ) {}
 
     public function savePerson(Request $request): RedirectResponse
@@ -70,12 +72,12 @@ class PeopleTreeWriter
             $selectedExportBranch = normalize_central_recap_branch($selectedExportBranch);
             if ($selectedExportBranch === 'all') {
                 return redirect()->route('discipleship.tree', [
-                    'rekap_cabang' => 'all',
+                    'branch_id' => 'all',
                     'error' => 'dot_export_branch_required',
                 ]);
             }
             $targetBranch = normalize_public_branch_code($selectedExportBranch);
-            $redirectParams['rekap_cabang'] = $targetBranch;
+            $redirectParams['branch_id'] = $this->branches->idForSlug($targetBranch);
         }
 
         $dotContent = build_pohon_pemuridan_dot_content($targetBranch, $this->modelStore->modelForBranch($targetBranch));

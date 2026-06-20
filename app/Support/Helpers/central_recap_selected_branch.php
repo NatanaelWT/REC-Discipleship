@@ -1,25 +1,47 @@
 <?php
 
+use App\Services\Branches\BranchCatalog;
+
 function central_recap_selected_branch(): string
 {
     if (! is_effective_central_discipleship_readonly()) {
         return 'all';
     }
 
-    $fromQuery = trim((string) request()->query('rekap_cabang', ''));
-    if ($fromQuery !== '') {
-        $selected = normalize_central_recap_branch($fromQuery);
-        session()->put('central_rekap_cabang', $selected);
+    if (request()->query->has('branch_id')) {
+        $branchIdInput = trim((string) request()->query('branch_id', 'all'));
+        if ($branchIdInput === '' || $branchIdInput === 'all') {
+            session()->put('central_rekap_branch_id', 'all');
+
+            return 'all';
+        }
+
+        $branchId = filter_var($branchIdInput, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($branchId !== false && app(BranchCatalog::class)->isActiveId($branchId)) {
+            session()->put('central_rekap_branch_id', $branchId);
+
+            return app(BranchCatalog::class)->slugForId($branchId);
+        }
+    }
+
+    $legacyQuery = trim((string) request()->query('rekap_cabang', ''));
+    if ($legacyQuery !== '') {
+        $selected = normalize_central_recap_branch($legacyQuery);
+        $branchId = $selected !== 'all' ? app(BranchCatalog::class)->idForSlug($selected) : null;
+        session()->put('central_rekap_branch_id', $branchId ?? 'all');
 
         return $selected;
     }
 
-    $fromSession = trim((string) session('central_rekap_cabang', ''));
-    if ($fromSession !== '') {
-        return normalize_central_recap_branch($fromSession);
+    $fromSession = session('central_rekap_branch_id', 'all');
+    if (is_numeric($fromSession)) {
+        $branchCode = app(BranchCatalog::class)->slugForId((int) $fromSession);
+        if ($branchCode !== '') {
+            return $branchCode;
+        }
     }
 
-    session()->put('central_rekap_cabang', 'all');
+    session()->put('central_rekap_branch_id', 'all');
 
     return 'all';
 }

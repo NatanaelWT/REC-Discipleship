@@ -2,15 +2,11 @@
 
 namespace App\Services\MskParticipants;
 
+use App\Models\MskParticipant;
 use Illuminate\Http\Request;
 
 class MskParticipantPageData
 {
-    public function __construct(
-        private readonly MskParticipantTableData $tableData,
-    ) {
-    }
-
     /**
      * @return array<string, mixed>
      */
@@ -22,17 +18,17 @@ class MskParticipantPageData
             : normalize_public_branch_code(current_user_branch());
 
         $branchCodes = $this->branchCodes($selectedBranch, $centralReadOnly);
-        $participantsSorted = $this->tableData->participantsForBranches($branchCodes);
-        usort($participantsSorted, static function ($a, $b): int {
-            return strcasecmp((string) ($a['full_name'] ?? ''), (string) ($b['full_name'] ?? ''));
-        });
-
-        $participantsById = index_by_id($participantsSorted);
+        $branchIds = branch_ids_from_slugs($branchCodes);
         $editId = trim((string) $request->query('edit', ''));
-        $editParticipant = $editId !== '' ? ($participantsById[$editId] ?? null) : null;
         $requestedViewId = trim((string) $request->query('view', ''));
 
-        $batchMonthMap = $this->batchMonthMap($participantsSorted);
+        $batchMonthMap = MskParticipant::query()
+            ->whereIn('branch_id', $branchIds)
+            ->selectRaw('batch_month, COUNT(*) AS aggregate')
+            ->groupBy('batch_month')
+            ->pluck('aggregate', 'batch_month')
+            ->map(static fn (mixed $count): int => (int) $count)
+            ->all();
         $batchMonthOptions = array_keys($batchMonthMap);
         rsort($batchMonthOptions, SORT_STRING);
         $latestBatchMonth = count($batchMonthOptions) > 0 ? $batchMonthOptions[0] : date('Y-m');
@@ -47,20 +43,68 @@ class MskParticipantPageData
 
         $batchMonthFilterParam = $batchMonthFilterIsAll ? 'all' : $batchMonthFilter;
         $batchMonthFilterLabel = $batchMonthFilterIsAll ? 'Semua Batch' : format_indo_month($batchMonthFilter);
-        $participantsFilteredByBatch = $this->participantsFilteredByBatch($participantsSorted, $batchMonthFilterIsAll, $batchMonthFilter);
-        $completedParticipantsFiltered = $this->completedCount($participantsFilteredByBatch);
-        $totalParticipantsFiltered = count($participantsFilteredByBatch);
+        $search = strtolower(trim((string) $request->query('q', '')));
+        $filteredQuery = MskParticipant::query()
+            ->whereIn('branch_id', $branchIds)
+            ->when(! $batchMonthFilterIsAll, static fn ($query) => $query->where('batch_month', $batchMonthFilter))
+            ->when($search !== '', static function ($query) use ($search): void {
+                $query->where(static function ($searchQuery) use ($search): void {
+                    $like = '%'.$search.'%';
+                    $searchQuery->whereRaw('LOWER(full_name) LIKE ?', [$like])
+                        ->orWhereRaw('LOWER(whatsapp) LIKE ?', [$like])
+                        ->orWhereRaw('LOWER(email) LIKE ?', [$like]);
+                });
+            });
+        $completedParticipantsFiltered = (clone $filteredQuery)
+            ->whereJsonLength('session_numbers', '=', 12)
+            ->count();
+        $perPage = max(1, min(100, (int) $request->query('per_page', 50)));
+        $pagination = (clone $filteredQuery)
+            ->orderBy('full_name')
+            ->orderBy('id')
+            ->paginate($perPage)
+            ->withQueryString();
+        $pageParticipants = $pagination->getCollection()
+            ->map($this->participantViewRow(...))
+            ->values()
+            ->all();
+        $selectedParticipants = [];
+        foreach (array_unique(array_filter([$editId, $requestedViewId])) as $selectedId) {
+            if (! ctype_digit((string) $selectedId)) {
+                continue;
+            }
+            $selected = MskParticipant::query()
+                ->whereIn('branch_id', $branchIds)
+                ->whereKey((int) $selectedId)
+                ->first();
+            if ($selected instanceof MskParticipant) {
+                $selectedParticipants[(string) $selected->getKey()] = $this->participantViewRow($selected);
+            }
+        }
+        $participantsById = array_merge(index_by_id($pageParticipants), $selectedParticipants);
+        $editParticipant = $editId !== '' ? ($participantsById[$editId] ?? null) : null;
+        foreach ([$editParticipant, $participantsById[$requestedViewId] ?? null] as $selectedParticipant) {
+            if (! is_array($selectedParticipant)) {
+                continue;
+            }
+            $selectedId = (string) ($selectedParticipant['id'] ?? '');
+            if ($selectedId !== '' && ! isset(index_by_id($pageParticipants)[$selectedId])) {
+                array_unshift($pageParticipants, $selectedParticipant);
+            }
+        }
 
         return [
             'settings' => ['church_name' => app_church_name()],
             'page' => 'msk_classes',
             'centralReadOnly' => $centralReadOnly,
             'members' => [],
-            'mskClasses' => $participantsSorted,
+            'mskClasses' => $pageParticipants,
             'people' => [],
             'participantsById' => $participantsById,
-            'participantsSorted' => $participantsSorted,
-            'participantsFilteredByBatch' => $participantsFilteredByBatch,
+            'participantsSorted' => $pageParticipants,
+            'participantsFilteredByBatch' => $pageParticipants,
+            'participantsPagination' => $pagination,
+            'participantsSearch' => $search,
             'editId' => $editId,
             'editParticipant' => $editParticipant,
             'autoOpenEditParticipantId' => $editParticipant !== null ? $editId : '',
@@ -74,9 +118,10 @@ class MskParticipantPageData
             'batchMonthFilter' => $batchMonthFilter,
             'batchMonthFilterParam' => $batchMonthFilterParam,
             'batchMonthFilterLabel' => $batchMonthFilterLabel,
-            'totalParticipantsFiltered' => $totalParticipantsFiltered,
+            'totalParticipantsFiltered' => $pagination->total(),
             'completedParticipantsFiltered' => $completedParticipantsFiltered,
-            'inProgressParticipantsFiltered' => max(0, $totalParticipantsFiltered - $completedParticipantsFiltered),
+            'inProgressParticipantsFiltered' => max(0, $pagination->total() - $completedParticipantsFiltered),
+            'totalParticipantsAll' => array_sum($batchMonthMap),
         ];
     }
 
@@ -95,51 +140,12 @@ class MskParticipantPageData
         return [$selectedBranch];
     }
 
-    /**
-     * @param array<int, array<string, mixed>> $participants
-     * @return array<string, int>
-     */
-    private function batchMonthMap(array $participants): array
+    /** @return array<string, mixed> */
+    private function participantViewRow(MskParticipant $participant): array
     {
-        $map = [];
-        foreach ($participants as $participant) {
-            $participantBatchMonth = normalize_month_value((string) ($participant['msk_month'] ?? date('Y-m')));
-            if (! isset($map[$participantBatchMonth])) {
-                $map[$participantBatchMonth] = 0;
-            }
-            $map[$participantBatchMonth]++;
-        }
+        $row = $participant->toViewArray();
+        $row['branch_code'] = normalize_public_branch_code((string) $participant->branch_code);
 
-        return $map;
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $participants
-     * @return array<int, array<string, mixed>>
-     */
-    private function participantsFilteredByBatch(array $participants, bool $isAll, string $batchMonth): array
-    {
-        if ($isAll) {
-            return $participants;
-        }
-
-        return array_values(array_filter($participants, static function (array $participant) use ($batchMonth): bool {
-            return normalize_month_value((string) ($participant['msk_month'] ?? date('Y-m'))) === $batchMonth;
-        }));
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $participants
-     */
-    private function completedCount(array $participants): int
-    {
-        $count = 0;
-        foreach ($participants as $participant) {
-            if (msk_is_complete($participant)) {
-                $count++;
-            }
-        }
-
-        return $count;
+        return $row;
     }
 }

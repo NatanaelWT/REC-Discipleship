@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Services\AppConfig\AppConfigService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
 use Throwable;
 
 class RuntimeBootstrap
@@ -46,20 +45,11 @@ class RuntimeBootstrap
             config(['app.timezone' => $runtimeSettings['app_timezone']]);
         }
         date_default_timezone_set($runtimeSettings['app_timezone']);
-        self::ensureRuntimeFilesystem();
-
         foreach (glob(app_path('Support/Helpers/*.php')) ?: [] as $supportFile) {
             require_once $supportFile;
         }
 
         self::$loaded = true;
-    }
-
-    private static function ensureRuntimeFilesystem(): void
-    {
-        foreach (['assets', 'data', 'templates', 'uploads'] as $directory) {
-            File::ensureDirectoryExists(REC_RUNTIME_PATH.DIRECTORY_SEPARATOR.$directory);
-        }
     }
 
     /**

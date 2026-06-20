@@ -10,7 +10,7 @@ use App\Models\DiscipleshipRelationship;
 use App\Models\MskParticipant;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 class PeopleTreeModelStore
 {
@@ -46,32 +46,41 @@ class PeopleTreeModelStore
     /** @param array<int, string> $branchCodes */
     public function modelForContext(array $branchCodes, bool $centralReadOnly): array
     {
-        $combined = dgv2_empty_model();
-        foreach ($this->normalizeBranchCodes($branchCodes) as $branchCode) {
-            $branchModel = $this->modelForBranch($branchCode);
-            foreach (array_keys($combined) as $key) {
-                $combined[$key] = array_merge($combined[$key] ?? [], $branchModel[$key] ?? []);
+        $branchIds = branch_ids_from_slugs($this->normalizeBranchCodes($branchCodes));
+        if ($branchIds === []) {
+            return dgv2_empty_model();
+        }
+
+        $groups = $this->groupRows($branchIds);
+        $groupPeople = $this->groupPeopleRows($branchIds);
+        $memberships = [];
+        $leaderships = [];
+        foreach ($groupPeople as $row) {
+            if (($row['role'] ?? '') === 'member') {
+                $memberships[] = $row;
+            } else {
+                $leaderships[] = $row;
             }
         }
 
-        return dgv2_normalize_model($combined);
+        return dgv2_normalize_model([
+            'discipleship_persons' => $this->peopleRows($branchIds),
+            'discipleship_groups' => $groups,
+            'discipleship_relations' => $this->relationshipRows($branchIds),
+            'group_memberships' => $memberships,
+            'group_leaderships' => $leaderships,
+            'group_multiplications' => $this->multiplicationRows($groups),
+        ]);
     }
 
     public function modelForBranch(string $branchCode): array
     {
         $branchCode = normalize_public_branch_code($branchCode);
-        if ($branchCode === '' || ! $this->hasPeopleTreeTables()) {
+        if ($branchCode === '') {
             return dgv2_empty_model();
         }
 
-        return dgv2_normalize_model([
-            'discipleship_persons' => $this->peopleRows($branchCode),
-            'discipleship_groups' => $this->groupRows($branchCode),
-            'discipleship_relations' => $this->relationshipRows($branchCode),
-            'group_memberships' => $this->groupPeopleRows($branchCode, true),
-            'group_leaderships' => $this->groupPeopleRows($branchCode, false),
-            'group_multiplications' => $this->multiplicationRows($branchCode),
-        ]);
+        return $this->modelForContext([$branchCode], false);
     }
 
     /**
@@ -81,31 +90,35 @@ class PeopleTreeModelStore
     public function participantsForBranches(array $branchCodes, bool $centralReadOnly): array
     {
         $branchCodes = $this->normalizeBranchCodes($branchCodes);
-        if ($branchCodes === [] || ! Schema::hasTable('msk_participants')) {
+        if ($branchCodes === []) {
             return [];
         }
 
         $labels = $this->branchLabels();
 
-        return MskParticipant::query()
-            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-            ->orderBy('full_name')
-            ->orderBy('id')
-            ->get()
-            ->map(static function (MskParticipant $participant) use ($centralReadOnly, $labels): array {
-                $row = $participant->toViewArray();
-                $branchCode = normalize_public_branch_code((string) $participant->branch_code);
-                $branchLabel = $labels[$branchCode] ?? strtoupper($branchCode);
-                $row['branch_code'] = $branchCode;
-                $row['branch_label'] = $branchLabel;
-                if ($centralReadOnly) {
-                    $row['full_name'] = append_branch_suffix((string) ($row['full_name'] ?? ''), $branchLabel);
-                }
+        try {
+            return MskParticipant::query()
+                ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+                ->orderBy('full_name')
+                ->orderBy('id')
+                ->get()
+                ->map(static function (MskParticipant $participant) use ($centralReadOnly, $labels): array {
+                    $row = $participant->toViewArray();
+                    $branchCode = normalize_public_branch_code((string) $participant->branch_code);
+                    $branchLabel = $labels[$branchCode] ?? strtoupper($branchCode);
+                    $row['branch_code'] = $branchCode;
+                    $row['branch_label'] = $branchLabel;
+                    if ($centralReadOnly) {
+                        $row['full_name'] = append_branch_suffix((string) ($row['full_name'] ?? ''), $branchLabel);
+                    }
 
-                return $row;
-            })
-            ->values()
-            ->all();
+                    return $row;
+                })
+                ->values()
+                ->all();
+        } catch (Throwable) {
+            return [];
+        }
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -179,64 +192,68 @@ class PeopleTreeModelStore
     public function meetingReportsForBranches(array $branchCodes, bool $centralReadOnly): array
     {
         $branchCodes = $this->normalizeBranchCodes($branchCodes);
-        if ($branchCodes === [] || ! Schema::hasTable('discipleship_meeting_reports')) {
+        if ($branchCodes === []) {
             return [];
         }
 
         $labels = $this->branchLabels();
 
-        return DiscipleshipMeetingReport::query()
-            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-            ->orderByDesc('meeting_date')
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->get()
-            ->map(function (DiscipleshipMeetingReport $report) use ($centralReadOnly, $labels): array {
-                $branchCode = normalize_public_branch_code((string) $report->branch_code);
-                $branchLabel = $labels[$branchCode] ?? strtoupper($branchCode);
-                $leaderName = trim((string) ($report->leader_name_snapshot ?? ''));
-                $groupName = trim((string) ($report->group_name_snapshot ?? 'Kelompok')) ?: 'Kelompok';
-                if ($centralReadOnly) {
-                    $leaderName = $leaderName !== '' ? append_branch_suffix($leaderName, $branchLabel) : '';
-                    $groupName = append_branch_suffix($groupName, $branchLabel);
-                }
+        try {
+            return DiscipleshipMeetingReport::query()
+                ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+                ->orderByDesc('meeting_date')
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->get()
+                ->map(function (DiscipleshipMeetingReport $report) use ($centralReadOnly, $labels): array {
+                    $branchCode = normalize_public_branch_code((string) $report->branch_code);
+                    $branchLabel = $labels[$branchCode] ?? strtoupper($branchCode);
+                    $leaderName = trim((string) ($report->leader_name_snapshot ?? ''));
+                    $groupName = trim((string) ($report->group_name_snapshot ?? 'Kelompok')) ?: 'Kelompok';
+                    if ($centralReadOnly) {
+                        $leaderName = $leaderName !== '' ? append_branch_suffix($leaderName, $branchLabel) : '';
+                        $groupName = append_branch_suffix($groupName, $branchLabel);
+                    }
 
-                return [
-                    'id' => (string) $report->getKey(),
-                    'branch_code' => $branchCode,
-                    'branch_label' => $branchLabel,
-                    'leader_id' => $report->leader_person_id !== null ? (string) $report->leader_person_id : '',
-                    'leader_name' => $leaderName,
-                    'group_id' => $report->discipleship_group_id !== null ? (string) $report->discipleship_group_id : '',
-                    'group_name' => $groupName,
-                    'meeting_date' => $this->dateString($report->meeting_date),
-                    'material_topic' => trim((string) $report->material_topic),
-                    'group_progress' => normalize_dg_progress_value((string) $report->group_progress_snapshot) ?: 'DG 1',
-                    'absence_reason' => trim((string) $report->absence_reason),
-                    'absent_member_ids' => $this->reportPersonIds($report->absenceItems()),
-                    'additional_notes' => trim((string) $report->additional_notes),
-                    'meditation_min_times' => max(0, (int) $report->meditation_min_times),
-                    'meditation_sharer_ids' => $this->reportPersonIds($report->meditationSharerItems()),
-                    'meeting_photos' => $this->reportPhotos($report->photoItems()),
-                    'quality_pray' => $report->prayed_for_members ? 'true' : 'false',
-                    'quality_prepare' => $report->prepared_material ? 'true' : 'false',
-                    'quality_relational' => $report->relationally_contacted ? 'true' : 'false',
-                    'quality_share_meditation' => $report->shared_meditation ? 'true' : 'false',
-                    'sharing_openness' => $report->sharing_openness_score,
-                    'source' => trim((string) ($report->source ?? 'public_form')) ?: 'public_form',
-                    'created_at' => $this->timestampString($report->created_at),
-                    'updated_at' => $this->timestampString($report->updated_at),
-                ];
-            })
-            ->values()
-            ->all();
+                    return [
+                        'id' => (string) $report->getKey(),
+                        'branch_code' => $branchCode,
+                        'branch_label' => $branchLabel,
+                        'leader_id' => $report->leader_person_id !== null ? (string) $report->leader_person_id : '',
+                        'leader_name' => $leaderName,
+                        'group_id' => $report->discipleship_group_id !== null ? (string) $report->discipleship_group_id : '',
+                        'group_name' => $groupName,
+                        'meeting_date' => $this->dateString($report->meeting_date),
+                        'material_topic' => trim((string) $report->material_topic),
+                        'group_progress' => normalize_dg_progress_value((string) $report->group_progress_snapshot) ?: 'DG 1',
+                        'absence_reason' => trim((string) $report->absence_reason),
+                        'absent_member_ids' => $this->reportPersonIds($report->absenceItems()),
+                        'additional_notes' => trim((string) $report->additional_notes),
+                        'meditation_min_times' => max(0, (int) $report->meditation_min_times),
+                        'meditation_sharer_ids' => $this->reportPersonIds($report->meditationSharerItems()),
+                        'meeting_photos' => $this->reportPhotos($report->photoItems()),
+                        'quality_pray' => $report->prayed_for_members ? 'true' : 'false',
+                        'quality_prepare' => $report->prepared_material ? 'true' : 'false',
+                        'quality_relational' => $report->relationally_contacted ? 'true' : 'false',
+                        'quality_share_meditation' => $report->shared_meditation ? 'true' : 'false',
+                        'sharing_openness' => $report->sharing_openness_score,
+                        'source' => trim((string) ($report->source ?? 'public_form')) ?: 'public_form',
+                        'created_at' => $this->timestampString($report->created_at),
+                        'updated_at' => $this->timestampString($report->updated_at),
+                    ];
+                })
+                ->values()
+                ->all();
+        } catch (Throwable) {
+            return [];
+        }
     }
 
     public function replaceBranchModel(string $branchCode, array $model): void
     {
         $branchCode = normalize_public_branch_code($branchCode);
         $branchId = branch_id_from_slug($branchCode);
-        if ($branchCode === '' || $branchId === null || ! $this->hasPeopleTreeTables()) {
+        if ($branchCode === '' || $branchId === null) {
             return;
         }
 
@@ -254,19 +271,11 @@ class PeopleTreeModelStore
         });
     }
 
-    private function hasPeopleTreeTables(): bool
-    {
-        return Schema::hasTable('discipleship_people')
-            && Schema::hasTable('discipleship_groups')
-            && Schema::hasTable('discipleship_relationships')
-            && Schema::hasTable('discipleship_group_people');
-    }
-
     /** @return array<int, array<string, mixed>> */
-    private function peopleRows(string $branchCode): array
+    private function peopleRows(array $branchIds): array
     {
         return DiscipleshipPerson::query()
-            ->where('branch_id', branch_id_from_slug($branchCode))
+            ->whereIn('branch_id', $branchIds)
             ->orderBy('id')
             ->get()
             ->map(static fn (DiscipleshipPerson $person): array => [
@@ -289,10 +298,10 @@ class PeopleTreeModelStore
     }
 
     /** @return array<int, array<string, mixed>> */
-    private function groupRows(string $branchCode): array
+    private function groupRows(array $branchIds): array
     {
         return DiscipleshipGroup::query()
-            ->where('branch_id', branch_id_from_slug($branchCode))
+            ->whereIn('branch_id', $branchIds)
             ->orderBy('id')
             ->get()
             ->map(static fn (DiscipleshipGroup $group): array => [
@@ -315,10 +324,10 @@ class PeopleTreeModelStore
     }
 
     /** @return array<int, array<string, mixed>> */
-    private function relationshipRows(string $branchCode): array
+    private function relationshipRows(array $branchIds): array
     {
         return DiscipleshipRelationship::query()
-            ->where('branch_id', branch_id_from_slug($branchCode))
+            ->whereIn('branch_id', $branchIds)
             ->orderBy('id')
             ->get()
             ->map(static fn (DiscipleshipRelationship $relation): array => [
@@ -342,12 +351,10 @@ class PeopleTreeModelStore
     }
 
     /** @return array<int, array<string, mixed>> */
-    private function groupPeopleRows(string $branchCode, bool $members): array
+    private function groupPeopleRows(array $branchIds): array
     {
         return DiscipleshipGroupPerson::query()
-            ->where('branch_id', branch_id_from_slug($branchCode))
-            ->when($members, static fn ($query) => $query->where('role', 'member'))
-            ->when(! $members, static fn ($query) => $query->where('role', '!=', 'member'))
+            ->whereIn('branch_id', $branchIds)
             ->orderBy('id')
             ->get()
             ->map(static fn (DiscipleshipGroupPerson $row): array => [
@@ -371,27 +378,29 @@ class PeopleTreeModelStore
     }
 
     /** @return array<int, array<string, mixed>> */
-    private function multiplicationRows(string $branchCode): array
+    private function multiplicationRows(array $groups): array
     {
-        return DiscipleshipGroup::query()
-            ->where('branch_id', branch_id_from_slug($branchCode))
-            ->where(static function ($query): void {
-                $query->whereNotNull('source_group_id')
-                    ->orWhereNotNull('initiated_by_person_id')
-                    ->orWhereNotNull('multiplied_at');
-            })
-            ->orderBy('id')
-            ->get()
-            ->map(static fn (DiscipleshipGroup $group): array => [
-                'id' => 'multiplication-'.$group->getKey(),
-                'initiated_by_person_id' => $group->initiated_by_person_id !== null ? (string) $group->initiated_by_person_id : '',
-                'source_group_id' => $group->source_group_id !== null ? (string) $group->source_group_id : '',
-                'new_group_id' => (string) $group->getKey(),
-                'multiplication_date' => optional($group->multiplied_at)->format('Y-m-d'),
-                'notes' => trim((string) $group->notes),
-            ])
-            ->values()
-            ->all();
+        $rows = [];
+        foreach ($groups as $group) {
+            $sourceGroupId = trim((string) ($group['source_group_id'] ?? ''));
+            $initiatorId = trim((string) ($group['initiated_by_person_id'] ?? ''));
+            $multipliedAt = trim((string) ($group['multiplied_at'] ?? ''));
+            if ($sourceGroupId === '' && $initiatorId === '' && $multipliedAt === '') {
+                continue;
+            }
+
+            $groupId = (string) ($group['id'] ?? '');
+            $rows[] = [
+                'id' => 'multiplication-'.$groupId,
+                'initiated_by_person_id' => $initiatorId,
+                'source_group_id' => $sourceGroupId,
+                'new_group_id' => $groupId,
+                'multiplication_date' => $multipliedAt,
+                'notes' => trim((string) ($group['notes'] ?? '')),
+            ];
+        }
+
+        return $rows;
     }
 
     /**

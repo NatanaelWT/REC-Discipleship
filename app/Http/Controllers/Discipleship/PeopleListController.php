@@ -14,6 +14,6 @@ class PeopleListController extends Controller
     {
         RuntimeBootstrap::boot($request);
 
-        return view('discipleship.people-list.index', $peopleListData->forCurrentContext());
+        return view('discipleship.people-list.index', $peopleListData->forCurrentContext($request));
     }
 }

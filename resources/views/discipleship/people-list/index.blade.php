@@ -21,24 +21,28 @@
           <div class="people-hero-stat"><span class="people-hero-stat-label">DG3</span><strong class="people-hero-stat-value" data-people-stat="dg3">{{ (string) $peopleInDg3Count }}</strong></div>
         </div>
       </div>
-      <div class="actions people-hero-tools">
+      <form method="get" action="{{ route('discipleship.people-list') }}" class="actions people-hero-tools">
+        @if (request()->filled('branch_id'))
+          <input type="hidden" name="branch_id" value="{{ request()->query('branch_id') }}">
+        @endif
         <div class="people-hero-filter-wrap">
-          <select class="search people-status-filter" data-filter="people-dashboard-table" data-filter-role="people-status" aria-label="Filter status progress anggota DG">
-            <option value="all">Semua Peserta</option>
-            <option value="active_dg1">Sedang DG 1</option>
-            <option value="complete_dg1">Selesai DG 1</option>
-            <option value="active_dg2">Sedang DG 2</option>
-            <option value="complete_dg2">Selesai DG 2</option>
-            <option value="active_dg3">Sedang DG 3</option>
-            <option value="complete_dg3">Selesai DG 3</option>
-            <option value="kgap_complete">Selesai Camp GAP</option>
-            <option value="rg_complete">Selesai RG</option>
+          <select name="progress" class="search people-status-filter" aria-label="Filter status progress anggota DG" onchange="this.form.submit()">
+            <option value="all" @selected($peopleProgressFilter === 'all')>Semua Peserta</option>
+            <option value="active_dg1" @selected($peopleProgressFilter === 'active_dg1')>Sedang DG 1</option>
+            <option value="complete_dg1" @selected($peopleProgressFilter === 'complete_dg1')>Selesai DG 1</option>
+            <option value="active_dg2" @selected($peopleProgressFilter === 'active_dg2')>Sedang DG 2</option>
+            <option value="complete_dg2" @selected($peopleProgressFilter === 'complete_dg2')>Selesai DG 2</option>
+            <option value="active_dg3" @selected($peopleProgressFilter === 'active_dg3')>Sedang DG 3</option>
+            <option value="complete_dg3" @selected($peopleProgressFilter === 'complete_dg3')>Selesai DG 3</option>
+            <option value="kgap_complete" @selected($peopleProgressFilter === 'kgap_complete')>Selesai Camp GAP</option>
+            <option value="rg_complete" @selected($peopleProgressFilter === 'rg_complete')>Selesai RG</option>
           </select>
         </div>
         <div class="people-hero-search-wrap">
-          <?php render_table_search_input('people-dashboard-table', 'Cari peserta, pembina, progres, atau kontak...', 'search people-table-search', 'Cari daftar peserta DG', '      '); ?>
+          <input type="search" name="q" value="{{ $peopleSearch }}" class="search people-table-search" placeholder="Cari peserta, pembina, progres, atau kontak..." aria-label="Cari daftar peserta DG">
         </div>
-      </div>
+        <button class="btn tiny secondary" type="submit">Cari</button>
+      </form>
     </section>
 
     <section class="card discipleship-list-card table-card-plain" id="discipleship-people-list">
@@ -120,11 +124,12 @@
                 </td>
               </tr>
             @endforeach
-            @if ($totalPeopleRows === 0)
+            @if ($filteredPeopleRows === 0)
               <tr><td colspan="5">Belum ada data orang.</td></tr>
             @endif
           </tbody>
         </table>
       </div>
+      @include('partials.compact-pagination', ['paginator' => $peoplePagination])
     </section>
 @endsection

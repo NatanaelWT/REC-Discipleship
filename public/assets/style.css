@@ -3877,6 +3877,38 @@ button.note-link.dg-recap-photo-trigger {
   margin-bottom: 22px;
 }
 
+.rec-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 0 2px;
+}
+
+.rec-pagination-status {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rec-pagination .is-disabled {
+  pointer-events: none;
+  opacity: 0.48;
+}
+
+@media (max-width: 720px) {
+  .rec-pagination {
+    justify-content: space-between;
+  }
+
+  .rec-pagination-status {
+    order: -1;
+    width: 100%;
+    text-align: center;
+  }
+}
+
 .app-page.is-central-readonly.page-msk_classes .container > .central-rekap-toolbar,
 .app-page.is-central-readonly.page-spiritual_journey .container > .central-rekap-toolbar,
 .app-page.is-central-readonly.page-tree-v2 .container > .central-rekap-toolbar,

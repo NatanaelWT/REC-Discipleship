@@ -9,11 +9,12 @@ if ($page === 'dg_reports_recap') {
             return '';
         }
         if (preg_match('/^DG\s*([1-3])$/i', $value, $match) === 1) {
-            return 'DG ' . $match[1];
+            return 'DG '.$match[1];
         }
         if (preg_match('/^[1-3]$/', $value) === 1) {
-            return 'DG ' . $value;
+            return 'DG '.$value;
         }
+
         return $value;
     };
     $extractFirstName = function (string $fullName): string {
@@ -22,14 +23,15 @@ if ($page === 'dg_reports_recap') {
             return '';
         }
         $parts = preg_split('/\s+/', $fullName);
-        if (!is_array($parts) || count($parts) === 0) {
+        if (! is_array($parts) || count($parts) === 0) {
             return '';
         }
+
         return trim((string) $parts[0]);
     };
     $currentGroupProgressById = [];
     foreach ($groups as $groupRow) {
-        if (!is_array($groupRow)) {
+        if (! is_array($groupRow)) {
             continue;
         }
         $groupId = trim((string) ($groupRow['id'] ?? ''));
@@ -45,13 +47,13 @@ if ($page === 'dg_reports_recap') {
 
     $reportsPrepared = [];
     foreach ($dgMeetingReports as $index => $report) {
-        if (!is_array($report)) {
+        if (! is_array($report)) {
             continue;
         }
 
         $reportId = trim((string) ($report['id'] ?? ''));
         if ($reportId === '') {
-            $reportId = 'dg_report_row_' . (string) $index;
+            $reportId = 'dg_report_row_'.(string) $index;
         }
 
         $leaderId = trim((string) ($report['leader_id'] ?? ''));
@@ -95,7 +97,7 @@ if ($page === 'dg_reports_recap') {
             }
         }
         $rawAbsentMemberIds = $report['absent_member_ids'] ?? [];
-        if (!is_array($rawAbsentMemberIds)) {
+        if (! is_array($rawAbsentMemberIds)) {
             $rawAbsentMemberIds = [];
         }
         $absentMemberCount = count($absentMemberNames);
@@ -170,7 +172,7 @@ if ($page === 'dg_reports_recap') {
                 }
                 $safePhotoName = trim($photoName);
                 if ($safePhotoName === '') {
-                    $safePhotoName = 'Foto ' . (string) ($photoIndex + 1);
+                    $safePhotoName = 'Foto '.(string) ($photoIndex + 1);
                 }
                 $meetingPhotos[] = [
                     'path' => $safePhotoPath,
@@ -217,13 +219,14 @@ if ($page === 'dg_reports_recap') {
         if ($aCreatedAt !== $bCreatedAt) {
             return strcmp($bCreatedAt, $aCreatedAt);
         }
+
         return strcmp((string) ($b['id'] ?? ''), (string) ($a['id'] ?? ''));
     });
 
     $leaderSummaries = [];
     $groupSummaries = [];
     foreach ($groups as $groupRow) {
-        if (!is_array($groupRow)) {
+        if (! is_array($groupRow)) {
             continue;
         }
         $groupId = trim((string) ($groupRow['id'] ?? ''));
@@ -237,7 +240,7 @@ if ($page === 'dg_reports_recap') {
         if ($leaderKey === '') {
             $leaderKey = 'leader_unknown';
         }
-        if (!isset($leaderSummaries[$leaderKey])) {
+        if (! isset($leaderSummaries[$leaderKey])) {
             $leaderSummaries[$leaderKey] = [
                 'name' => $leaderName,
                 'report_count' => 0,
@@ -253,9 +256,9 @@ if ($page === 'dg_reports_recap') {
             $leaderSummaries[$leaderKey]['name'] = $leaderName;
         }
 
-        $groupKey = $groupId !== '' ? $groupId : strtolower($groupName . '|' . $leaderKey);
+        $groupKey = $groupId !== '' ? $groupId : strtolower($groupName.'|'.$leaderKey);
         if ($groupKey === '') {
-            $groupKey = 'group_unknown_' . $leaderKey;
+            $groupKey = 'group_unknown_'.$leaderKey;
         }
         $leaderSummaries[$leaderKey]['group_keys'][$groupKey] = true;
         $groupMemberIds = $groupRow['member_ids'] ?? [];
@@ -283,7 +286,7 @@ if ($page === 'dg_reports_recap') {
         $groupMembersLabel = count($groupMemberFirstNames) > 0 ? implode(', ', $groupMemberFirstNames) : 'Belum ada anggota';
 
         $progressLabel = $normalizeProgressLabel((string) ($groupRow['progress'] ?? ''));
-        if (!isset($groupSummaries[$groupKey])) {
+        if (! isset($groupSummaries[$groupKey])) {
             $groupSummaries[$groupKey] = [
                 'group_key' => $groupKey,
                 'group_id' => $groupId,
@@ -317,7 +320,7 @@ if ($page === 'dg_reports_recap') {
             $leaderKey = 'leader_unknown';
         }
 
-        if (!isset($leaderSummaries[$leaderKey])) {
+        if (! isset($leaderSummaries[$leaderKey])) {
             $leaderSummaries[$leaderKey] = [
                 'name' => $leaderName,
                 'report_count' => 0,
@@ -338,12 +341,12 @@ if ($page === 'dg_reports_recap') {
         if ($groupName === '') {
             $groupName = 'Kelompok';
         }
-        $groupKey = $groupId !== '' ? $groupId : strtolower($groupName . '|' . $leaderKey);
+        $groupKey = $groupId !== '' ? $groupId : strtolower($groupName.'|'.$leaderKey);
         if ($groupKey === '') {
-            $groupKey = 'group_unknown_' . $leaderKey;
+            $groupKey = 'group_unknown_'.$leaderKey;
         }
 
-        if (!isset($groupSummaries[$groupKey])) {
+        if (! isset($groupSummaries[$groupKey])) {
             $groupSummaries[$groupKey] = [
                 'group_key' => $groupKey,
                 'group_id' => $groupId,
@@ -429,6 +432,7 @@ if ($page === 'dg_reports_recap') {
         if ($cmpCount !== 0) {
             return $cmpCount;
         }
+
         return strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
     });
 
@@ -442,6 +446,7 @@ if ($page === 'dg_reports_recap') {
         if ($cmpDate !== 0) {
             return $cmpDate;
         }
+
         return strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
     });
 
@@ -451,31 +456,33 @@ if ($page === 'dg_reports_recap') {
     $buildReportLeaderFilterKey = function (array $reportRow): string {
         $leaderId = trim((string) ($reportRow['leader_id'] ?? ''));
         if ($leaderId !== '') {
-            return 'id:' . $leaderId;
+            return 'id:'.$leaderId;
         }
         $leaderName = trim((string) ($reportRow['leader_name'] ?? ''));
         if ($leaderName === '') {
             $leaderName = '-';
         }
-        return 'name:' . $leaderName;
+
+        return 'name:'.$leaderName;
     };
     $buildReportGroupFilterKey = function (array $reportRow) use ($buildReportLeaderFilterKey): string {
         $groupId = trim((string) ($reportRow['group_id'] ?? ''));
         if ($groupId !== '') {
-            return 'id:' . $groupId;
+            return 'id:'.$groupId;
         }
         $groupName = trim((string) ($reportRow['group_name'] ?? 'Kelompok'));
         if ($groupName === '') {
             $groupName = 'Kelompok';
         }
-        return 'name:' . $groupName . '|' . $buildReportLeaderFilterKey($reportRow);
+
+        return 'name:'.$groupName.'|'.$buildReportLeaderFilterKey($reportRow);
     };
     $reportLeaderOptions = [];
     $reportGroupOptions = [];
     $groupMembersByFilterKey = [];
     $groupMemberFirstNamesByFilterKey = [];
     foreach ($groups as $groupRow) {
-        if (!is_array($groupRow)) {
+        if (! is_array($groupRow)) {
             continue;
         }
         $groupId = trim((string) ($groupRow['id'] ?? ''));
@@ -518,7 +525,7 @@ if ($page === 'dg_reports_recap') {
         $groupMemberFirstNamesByFilterKey[$groupFilterKey] = count($memberFirstNames) > 0 ? implode(', ', $memberFirstNames) : 'Belum ada anggota';
     }
     foreach ($groupRows as &$groupRow) {
-        if (!is_array($groupRow)) {
+        if (! is_array($groupRow)) {
             continue;
         }
         $groupRow['report_group_key'] = $buildReportGroupFilterKey([
@@ -533,7 +540,7 @@ if ($page === 'dg_reports_recap') {
     $reportCalendarRowsByDate = [];
     $reportCalendarRowsByMonth = [];
     foreach ($reportsPrepared as $reportRow) {
-        if (!is_array($reportRow)) {
+        if (! is_array($reportRow)) {
             continue;
         }
         $leaderKey = $buildReportLeaderFilterKey($reportRow);
@@ -541,12 +548,12 @@ if ($page === 'dg_reports_recap') {
         if ($leaderName === '') {
             $leaderName = '-';
         }
-        if (!isset($reportLeaderOptions[$leaderKey])) {
+        if (! isset($reportLeaderOptions[$leaderKey])) {
             $reportLeaderOptions[$leaderKey] = $leaderName;
         }
 
         $groupKey = $buildReportGroupFilterKey($reportRow);
-        if (!isset($groupReportRowsByFilterKey[$groupKey])) {
+        if (! isset($groupReportRowsByFilterKey[$groupKey])) {
             $groupReportRowsByFilterKey[$groupKey] = [];
         }
         $groupName = trim((string) ($reportRow['group_name'] ?? 'Kelompok'));
@@ -554,7 +561,7 @@ if ($page === 'dg_reports_recap') {
             $groupName = 'Kelompok';
         }
         $groupMembersLabel = (string) ($groupMembersByFilterKey[$groupKey] ?? 'Belum ada anggota');
-        if (!isset($reportGroupOptions[$groupKey])) {
+        if (! isset($reportGroupOptions[$groupKey])) {
             $reportGroupOptions[$groupKey] = [
                 'label' => $groupName,
                 'members_label' => $groupMembersLabel,
@@ -570,7 +577,7 @@ if ($page === 'dg_reports_recap') {
         }
         $groupProgressLabel = trim((string) ($reportRow['group_progress'] ?? ''));
         $absentMemberNames = $reportRow['absent_member_names'] ?? [];
-        if (!is_array($absentMemberNames)) {
+        if (! is_array($absentMemberNames)) {
             $absentMemberNames = [];
         }
         $absentMemberCount = (int) ($reportRow['absent_member_count'] ?? 0);
@@ -582,12 +589,12 @@ if ($page === 'dg_reports_recap') {
             $absentLabel = implode(', ', $absentMemberNames);
             $absentReasonLabel = $absenceReason;
         } else {
-            $absentLabel = (string) $absentMemberCount . ' anggota';
+            $absentLabel = (string) $absentMemberCount.' anggota';
             $absentReasonLabel = $absenceReason;
         }
 
         $meditationSharerNames = $reportRow['meditation_sharer_names'] ?? [];
-        if (!is_array($meditationSharerNames)) {
+        if (! is_array($meditationSharerNames)) {
             $meditationSharerNames = [];
         }
         $meditationMinTimes = (int) ($reportRow['meditation_min_times'] ?? 2);
@@ -595,11 +602,11 @@ if ($page === 'dg_reports_recap') {
             $meditationMinTimes = 2;
         }
         $meditationLabel = count($meditationSharerNames) > 0 ? implode(', ', $meditationSharerNames) : '-';
-        $meditationMetaLabel = count($meditationSharerNames) > 0 ? 'Minimal ' . $meditationMinTimes . ' kali' : '';
+        $meditationMetaLabel = count($meditationSharerNames) > 0 ? 'Minimal '.$meditationMinTimes.' kali' : '';
 
         $sharingLabel = '-';
         if (($reportRow['sharing_openness'] ?? null) !== null) {
-            $sharingLabel = (string) ((int) $reportRow['sharing_openness']) . ' / 10';
+            $sharingLabel = (string) ((int) $reportRow['sharing_openness']).' / 10';
         }
 
         $qualityTags = [];
@@ -617,7 +624,7 @@ if ($page === 'dg_reports_recap') {
         }
 
         $meetingPhotos = $reportRow['meeting_photos'] ?? [];
-        if (!is_array($meetingPhotos)) {
+        if (! is_array($meetingPhotos)) {
             $meetingPhotos = [];
         }
 
@@ -638,7 +645,7 @@ if ($page === 'dg_reports_recap') {
         ];
         if ($meetingDate !== '') {
             $meetingMonth = substr($meetingDate, 0, 7);
-            if (!isset($reportCalendarRowsByDate[$meetingDate])) {
+            if (! isset($reportCalendarRowsByDate[$meetingDate])) {
                 $reportCalendarRowsByDate[$meetingDate] = [];
             }
             $calendarRow = [
@@ -657,7 +664,7 @@ if ($page === 'dg_reports_recap') {
                 'meeting_photos' => $meetingPhotos,
             ];
             $reportCalendarRowsByDate[$meetingDate][] = $calendarRow;
-            if (!isset($reportCalendarRowsByMonth[$meetingMonth])) {
+            if (! isset($reportCalendarRowsByMonth[$meetingMonth])) {
                 $reportCalendarRowsByMonth[$meetingMonth] = [];
             }
             $reportCalendarRowsByMonth[$meetingMonth][] = $calendarRow;
@@ -668,14 +675,14 @@ if ($page === 'dg_reports_recap') {
     }
 
     $selectedReportLeader = trim((string) ($_GET['report_leader'] ?? ''));
-    if ($selectedReportLeader !== '' && !isset($reportLeaderOptions[$selectedReportLeader])) {
+    if ($selectedReportLeader !== '' && ! isset($reportLeaderOptions[$selectedReportLeader])) {
         $selectedReportLeader = '';
     }
 
     $availableReportGroupOptions = [];
     if ($selectedReportLeader !== '') {
         foreach ($reportGroupOptions as $groupKey => $groupMeta) {
-            if (!is_array($groupMeta)) {
+            if (! is_array($groupMeta)) {
                 continue;
             }
             $groupLeaderKey = (string) ($groupMeta['leader_key'] ?? '');
@@ -687,7 +694,7 @@ if ($page === 'dg_reports_recap') {
             if ($groupMembersLabel === '') {
                 $groupMembersLabel = 'Belum ada anggota';
             }
-            $availableReportGroupOptions[$groupKey] = $groupLabel . ' - ' . $groupMembersLabel;
+            $availableReportGroupOptions[$groupKey] = $groupLabel.' - '.$groupMembersLabel;
         }
         if (count($availableReportGroupOptions) > 1) {
             asort($availableReportGroupOptions, SORT_NATURAL | SORT_FLAG_CASE);
@@ -698,7 +705,7 @@ if ($page === 'dg_reports_recap') {
     if ($selectedReportLeader === '') {
         $selectedReportGroup = '';
     } elseif ($selectedReportGroup !== '') {
-        if (!isset($reportGroupOptions[$selectedReportGroup])) {
+        if (! isset($reportGroupOptions[$selectedReportGroup])) {
             $selectedReportGroup = '';
         } elseif ((string) ($reportGroupOptions[$selectedReportGroup]['leader_key'] ?? '') !== $selectedReportLeader) {
             $selectedReportGroup = '';
@@ -706,7 +713,7 @@ if ($page === 'dg_reports_recap') {
     }
 
     $reportsPreparedFiltered = array_values(array_filter($reportsPrepared, function ($reportRow) use ($buildReportLeaderFilterKey, $buildReportGroupFilterKey, $selectedReportLeader, $selectedReportGroup): bool {
-        if (!is_array($reportRow)) {
+        if (! is_array($reportRow)) {
             return false;
         }
         if ($selectedReportLeader !== '' && $buildReportLeaderFilterKey($reportRow) !== $selectedReportLeader) {
@@ -715,10 +722,11 @@ if ($page === 'dg_reports_recap') {
         if ($selectedReportGroup !== '' && $buildReportGroupFilterKey($reportRow) !== $selectedReportGroup) {
             return false;
         }
+
         return true;
     }));
     $totalReportRows = count($reportsPreparedFiltered);
-    $reportsPerPage = 10;
+    $reportsPerPage = max(1, min(100, (int) ($_GET['per_page'] ?? 25)));
     $currentReportPage = (int) ($_GET['report_page'] ?? 1);
     if ($currentReportPage < 1) {
         $currentReportPage = 1;
@@ -729,10 +737,11 @@ if ($page === 'dg_reports_recap') {
     }
     $reportOffset = ($currentReportPage - 1) * $reportsPerPage;
     $reportsPreparedPage = array_slice($reportsPreparedFiltered, $reportOffset, $reportsPerPage);
-    $reportPageHref = function (int $targetPage) use ($totalReportPages, $selectedReportLeader, $selectedReportGroup): string {
+    $reportPageHref = function (int $targetPage) use ($totalReportPages, $selectedReportLeader, $selectedReportGroup, $reportsPerPage): string {
         $pageNumber = max(1, min($totalReportPages, $targetPage));
         $query = [
             'report_page' => (string) $pageNumber,
+            'per_page' => (string) $reportsPerPage,
         ];
         if ($selectedReportLeader !== '') {
             $query['report_leader'] = $selectedReportLeader;
@@ -740,17 +749,18 @@ if ($page === 'dg_reports_recap') {
         if ($selectedReportGroup !== '') {
             $query['report_group'] = $selectedReportGroup;
         }
-        return route('discipleship.reports-recap', $query) . '#dg-recap-report-list';
+
+        return route('discipleship.reports-recap', $query).'#dg-recap-report-list';
     };
     $reportCalendarByMonth = [];
     $calendarMinMonth = '';
     $calendarMaxMonth = '';
     foreach ($reportsPrepared as $reportRow) {
-        if (!is_array($reportRow)) {
+        if (! is_array($reportRow)) {
             continue;
         }
         $meetingDate = trim((string) ($reportRow['meeting_date'] ?? ''));
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $meetingDate)) {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $meetingDate)) {
             continue;
         }
         $monthKey = substr($meetingDate, 0, 7);
@@ -761,10 +771,10 @@ if ($page === 'dg_reports_recap') {
         if ($calendarMaxMonth === '' || strcmp($monthKey, $calendarMaxMonth) > 0) {
             $calendarMaxMonth = $monthKey;
         }
-        if (!isset($reportCalendarByMonth[$monthKey])) {
+        if (! isset($reportCalendarByMonth[$monthKey])) {
             $reportCalendarByMonth[$monthKey] = [];
         }
-        if (!isset($reportCalendarByMonth[$monthKey][$dayKey])) {
+        if (! isset($reportCalendarByMonth[$monthKey][$dayKey])) {
             $reportCalendarByMonth[$monthKey][$dayKey] = [
                 'count' => 0,
                 'leaders' => [],
@@ -772,7 +782,7 @@ if ($page === 'dg_reports_recap') {
         }
         $reportCalendarByMonth[$monthKey][$dayKey]['count']++;
         $leaderName = trim((string) ($reportRow['leader_name'] ?? ''));
-        if ($leaderName !== '' && !in_array($leaderName, $reportCalendarByMonth[$monthKey][$dayKey]['leaders'], true)) {
+        if ($leaderName !== '' && ! in_array($leaderName, $reportCalendarByMonth[$monthKey][$dayKey]['leaders'], true)) {
             $reportCalendarByMonth[$monthKey][$dayKey]['leaders'][] = $leaderName;
         }
     }
@@ -786,9 +796,9 @@ if ($page === 'dg_reports_recap') {
     echo "      <p>Ringkas performa pemimpin, perkembangan kelompok, dan catatan pertemuan DG dalam satu tampilan yang lebih mudah dipantau.</p>\n";
     echo "    </div>\n";
     echo "    <div class=\"dg-recap-hero-stats\">\n";
-    echo "      <div class=\"dg-recap-hero-stat\"><span class=\"dg-recap-hero-stat-label\">Total Laporan</span><strong class=\"dg-recap-hero-stat-value\">" . h((string) $totalReports) . "</strong></div>\n";
-    echo "      <div class=\"dg-recap-hero-stat\"><span class=\"dg-recap-hero-stat-label\">Pemimpin Aktif</span><strong class=\"dg-recap-hero-stat-value\">" . h((string) $totalLeaders) . "</strong></div>\n";
-    echo "      <div class=\"dg-recap-hero-stat\"><span class=\"dg-recap-hero-stat-label\">Kelompok</span><strong class=\"dg-recap-hero-stat-value\">" . h((string) $totalGroups) . "</strong></div>\n";
+    echo '      <div class="dg-recap-hero-stat"><span class="dg-recap-hero-stat-label">Total Laporan</span><strong class="dg-recap-hero-stat-value">'.h((string) $totalReports)."</strong></div>\n";
+    echo '      <div class="dg-recap-hero-stat"><span class="dg-recap-hero-stat-label">Pemimpin Aktif</span><strong class="dg-recap-hero-stat-value">'.h((string) $totalLeaders)."</strong></div>\n";
+    echo '      <div class="dg-recap-hero-stat"><span class="dg-recap-hero-stat-label">Kelompok</span><strong class="dg-recap-hero-stat-value">'.h((string) $totalGroups)."</strong></div>\n";
     echo "      <button class=\"dg-recap-hero-stat dg-recap-hero-stat-action\" type=\"button\" data-dg-calendar-open><span class=\"dg-recap-hero-stat-label\">Lihat Kalender</span><strong class=\"dg-recap-hero-stat-value\">Laporan</strong></button>\n";
     echo "    </div>\n";
     echo "  </div>\n";
@@ -810,12 +820,12 @@ if ($page === 'dg_reports_recap') {
     echo "    </div>\n";
     echo "    <div class=\"modal-body dg-recap-calendar-modal-body\">\n";
     echo "      <div class=\"dg-recap-calendar-toolbar\">\n";
-        echo "        <div class=\"dg-recap-calendar-nav\" data-dg-calendar-nav data-report-map=\"" . h(json_encode($reportCalendarByMonth, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}') . "\" data-default-month=\"" . h($defaultCalendarMonth) . "\">\n";
-        echo "          <button class=\"btn tiny ghost dg-recap-calendar-nav-btn\" type=\"button\" data-dg-calendar-prev aria-label=\"Bulan sebelumnya\">&lsaquo;</button>\n";
-        echo "          <button class=\"dg-recap-calendar-nav-title\" type=\"button\" data-dg-calendar-title>" . h(format_indo_month($defaultCalendarMonth)) . "</button>\n";
-        echo "          <input class=\"dg-recap-calendar-month-input\" type=\"month\" value=\"" . h($defaultCalendarMonth) . "\" data-dg-calendar-month-input>\n";
-        echo "          <button class=\"btn tiny ghost dg-recap-calendar-nav-btn\" type=\"button\" data-dg-calendar-next aria-label=\"Bulan sesudahnya\">&rsaquo;</button>\n";
-        echo "        </div>\n";
+    echo '        <div class="dg-recap-calendar-nav" data-dg-calendar-nav data-report-map="'.h(json_encode($reportCalendarByMonth, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}').'" data-default-month="'.h($defaultCalendarMonth)."\">\n";
+    echo "          <button class=\"btn tiny ghost dg-recap-calendar-nav-btn\" type=\"button\" data-dg-calendar-prev aria-label=\"Bulan sebelumnya\">&lsaquo;</button>\n";
+    echo '          <button class="dg-recap-calendar-nav-title" type="button" data-dg-calendar-title>'.h(format_indo_month($defaultCalendarMonth))."</button>\n";
+    echo '          <input class="dg-recap-calendar-month-input" type="month" value="'.h($defaultCalendarMonth)."\" data-dg-calendar-month-input>\n";
+    echo "          <button class=\"btn tiny ghost dg-recap-calendar-nav-btn\" type=\"button\" data-dg-calendar-next aria-label=\"Bulan sesudahnya\">&rsaquo;</button>\n";
+    echo "        </div>\n";
     echo "        <div class=\"dg-recap-calendar-toolbar-side\">\n";
     echo "          <button class=\"btn secondary tiny dg-recap-calendar-month-report-btn\" type=\"button\" data-dg-calendar-month-report-open>Lihat Laporan Bulan Ini</button>\n";
     echo "          <div class=\"dg-recap-calendar-legend\"><span class=\"dg-recap-calendar-dot\"></span> Ada laporan pada tanggal ini</div>\n";
@@ -865,67 +875,67 @@ if ($page === 'dg_reports_recap') {
     echo "  </div>\n";
     echo "</div>\n";
     foreach ($reportCalendarRowsByDate as $reportDate => $dateRows) {
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $reportDate)) {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $reportDate)) {
             continue;
         }
-        echo "<template data-dg-recap-date-report-template=\"" . h($reportDate) . "\">";
+        echo '<template data-dg-recap-date-report-template="'.h($reportDate).'">';
         if (count($dateRows) === 0) {
-            echo "<div class=\"panel-note\">Belum ada laporan pada tanggal ini.</div>";
+            echo '<div class="panel-note">Belum ada laporan pada tanggal ini.</div>';
         } else {
-            echo "<div class=\"table-wrap dg-recap-group-report-table-wrap\"><table class=\"table dg-recap-table dg-recap-group-report-table\"><thead><tr><th>Tanggal</th><th>Pemimpin</th><th>Anggota</th><th>Materi</th><th>Anggota Tidak Hadir</th><th>Kualitas Pemimpin</th><th>Sharing</th><th>Pembagi Meditasi</th><th>Catatan</th><th>Foto</th></tr></thead><tbody>";
+            echo '<div class="table-wrap dg-recap-group-report-table-wrap"><table class="table dg-recap-table dg-recap-group-report-table"><thead><tr><th>Tanggal</th><th>Pemimpin</th><th>Anggota</th><th>Materi</th><th>Anggota Tidak Hadir</th><th>Kualitas Pemimpin</th><th>Sharing</th><th>Pembagi Meditasi</th><th>Catatan</th><th>Foto</th></tr></thead><tbody>';
             foreach ($dateRows as $modalRow) {
                 $qualityTags = $modalRow['quality_tags'] ?? [];
-                if (!is_array($qualityTags)) {
+                if (! is_array($qualityTags)) {
                     $qualityTags = [];
                 }
                 $meetingPhotos = $modalRow['meeting_photos'] ?? [];
-                if (!is_array($meetingPhotos)) {
+                if (! is_array($meetingPhotos)) {
                     $meetingPhotos = [];
                 }
-                echo "<tr>";
-                echo "<td class=\"dg-recap-text\"><div class=\"dg-recap-main-cell\"><div class=\"dg-recap-main-title\">" . h((string) ($modalRow['meeting_date'] ?? '-')) . "</div></div></td>";
-                echo "<td>" . h((string) ($modalRow['leader_name'] ?? '-')) . "</td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['group_label'] ?? 'Belum ada anggota'));
+                echo '<tr>';
+                echo '<td class="dg-recap-text"><div class="dg-recap-main-cell"><div class="dg-recap-main-title">'.h((string) ($modalRow['meeting_date'] ?? '-')).'</div></div></td>';
+                echo '<td>'.h((string) ($modalRow['leader_name'] ?? '-')).'</td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['group_label'] ?? 'Belum ada anggota'));
                 $groupProgressLabel = trim((string) ($modalRow['group_progress'] ?? ''));
                 if ($groupProgressLabel !== '') {
-                    echo "<div class=\"dg-recap-subtext\">Progress: " . h($groupProgressLabel) . "</div>";
+                    echo '<div class="dg-recap-subtext">Progress: '.h($groupProgressLabel).'</div>';
                 }
-                echo "</td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['material_topic'] ?? '-')) . "</td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['absent_label'] ?? '-'));
+                echo '</td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['material_topic'] ?? '-')).'</td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['absent_label'] ?? '-'));
                 $absentReasonLabel = trim((string) ($modalRow['absent_reason_label'] ?? ''));
                 if ($absentReasonLabel !== '') {
-                    echo "<div class=\"dg-recap-subtext\">Alasan: " . h($absentReasonLabel) . "</div>";
+                    echo '<div class="dg-recap-subtext">Alasan: '.h($absentReasonLabel).'</div>';
                 }
-                echo "</td>";
-                echo "<td>";
+                echo '</td>';
+                echo '<td>';
                 if (count($qualityTags) === 0) {
-                    echo "-";
+                    echo '-';
                 } else {
-                    echo "<div class=\"dg-recap-chip-list\">";
+                    echo '<div class="dg-recap-chip-list">';
                     foreach ($qualityTags as $tag) {
-                        echo "<span class=\"chip\">" . h((string) $tag) . "</span>";
+                        echo '<span class="chip">'.h((string) $tag).'</span>';
                     }
-                    echo "</div>";
+                    echo '</div>';
                 }
-                echo "</td>";
-                echo "<td><div class=\"dg-recap-number-chip\">" . h((string) ($modalRow['sharing_label'] ?? '-')) . "</div></td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['meditation_label'] ?? '-'));
+                echo '</td>';
+                echo '<td><div class="dg-recap-number-chip">'.h((string) ($modalRow['sharing_label'] ?? '-')).'</div></td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['meditation_label'] ?? '-'));
                 $meditationMetaLabel = trim((string) ($modalRow['meditation_meta_label'] ?? ''));
                 if ($meditationMetaLabel !== '') {
-                    echo "<div class=\"dg-recap-subtext\">" . h($meditationMetaLabel) . "</div>";
+                    echo '<div class="dg-recap-subtext">'.h($meditationMetaLabel).'</div>';
                 }
-                echo "</td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['notes_label'] ?? '-')) . "</td>";
-                echo "<td class=\"dg-recap-text\">";
+                echo '</td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['notes_label'] ?? '-')).'</td>';
+                echo '<td class="dg-recap-text">';
                 $photoCount = count($meetingPhotos);
                 if ($photoCount <= 0) {
-                    echo "-";
+                    echo '-';
                 } else {
-                    echo h((string) $photoCount . " foto");
+                    echo h((string) $photoCount.' foto');
                     $photoPreview = array_slice($meetingPhotos, 0, 3);
                     if (count($photoPreview) > 0) {
-                        echo "<div class=\"dg-recap-photo-links\">";
+                        echo '<div class="dg-recap-photo-links">';
                         foreach ($photoPreview as $photoRow) {
                             $photoPath = trim((string) ($photoRow['path'] ?? ''));
                             if ($photoPath === '') {
@@ -935,83 +945,83 @@ if ($page === 'dg_reports_recap') {
                             if ($photoUrl === '') {
                                 continue;
                             }
-                            echo "<button class=\"note-link dg-recap-photo-trigger\" type=\"button\" data-dg-recap-photo-open data-photo-src=\"" . h($photoUrl) . "\" data-photo-title=\"Preview Foto\">Lihat Foto</button>";
+                            echo '<button class="note-link dg-recap-photo-trigger" type="button" data-dg-recap-photo-open data-photo-src="'.h($photoUrl).'" data-photo-title="Preview Foto">Lihat Foto</button>';
                         }
-                        echo "</div>";
+                        echo '</div>';
                     }
                     if ($photoCount > 3) {
-                        echo "<div class=\"dg-recap-subtext\">+" . h((string) ($photoCount - 3)) . " foto lainnya</div>";
+                        echo '<div class="dg-recap-subtext">+'.h((string) ($photoCount - 3)).' foto lainnya</div>';
                     }
                 }
-                echo "</td>";
-                echo "</tr>";
+                echo '</td>';
+                echo '</tr>';
             }
-            echo "</tbody></table></div>";
+            echo '</tbody></table></div>';
         }
         echo "</template>\n";
     }
     foreach ($reportCalendarRowsByMonth as $reportMonth => $monthRows) {
-        if (!preg_match('/^\d{4}-\d{2}$/', (string) $reportMonth)) {
+        if (! preg_match('/^\d{4}-\d{2}$/', (string) $reportMonth)) {
             continue;
         }
-        echo "<template data-dg-recap-month-report-template=\"" . h($reportMonth) . "\">";
+        echo '<template data-dg-recap-month-report-template="'.h($reportMonth).'">';
         if (count($monthRows) === 0) {
-            echo "<div class=\"panel-note\">Belum ada laporan pada bulan ini.</div>";
+            echo '<div class="panel-note">Belum ada laporan pada bulan ini.</div>';
         } else {
-            echo "<div class=\"table-wrap dg-recap-group-report-table-wrap\"><table class=\"table dg-recap-table dg-recap-group-report-table\"><thead><tr><th>Tanggal</th><th>Pemimpin</th><th>Anggota</th><th>Materi</th><th>Anggota Tidak Hadir</th><th>Kualitas Pemimpin</th><th>Sharing</th><th>Pembagi Meditasi</th><th>Catatan</th><th>Foto</th></tr></thead><tbody>";
+            echo '<div class="table-wrap dg-recap-group-report-table-wrap"><table class="table dg-recap-table dg-recap-group-report-table"><thead><tr><th>Tanggal</th><th>Pemimpin</th><th>Anggota</th><th>Materi</th><th>Anggota Tidak Hadir</th><th>Kualitas Pemimpin</th><th>Sharing</th><th>Pembagi Meditasi</th><th>Catatan</th><th>Foto</th></tr></thead><tbody>';
             foreach ($monthRows as $modalRow) {
                 $qualityTags = $modalRow['quality_tags'] ?? [];
-                if (!is_array($qualityTags)) {
+                if (! is_array($qualityTags)) {
                     $qualityTags = [];
                 }
                 $meetingPhotos = $modalRow['meeting_photos'] ?? [];
-                if (!is_array($meetingPhotos)) {
+                if (! is_array($meetingPhotos)) {
                     $meetingPhotos = [];
                 }
-                echo "<tr>";
-                echo "<td class=\"dg-recap-text\"><div class=\"dg-recap-main-cell\"><div class=\"dg-recap-main-title\">" . h((string) ($modalRow['meeting_date'] ?? '-')) . "</div></div></td>";
-                echo "<td>" . h((string) ($modalRow['leader_name'] ?? '-')) . "</td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['group_label'] ?? 'Belum ada anggota'));
+                echo '<tr>';
+                echo '<td class="dg-recap-text"><div class="dg-recap-main-cell"><div class="dg-recap-main-title">'.h((string) ($modalRow['meeting_date'] ?? '-')).'</div></div></td>';
+                echo '<td>'.h((string) ($modalRow['leader_name'] ?? '-')).'</td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['group_label'] ?? 'Belum ada anggota'));
                 $groupProgressLabel = trim((string) ($modalRow['group_progress'] ?? ''));
                 if ($groupProgressLabel !== '') {
-                    echo "<div class=\"dg-recap-subtext\">Progress: " . h($groupProgressLabel) . "</div>";
+                    echo '<div class="dg-recap-subtext">Progress: '.h($groupProgressLabel).'</div>';
                 }
-                echo "</td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['material_topic'] ?? '-')) . "</td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['absent_label'] ?? '-'));
+                echo '</td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['material_topic'] ?? '-')).'</td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['absent_label'] ?? '-'));
                 $absentReasonLabel = trim((string) ($modalRow['absent_reason_label'] ?? ''));
                 if ($absentReasonLabel !== '') {
-                    echo "<div class=\"dg-recap-subtext\">Alasan: " . h($absentReasonLabel) . "</div>";
+                    echo '<div class="dg-recap-subtext">Alasan: '.h($absentReasonLabel).'</div>';
                 }
-                echo "</td>";
-                echo "<td>";
+                echo '</td>';
+                echo '<td>';
                 if (count($qualityTags) === 0) {
-                    echo "-";
+                    echo '-';
                 } else {
-                    echo "<div class=\"dg-recap-chip-list\">";
+                    echo '<div class="dg-recap-chip-list">';
                     foreach ($qualityTags as $tag) {
-                        echo "<span class=\"chip\">" . h((string) $tag) . "</span>";
+                        echo '<span class="chip">'.h((string) $tag).'</span>';
                     }
-                    echo "</div>";
+                    echo '</div>';
                 }
-                echo "</td>";
-                echo "<td><div class=\"dg-recap-number-chip\">" . h((string) ($modalRow['sharing_label'] ?? '-')) . "</div></td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['meditation_label'] ?? '-'));
+                echo '</td>';
+                echo '<td><div class="dg-recap-number-chip">'.h((string) ($modalRow['sharing_label'] ?? '-')).'</div></td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['meditation_label'] ?? '-'));
                 $meditationMetaLabel = trim((string) ($modalRow['meditation_meta_label'] ?? ''));
                 if ($meditationMetaLabel !== '') {
-                    echo "<div class=\"dg-recap-subtext\">" . h($meditationMetaLabel) . "</div>";
+                    echo '<div class="dg-recap-subtext">'.h($meditationMetaLabel).'</div>';
                 }
-                echo "</td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['notes_label'] ?? '-')) . "</td>";
-                echo "<td class=\"dg-recap-text\">";
+                echo '</td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['notes_label'] ?? '-')).'</td>';
+                echo '<td class="dg-recap-text">';
                 $photoCount = count($meetingPhotos);
                 if ($photoCount <= 0) {
-                    echo "-";
+                    echo '-';
                 } else {
-                    echo h((string) $photoCount . " foto");
+                    echo h((string) $photoCount.' foto');
                     $photoPreview = array_slice($meetingPhotos, 0, 3);
                     if (count($photoPreview) > 0) {
-                        echo "<div class=\"dg-recap-photo-links\">";
+                        echo '<div class="dg-recap-photo-links">';
                         foreach ($photoPreview as $photoRow) {
                             $photoPath = trim((string) ($photoRow['path'] ?? ''));
                             if ($photoPath === '') {
@@ -1021,18 +1031,18 @@ if ($page === 'dg_reports_recap') {
                             if ($photoUrl === '') {
                                 continue;
                             }
-                            echo "<button class=\"note-link dg-recap-photo-trigger\" type=\"button\" data-dg-recap-photo-open data-photo-src=\"" . h($photoUrl) . "\" data-photo-title=\"Preview Foto\">Lihat Foto</button>";
+                            echo '<button class="note-link dg-recap-photo-trigger" type="button" data-dg-recap-photo-open data-photo-src="'.h($photoUrl).'" data-photo-title="Preview Foto">Lihat Foto</button>';
                         }
-                        echo "</div>";
+                        echo '</div>';
                     }
                     if ($photoCount > 3) {
-                        echo "<div class=\"dg-recap-subtext\">+" . h((string) ($photoCount - 3)) . " foto lainnya</div>";
+                        echo '<div class="dg-recap-subtext">+'.h((string) ($photoCount - 3)).' foto lainnya</div>';
                     }
                 }
-                echo "</td>";
-                echo "</tr>";
+                echo '</td>';
+                echo '</tr>';
             }
-            echo "</tbody></table></div>";
+            echo '</tbody></table></div>';
         }
         echo "</template>\n";
     }
@@ -1049,6 +1059,7 @@ if ($page === 'dg_reports_recap') {
             if ($normalized === 'DG 3') {
                 return 3;
             }
+
             return 9;
         };
         $rankA = $progressRank((string) ($a['progress'] ?? ''));
@@ -1056,6 +1067,7 @@ if ($page === 'dg_reports_recap') {
         if ($rankA !== $rankB) {
             return $rankA <=> $rankB;
         }
+
         return strcasecmp((string) ($a['leader_name'] ?? ''), (string) ($b['leader_name'] ?? ''));
     });
 
@@ -1087,20 +1099,20 @@ if ($page === 'dg_reports_recap') {
         } elseif ($progressLabel === 'DG 3') {
             $progressClass = 'is-dg3';
         }
-        echo "<tr>";
-        echo "<td><div class=\"dg-recap-main-cell\"><div class=\"dg-recap-main-title\">" . h((string) ($groupRow['leader_name'] ?? '-')) . "</div><div class=\"dg-recap-subtext\">" . h($groupMembersLabel) . "</div></div></td>";
-        echo "<td><span class=\"dg-recap-stage-pill " . h($progressClass) . "\">" . h($progressLabel) . "</span></td>";
+        echo '<tr>';
+        echo '<td><div class="dg-recap-main-cell"><div class="dg-recap-main-title">'.h((string) ($groupRow['leader_name'] ?? '-')).'</div><div class="dg-recap-subtext">'.h($groupMembersLabel).'</div></div></td>';
+        echo '<td><span class="dg-recap-stage-pill '.h($progressClass).'">'.h($progressLabel).'</span></td>';
         $reportCount = (int) ($groupRow['report_count'] ?? 0);
         $reportGroupKey = (string) ($groupRow['report_group_key'] ?? '');
-        echo "<td>" . h($lastMaterialLabel) . "</td>";
-        echo "<td>";
+        echo '<td>'.h($lastMaterialLabel).'</td>';
+        echo '<td>';
         if ($reportCount > 0 && $reportGroupKey !== '') {
-            echo "<button class=\"dg-recap-number-chip is-accent dg-recap-report-trigger\" type=\"button\" data-dg-recap-modal-open data-group-key=\"" . h($reportGroupKey) . "\" data-group-title=\"" . h((string) ($groupRow['leader_name'] ?? '-')) . "\" data-group-progress=\"" . h($progressLabel) . "\" data-group-members=\"" . h($groupMembersLabel) . "\">" . h((string) $reportCount) . "</button>";
+            echo '<button class="dg-recap-number-chip is-accent dg-recap-report-trigger" type="button" data-dg-recap-modal-open data-group-key="'.h($reportGroupKey).'" data-group-title="'.h((string) ($groupRow['leader_name'] ?? '-')).'" data-group-progress="'.h($progressLabel).'" data-group-members="'.h($groupMembersLabel).'">'.h((string) $reportCount).'</button>';
         } else {
-            echo "<div class=\"dg-recap-number-chip is-accent\">" . h((string) $reportCount) . "</div>";
+            echo '<div class="dg-recap-number-chip is-accent">'.h((string) $reportCount).'</div>';
         }
-        echo "</td>";
-        echo "<td>" . h($lastMeetingLabel) . "</td>";
+        echo '</td>';
+        echo '<td>'.h($lastMeetingLabel).'</td>';
         echo "</tr>\n";
     }
     if (count($groupRows) === 0) {
@@ -1131,64 +1143,64 @@ if ($page === 'dg_reports_recap') {
             continue;
         }
         $modalRows = $groupReportRowsByFilterKey[$reportGroupKey] ?? [];
-        echo "<template data-dg-recap-group-report-template=\"" . h($reportGroupKey) . "\">";
+        echo '<template data-dg-recap-group-report-template="'.h($reportGroupKey).'">';
         if (count($modalRows) === 0) {
-            echo "<div class=\"panel-note\">Belum ada laporan untuk kelompok ini.</div>";
+            echo '<div class="panel-note">Belum ada laporan untuk kelompok ini.</div>';
         } else {
-            echo "<div class=\"table-wrap dg-recap-group-report-table-wrap\"><table class=\"table dg-recap-table dg-recap-group-report-table\"><thead><tr><th>Tanggal</th><th>Pemimpin</th><th>Anggota</th><th>Materi</th><th>Anggota Tidak Hadir</th><th>Kualitas Pemimpin</th><th>Sharing</th><th>Pembagi Meditasi</th><th>Catatan</th><th>Foto</th></tr></thead><tbody>";
+            echo '<div class="table-wrap dg-recap-group-report-table-wrap"><table class="table dg-recap-table dg-recap-group-report-table"><thead><tr><th>Tanggal</th><th>Pemimpin</th><th>Anggota</th><th>Materi</th><th>Anggota Tidak Hadir</th><th>Kualitas Pemimpin</th><th>Sharing</th><th>Pembagi Meditasi</th><th>Catatan</th><th>Foto</th></tr></thead><tbody>';
             foreach ($modalRows as $modalRow) {
                 $qualityTags = $modalRow['quality_tags'] ?? [];
-                if (!is_array($qualityTags)) {
+                if (! is_array($qualityTags)) {
                     $qualityTags = [];
                 }
                 $meetingPhotos = $modalRow['meeting_photos'] ?? [];
-                if (!is_array($meetingPhotos)) {
+                if (! is_array($meetingPhotos)) {
                     $meetingPhotos = [];
                 }
-                echo "<tr>";
-                echo "<td class=\"dg-recap-text\"><div class=\"dg-recap-main-cell\"><div class=\"dg-recap-main-title\">" . h((string) ($modalRow['meeting_date'] ?? '-')) . "</div></div></td>";
-                echo "<td>" . h((string) ($modalRow['leader_name'] ?? '-')) . "</td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['group_label'] ?? 'Belum ada anggota'));
+                echo '<tr>';
+                echo '<td class="dg-recap-text"><div class="dg-recap-main-cell"><div class="dg-recap-main-title">'.h((string) ($modalRow['meeting_date'] ?? '-')).'</div></div></td>';
+                echo '<td>'.h((string) ($modalRow['leader_name'] ?? '-')).'</td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['group_label'] ?? 'Belum ada anggota'));
                 $groupProgressLabel = trim((string) ($modalRow['group_progress'] ?? ''));
                 if ($groupProgressLabel !== '') {
-                    echo "<div class=\"dg-recap-subtext\">Progress: " . h($groupProgressLabel) . "</div>";
+                    echo '<div class="dg-recap-subtext">Progress: '.h($groupProgressLabel).'</div>';
                 }
-                echo "</td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['material_topic'] ?? '-')) . "</td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['absent_label'] ?? '-'));
+                echo '</td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['material_topic'] ?? '-')).'</td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['absent_label'] ?? '-'));
                 $absentReasonLabel = trim((string) ($modalRow['absent_reason_label'] ?? ''));
                 if ($absentReasonLabel !== '') {
-                    echo "<div class=\"dg-recap-subtext\">Alasan: " . h($absentReasonLabel) . "</div>";
+                    echo '<div class="dg-recap-subtext">Alasan: '.h($absentReasonLabel).'</div>';
                 }
-                echo "</td>";
-                echo "<td>";
+                echo '</td>';
+                echo '<td>';
                 if (count($qualityTags) === 0) {
-                    echo "-";
+                    echo '-';
                 } else {
-                    echo "<div class=\"dg-recap-chip-list\">";
+                    echo '<div class="dg-recap-chip-list">';
                     foreach ($qualityTags as $tag) {
-                        echo "<span class=\"chip\">" . h((string) $tag) . "</span>";
+                        echo '<span class="chip">'.h((string) $tag).'</span>';
                     }
-                    echo "</div>";
+                    echo '</div>';
                 }
-                echo "</td>";
-                echo "<td><div class=\"dg-recap-number-chip\">" . h((string) ($modalRow['sharing_label'] ?? '-')) . "</div></td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['meditation_label'] ?? '-'));
+                echo '</td>';
+                echo '<td><div class="dg-recap-number-chip">'.h((string) ($modalRow['sharing_label'] ?? '-')).'</div></td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['meditation_label'] ?? '-'));
                 $meditationMetaLabel = trim((string) ($modalRow['meditation_meta_label'] ?? ''));
                 if ($meditationMetaLabel !== '') {
-                    echo "<div class=\"dg-recap-subtext\">" . h($meditationMetaLabel) . "</div>";
+                    echo '<div class="dg-recap-subtext">'.h($meditationMetaLabel).'</div>';
                 }
-                echo "</td>";
-                echo "<td class=\"dg-recap-text\">" . h((string) ($modalRow['notes_label'] ?? '-')) . "</td>";
-                echo "<td class=\"dg-recap-text\">";
+                echo '</td>';
+                echo '<td class="dg-recap-text">'.h((string) ($modalRow['notes_label'] ?? '-')).'</td>';
+                echo '<td class="dg-recap-text">';
                 $photoCount = count($meetingPhotos);
                 if ($photoCount <= 0) {
-                    echo "-";
+                    echo '-';
                 } else {
-                    echo h((string) $photoCount . " foto");
+                    echo h((string) $photoCount.' foto');
                     $photoPreview = array_slice($meetingPhotos, 0, 3);
                     if (count($photoPreview) > 0) {
-                        echo "<div class=\"dg-recap-photo-links\">";
+                        echo '<div class="dg-recap-photo-links">';
                         foreach ($photoPreview as $photoRow) {
                             $photoPath = trim((string) ($photoRow['path'] ?? ''));
                             if ($photoPath === '') {
@@ -1198,18 +1210,18 @@ if ($page === 'dg_reports_recap') {
                             if ($photoUrl === '') {
                                 continue;
                             }
-                            echo "<button class=\"note-link dg-recap-photo-trigger\" type=\"button\" data-dg-recap-photo-open data-photo-src=\"" . h($photoUrl) . "\" data-photo-title=\"Preview Foto\">Lihat Foto</button>";
+                            echo '<button class="note-link dg-recap-photo-trigger" type="button" data-dg-recap-photo-open data-photo-src="'.h($photoUrl).'" data-photo-title="Preview Foto">Lihat Foto</button>';
                         }
-                        echo "</div>";
+                        echo '</div>';
                     }
                     if ($photoCount > 3) {
-                        echo "<div class=\"dg-recap-subtext\">+" . h((string) ($photoCount - 3)) . " foto lainnya</div>";
+                        echo '<div class="dg-recap-subtext">+'.h((string) ($photoCount - 3)).' foto lainnya</div>';
                     }
                 }
-                echo "</td>";
-                echo "</tr>";
+                echo '</td>';
+                echo '</tr>';
             }
-            echo "</tbody></table></div>";
+            echo '</tbody></table></div>';
         }
         echo "</template>\n";
     }

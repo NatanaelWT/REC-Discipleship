@@ -30,7 +30,7 @@ if ($page === 'msk_classes') {
         'export_template_missing' => 'Template export MSK tidak ditemukan atau rusak.',
         'export_failed' => 'Export data kelas MSK gagal. Coba ulangi lagi.',
     ]);
-    if (!$centralReadOnly) {
+    if (! $centralReadOnly) {
         render_pemuridan_import_feedback();
     }
 
@@ -67,7 +67,7 @@ if ($page === 'msk_classes') {
     $batchMonthMap = [];
     foreach ($participantsSorted as $participant) {
         $participantBatchMonth = normalize_month_value((string) ($participant['msk_month'] ?? date('Y-m')));
-        if (!isset($batchMonthMap[$participantBatchMonth])) {
+        if (! isset($batchMonthMap[$participantBatchMonth])) {
             $batchMonthMap[$participantBatchMonth] = 0;
         }
         $batchMonthMap[$participantBatchMonth]++;
@@ -79,7 +79,7 @@ if ($page === 'msk_classes') {
     $batchMonthFilterIsAll = strtolower($batchMonthFilterInput) === 'all';
     $batchMonthFilterNormalized = $batchMonthFilterInput !== '' ? normalize_month_value($batchMonthFilterInput) : '';
     $batchMonthFilter = $latestBatchMonth;
-    if (!$batchMonthFilterIsAll && $batchMonthFilterNormalized !== '' && isset($batchMonthMap[$batchMonthFilterNormalized])) {
+    if (! $batchMonthFilterIsAll && $batchMonthFilterNormalized !== '' && isset($batchMonthMap[$batchMonthFilterNormalized])) {
         $batchMonthFilter = $batchMonthFilterNormalized;
     }
     $batchMonthFilterParam = $batchMonthFilterIsAll ? 'all' : $batchMonthFilter;
@@ -87,7 +87,7 @@ if ($page === 'msk_classes') {
     $participantsFilteredByBatch = [];
     foreach ($participantsSorted as $participant) {
         $participantBatchMonth = normalize_month_value((string) ($participant['msk_month'] ?? date('Y-m')));
-        if (!$batchMonthFilterIsAll && $participantBatchMonth !== $batchMonthFilter) {
+        if (! $batchMonthFilterIsAll && $participantBatchMonth !== $batchMonthFilter) {
             continue;
         }
         $participantsFilteredByBatch[] = $participant;
@@ -156,55 +156,56 @@ if ($page === 'msk_classes') {
             $statusClass = 'is-progress';
         }
         $mskField = static function (string $label, string $controlHtml, string $extraClass = ''): string {
-            $fieldClass = trim('msk-form-field ' . $extraClass);
-            return "<label class=\"" . h($fieldClass) . "\"><span class=\"msk-form-field-label\">" . h($label) . "</span>" . $controlHtml . "</label>\n";
+            $fieldClass = trim('msk-form-field '.$extraClass);
+
+            return '<label class="'.h($fieldClass).'"><span class="msk-form-field-label">'.h($label).'</span>'.$controlHtml."</label>\n";
         };
 
         $identityFields = [];
         $identityFields[] = $mskField(
             'Nama Peserta',
-            "<input type=\"text\" name=\"full_name\" value=\"" . h($fullName) . "\" placeholder=\"Nama lengkap\" data-msk-name-input>"
+            '<input type="text" name="full_name" value="'.h($fullName).'" placeholder="Nama lengkap" data-msk-name-input>'
         );
 
         $identityFields[] = $mskField(
             'Jenis Kelamin',
-            "<select name=\"gender\" data-msk-gender>"
-                . "<option value=\"\">- Pilih -</option>"
-                . "<option value=\"Laki-laki\" " . ($gender === 'Laki-laki' ? 'selected' : '') . ">Laki-laki</option>"
-                . "<option value=\"Perempuan\" " . ($gender === 'Perempuan' ? 'selected' : '') . ">Perempuan</option>"
-                . "</select>"
+            '<select name="gender" data-msk-gender>'
+                .'<option value="">- Pilih -</option>'
+                .'<option value="Laki-laki" '.($gender === 'Laki-laki' ? 'selected' : '').'>Laki-laki</option>'
+                .'<option value="Perempuan" '.($gender === 'Perempuan' ? 'selected' : '').'>Perempuan</option>'
+                .'</select>'
         );
         $identityFields[] = $mskField(
             'Tanggal Lahir',
-            "<input type=\"date\" name=\"birth_date\" value=\"" . h($birthDate) . "\" data-msk-birth-date>"
+            '<input type="date" name="birth_date" value="'.h($birthDate).'" data-msk-birth-date>'
         );
         $identityFields[] = $mskField(
             'Tempat Lahir',
-            "<input type=\"text\" name=\"birth_place\" value=\"" . h($birthPlace) . "\" placeholder=\"Kota lahir\" data-msk-birth-place>"
+            '<input type="text" name="birth_place" value="'.h($birthPlace).'" placeholder="Kota lahir" data-msk-birth-place>'
         );
 
         $contactFields = [];
         $contactFields[] = $mskField(
             'Alamat',
-            "<textarea name=\"address\" rows=\"3\" placeholder=\"Alamat domisili\" data-msk-address>" . h($address) . "</textarea>",
+            '<textarea name="address" rows="3" placeholder="Alamat domisili" data-msk-address>'.h($address).'</textarea>',
             'is-wide'
         );
         $contactFields[] = $mskField(
             'Email',
-            "<input type=\"email\" name=\"email\" value=\"" . h($email) . "\" placeholder=\"email@contoh.com\" data-msk-email>"
+            '<input type="email" name="email" value="'.h($email).'" placeholder="email@contoh.com" data-msk-email>'
         );
         $contactFields[] = $mskField(
             'Nomor WhatsApp',
-            "<input type=\"text\" name=\"whatsapp\" value=\"" . h($whatsapp) . "\" placeholder=\"08xxxxxxxxxx\" data-msk-whatsapp>"
+            '<input type="text" name="whatsapp" value="'.h($whatsapp).'" placeholder="08xxxxxxxxxx" data-msk-whatsapp>'
         );
         $contactFields[] = $mskField(
             'Upload Foto Peserta',
-            "<input type=\"file\" name=\"participant_photos[]\" accept=\".jpg,.jpeg,.png,.webp\" multiple><span class=\"msk-form-field-hint\">JPG, PNG, atau WEBP. Bisa pilih lebih dari satu file.</span>",
+            '<input type="file" name="participant_photos[]" accept=".jpg,.jpeg,.png,.webp" multiple><span class="msk-form-field-hint">JPG, PNG, atau WEBP. Bisa pilih lebih dari satu file.</span>',
             'is-upload is-wide'
         );
         if (count($photos) > 0) {
-            $photoListHtml = "<div class=\"member-photo-list msk-photo-list\">";
-            $photoListHtml .= "<div class=\"member-photo-current\">Foto saat ini</div>";
+            $photoListHtml = '<div class="member-photo-list msk-photo-list">';
+            $photoListHtml .= '<div class="member-photo-current">Foto saat ini</div>';
             foreach ($photos as $idx => $photo) {
                 $photoPath = (string) ($photo['path'] ?? '');
                 $photoUrl = secure_upload_url($photoPath);
@@ -213,34 +214,34 @@ if ($page === 'msk_classes') {
                 }
                 $photoLabel = trim((string) ($photo['name'] ?? ''));
                 if ($photoLabel === '') {
-                    $photoLabel = 'Foto ' . (string) ($idx + 1);
+                    $photoLabel = 'Foto '.(string) ($idx + 1);
                 }
-                $photoListHtml .= "<div class=\"member-photo-item\">"
-                    . "<a class=\"note-link\" href=\"" . h($photoUrl) . "\" target=\"_blank\" rel=\"noopener\">" . h($photoLabel) . "</a>"
-                    . "<label class=\"check-label\"><input type=\"checkbox\" name=\"remove_photo_paths[]\" value=\"" . h($photoPath) . "\">Hapus</label>"
-                    . "</div>";
+                $photoListHtml .= '<div class="member-photo-item">'
+                    .'<a class="note-link" href="'.h($photoUrl).'" target="_blank" rel="noopener">'.h($photoLabel).'</a>'
+                    .'<label class="check-label"><input type="checkbox" name="remove_photo_paths[]" value="'.h($photoPath).'">Hapus</label>'
+                    .'</div>';
             }
-            $photoListHtml .= "</div>";
-            $contactFields[] = "<div class=\"msk-form-meta-card is-wide\">" . $photoListHtml . "</div>\n";
+            $photoListHtml .= '</div>';
+            $contactFields[] = '<div class="msk-form-meta-card is-wide">'.$photoListHtml."</div>\n";
         }
 
         $progressFields = [];
         $progressFields[] = $mskField(
             'Bulan-Tahun MSK Diikuti',
-            "<input type=\"month\" name=\"msk_month\" value=\"" . h($mskMonth) . "\" required>"
+            '<input type="month" name="msk_month" value="'.h($mskMonth).'" required>'
         );
         $progressFields[] = $mskField(
             'Keterangan',
-            "<textarea name=\"notes\" rows=\"3\" placeholder=\"Catatan peserta...\">" . h($notes) . "</textarea>",
+            '<textarea name="notes" rows="3" placeholder="Catatan peserta...">'.h($notes).'</textarea>',
             'is-wide'
         );
 
         ob_start();
-        echo "<form method=\"post\" action=\"" . h($mskStoreAction) . "\" enctype=\"multipart/form-data\" class=\"form-grid msk-participant-form\" data-msk-form>\n";
-        echo csrf_field() . "\n";
+        echo '<form method="post" action="'.h($mskStoreAction)."\" enctype=\"multipart/form-data\" class=\"form-grid msk-participant-form\" data-msk-form>\n";
+        echo csrf_field()."\n";
         echo "  <input type=\"hidden\" name=\"action\" value=\"save_msk_participant\">\n";
-        echo "  <input type=\"hidden\" name=\"id\" value=\"" . h($participantId) . "\">\n";
-        echo "  <input type=\"hidden\" name=\"batch_month\" value=\"" . h($batchMonth) . "\">\n";
+        echo '  <input type="hidden" name="id" value="'.h($participantId)."\">\n";
+        echo '  <input type="hidden" name="batch_month" value="'.h($batchMonth)."\">\n";
         echo "  <section class=\"msk-form-banner msk-form-full\">\n";
         echo "    <div class=\"msk-form-banner-copy\">\n";
         echo "      <span class=\"msk-form-banner-kicker\">Peserta MSK</span>\n";
@@ -248,8 +249,8 @@ if ($page === 'msk_classes') {
         echo "      <p>Gunakan form ini untuk menyimpan identitas, kontak, batch MSK, dan progres sesi dalam satu alur yang ringkas.</p>\n";
         echo "    </div>\n";
         echo "    <div class=\"msk-form-banner-meta\">\n";
-        echo "      <span class=\"msk-form-badge\">Batch: " . h(format_indo_month($mskMonth)) . "</span>\n";
-        echo "      <span class=\"msk-form-badge is-status " . h($statusClass) . "\">" . h($statusLabel) . " - " . h((string) $sessionCount) . "/12 sesi - " . h((string) $progressPercent) . "%</span>\n";
+        echo '      <span class="msk-form-badge">Batch: '.h(format_indo_month($mskMonth))."</span>\n";
+        echo '      <span class="msk-form-badge is-status '.h($statusClass).'">'.h($statusLabel).' - '.h((string) $sessionCount).'/12 sesi - '.h((string) $progressPercent)."%</span>\n";
         echo "    </div>\n";
         echo "  </section>\n";
         echo "  <section class=\"msk-form-section msk-form-full\">\n";
@@ -293,7 +294,7 @@ if ($page === 'msk_classes') {
         echo "    <div class=\"msk-session-grid\">\n";
         for ($session = 1; $session <= 12; $session++) {
             $checked = isset($sessionMap[(string) $session]) ? 'checked' : '';
-            echo "    <label class=\"check-label\"><input type=\"checkbox\" name=\"session_numbers[]\" value=\"" . h((string) $session) . "\" " . $checked . ">Sesi " . h((string) $session) . "</label>\n";
+            echo '    <label class="check-label"><input type="checkbox" name="session_numbers[]" value="'.h((string) $session).'" '.$checked.'>Sesi '.h((string) $session)."</label>\n";
         }
         echo "    </div>\n";
         echo "  </fieldset>\n";
@@ -301,10 +302,10 @@ if ($page === 'msk_classes') {
         if ($closeActionAttr !== '') {
             $mskFormActionsClass .= ' msk-form-actions is-right';
         }
-        echo "  <div class=\"" . h($mskFormActionsClass) . "\">\n";
+        echo '  <div class="'.h($mskFormActionsClass)."\">\n";
         echo "    <button class=\"btn\" type=\"submit\">Simpan Peserta MSK</button>\n";
         if ($closeActionAttr === '') {
-            echo "    <a class=\"btn ghost\" href=\"" . h(route('discipleship.msk-classes', ['batch_month' => $batchMonth])) . "\">Batal</a>\n";
+            echo '    <a class="btn ghost" href="'.h(route('discipleship.msk-classes', ['batch_month' => $batchMonth]))."\">Batal</a>\n";
         }
         echo "  </div>\n";
         echo "</form>\n";
@@ -313,7 +314,7 @@ if ($page === 'msk_classes') {
     };
 
     $createMskFormContent = '';
-    if (!$centralReadOnly) {
+    if (! $centralReadOnly) {
         $createMskParticipant = [
             'id' => '',
             'full_name' => '',
@@ -355,7 +356,7 @@ if ($page === 'msk_classes') {
         if ($viewBirthDate !== '') {
             $viewBirthDateLabel = format_indo_date($viewBirthDate);
         } elseif ($viewBirthDayMonth !== '') {
-            $viewBirthDateLabel = format_member_birth_day_month($viewBirthDayMonth) . ' (tanpa tahun)';
+            $viewBirthDateLabel = format_member_birth_day_month($viewBirthDayMonth).' (tanpa tahun)';
         }
         $viewBirthPlaceLabel = $viewBirthPlace !== '' ? $viewBirthPlace : '-';
 
@@ -370,39 +371,39 @@ if ($page === 'msk_classes') {
         }
         $viewEmailHtml = '-';
         if ($viewEmail !== '') {
-            $viewEmailHtml = "<a class=\"note-link\" href=\"" . h('mailto:' . $viewEmail) . "\">" . h($viewEmail) . "</a>";
+            $viewEmailHtml = '<a class="note-link" href="'.h('mailto:'.$viewEmail).'">'.h($viewEmail).'</a>';
         }
 
         $viewWhatsapp = trim((string) ($participant['whatsapp'] ?? ''));
         $viewWaDisplay = $viewWhatsapp !== '' ? $viewWhatsapp : '-';
         $viewWaDigits = preg_replace('/\\D+/', '', $viewWhatsapp) ?? '';
         if ($viewWaDigits !== '' && strpos($viewWaDigits, '0') === 0) {
-            $viewWaDigits = '62' . substr($viewWaDigits, 1);
+            $viewWaDigits = '62'.substr($viewWaDigits, 1);
         }
         $viewWaHtml = h($viewWaDisplay);
         if ($viewWaDigits !== '') {
-            $viewWaHtml = "<a class=\"note-link\" href=\"" . h('https://wa.me/' . $viewWaDigits) . "\" target=\"_blank\" rel=\"noopener\">" . h($viewWaDisplay) . "</a>";
+            $viewWaHtml = '<a class="note-link" href="'.h('https://wa.me/'.$viewWaDigits).'" target="_blank" rel="noopener">'.h($viewWaDisplay).'</a>';
         }
 
         $viewMskMonthLabel = format_indo_month((string) ($participant['msk_month'] ?? date('Y-m')));
         $viewSessionNumbers = normalize_msk_session_numbers($participant['session_numbers'] ?? []);
         $viewSessionCount = count($viewSessionNumbers);
         $viewProgressPercent = max(0, min(100, (int) round(($viewSessionCount / 12) * 100)));
-        $viewProgressLabel = (string) $viewSessionCount . '/12 sesi';
+        $viewProgressLabel = (string) $viewSessionCount.'/12 sesi';
         $viewParticipantStatus = normalize_msk_participant_status((string) ($participant['status'] ?? 'active'));
         $viewStatusClass = 'is-pending';
-        $viewStatusBadge = "<span class=\"msk-status-badge is-pending\">Belum</span>";
+        $viewStatusBadge = '<span class="msk-status-badge is-pending">Belum</span>';
         if ($viewParticipantStatus === 'inactive') {
             $viewStatusClass = 'is-inactive';
-            $viewStatusBadge = "<span class=\"msk-status-badge is-inactive\">Nonaktif</span>";
+            $viewStatusBadge = '<span class="msk-status-badge is-inactive">Nonaktif</span>';
         } elseif ($viewSessionCount === 12) {
             $viewStatusClass = 'is-complete';
-            $viewStatusBadge = "<span class=\"msk-status-badge is-complete\">Selesai</span>";
+            $viewStatusBadge = '<span class="msk-status-badge is-complete">Selesai</span>';
         } elseif ($viewSessionCount > 0) {
             $viewStatusClass = 'is-progress';
-            $viewStatusBadge = "<span class=\"msk-status-badge is-progress\">Proses</span>";
+            $viewStatusBadge = '<span class="msk-status-badge is-progress">Proses</span>';
         }
-        $viewSessionLabel = $viewSessionCount > 0 ? 'Sesi ' . implode(', ', array_map('strval', $viewSessionNumbers)) : '-';
+        $viewSessionLabel = $viewSessionCount > 0 ? 'Sesi '.implode(', ', array_map('strval', $viewSessionNumbers)) : '-';
 
         $viewNotes = trim((string) ($participant['notes'] ?? ''));
         if ($viewNotes === '') {
@@ -421,58 +422,58 @@ if ($page === 'msk_classes') {
                 continue;
             }
             $viewPhotoNumber++;
-            $photoLabel = 'Foto ' . (string) $viewPhotoNumber;
-            $viewPhotoLinks[] = "<a class=\"note-link\" href=\"" . h($photoUrl) . "\" target=\"_blank\" rel=\"noopener\">" . h($photoLabel) . "</a>";
+            $photoLabel = 'Foto '.(string) $viewPhotoNumber;
+            $viewPhotoLinks[] = '<a class="note-link" href="'.h($photoUrl).'" target="_blank" rel="noopener">'.h($photoLabel).'</a>';
         }
-        $viewPhotoHtml = count($viewPhotoLinks) > 0 ? "<div class=\"member-photo-links\">" . implode(' ', $viewPhotoLinks) . "</div>" : '-';
+        $viewPhotoHtml = count($viewPhotoLinks) > 0 ? '<div class="member-photo-links">'.implode(' ', $viewPhotoLinks).'</div>' : '-';
 
         ob_start();
-        echo "<div class=\"msk-view-sheet\">";
-        echo "  <section class=\"msk-view-summary-card\">";
-        echo "    <div class=\"msk-view-summary-grid\">";
-        echo "      <div class=\"msk-view-summary-item\"><span>Batch MSK</span><strong>" . h($viewMskMonthLabel) . "</strong></div>";
-        echo "      <div class=\"msk-view-summary-item is-status " . h($viewStatusClass) . "\"><span>Status</span><strong>" . $viewStatusBadge . "</strong></div>";
-        echo "      <div class=\"msk-view-summary-item\"><span>Progress</span><strong>" . h($viewProgressLabel) . "</strong></div>";
-        echo "    </div>";
-        echo "    <div class=\"msk-view-progress\">";
-        echo "      <div class=\"msk-progress-top\"><span class=\"msk-progress-value\">" . h($viewProgressLabel) . "</span><span class=\"msk-progress-percent\">" . h((string) $viewProgressPercent) . "%</span></div>";
-        echo "      <div class=\"msk-progress-bar\" aria-hidden=\"true\"><span style=\"width:" . h((string) $viewProgressPercent) . "%\"></span></div>";
-        echo "      <div class=\"msk-progress-meta\">" . h($viewSessionLabel) . "</div>";
-        echo "    </div>";
-        echo "  </section>";
-        echo "  <div class=\"msk-view-sections\">";
-        echo "    <section class=\"msk-view-section\">";
-        echo "      <div class=\"msk-view-section-head\"><span class=\"msk-view-section-kicker\">Identitas</span><h4>Profil peserta</h4></div>";
-        echo "      <dl class=\"msk-view-details\">";
-        echo "        <div class=\"msk-view-detail\"><dt>Nama Peserta</dt><dd>" . h($viewFullName) . "</dd></div>";
-        echo "        <div class=\"msk-view-detail\"><dt>Jenis Kelamin</dt><dd>" . h($viewGender) . "</dd></div>";
-        echo "        <div class=\"msk-view-detail\"><dt>Tempat Lahir</dt><dd>" . h($viewBirthPlaceLabel) . "</dd></div>";
-        echo "        <div class=\"msk-view-detail\"><dt>Tanggal Lahir</dt><dd>" . h($viewBirthDateLabel) . "</dd></div>";
-        echo "      </dl>";
-        echo "    </section>";
-        echo "    <section class=\"msk-view-section\">";
-        echo "      <div class=\"msk-view-section-head\"><span class=\"msk-view-section-kicker\">Kontak</span><h4>Kontak dan akses</h4></div>";
-        echo "      <dl class=\"msk-view-details\">";
-        echo "        <div class=\"msk-view-detail is-wide\"><dt>Alamat</dt><dd>" . h($viewAddress) . "</dd></div>";
-        echo "        <div class=\"msk-view-detail\"><dt>Email</dt><dd>" . $viewEmailHtml . "</dd></div>";
-        echo "        <div class=\"msk-view-detail\"><dt>WhatsApp</dt><dd>" . $viewWaHtml . "</dd></div>";
-        echo "      </dl>";
-        echo "    </section>";
-        echo "    <section class=\"msk-view-section is-wide\">";
-        echo "      <div class=\"msk-view-section-head\"><span class=\"msk-view-section-kicker\">Lampiran</span><h4>Foto dan keterangan</h4></div>";
-        echo "      <div class=\"msk-view-rich-grid\">";
-        echo "        <div class=\"msk-view-rich-card\"><span>Foto</span><div>" . $viewPhotoHtml . "</div></div>";
-        echo "        <div class=\"msk-view-rich-card\"><span>Keterangan</span><div>" . h($viewNotes) . "</div></div>";
-        echo "      </div>";
-        echo "    </section>";
-        echo "  </div>";
-        echo "</div>";
+        echo '<div class="msk-view-sheet">';
+        echo '  <section class="msk-view-summary-card">';
+        echo '    <div class="msk-view-summary-grid">';
+        echo '      <div class="msk-view-summary-item"><span>Batch MSK</span><strong>'.h($viewMskMonthLabel).'</strong></div>';
+        echo '      <div class="msk-view-summary-item is-status '.h($viewStatusClass).'"><span>Status</span><strong>'.$viewStatusBadge.'</strong></div>';
+        echo '      <div class="msk-view-summary-item"><span>Progress</span><strong>'.h($viewProgressLabel).'</strong></div>';
+        echo '    </div>';
+        echo '    <div class="msk-view-progress">';
+        echo '      <div class="msk-progress-top"><span class="msk-progress-value">'.h($viewProgressLabel).'</span><span class="msk-progress-percent">'.h((string) $viewProgressPercent).'%</span></div>';
+        echo '      <div class="msk-progress-bar" aria-hidden="true"><span style="width:'.h((string) $viewProgressPercent).'%"></span></div>';
+        echo '      <div class="msk-progress-meta">'.h($viewSessionLabel).'</div>';
+        echo '    </div>';
+        echo '  </section>';
+        echo '  <div class="msk-view-sections">';
+        echo '    <section class="msk-view-section">';
+        echo '      <div class="msk-view-section-head"><span class="msk-view-section-kicker">Identitas</span><h4>Profil peserta</h4></div>';
+        echo '      <dl class="msk-view-details">';
+        echo '        <div class="msk-view-detail"><dt>Nama Peserta</dt><dd>'.h($viewFullName).'</dd></div>';
+        echo '        <div class="msk-view-detail"><dt>Jenis Kelamin</dt><dd>'.h($viewGender).'</dd></div>';
+        echo '        <div class="msk-view-detail"><dt>Tempat Lahir</dt><dd>'.h($viewBirthPlaceLabel).'</dd></div>';
+        echo '        <div class="msk-view-detail"><dt>Tanggal Lahir</dt><dd>'.h($viewBirthDateLabel).'</dd></div>';
+        echo '      </dl>';
+        echo '    </section>';
+        echo '    <section class="msk-view-section">';
+        echo '      <div class="msk-view-section-head"><span class="msk-view-section-kicker">Kontak</span><h4>Kontak dan akses</h4></div>';
+        echo '      <dl class="msk-view-details">';
+        echo '        <div class="msk-view-detail is-wide"><dt>Alamat</dt><dd>'.h($viewAddress).'</dd></div>';
+        echo '        <div class="msk-view-detail"><dt>Email</dt><dd>'.$viewEmailHtml.'</dd></div>';
+        echo '        <div class="msk-view-detail"><dt>WhatsApp</dt><dd>'.$viewWaHtml.'</dd></div>';
+        echo '      </dl>';
+        echo '    </section>';
+        echo '    <section class="msk-view-section is-wide">';
+        echo '      <div class="msk-view-section-head"><span class="msk-view-section-kicker">Lampiran</span><h4>Foto dan keterangan</h4></div>';
+        echo '      <div class="msk-view-rich-grid">';
+        echo '        <div class="msk-view-rich-card"><span>Foto</span><div>'.$viewPhotoHtml.'</div></div>';
+        echo '        <div class="msk-view-rich-card"><span>Keterangan</span><div>'.h($viewNotes).'</div></div>';
+        echo '      </div>';
+        echo '    </section>';
+        echo '  </div>';
+        echo '</div>';
 
         $templateData = [
             'title' => $viewFullName,
             'content' => (string) ob_get_clean(),
         ];
-        if (!$centralReadOnly) {
+        if (! $centralReadOnly) {
             $templateData['edit_href'] = route('discipleship.msk-classes', ['edit' => $viewParticipantId, 'batch_month' => $batchMonthFilterParam]);
         }
         $mskModalTemplates[$viewParticipantId] = $templateData;
@@ -489,60 +490,74 @@ if ($page === 'msk_classes') {
     echo "      <p>Pantau batch aktif, progres penyelesaian sesi, dan kelola peserta MSK dari satu panel yang lebih ringkas.</p>\n";
     echo "    </div>\n";
     echo "    <div class=\"msk-hero-stats\" aria-label=\"Ringkasan kelas MSK\">\n";
-    echo "      <div class=\"msk-hero-stat\"><span class=\"msk-hero-stat-label\">Filter</span><strong class=\"msk-hero-stat-value\">" . h($batchMonthFilterLabel) . "</strong></div>\n";
-    echo "      <div class=\"msk-hero-stat\"><span class=\"msk-hero-stat-label\">Peserta</span><strong class=\"msk-hero-stat-value\">" . h((string) $totalParticipantsFiltered) . "</strong></div>\n";
-    echo "      <div class=\"msk-hero-stat\"><span class=\"msk-hero-stat-label\">Selesai</span><strong class=\"msk-hero-stat-value\">" . h((string) $completedParticipantsFiltered) . "</strong></div>\n";
-    echo "      <div class=\"msk-hero-stat\"><span class=\"msk-hero-stat-label\">Berjalan</span><strong class=\"msk-hero-stat-value\">" . h((string) $inProgressParticipantsFiltered) . "</strong></div>\n";
+    echo '      <div class="msk-hero-stat"><span class="msk-hero-stat-label">Filter</span><strong class="msk-hero-stat-value">'.h($batchMonthFilterLabel)."</strong></div>\n";
+    echo '      <div class="msk-hero-stat"><span class="msk-hero-stat-label">Peserta</span><strong class="msk-hero-stat-value">'.h((string) $totalParticipantsFiltered)."</strong></div>\n";
+    echo '      <div class="msk-hero-stat"><span class="msk-hero-stat-label">Selesai</span><strong class="msk-hero-stat-value">'.h((string) $completedParticipantsFiltered)."</strong></div>\n";
+    echo '      <div class="msk-hero-stat"><span class="msk-hero-stat-label">Berjalan</span><strong class="msk-hero-stat-value">'.h((string) $inProgressParticipantsFiltered)."</strong></div>\n";
     echo "    </div>\n";
     echo "  </div>\n";
     echo "  <div class=\"actions table-tools msk-table-tools msk-hero-tools\">\n";
     echo "    <div class=\"msk-hero-controls\">\n";
-    if (!$centralReadOnly) {
-        echo "      <button class=\"btn tiny icon-btn\" type=\"button\" data-msk-create-open aria-label=\"Tambah Peserta MSK\" title=\"Tambah Peserta MSK\">" . icon_svg('plus') . "</button>\n";
-        echo "      <form method=\"post\" action=\"" . h($mskImportAction) . "\" enctype=\"multipart/form-data\" class=\"msk-import-inline-form\">\n";
-        echo "        " . csrf_field() . "\n";
+    if (! $centralReadOnly) {
+        echo '      <button class="btn tiny icon-btn" type="button" data-msk-create-open aria-label="Tambah Peserta MSK" title="Tambah Peserta MSK">'.icon_svg('plus')."</button>\n";
+        echo '      <form method="post" action="'.h($mskImportAction)."\" enctype=\"multipart/form-data\" class=\"msk-import-inline-form\">\n";
+        echo '        '.csrf_field()."\n";
         echo "        <input type=\"hidden\" name=\"action\" value=\"import_pemuridan_excel\">\n";
         echo "        <input type=\"hidden\" name=\"return_page\" value=\"msk_classes\">\n";
-        echo "        <input type=\"hidden\" name=\"batch_month\" value=\"" . h($batchMonthFilterParam) . "\">\n";
+        echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
         echo "        <label class=\"btn tiny msk-import-trigger\" aria-label=\"Import Data Kelas MSK\" title=\"Import Data Kelas MSK\">Import MSK<input class=\"msk-import-input\" type=\"file\" name=\"import_pemuridan_excel\" accept=\".xlsx\" onchange=\"this.form.submit()\"></label>\n";
         echo "      </form>\n";
-        echo "      <form method=\"post\" action=\"" . h($mskExportAction) . "\" class=\"msk-export-inline-form\">\n";
-        echo "        " . csrf_field() . "\n";
+        echo '      <form method="post" action="'.h($mskExportAction)."\" class=\"msk-export-inline-form\">\n";
+        echo '        '.csrf_field()."\n";
         echo "        <input type=\"hidden\" name=\"action\" value=\"export_pemuridan_excel\">\n";
-        echo "        <input type=\"hidden\" name=\"batch_month\" value=\"" . h($batchMonthFilterParam) . "\">\n";
+        echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
         echo "        <button class=\"btn tiny ghost\" type=\"submit\">Export MSK</button>\n";
         echo "      </form>\n";
     }
     if (count($batchMonthOptions) > 0) {
-        echo "      <form method=\"get\" action=\"" . h($mskIndexAction) . "\" class=\"form-row cash-filter-form\">\n";
+        echo '      <form method="get" action="'.h($mskIndexAction)."\" class=\"form-row cash-filter-form\">\n";
+        if (request()->filled('branch_id')) {
+            echo '      <input type="hidden" name="branch_id" value="'.h((string) request()->query('branch_id'))."\">\n";
+        }
         if ($editId !== '' && $editParticipant !== null) {
-            echo "      <input type=\"hidden\" name=\"edit\" value=\"" . h($editId) . "\">\n";
+            echo '      <input type="hidden" name="edit" value="'.h($editId)."\">\n";
         }
         if ($autoOpenViewParticipantId !== '') {
-            echo "      <input type=\"hidden\" name=\"view\" value=\"" . h($autoOpenViewParticipantId) . "\">\n";
+            echo '      <input type="hidden" name="view" value="'.h($autoOpenViewParticipantId)."\">\n";
+        }
+        if ($participantsSearch !== '') {
+            echo '      <input type="hidden" name="q" value="'.h($participantsSearch)."\">\n";
         }
         echo "      <select name=\"batch_month\" class=\"msk-batch-select\" aria-label=\"Filter batch bulan MSK\" required onchange=\"this.form.submit()\">\n";
-        echo "        <option value=\"all\" " . ($batchMonthFilterIsAll ? 'selected' : '') . ">Semua Batch (" . h((string) count($participantsSorted)) . ")</option>\n";
+        echo '        <option value="all" '.($batchMonthFilterIsAll ? 'selected' : '').'>Semua Batch ('.h((string) $totalParticipantsAll).")</option>\n";
         foreach ($batchMonthOptions as $batchMonthOption) {
-            $selected = !$batchMonthFilterIsAll && $batchMonthOption === $batchMonthFilter ? 'selected' : '';
+            $selected = ! $batchMonthFilterIsAll && $batchMonthOption === $batchMonthFilter ? 'selected' : '';
             $batchCount = (int) ($batchMonthMap[$batchMonthOption] ?? 0);
-            $batchLabel = format_indo_month($batchMonthOption) . ' (' . (string) $batchCount . ')';
-            echo "        <option value=\"" . h($batchMonthOption) . "\" " . $selected . ">" . h($batchLabel) . "</option>\n";
+            $batchLabel = format_indo_month($batchMonthOption).' ('.(string) $batchCount.')';
+            echo '        <option value="'.h($batchMonthOption).'" '.$selected.'>'.h($batchLabel)."</option>\n";
         }
         echo "      </select>\n";
         echo "      </form>\n";
     }
     echo "    </div>\n";
     echo "    <div class=\"msk-hero-search-wrap\">\n";
-    render_table_search_input('msk-table', 'Cari peserta MSK...', 'search msk-table-search', '', '      ');
+    echo '      <form method="get" action="'.h($mskIndexAction)."\" class=\"form-row\">\n";
+    if (request()->filled('branch_id')) {
+        echo '        <input type="hidden" name="branch_id" value="'.h((string) request()->query('branch_id'))."\">\n";
+    }
+    echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
+    echo '        <input type="search" name="q" value="'.h($participantsSearch)."\" class=\"search msk-table-search\" placeholder=\"Cari peserta MSK...\" aria-label=\"Cari peserta MSK\">\n";
+    echo "        <button class=\"btn tiny secondary\" type=\"submit\">Cari</button>\n";
+    echo "      </form>\n";
     echo "    </div>\n";
     echo "  </div>\n";
+    echo view('partials.compact-pagination', ['paginator' => $participantsPagination])->render();
     echo "</section>\n";
 
     echo "<section class=\"card table-card-plain\">\n";
     echo "  <div class=\"table-wrap\">\n";
     echo "    <table class=\"table\" id=\"msk-table\">\n";
-        echo "      <thead><tr><th>Nama Peserta</th><th>Bulan MSK</th><th>Progress Sesi</th><th>Status</th><th>WhatsApp</th><th class=\"actions-head\">Aksi</th></tr></thead>\n";
+    echo "      <thead><tr><th>Nama Peserta</th><th>Bulan MSK</th><th>Progress Sesi</th><th>Status</th><th>WhatsApp</th><th class=\"actions-head\">Aksi</th></tr></thead>\n";
     echo "      <tbody>\n";
     foreach ($participantsFilteredByBatch as $participant) {
         $participantId = trim((string) ($participant['id'] ?? ''));
@@ -550,9 +565,9 @@ if ($page === 'msk_classes') {
         if ($fullName === '') {
             $fullName = '-';
         }
-        if (!$centralReadOnly && $participantId !== '') {
+        if (! $centralReadOnly && $participantId !== '') {
             $mskEditModalTemplates[$participantId] = [
-                'title' => 'Edit Peserta MSK: ' . $fullName,
+                'title' => 'Edit Peserta MSK: '.$fullName,
                 'content' => $renderMskParticipantForm($participant, $batchMonthFilterParam, 'data-msk-edit-close'),
             ];
         }
@@ -560,43 +575,43 @@ if ($page === 'msk_classes') {
 
         $sessionNumbers = normalize_msk_session_numbers($participant['session_numbers'] ?? []);
         $sessionCount = count($sessionNumbers);
-        $progressLabel = (string) $sessionCount . '/12 sesi';
+        $progressLabel = (string) $sessionCount.'/12 sesi';
         $progressPercent = max(0, min(100, (int) round(($sessionCount / 12) * 100)));
-        $progressMeta = $sessionCount > 0 ? ('Sesi ' . implode(', ', array_map('strval', $sessionNumbers))) : 'Belum ada sesi yang ditandai.';
+        $progressMeta = $sessionCount > 0 ? ('Sesi '.implode(', ', array_map('strval', $sessionNumbers))) : 'Belum ada sesi yang ditandai.';
 
         $participantStatus = normalize_msk_participant_status((string) ($participant['status'] ?? 'active'));
-        $statusBadge = "<span class=\"msk-status-badge is-pending\">Belum</span>";
+        $statusBadge = '<span class="msk-status-badge is-pending">Belum</span>';
         if ($participantStatus === 'inactive') {
-            $statusBadge = "<span class=\"msk-status-badge is-inactive\">Nonaktif</span>";
+            $statusBadge = '<span class="msk-status-badge is-inactive">Nonaktif</span>';
         } elseif ($sessionCount === 12) {
-            $statusBadge = "<span class=\"msk-status-badge is-complete\">Selesai</span>";
+            $statusBadge = '<span class="msk-status-badge is-complete">Selesai</span>';
         } elseif ($sessionCount > 0) {
-            $statusBadge = "<span class=\"msk-status-badge is-progress\">Proses</span>";
+            $statusBadge = '<span class="msk-status-badge is-progress">Proses</span>';
         }
 
         $whatsapp = trim((string) ($participant['whatsapp'] ?? ''));
         $waDisplay = $whatsapp !== '' ? $whatsapp : '-';
         $waDigits = preg_replace('/\\D+/', '', $whatsapp) ?? '';
         if ($waDigits !== '' && strpos($waDigits, '0') === 0) {
-            $waDigits = '62' . substr($waDigits, 1);
+            $waDigits = '62'.substr($waDigits, 1);
         }
         $waHtml = h($waDisplay);
         if ($waDigits !== '') {
-            $waHtml = "<a class=\"note-link msk-wa-link\" href=\"" . h('https://wa.me/' . $waDigits) . "\" target=\"_blank\" rel=\"noopener\">Hubungi <span>" . h($waDisplay) . "</span></a>";
+            $waHtml = '<a class="note-link msk-wa-link" href="'.h('https://wa.me/'.$waDigits).'" target="_blank" rel="noopener">Hubungi <span>'.h($waDisplay).'</span></a>';
         } else {
-            $waHtml = "<span class=\"msk-wa-empty\">Tidak ada nomor</span>";
+            $waHtml = '<span class="msk-wa-empty">Tidak ada nomor</span>';
         }
 
-        echo "<tr>";
+        echo '<tr>';
         $nameSubLabel = $participantStatus === 'inactive' ? 'Peserta kelas MSK · Nonaktif' : 'Peserta kelas MSK';
-        echo "<td><div class=\"msk-name-cell\"><span class=\"msk-name-main\">" . h($fullName) . "</span><span class=\"msk-name-sub\">" . h($nameSubLabel) . "</span></div></td>";
-        echo "<td><div class=\"msk-month-cell\"><span class=\"msk-month-main\">" . h($mskMonthLabel) . "</span><span class=\"msk-month-sub\">Batch pembinaan</span></div></td>";
-        echo "<td><div class=\"msk-progress-cell\"><div class=\"msk-progress-top\"><span class=\"msk-progress-value\">" . h($progressLabel) . "</span><span class=\"msk-progress-percent\">" . h((string) $progressPercent) . "%</span></div><div class=\"msk-progress-bar\" aria-hidden=\"true\"><span style=\"width:" . h((string) $progressPercent) . "%\"></span></div><div class=\"msk-progress-meta\">" . h($progressMeta) . "</div></div></td>";
-        echo "<td>" . $statusBadge . "</td>";
-        echo "<td>" . $waHtml . "</td>";
-        echo "<td class=\"actions\">";
-        echo "<button class=\"btn tiny secondary icon-btn\" type=\"button\" data-msk-view-open=\"" . h($participantId) . "\" aria-label=\"Lihat\" title=\"Lihat\">" . icon_svg('eye') . "</button>";
-        if (!$centralReadOnly) {
+        echo '<td><div class="msk-name-cell"><span class="msk-name-main">'.h($fullName).'</span><span class="msk-name-sub">'.h($nameSubLabel).'</span></div></td>';
+        echo '<td><div class="msk-month-cell"><span class="msk-month-main">'.h($mskMonthLabel).'</span><span class="msk-month-sub">Batch pembinaan</span></div></td>';
+        echo '<td><div class="msk-progress-cell"><div class="msk-progress-top"><span class="msk-progress-value">'.h($progressLabel).'</span><span class="msk-progress-percent">'.h((string) $progressPercent).'%</span></div><div class="msk-progress-bar" aria-hidden="true"><span style="width:'.h((string) $progressPercent).'%"></span></div><div class="msk-progress-meta">'.h($progressMeta).'</div></div></td>';
+        echo '<td>'.$statusBadge.'</td>';
+        echo '<td>'.$waHtml.'</td>';
+        echo '<td class="actions">';
+        echo '<button class="btn tiny secondary icon-btn" type="button" data-msk-view-open="'.h($participantId).'" aria-label="Lihat" title="Lihat">'.icon_svg('eye').'</button>';
+        if (! $centralReadOnly) {
             $toggleAction = $participantStatus === 'inactive' ? 'reactivate_msk_participant' : 'delete_msk_participant';
             $toggleRouteName = $participantStatus === 'inactive' ? 'discipleship.msk-classes.reactivate' : 'discipleship.msk-classes.deactivate';
             $toggleRoute = route($toggleRouteName, ['participant' => $participantId]);
@@ -606,16 +621,16 @@ if ($page === 'msk_classes') {
                 : 'Nonaktifkan data peserta MSK ini?';
             $toggleClass = $participantStatus === 'inactive' ? 'btn tiny secondary icon-btn' : 'btn tiny danger icon-btn';
             $toggleIcon = $participantStatus === 'inactive' ? icon_svg('check') : icon_svg('trash');
-            echo "<button class=\"btn tiny icon-btn\" type=\"button\" data-msk-edit-open=\"" . h($participantId) . "\" aria-label=\"Edit\" title=\"Edit\">" . icon_svg('edit') . "</button>";
-            echo "<form method=\"post\" action=\"" . h($toggleRoute) . "\" class=\"inline\" onsubmit=\"return confirm('" . h($toggleConfirm) . "');\">";
+            echo '<button class="btn tiny icon-btn" type="button" data-msk-edit-open="'.h($participantId).'" aria-label="Edit" title="Edit">'.icon_svg('edit').'</button>';
+            echo '<form method="post" action="'.h($toggleRoute)."\" class=\"inline\" onsubmit=\"return confirm('".h($toggleConfirm)."');\">";
             echo csrf_field();
-            echo "<input type=\"hidden\" name=\"action\" value=\"" . h($toggleAction) . "\">";
-            echo "<input type=\"hidden\" name=\"id\" value=\"" . h($participantId) . "\">";
-            echo "<input type=\"hidden\" name=\"batch_month\" value=\"" . h($batchMonthFilterParam) . "\">";
-            echo "<button class=\"" . h($toggleClass) . "\" type=\"submit\" aria-label=\"" . h($toggleLabel) . "\" title=\"" . h($toggleLabel) . "\">" . $toggleIcon . "</button>";
-            echo "</form>";
+            echo '<input type="hidden" name="action" value="'.h($toggleAction).'">';
+            echo '<input type="hidden" name="id" value="'.h($participantId).'">';
+            echo '<input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam).'">';
+            echo '<button class="'.h($toggleClass).'" type="submit" aria-label="'.h($toggleLabel).'" title="'.h($toggleLabel).'">'.$toggleIcon.'</button>';
+            echo '</form>';
         }
-        echo "</td>";
+        echo '</td>';
         echo "</tr>\n";
     }
     if ($totalParticipantsFiltered === 0) {
@@ -635,11 +650,11 @@ if ($page === 'msk_classes') {
             }
             $templateEditHref = (string) ($templateData['edit_href'] ?? '');
             $templateContent = (string) ($templateData['content'] ?? '');
-            echo "<template data-msk-view-template=\"" . h($templateId) . "\" data-msk-view-template-title=\"" . h($templateTitle) . "\" data-msk-view-template-edit=\"" . h($templateEditHref) . "\">" . $templateContent . "</template>\n";
+            echo '<template data-msk-view-template="'.h($templateId).'" data-msk-view-template-title="'.h($templateTitle).'" data-msk-view-template-edit="'.h($templateEditHref).'">'.$templateContent."</template>\n";
         }
         echo "</div>\n";
 
-        echo "<div class=\"modal\" id=\"msk-view-modal\" data-msk-view-modal data-msk-view-auto-open=\"" . h($autoOpenViewParticipantId) . "\" aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
+        echo '<div class="modal" id="msk-view-modal" data-msk-view-modal data-msk-view-auto-open="'.h($autoOpenViewParticipantId)."\" aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
         echo "  <div class=\"modal-card member-view-modal-card msk-view-modal-card\">\n";
         echo "    <div class=\"modal-head\">\n";
         echo "      <div class=\"modal-title\" data-msk-view-title>Detail Peserta MSK</div>\n";
@@ -652,7 +667,7 @@ if ($page === 'msk_classes') {
         echo "</div>\n";
     }
 
-    if (!$centralReadOnly) {
+    if (! $centralReadOnly) {
         echo "<div class=\"modal\" id=\"msk-create-modal\" data-msk-create-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
         echo "  <div class=\"modal-card member-view-modal-card msk-form-modal-card\">\n";
         echo "    <div class=\"modal-head\">\n";
@@ -666,7 +681,7 @@ if ($page === 'msk_classes') {
         echo "</div>\n";
     }
 
-    if (!$centralReadOnly && count($mskEditModalTemplates) > 0) {
+    if (! $centralReadOnly && count($mskEditModalTemplates) > 0) {
         echo "<div class=\"is-hidden\" data-msk-edit-templates>\n";
         foreach ($mskEditModalTemplates as $templateId => $templateData) {
             $templateTitle = trim((string) ($templateData['title'] ?? 'Edit Peserta MSK'));
@@ -674,11 +689,11 @@ if ($page === 'msk_classes') {
                 $templateTitle = 'Edit Peserta MSK';
             }
             $templateContent = (string) ($templateData['content'] ?? '');
-            echo "<template data-msk-edit-template=\"" . h($templateId) . "\" data-msk-edit-template-title=\"" . h($templateTitle) . "\">" . $templateContent . "</template>\n";
+            echo '<template data-msk-edit-template="'.h($templateId).'" data-msk-edit-template-title="'.h($templateTitle).'">'.$templateContent."</template>\n";
         }
         echo "</div>\n";
 
-        echo "<div class=\"modal\" id=\"msk-edit-modal\" data-msk-edit-modal data-msk-edit-auto-open=\"" . h($autoOpenEditParticipantId) . "\" aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
+        echo '<div class="modal" id="msk-edit-modal" data-msk-edit-modal data-msk-edit-auto-open="'.h($autoOpenEditParticipantId)."\" aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
         echo "  <div class=\"modal-card member-view-modal-card msk-form-modal-card\">\n";
         echo "    <div class=\"modal-head\">\n";
         echo "      <div class=\"modal-title\" data-msk-edit-title>Edit Peserta MSK</div>\n";

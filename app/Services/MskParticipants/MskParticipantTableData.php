@@ -13,10 +13,6 @@ class MskParticipantTableData
     /** @param array<int, string>|null $branchCodes */
     public function countParticipants(?array $branchCodes = null): int
     {
-        if (! $this->hasTables()) {
-            return 0;
-        }
-
         $query = MskParticipant::query();
         if ($branchCodes !== null) {
             $branchCodes = $this->normalizeBranchCodes($branchCodes);
@@ -27,7 +23,11 @@ class MskParticipantTableData
             $query->whereIn('branch_id', branch_ids_from_slugs($branchCodes));
         }
 
-        return (int) $query->count();
+        try {
+            return (int) $query->count();
+        } catch (Throwable) {
+            return 0;
+        }
     }
 
     /**
@@ -36,28 +36,28 @@ class MskParticipantTableData
      */
     public function participantsForBranches(array $branchCodes): array
     {
-        if (! $this->hasTables()) {
-            return [];
-        }
-
         $branchCodes = $this->normalizeBranchCodes($branchCodes);
         if ($branchCodes === []) {
             return [];
         }
 
-        return MskParticipant::query()
-            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-            ->orderBy('full_name')
-            ->orderBy('id')
-            ->get()
-            ->map(static function (MskParticipant $participant): array {
-                $row = $participant->toViewArray();
-                $row['branch_code'] = normalize_public_branch_code((string) $participant->branch_code);
+        try {
+            return MskParticipant::query()
+                ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+                ->orderBy('full_name')
+                ->orderBy('id')
+                ->get()
+                ->map(static function (MskParticipant $participant): array {
+                    $row = $participant->toViewArray();
+                    $row['branch_code'] = normalize_public_branch_code((string) $participant->branch_code);
 
-                return $row;
-            })
-            ->values()
-            ->all();
+                    return $row;
+                })
+                ->values()
+                ->all();
+        } catch (Throwable) {
+            return [];
+        }
     }
 
     /**

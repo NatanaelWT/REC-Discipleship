@@ -1,9 +1,33 @@
 <?php
 
-function dgv2_groups_projection(array $model, array $peopleById): array {
+function dgv2_groups_projection(array $model, array $peopleById): array
+{
+    $leadershipsByGroup = [];
+    foreach ($model['group_leaderships'] as $leadership) {
+        if (! is_array($leadership) || ! dgv2_is_current_period($leadership)) {
+            continue;
+        }
+        $groupId = trim((string) ($leadership['group_id'] ?? ''));
+        if ($groupId !== '') {
+            $leadershipsByGroup[$groupId][] = $leadership;
+        }
+    }
+
+    $membersByGroup = [];
+    foreach ($model['group_memberships'] as $membership) {
+        if (! is_array($membership) || ! dgv2_is_current_period($membership)) {
+            continue;
+        }
+        $groupId = trim((string) ($membership['group_id'] ?? ''));
+        $personId = trim((string) ($membership['person_id'] ?? ''));
+        if ($groupId !== '' && $personId !== '' && isset($peopleById[$personId])) {
+            $membersByGroup[$groupId][$personId] = true;
+        }
+    }
+
     $rows = [];
     foreach ($model['discipleship_groups'] as $group) {
-        if (!is_array($group)) {
+        if (! is_array($group)) {
             continue;
         }
         $groupId = trim((string) ($group['id'] ?? ''));
@@ -15,13 +39,7 @@ function dgv2_groups_projection(array $model, array $peopleById): array {
         }
         $leaderId = '';
         $assistantId = '';
-        foreach ($model['group_leaderships'] as $leadership) {
-            if (!is_array($leadership) || !dgv2_is_current_period($leadership)) {
-                continue;
-            }
-            if (trim((string) ($leadership['group_id'] ?? '')) !== $groupId) {
-                continue;
-            }
+        foreach ($leadershipsByGroup[$groupId] ?? [] as $leadership) {
             $personId = trim((string) ($leadership['leader_person_id'] ?? ''));
             $role = strtolower(trim((string) ($leadership['role'] ?? 'leader')));
             if (($role === 'co_leader' || $role === 'assistant') && $assistantId === '') {
@@ -33,19 +51,7 @@ function dgv2_groups_projection(array $model, array $peopleById): array {
         if ($leaderId === '') {
             continue;
         }
-        $memberIds = [];
-        foreach ($model['group_memberships'] as $membership) {
-            if (!is_array($membership) || !dgv2_is_current_period($membership)) {
-                continue;
-            }
-            if (trim((string) ($membership['group_id'] ?? '')) !== $groupId) {
-                continue;
-            }
-            $personId = trim((string) ($membership['person_id'] ?? ''));
-            if ($personId !== '' && isset($peopleById[$personId]) && !in_array($personId, $memberIds, true)) {
-                $memberIds[] = $personId;
-            }
-        }
+        $memberIds = array_keys($membersByGroup[$groupId] ?? []);
         $progress = normalize_dg_progress_value((string) ($group['current_stage'] ?? $group['start_stage'] ?? ''));
         if ($progress === '') {
             $progress = 'DG 1';
@@ -66,5 +72,6 @@ function dgv2_groups_projection(array $model, array $peopleById): array {
             'updated_at' => trim((string) ($group['updated_at'] ?? now_iso())) ?: now_iso(),
         ];
     }
+
     return $rows;
 }

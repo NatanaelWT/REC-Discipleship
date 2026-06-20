@@ -5,7 +5,7 @@ if ($page === 'spiritual_journey') {
     $peopleByMemberId = [];
     $peopleByName = [];
     foreach ($people as $personRow) {
-        if (!is_array($personRow)) {
+        if (! is_array($personRow)) {
             continue;
         }
         $personId = trim((string) ($personRow['id'] ?? ''));
@@ -13,17 +13,17 @@ if ($page === 'spiritual_journey') {
             continue;
         }
         $personMemberId = trim((string) ($personRow['member_id'] ?? ''));
-        if ($personMemberId !== '' && !isset($peopleByMemberId[$personMemberId])) {
+        if ($personMemberId !== '' && ! isset($peopleByMemberId[$personMemberId])) {
             $peopleByMemberId[$personMemberId] = $personId;
         }
         $personNameKey = strtolower(trim((string) ($personRow['name'] ?? '')));
-        if ($personNameKey !== '' && !isset($peopleByName[$personNameKey])) {
+        if ($personNameKey !== '' && ! isset($peopleByName[$personNameKey])) {
             $peopleByName[$personNameKey] = $personId;
         }
     }
     $discipleshipPersonsById = [];
     foreach (($discipleshipV2Model['discipleship_persons'] ?? []) as $personRecord) {
-        if (!is_array($personRecord)) {
+        if (! is_array($personRecord)) {
             continue;
         }
         $personId = trim((string) ($personRecord['id'] ?? ''));
@@ -35,7 +35,7 @@ if ($page === 'spiritual_journey') {
 
     $allGroupsById = [];
     foreach (($discipleshipV2Model['discipleship_groups'] ?? []) as $groupRecord) {
-        if (!is_array($groupRecord)) {
+        if (! is_array($groupRecord)) {
             continue;
         }
         $groupId = trim((string) ($groupRecord['id'] ?? ''));
@@ -48,7 +48,7 @@ if ($page === 'spiritual_journey') {
     $membershipsByPersonId = [];
     $membershipsByGroupId = [];
     foreach (($discipleshipV2Model['group_memberships'] ?? []) as $membershipRecord) {
-        if (!is_array($membershipRecord)) {
+        if (! is_array($membershipRecord)) {
             continue;
         }
         $personId = trim((string) ($membershipRecord['person_id'] ?? ''));
@@ -65,7 +65,7 @@ if ($page === 'spiritual_journey') {
     $leadershipsByPersonId = [];
     $leadershipsByGroupId = [];
     foreach (($discipleshipV2Model['group_leaderships'] ?? []) as $leadershipRecord) {
-        if (!is_array($leadershipRecord)) {
+        if (! is_array($leadershipRecord)) {
             continue;
         }
         $personId = trim((string) ($leadershipRecord['leader_person_id'] ?? ''));
@@ -81,7 +81,7 @@ if ($page === 'spiritual_journey') {
     $relationsByDiscipleId = [];
     $relationsByMentorId = [];
     foreach (($discipleshipV2Model['discipleship_relations'] ?? []) as $relationRecord) {
-        if (!is_array($relationRecord)) {
+        if (! is_array($relationRecord)) {
             continue;
         }
         $discipleId = trim((string) ($relationRecord['disciple_person_id'] ?? ''));
@@ -119,6 +119,7 @@ if ($page === 'spiritual_journey') {
         if (isset($labelMap[$normalized])) {
             return $labelMap[$normalized];
         }
+
         return ucwords(str_replace('_', ' ', $value));
     };
     $historyUpgradeNoteLabel = static function (string $reason, string $stage): string {
@@ -142,6 +143,7 @@ if ($page === 'spiritual_journey') {
         if ($reason === 'stage_transition') {
             return 'Transisi tahap';
         }
+
         return $reason;
     };
     $historyDateLabel = static function (string $startDate, string $endDate): string {
@@ -155,7 +157,8 @@ if ($page === 'spiritual_journey') {
         if ($startDate !== '' && $endDate !== '' && $startDate === $endDate) {
             return $startLabel;
         }
-        return $startLabel . ' - ' . $endLabel;
+
+        return $startLabel.' - '.$endLabel;
     };
     $journeyStageBadgeHtml = static function (string $stage): string {
         $stage = normalize_dg_progress_value($stage);
@@ -170,7 +173,8 @@ if ($page === 'spiritual_journey') {
         } elseif ($stage === 'DG 3') {
             $badgeClass = 'journey-track-badge is-dg3';
         }
-        return "<span class=\"" . h($badgeClass) . "\">" . h($stage) . "</span>";
+
+        return '<span class="'.h($badgeClass).'">'.h($stage).'</span>';
     };
     $renderJourneyHistoryHtml = static function (
         array $participant,
@@ -199,7 +203,7 @@ if ($page === 'spiritual_journey') {
         if ($sessionCount > 12) {
             $sessionCount = 12;
         }
-        $mskProgress = $sessionCount > 0 ? ((string) $sessionCount . '/12') : '-';
+        $mskProgress = $sessionCount > 0 ? ((string) $sessionCount.'/12') : '-';
         $mskBadgeClass = $sessionCount >= 12
             ? 'journey-track-badge is-msk is-msk-done'
             : 'journey-track-badge is-msk is-msk-progress';
@@ -218,11 +222,11 @@ if ($page === 'spiritual_journey') {
         }
 
         $summaryBadges = [];
-        $summaryBadges[] = "<span class=\"" . h($mskBadgeClass) . "\">MSK " . h($mskProgress) . "</span>";
+        $summaryBadges[] = '<span class="'.h($mskBadgeClass).'">MSK '.h($mskProgress).'</span>';
         if ($activeDgProgress !== '') {
             $summaryBadges[] = $journeyStageBadgeHtml($activeDgProgress);
         }
-        $summaryBadges[] = "<span class=\"" . h($bridgeBadgeClass) . "\">" . h((string) ($bridgeLabels[$journeyBridgeStatus] ?? 'Belum RG/KGAP')) . "</span>";
+        $summaryBadges[] = '<span class="'.h($bridgeBadgeClass).'">'.h((string) ($bridgeLabels[$journeyBridgeStatus] ?? 'Belum RG/KGAP')).'</span>';
 
         $currentMentorNames = [];
         $currentGroupNames = [];
@@ -239,6 +243,7 @@ if ($page === 'spiritual_journey') {
             if ($stage === 'DG 1') {
                 return 1;
             }
+
             return 0;
         };
 
@@ -264,23 +269,26 @@ if ($page === 'spiritual_journey') {
                 $stage = normalize_dg_progress_value((string) ($membership['stage'] ?? ''));
                 $role = trim((string) ($membership['role'] ?? 'anggota'));
                 $isActive = dgv2_is_current_period($membership);
-                if ($isActive && !in_array($groupName, $currentGroupNames, true)) {
+                if ($isActive && ! in_array($groupName, $currentGroupNames, true)) {
                     $currentGroupNames[] = $groupName;
                 }
                 $meta = [];
                 if ($stage !== '') {
                     $meta[] = $journeyStageBadgeHtml($stage);
                 }
-                $meta[] = "<span class=\"journey-history-chip\">" . h($historyTextLabel($role)) . "</span>";
-                
+                $meta[] = '<span class="journey-history-chip">'.h($historyTextLabel($role)).'</span>';
+
                 $groupLeaderName = '';
                 if (isset($leadershipsByGroupId[$groupId])) {
                     $groupLeaderships = $leadershipsByGroupId[$groupId];
-                    usort($groupLeaderships, static function(array $a, array $b): int {
+                    usort($groupLeaderships, static function (array $a, array $b): int {
                         $aActive = dgv2_is_current_period($a) ? 1 : 0;
                         $bActive = dgv2_is_current_period($b) ? 1 : 0;
-                        if ($aActive !== $bActive) return $bActive <=> $aActive;
-                        return strcmp(trim((string)($b['updated_at'] ?? '')), trim((string)($a['updated_at'] ?? '')));
+                        if ($aActive !== $bActive) {
+                            return $bActive <=> $aActive;
+                        }
+
+                        return strcmp(trim((string) ($b['updated_at'] ?? '')), trim((string) ($a['updated_at'] ?? '')));
                     });
                     $lPersonId = trim((string) ($groupLeaderships[0]['leader_person_id'] ?? ''));
                     if ($lPersonId !== '') {
@@ -288,18 +296,18 @@ if ($page === 'spiritual_journey') {
                     }
                 }
                 if ($groupLeaderName !== '' && $groupLeaderName !== '-') {
-                    $meta[] = "<span class=\"journey-history-chip\">Pembina: " . h($groupLeaderName) . "</span>";
+                    $meta[] = '<span class="journey-history-chip">Pembina: '.h($groupLeaderName).'</span>';
                 }
 
                 if ($isActive) {
-                    $meta[] = "<span class=\"journey-history-chip is-active\">Aktif</span>";
+                    $meta[] = '<span class="journey-history-chip is-active">Aktif</span>';
                 }
                 $membershipTimelineItems[] = [
                     'type' => 'membership',
                     'is_active' => $isActive ? 1 : 0,
                     'stage_rank' => $stageRank($stage),
                     'sort_date' => trim((string) ($membership['end_date'] ?? $membership['start_date'] ?? $membership['created_at'] ?? '')),
-                    'title' => 'Masuk Kelompok' . ($stage !== '' ? ' ' . $stage : ''),
+                    'title' => 'Masuk Kelompok'.($stage !== '' ? ' '.$stage : ''),
                     'date' => $historyDateLabel((string) ($membership['start_date'] ?? ''), (string) ($membership['end_date'] ?? '')),
                     'meta' => implode('', $meta),
                     'description' => $historyUpgradeNoteLabel((string) ($membership['reason_end'] ?? ''), $stage),
@@ -338,7 +346,7 @@ if ($page === 'spiritual_journey') {
                     if ($leadershipStart !== '' && $membershipEnd !== '' && strcmp($membershipEnd, $leadershipStart) < 0) {
                         $overlapsLeadership = false;
                     }
-                    if (!$overlapsLeadership) {
+                    if (! $overlapsLeadership) {
                         continue;
                     }
                     $memberLabel = person_label($peopleById, $memberPersonId, trim((string) ($discipleshipPersonsById[$memberPersonId]['full_name'] ?? '')));
@@ -349,21 +357,21 @@ if ($page === 'spiritual_journey') {
                 }
                 $memberLabels = array_values(array_unique($memberLabels));
                 $meta = [
-                    "<span class=\"journey-history-chip\">" . h($historyTextLabel($role)) . "</span>",
+                    '<span class="journey-history-chip">'.h($historyTextLabel($role)).'</span>',
                 ];
                 if ($isActive) {
-                    $meta[] = "<span class=\"journey-history-chip is-active\">Aktif</span>";
+                    $meta[] = '<span class="journey-history-chip is-active">Aktif</span>';
                 }
                 $leadershipTimelineItems[] = [
                     'type' => 'leadership',
                     'is_active' => $isActive ? 1 : 0,
                     'stage_rank' => $stageRank($groupStage),
                     'sort_date' => trim((string) ($leadership['end_date'] ?? $leadership['start_date'] ?? $leadership['created_at'] ?? '')),
-                    'title' => 'Memimpin kelompok ' . $groupStage,
+                    'title' => 'Memimpin kelompok '.$groupStage,
                     'date' => $historyDateLabel((string) ($leadership['start_date'] ?? ''), (string) ($leadership['end_date'] ?? '')),
                     'meta' => implode('', $meta),
                     'description' => $historyUpgradeNoteLabel((string) ($leadership['reason_change'] ?? ''), $groupStage),
-                    'members' => count($memberLabels) > 0 ? ('Anggota: ' . implode(', ', $memberLabels)) : '',
+                    'members' => count($memberLabels) > 0 ? ('Anggota: '.implode(', ', $memberLabels)) : '',
                 ];
             }
         }
@@ -385,6 +393,7 @@ if ($page === 'spiritual_journey') {
             if ($dateA !== $dateB) {
                 return strcmp($dateB, $dateA);
             }
+
             return strcasecmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
         });
 
@@ -402,6 +411,7 @@ if ($page === 'spiritual_journey') {
             if ($dateA !== $dateB) {
                 return strcmp($dateB, $dateA);
             }
+
             return strcasecmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
         });
 
@@ -410,68 +420,70 @@ if ($page === 'spiritual_journey') {
                 return '';
             }
             ob_start();
-            echo "<div class=\"journey-history-timeline\">";
+            echo '<div class="journey-history-timeline">';
             foreach ($items as $item) {
                 $description = trim((string) ($item['description'] ?? ''));
                 $membersNote = trim((string) ($item['members'] ?? ''));
-                echo "<article class=\"journey-history-item\">";
-                echo "<div class=\"journey-history-item-head\"><div class=\"journey-history-item-title\">" . h((string) ($item['title'] ?? '-')) . "</div><div class=\"journey-history-item-date\">" . h((string) ($item['date'] ?? '-')) . "</div></div>";
+                echo '<article class="journey-history-item">';
+                echo '<div class="journey-history-item-head"><div class="journey-history-item-title">'.h((string) ($item['title'] ?? '-')).'</div><div class="journey-history-item-date">'.h((string) ($item['date'] ?? '-')).'</div></div>';
                 if (trim((string) ($item['meta'] ?? '')) !== '') {
-                    echo "<div class=\"journey-history-item-meta\">" . (string) ($item['meta'] ?? '') . "</div>";
+                    echo '<div class="journey-history-item-meta">'.(string) ($item['meta'] ?? '').'</div>';
                 }
                 if ($membersNote !== '') {
-                    echo "<div class=\"journey-history-item-members\">" . h($membersNote) . "</div>";
+                    echo '<div class="journey-history-item-members">'.h($membersNote).'</div>';
                 }
                 if ($description !== '') {
-                    echo "<div class=\"journey-history-item-note\">Catatan: " . h($historyTextLabel($description)) . "</div>";
+                    echo '<div class="journey-history-item-note">Catatan: '.h($historyTextLabel($description)).'</div>';
                 }
-                echo "</article>";
+                echo '</article>';
             }
-            echo "</div>";
+            echo '</div>';
+
             return (string) ob_get_clean();
         };
 
         ob_start();
-        echo "<div class=\"journey-history-view\">";
-        echo "<div class=\"journey-history-summary\">";
-        echo "<div class=\"journey-history-summary-main\">";
-        echo "<div class=\"journey-history-summary-name\">" . h($participantName) . "</div>";
-        echo "<div class=\"journey-history-summary-sub\">Member ID: " . h($participantMemberId !== '' ? $participantMemberId : '-') . "</div>";
-        echo "</div>";
-        echo "<div class=\"journey-history-summary-badges\">" . implode('', $summaryBadges) . "</div>";
-        echo "</div>";
+        echo '<div class="journey-history-view">';
+        echo '<div class="journey-history-summary">';
+        echo '<div class="journey-history-summary-main">';
+        echo '<div class="journey-history-summary-name">'.h($participantName).'</div>';
+        echo '<div class="journey-history-summary-sub">Member ID: '.h($participantMemberId !== '' ? $participantMemberId : '-').'</div>';
+        echo '</div>';
+        echo '<div class="journey-history-summary-badges">'.implode('', $summaryBadges).'</div>';
+        echo '</div>';
 
-        echo "<div class=\"journey-history-facts\">";
-        echo "<div class=\"journey-history-fact\"><span class=\"journey-history-fact-label\">Sesi MSK</span><strong>" . h($sessionCount > 0 ? implode(', ', array_map('strval', $sessionNumbers)) : 'Belum ada sesi') . "</strong></div>";
-        echo "<div class=\"journey-history-fact\"><span class=\"journey-history-fact-label\">Mentor Aktif</span><strong>" . h(count($currentMentorNames) > 0 ? implode(', ', $currentMentorNames) : '-') . "</strong></div>";
-        echo "<div class=\"journey-history-fact\"><span class=\"journey-history-fact-label\">Kelompok Aktif</span><strong>" . h(count($currentGroupNames) > 0 ? implode(', ', $currentGroupNames) : '-') . "</strong></div>";
-        echo "</div>";
+        echo '<div class="journey-history-facts">';
+        echo '<div class="journey-history-fact"><span class="journey-history-fact-label">Sesi MSK</span><strong>'.h($sessionCount > 0 ? implode(', ', array_map('strval', $sessionNumbers)) : 'Belum ada sesi').'</strong></div>';
+        echo '<div class="journey-history-fact"><span class="journey-history-fact-label">Mentor Aktif</span><strong>'.h(count($currentMentorNames) > 0 ? implode(', ', $currentMentorNames) : '-').'</strong></div>';
+        echo '<div class="journey-history-fact"><span class="journey-history-fact-label">Kelompok Aktif</span><strong>'.h(count($currentGroupNames) > 0 ? implode(', ', $currentGroupNames) : '-').'</strong></div>';
+        echo '</div>';
 
-        echo "<div class=\"journey-history-section-title\">Riwayat Pemuridan</div>";
+        echo '<div class="journey-history-section-title">Riwayat Pemuridan</div>';
         if ($resolvedPersonId === '') {
-            echo "<div class=\"journey-history-empty\">Peserta ini belum terhubung ke data pemuridan, jadi yang tampil baru progres MSK. Hubungkan peserta ke data DG untuk melihat perpindahan kelompok, mentor, dan peran pelayanan.</div>";
+            echo '<div class="journey-history-empty">Peserta ini belum terhubung ke data pemuridan, jadi yang tampil baru progres MSK. Hubungkan peserta ke data DG untuk melihat perpindahan kelompok, mentor, dan peran pelayanan.</div>';
         } elseif (count($membershipTimelineItems) === 0 && count($leadershipTimelineItems) === 0) {
-            echo "<div class=\"journey-history-empty\">Belum ada histori kelompok atau relasi pemuridan yang tercatat untuk orang ini.</div>";
+            echo '<div class="journey-history-empty">Belum ada histori kelompok atau relasi pemuridan yang tercatat untuk orang ini.</div>';
         } else {
-            echo "<div class=\"journey-history-split-section\">";
-            echo "<div class=\"journey-history-split-header\">Riwayat Sebagai Anggota</div>";
+            echo '<div class="journey-history-split-section">';
+            echo '<div class="journey-history-split-header">Riwayat Sebagai Anggota</div>';
             if (count($membershipTimelineItems) === 0) {
-                echo "<div class=\"journey-history-empty\">Belum ada riwayat sebagai anggota.</div>";
+                echo '<div class="journey-history-empty">Belum ada riwayat sebagai anggota.</div>';
             } else {
                 echo $renderTimelineItems($membershipTimelineItems, $historyTextLabel);
             }
-            echo "</div>";
-            echo "<div class=\"journey-history-split-divider\"></div>";
-            echo "<div class=\"journey-history-split-section\">";
-            echo "<div class=\"journey-history-split-header\">Riwayat Memimpin</div>";
+            echo '</div>';
+            echo '<div class="journey-history-split-divider"></div>';
+            echo '<div class="journey-history-split-section">';
+            echo '<div class="journey-history-split-header">Riwayat Memimpin</div>';
             if (count($leadershipTimelineItems) === 0) {
-                echo "<div class=\"journey-history-empty\">Belum ada riwayat memimpin kelompok.</div>";
+                echo '<div class="journey-history-empty">Belum ada riwayat memimpin kelompok.</div>';
             } else {
                 echo $renderTimelineItems($leadershipTimelineItems, $historyTextLabel);
             }
-            echo "</div>";
+            echo '</div>';
         }
-        echo "</div>";
+        echo '</div>';
+
         return (string) ob_get_clean();
     };
 
@@ -486,6 +498,7 @@ if ($page === 'spiritual_journey') {
         if ($stage === 'DG 1') {
             return 1;
         }
+
         return 0;
     };
     $personCompletedDg1Map = [];
@@ -493,7 +506,7 @@ if ($page === 'spiritual_journey') {
     $personCompletedDg3Map = [];
     $personJourneyMap = [];
     foreach (($discipleshipV2Model['group_memberships'] ?? []) as $membershipRecord) {
-        if (!is_array($membershipRecord)) {
+        if (! is_array($membershipRecord)) {
             continue;
         }
         $personId = trim((string) ($membershipRecord['person_id'] ?? ''));
@@ -532,12 +545,13 @@ if ($page === 'spiritual_journey') {
             $sortDate = trim((string) ($membershipRecord['updated_at'] ?? $membershipRecord['created_at'] ?? ''));
         }
         $existing = $personJourneyMap[$personId] ?? null;
-        if (!is_array($existing)) {
+        if (! is_array($existing)) {
             $personJourneyMap[$personId] = [
                 'progress' => $stage,
                 'sort_date' => $sortDate,
                 'stage_rank' => $stageRank,
             ];
+
             continue;
         }
         $existingSortDate = trim((string) ($existing['sort_date'] ?? ''));
@@ -564,7 +578,7 @@ if ($page === 'spiritual_journey') {
     $completedDg2Count = 0;
     $completedDg3Count = 0;
     foreach ($mskClasses as $participant) {
-        if (!is_array($participant)) {
+        if (! is_array($participant)) {
             continue;
         }
         $fullName = trim((string) ($participant['full_name'] ?? ''));
@@ -577,9 +591,9 @@ if ($page === 'spiritual_journey') {
         if ($sessionCount > 12) {
             $sessionCount = 12;
         }
-        $mskProgress = $sessionCount > 0 ? ((string) $sessionCount . '/12') : '-';
+        $mskProgress = $sessionCount > 0 ? ((string) $sessionCount.'/12') : '-';
         $mskPercent = (int) round(($sessionCount / 12) * 100);
-        $sessionLabel = $sessionCount > 0 ? 'Sesi ' . implode(', ', array_map('strval', $sessionNumbers)) : 'Belum ada sesi';
+        $sessionLabel = $sessionCount > 0 ? 'Sesi '.implode(', ', array_map('strval', $sessionNumbers)) : 'Belum ada sesi';
         if ($sessionCount >= 12) {
             $completedMskCount++;
         }
@@ -599,10 +613,10 @@ if ($page === 'spiritual_journey') {
         }
         $journeyViewKey = trim((string) ($participant['id'] ?? ''));
         if ($journeyViewKey === '') {
-            $journeyViewKey = 'spiritual-journey-' . (string) (count($rows) + 1);
+            $journeyViewKey = 'spiritual-journey-'.(string) (count($rows) + 1);
         }
         $journeyViewTemplates[$journeyViewKey] = [
-            'title' => 'Riwayat Pemuridan ' . $fullName,
+            'title' => 'Riwayat Pemuridan '.$fullName,
             'content' => $renderJourneyHistoryHtml(
                 $participant,
                 $resolvedPersonId,
@@ -629,9 +643,9 @@ if ($page === 'spiritual_journey') {
             'msk_percent' => $mskPercent,
             'session_label' => $sessionLabel,
             'active_dg_progress' => $activeDgProgress,
-            'completed_dg1' => !empty($personCompletedDg1Map[$resolvedPersonId]),
-            'completed_dg2' => !empty($personCompletedDg2Map[$resolvedPersonId]),
-            'completed_dg3' => !empty($personCompletedDg3Map[$resolvedPersonId]),
+            'completed_dg1' => ! empty($personCompletedDg1Map[$resolvedPersonId]),
+            'completed_dg2' => ! empty($personCompletedDg2Map[$resolvedPersonId]),
+            'completed_dg3' => ! empty($personCompletedDg3Map[$resolvedPersonId]),
             'journey_bridge_status' => $journeyBridgeStatus,
             'journey_view_key' => $journeyViewKey,
         ];
@@ -647,10 +661,11 @@ if ($page === 'spiritual_journey') {
         if ($nameA !== $nameB) {
             return $nameA <=> $nameB;
         }
+
         return strcmp((string) ($a['msk_progress'] ?? ''), (string) ($b['msk_progress'] ?? ''));
     });
 
-    $totalJourneyRows = count($rows);
+    $totalJourneyRows = $spiritualJourneyTotalParticipants;
     $journeyTargetKgap = max(0, (int) ($discipleshipTargets['dg_total_people'] ?? 0));
     $journeyTargetDg1 = max(0, (int) ($discipleshipTargets['dg1_people'] ?? 0));
     $journeyTargetDg2 = max(0, (int) ($discipleshipTargets['dg2_people'] ?? 0));
@@ -659,16 +674,16 @@ if ($page === 'spiritual_journey') {
     $completedDg2Count = 0;
     $completedDg3Count = 0;
     foreach ($rows as $journeyRow) {
-        if (!is_array($journeyRow)) {
+        if (! is_array($journeyRow)) {
             continue;
         }
-        if (!empty($journeyRow['completed_dg1'])) {
+        if (! empty($journeyRow['completed_dg1'])) {
             $completedDg1Count++;
         }
-        if (!empty($journeyRow['completed_dg2'])) {
+        if (! empty($journeyRow['completed_dg2'])) {
             $completedDg2Count++;
         }
-        if (!empty($journeyRow['completed_dg3'])) {
+        if (! empty($journeyRow['completed_dg3'])) {
             $completedDg3Count++;
         }
     }
@@ -695,15 +710,22 @@ if ($page === 'spiritual_journey') {
         if (substr($percentLabel, -2) === ',0') {
             $percentLabel = substr($percentLabel, 0, -2);
         }
-        echo "      <div class=\"journey-hero-stat\"><span class=\"journey-hero-stat-label\">" . h((string) ($row['label'] ?? '-')) . "</span><strong class=\"journey-hero-stat-value\">" . h((string) $value) . "</strong></div>\n";
+        echo '      <div class="journey-hero-stat"><span class="journey-hero-stat-label">'.h((string) ($row['label'] ?? '-')).'</span><strong class="journey-hero-stat-value">'.h((string) $value)."</strong></div>\n";
     }
     echo "    </div>\n";
     echo "  </div>\n";
     echo "  <div class=\"actions journey-hero-tools\">\n";
     echo "    <div class=\"journey-hero-search-wrap\">\n";
-    render_table_search_input('spiritual-journey-table', 'Cari peserta spiritual journey...', 'search journey-table-search', '', '      ');
+    echo '      <form method="get" action="'.h(route('discipleship.spiritual-journey'))."\" class=\"form-row\">\n";
+    if (request()->filled('branch_id')) {
+        echo '        <input type="hidden" name="branch_id" value="'.h((string) request()->query('branch_id'))."\">\n";
+    }
+    echo '        <input type="search" name="q" value="'.h($spiritualJourneySearch)."\" class=\"search journey-table-search\" placeholder=\"Cari peserta spiritual journey...\" aria-label=\"Cari peserta spiritual journey\">\n";
+    echo "        <button class=\"btn tiny secondary\" type=\"submit\">Cari</button>\n";
+    echo "      </form>\n";
     echo "    </div>\n";
     echo "  </div>\n";
+    echo view('partials.compact-pagination', ['paginator' => $spiritualJourneyPagination])->render();
     echo "</section>\n";
 
     echo "<section class=\"card table-card-plain\">\n";
@@ -728,9 +750,9 @@ if ($page === 'spiritual_journey') {
         $activeDgProgress = trim((string) ($row['active_dg_progress'] ?? ''));
         $activeDgRank = 0;
         $journeyBridgeStatus = normalize_journey_bridge_status((string) ($row['journey_bridge_status'] ?? 'belum'));
-        $hasCompletedDg1 = !empty($row['completed_dg1']);
-        $hasCompletedDg2 = !empty($row['completed_dg2']);
-        $hasCompletedDg3 = !empty($row['completed_dg3']);
+        $hasCompletedDg1 = ! empty($row['completed_dg1']);
+        $hasCompletedDg2 = ! empty($row['completed_dg2']);
+        $hasCompletedDg3 = ! empty($row['completed_dg3']);
         $dg1Class = $hasCompletedDg1 ? 'is-dg1' : 'is-muted';
         $dg2Class = $hasCompletedDg2 ? 'is-dg2' : 'is-muted';
         $dg3Class = $hasCompletedDg3 ? 'is-dg3' : 'is-muted';
@@ -752,18 +774,18 @@ if ($page === 'spiritual_journey') {
         $bridgeFormAction = $journeyParticipantId !== ''
             ? route('discipleship.spiritual-journey.bridge-status', ['participant' => $journeyParticipantId])
             : route('discipleship.spiritual-journey.bridge-status-form');
-        $bridgeSelect = "<span class=\"journey-track-bridge\"><form method=\"post\" action=\"" . h($bridgeFormAction) . "\" class=\"journey-bridge-form\">" . csrf_field() . "<input type=\"hidden\" name=\"action\" value=\"save_journey_bridge_status\"><input type=\"hidden\" name=\"id\" value=\"" . h($journeyParticipantId) . "\"><select name=\"journey_bridge_status\" class=\"journey-bridge-select " . h($bridgeStateClass) . "\" aria-label=\"Status RG atau KGAP untuk " . h($journeyName) . "\"" . $bridgeSelectAttrs . ">";
+        $bridgeSelect = '<span class="journey-track-bridge"><form method="post" action="'.h($bridgeFormAction).'" class="journey-bridge-form">'.csrf_field().'<input type="hidden" name="action" value="save_journey_bridge_status"><input type="hidden" name="id" value="'.h($journeyParticipantId).'"><select name="journey_bridge_status" class="journey-bridge-select '.h($bridgeStateClass).'" aria-label="Status RG atau KGAP untuk '.h($journeyName).'"'.$bridgeSelectAttrs.'>';
         foreach ($bridgeOptions as $bridgeValue => $bridgeLabel) {
             $selected = $journeyBridgeStatus === $bridgeValue ? ' selected' : '';
-            $bridgeSelect .= "<option value=\"" . h($bridgeValue) . "\"" . $selected . ">" . h($bridgeLabel) . "</option>";
+            $bridgeSelect .= '<option value="'.h($bridgeValue).'"'.$selected.'>'.h($bridgeLabel).'</option>';
         }
-        $bridgeSelect .= "</select></form></span>";
-        echo "<tr>";
-        echo "<td><div class=\"journey-name-cell\"><div class=\"journey-name-main\">" . h($journeyName) . "</div><div class=\"journey-name-sub\">Peserta kelas MSK</div><button class=\"note-link member-inline-trigger journey-history-trigger\" type=\"button\" data-spiritual-journey-view-open=\"" . h($journeyViewKey) . "\" aria-label=\"" . h('Lihat riwayat pemuridan ' . $journeyName) . "\">Lihat riwayat pemuridan</button></div></td>";
+        $bridgeSelect .= '</select></form></span>';
+        echo '<tr>';
+        echo '<td><div class="journey-name-cell"><div class="journey-name-main">'.h($journeyName).'</div><div class="journey-name-sub">Peserta kelas MSK</div><button class="note-link member-inline-trigger journey-history-trigger" type="button" data-spiritual-journey-view-open="'.h($journeyViewKey).'" aria-label="'.h('Lihat riwayat pemuridan '.$journeyName).'">Lihat riwayat pemuridan</button></div></td>';
         $mskDone = $mskPercent >= 100;
         $mskBadgeClass = $mskDone ? 'journey-track-badge is-msk is-msk-done' : 'journey-track-badge is-msk is-msk-progress';
-        $mskBadge = "<span class=\"" . h($mskBadgeClass) . "\">MSK " . h($mskProgressLabel) . "</span>";
-        echo "<td><div class=\"journey-inline-track\" title=\"Tahap DG dan MSK peserta\">{$mskBadge}<span class=\"journey-track-badge " . h($dg1Class) . "\">DG 1</span>" . $bridgeSelect . "<span class=\"journey-track-badge " . h($dg2Class) . "\">DG 2</span><span class=\"journey-track-badge " . h($dg3Class) . "\">DG 3</span></div></td>";
+        $mskBadge = '<span class="'.h($mskBadgeClass).'">MSK '.h($mskProgressLabel).'</span>';
+        echo "<td><div class=\"journey-inline-track\" title=\"Tahap DG dan MSK peserta\">{$mskBadge}<span class=\"journey-track-badge ".h($dg1Class).'">DG 1</span>'.$bridgeSelect.'<span class="journey-track-badge '.h($dg2Class).'">DG 2</span><span class="journey-track-badge '.h($dg3Class).'">DG 3</span></div></td>';
         echo "</tr>\n";
     }
     if (count($rows) === 0) {
@@ -782,7 +804,7 @@ if ($page === 'spiritual_journey') {
                 $templateTitle = 'Riwayat Pemuridan';
             }
             $templateContent = (string) ($templateData['content'] ?? '');
-            echo "<template data-spiritual-journey-view-template=\"" . h($templateId) . "\" data-spiritual-journey-view-template-title=\"" . h($templateTitle) . "\">" . $templateContent . "</template>\n";
+            echo '<template data-spiritual-journey-view-template="'.h($templateId).'" data-spiritual-journey-view-template-title="'.h($templateTitle).'">'.$templateContent."</template>\n";
         }
         echo "</div>\n";
 

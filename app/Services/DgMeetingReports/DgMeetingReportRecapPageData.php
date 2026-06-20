@@ -6,12 +6,15 @@ use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipMeetingReport;
 use App\Models\DiscipleshipPerson;
+use App\Services\Discipleship\DiscipleshipReadCache;
 use DateTimeInterface;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 class DgMeetingReportRecapPageData
 {
+    public function __construct(private readonly DiscipleshipReadCache $cache) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -23,16 +26,21 @@ class DgMeetingReportRecapPageData
             : normalize_public_branch_code(current_user_branch());
 
         $branchCodes = $this->branchCodes($selectedBranch, $centralReadOnly);
-        $branchLabels = $this->branchLabels();
-        $people = $this->people($branchCodes, $centralReadOnly, $branchLabels);
+        $data = $this->cache->remember('meeting-report-recap', [...$branchCodes, $centralReadOnly ? 'central' : 'branch'], function () use ($branchCodes, $centralReadOnly): array {
+            $branchLabels = $this->branchLabels();
+            $people = $this->people($branchCodes, $centralReadOnly, $branchLabels);
+            [$leadershipsByGroup, $membershipsByGroup] = $this->groupPeopleByGroup($branchCodes);
 
-        return [
-            'settings' => ['church_name' => app_church_name()],
-            'page' => 'dg_reports_recap',
-            'people' => array_values($people),
-            'groups' => $this->groups($branchCodes, $centralReadOnly, $branchLabels, $people),
-            'dgMeetingReports' => $this->reports($branchCodes, $centralReadOnly, $branchLabels, $people),
-        ];
+            return [
+                'page' => 'dg_reports_recap',
+                'people' => array_values($people),
+                'groups' => $this->groups($branchCodes, $centralReadOnly, $branchLabels, $people, $leadershipsByGroup, $membershipsByGroup),
+                'dgMeetingReports' => $this->reports($branchCodes, $centralReadOnly, $branchLabels, $people),
+            ];
+        });
+        $data['settings'] = ['church_name' => app_church_name()];
+
+        return $data;
     }
 
     /**
@@ -76,12 +84,13 @@ class DgMeetingReportRecapPageData
      */
     private function people(array $branchCodes, bool $centralReadOnly, array $branchLabels): array
     {
-        if (! Schema::hasTable('discipleship_people')) {
+        $people = [];
+        try {
+            $records = DiscipleshipPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get();
+        } catch (Throwable) {
             return [];
         }
-
-        $people = [];
-        foreach (DiscipleshipPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get() as $person) {
+        foreach ($records as $person) {
             $branchCode = normalize_public_branch_code((string) $person->branch_code);
             $effectiveId = $this->effectiveId($branchCode, (string) $person->getKey());
             if ($effectiveId === '') {
@@ -121,19 +130,22 @@ class DgMeetingReportRecapPageData
      * @param  array<string, array<string, mixed>>  $people
      * @return array<int, array<string, mixed>>
      */
-    private function groups(array $branchCodes, bool $centralReadOnly, array $branchLabels, array $people): array
-    {
-        if (! Schema::hasTable('discipleship_groups')) {
+    private function groups(
+        array $branchCodes,
+        bool $centralReadOnly,
+        array $branchLabels,
+        array $people,
+        array $leadershipsByGroup,
+        array $membershipsByGroup,
+    ): array {
+        try {
+            $groups = DiscipleshipGroup::query()
+                ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+                ->orderBy('id')
+                ->get();
+        } catch (Throwable) {
             return [];
         }
-
-        $groups = DiscipleshipGroup::query()
-            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-            ->orderBy('id')
-            ->get();
-
-        $leadershipsByGroup = $this->leadershipsByGroup($branchCodes);
-        $membershipsByGroup = $this->membershipsByGroup($branchCodes);
         $rows = [];
 
         foreach ($groups as $group) {
@@ -177,52 +189,31 @@ class DgMeetingReportRecapPageData
      * @param  array<int, string>  $branchCodes
      * @return array<string, array<int, DiscipleshipGroupPerson>>
      */
-    private function leadershipsByGroup(array $branchCodes): array
+    private function groupPeopleByGroup(array $branchCodes): array
     {
-        if (! Schema::hasTable('discipleship_group_people')) {
-            return [];
+        $leaderships = [];
+        $memberships = [];
+        try {
+            $records = DiscipleshipGroupPerson::query()
+                ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+                ->orderBy('id')
+                ->get();
+        } catch (Throwable) {
+            return [$leaderships, $memberships];
         }
 
-        $rows = [];
-        $query = DiscipleshipGroupPerson::query()
-            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-            ->where('role', '!=', 'member')
-            ->orderBy('id');
-
-        foreach ($query->get() as $leadership) {
-            $groupId = (int) ($leadership->discipleship_group_id ?? 0);
+        foreach ($records as $record) {
+            $groupId = (int) ($record->discipleship_group_id ?? 0);
             if ($groupId > 0) {
-                $rows[(string) $groupId][] = $leadership;
+                if (($record->role ?? '') === 'member') {
+                    $memberships[(string) $groupId][] = $record;
+                } else {
+                    $leaderships[(string) $groupId][] = $record;
+                }
             }
         }
 
-        return $rows;
-    }
-
-    /**
-     * @param  array<int, string>  $branchCodes
-     * @return array<string, array<int, DiscipleshipGroupPerson>>
-     */
-    private function membershipsByGroup(array $branchCodes): array
-    {
-        if (! Schema::hasTable('discipleship_group_people')) {
-            return [];
-        }
-
-        $rows = [];
-        $query = DiscipleshipGroupPerson::query()
-            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-            ->where('role', 'member')
-            ->orderBy('id');
-
-        foreach ($query->get() as $membership) {
-            $groupId = (int) ($membership->discipleship_group_id ?? 0);
-            if ($groupId > 0) {
-                $rows[(string) $groupId][] = $membership;
-            }
-        }
-
-        return $rows;
+        return [$leaderships, $memberships];
     }
 
     /**
@@ -310,16 +301,16 @@ class DgMeetingReportRecapPageData
      */
     private function reports(array $branchCodes, bool $centralReadOnly, array $branchLabels, array $people): array
     {
-        if (! Schema::hasTable('discipleship_meeting_reports')) {
+        try {
+            $reports = DiscipleshipMeetingReport::query()
+                ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+                ->orderByDesc('meeting_date')
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->get();
+        } catch (Throwable) {
             return [];
         }
-
-        $reports = DiscipleshipMeetingReport::query()
-            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-            ->orderByDesc('meeting_date')
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->get();
 
         $rows = [];
         foreach ($reports as $report) {

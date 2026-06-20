@@ -45,6 +45,45 @@ class DiscipleshipPeopleListTest extends TestCase
         $response->assertDontSee('Anggota GM Rahasia');
     }
 
+    public function test_people_list_limits_large_datasets_and_keeps_query_count_constant(): void
+    {
+        $this->createDiscipleshipTables();
+        $rows = [];
+        for ($i = 1; $i <= 1000; $i++) {
+            $rows[] = [
+                'branch_id' => 1,
+                'full_name' => sprintf('Peserta %04d', $i),
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+        foreach (array_chunk($rows, 200) as $chunk) {
+            DB::table('discipleship_people')->insert($chunk);
+        }
+        $this->actingAsRecUser();
+        $queries = 0;
+        DB::listen(static function () use (&$queries): void {
+            $queries++;
+        });
+
+        $response = $this->get('/pemuridan/anggota');
+
+        $response->assertOk()
+            ->assertSee('Peserta 0001')
+            ->assertSee('Peserta 0050')
+            ->assertDontSee('Peserta 0051')
+            ->assertSee('Halaman 1 dari 20');
+        $this->assertLessThanOrEqual(10, $queries);
+        $this->assertLessThan(250 * 1024, strlen((string) $response->getContent()));
+
+        $this->get('/pemuridan/anggota?per_page=500')
+            ->assertOk()
+            ->assertSee('Peserta 0100')
+            ->assertDontSee('Peserta 0101')
+            ->assertSee('Halaman 1 dari 10');
+    }
+
     private function createDiscipleshipTables(): void
     {
         Schema::dropIfExists('discipleship_group_people');

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\InvalidateDiscipleshipReadCache;
+use App\Http\Middleware\MeasureRequestPerformance;
 use App\Http\Middleware\RejectLegacyPageQuery;
 use App\Http\Middleware\RequireRecAuthentication;
 use App\Http\Middleware\RequireRecPageAccess;
@@ -14,7 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(MeasureRequestPerformance::class);
         $middleware->append(RejectLegacyPageQuery::class);
+        $middleware->append(InvalidateDiscipleshipReadCache::class);
         $middleware->alias([
             'rec.auth' => RequireRecAuthentication::class,
             'rec.page' => RequireRecPageAccess::class,

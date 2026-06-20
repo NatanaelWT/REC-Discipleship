@@ -42,6 +42,48 @@ class PeopleTreePageTest extends TestCase
         $response->assertDontSee('?page=people_tree', false);
     }
 
+    public function test_central_all_branch_tree_defers_people_until_a_branch_is_selected(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $this->actingAsRecUser('central_reader', null, 'pemuridan_pusat');
+
+        $allBranches = $this->get('/pemuridan/pohon?branch_id=all');
+
+        $allBranches->assertOk()
+            ->assertSee('Semua Cabang')
+            ->assertSee('Kutisari')
+            ->assertDontSee('Leader Test');
+        $this->assertLessThan(100 * 1024, strlen((string) $allBranches->getContent()));
+
+        $this->get('/pemuridan/pohon?branch_id=1')
+            ->assertOk()
+            ->assertSee('Leader Test')
+            ->assertSee('Anggota Test');
+    }
+
+    public function test_people_tree_write_invalidates_cached_read_model(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/pohon')
+            ->assertOk()
+            ->assertDontSee('Peserta Cache Baru');
+
+        $this->post('/pemuridan/pohon/orang', [
+            'leader_id' => 'virtual_injil',
+            'group_id' => '',
+            'full_name' => 'Peserta Cache Baru',
+            'return_page' => 'people_tree',
+        ])->assertRedirect('/pemuridan/pohon?saved=1');
+
+        $this->get('/pemuridan/pohon')
+            ->assertOk()
+            ->assertSee('Peserta Cache Baru');
+    }
+
     public function test_people_tree_store_maps_temporary_ids_to_numeric_foreign_keys(): void
     {
         $this->createTables();

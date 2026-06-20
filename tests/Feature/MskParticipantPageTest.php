@@ -38,6 +38,34 @@ class MskParticipantPageTest extends TestCase
         $response->assertSee('Kelas MSK');
     }
 
+    public function test_msk_page_paginates_large_participant_lists(): void
+    {
+        $this->createMskTables();
+        $rows = [];
+        for ($i = 1; $i <= 120; $i++) {
+            $rows[] = [
+                'branch_id' => 1,
+                'full_name' => sprintf('Peserta MSK %03d', $i),
+                'batch_month' => '2026-06',
+                'journey_bridge_status' => 'belum',
+                'status' => 'active',
+                'session_numbers' => json_encode([]),
+                'photos' => json_encode([]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+        DB::table('msk_participants')->insert($rows);
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/msk?batch_month=all')
+            ->assertOk()
+            ->assertSee('Peserta MSK 001')
+            ->assertSee('Peserta MSK 050')
+            ->assertDontSee('Peserta MSK 051')
+            ->assertSee('Halaman 1 dari 3');
+    }
+
     public function test_store_msk_participant_persists_to_laravel_tables(): void
     {
         $this->createMskTables();

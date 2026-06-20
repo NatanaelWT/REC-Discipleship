@@ -4,12 +4,15 @@ namespace App\Services\AppConfig;
 
 use App\Models\AppConfig;
 use DateTimeZone;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class AppConfigService
 {
+    private const CACHE_KEY = 'rec.app-config.v2';
+
     public const DEFAULTS = [
         'church_name' => 'Reformed Exodus Community',
         'app_timezone' => 'Asia/Jakarta',
@@ -59,7 +62,7 @@ class AppConfigService
     }
 
     /**
-     * @param array<string, mixed> $input
+     * @param  array<string, mixed>  $input
      */
     public function update(array $input, string $updatedBy): ?string
     {
@@ -93,7 +96,7 @@ class AppConfigService
             );
         }
 
-        self::$cachedValues = null;
+        self::clearCache();
         if (function_exists('config')) {
             config(['app.timezone' => $values['app_timezone']]);
         }
@@ -105,6 +108,7 @@ class AppConfigService
     public static function clearCache(): void
     {
         self::$cachedValues = null;
+        Cache::store(self::cacheStore())->forget(self::CACHE_KEY);
     }
 
     /**
@@ -116,20 +120,20 @@ class AppConfigService
             return self::$cachedValues;
         }
 
-        $values = self::DEFAULTS;
-        if (! self::configTableAvailable()) {
-            return self::$cachedValues = $values;
-        }
-
         try {
-            $stored = DB::table('app_configs')
-                ->whereIn('key', self::ALLOWED_KEYS)
-                ->pluck('value', 'key')
-                ->all();
+            $stored = Cache::store(self::cacheStore())->remember(
+                self::CACHE_KEY,
+                now()->addMinutes(5),
+                static fn (): array => DB::table('app_configs')
+                    ->whereIn('key', self::ALLOWED_KEYS)
+                    ->pluck('value', 'key')
+                    ->all(),
+            );
         } catch (Throwable) {
-            return self::$cachedValues = $values;
+            return self::$cachedValues = self::DEFAULTS;
         }
 
+        $values = self::DEFAULTS;
         foreach ($stored as $key => $value) {
             if (! is_string($key) || ! in_array($key, self::ALLOWED_KEYS, true)) {
                 continue;
@@ -144,6 +148,11 @@ class AppConfigService
         return self::$cachedValues = $values;
     }
 
+    private static function cacheStore(): string
+    {
+        return app()->environment('testing') ? 'array' : 'file';
+    }
+
     private static function configTableAvailable(): bool
     {
         try {
@@ -155,7 +164,7 @@ class AppConfigService
 
     private static function normalizeStoredValue(string $key, string $value): string
     {
-        $service = new self();
+        $service = new self;
 
         return match ($key) {
             'church_name' => $service->normalizeChurchName($value) ?: self::DEFAULTS['church_name'],

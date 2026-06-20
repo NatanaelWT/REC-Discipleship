@@ -1,23 +1,29 @@
 <?php
 
-function dgv2_people_projection(array $model, array $members, array $mskClasses): array {
+function dgv2_people_projection(array $model, array $members, array $mskClasses): array
+{
     $identityById = [];
     foreach (dgv2_identity_sources($members, $mskClasses) as $row) {
         $identityById[(string) ($row['id'] ?? '')] = $row;
     }
     $childrenMap = [];
+    $parentsByDisciple = [];
     foreach ($model['discipleship_relations'] as $relation) {
-        if (!is_array($relation) || !dgv2_is_current_period($relation)) {
+        if (! is_array($relation) || ! dgv2_is_current_period($relation)) {
             continue;
         }
         $mentorId = trim((string) ($relation['mentor_person_id'] ?? ''));
+        $discipleId = trim((string) ($relation['disciple_person_id'] ?? ''));
         if ($mentorId !== '') {
             $childrenMap[$mentorId] = true;
+        }
+        if ($mentorId !== '' && $discipleId !== '') {
+            $parentsByDisciple[$discipleId][$mentorId] = true;
         }
     }
     $leadersMap = [];
     foreach ($model['group_leaderships'] as $leadership) {
-        if (!is_array($leadership) || !dgv2_is_current_period($leadership)) {
+        if (! is_array($leadership) || ! dgv2_is_current_period($leadership)) {
             continue;
         }
         $personId = trim((string) ($leadership['leader_person_id'] ?? ''));
@@ -28,7 +34,7 @@ function dgv2_people_projection(array $model, array $members, array $mskClasses)
 
     $rows = [];
     foreach ($model['discipleship_persons'] as $person) {
-        if (!is_array($person)) {
+        if (! is_array($person)) {
             continue;
         }
         $personId = trim((string) ($person['id'] ?? ''));
@@ -44,19 +50,7 @@ function dgv2_people_projection(array $model, array $members, array $mskClasses)
             continue;
         }
         $identity = dgv2_find_identity($identityById, $memberId);
-        $parentIds = [];
-        foreach ($model['discipleship_relations'] as $relation) {
-            if (!is_array($relation) || !dgv2_is_current_period($relation)) {
-                continue;
-            }
-            if (trim((string) ($relation['disciple_person_id'] ?? '')) !== $personId) {
-                continue;
-            }
-            $mentorId = trim((string) ($relation['mentor_person_id'] ?? ''));
-            if ($mentorId !== '' && !in_array($mentorId, $parentIds, true)) {
-                $parentIds[] = $mentorId;
-            }
-        }
+        $parentIds = array_keys($parentsByDisciple[$personId] ?? []);
         $rows[] = [
             'id' => $personId,
             'member_id' => $memberId,
@@ -76,5 +70,6 @@ function dgv2_people_projection(array $model, array $members, array $mskClasses)
     usort($rows, static function (array $a, array $b): int {
         return strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
     });
+
     return $rows;
 }

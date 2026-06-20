@@ -14,7 +14,7 @@ class GroupController extends Controller
     {
         RuntimeBootstrap::boot($request);
 
-        $pageData = $groupIndexData->forCurrentContext();
+        $pageData = $groupIndexData->forCurrentContext($request);
 
         return view('discipleship.groups.index', $pageData);
     }

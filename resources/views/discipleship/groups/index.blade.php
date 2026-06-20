@@ -21,18 +21,22 @@
           <div class="groups-hero-stat"><span class="groups-hero-stat-label">DG 3</span><strong class="groups-hero-stat-value" data-groups-stat="dg3">{{ (string) $groupsInDg3Count }}</strong></div>
         </div>
       </div>
-      <div class="actions groups-hero-tools">
+      <form method="get" action="{{ route('discipleship.groups') }}" class="actions groups-hero-tools">
+        @if (request()->filled('branch_id'))
+          <input type="hidden" name="branch_id" value="{{ request()->query('branch_id') }}">
+        @endif
         <div class="groups-hero-filter-wrap">
-          <select class="search groups-status-filter" data-filter="groups-dashboard-table" data-filter-role="status" aria-label="Filter status kelompok DG">
-            <option value="all">Semua Kelompok</option>
-            <option value="active">Kelompok Aktif</option>
-            <option value="inactive">Kelompok Tidak Aktif</option>
+          <select name="status" class="search groups-status-filter" aria-label="Filter status kelompok DG" onchange="this.form.submit()">
+            <option value="all" @selected($groupsStatusFilter === 'all')>Semua Kelompok</option>
+            <option value="active" @selected($groupsStatusFilter === 'active')>Kelompok Aktif</option>
+            <option value="inactive" @selected($groupsStatusFilter === 'inactive')>Kelompok Tidak Aktif</option>
           </select>
         </div>
         <div class="groups-hero-search-wrap">
-          <?php render_table_search_input('groups-dashboard-table', 'Cari leader, pendamping, progres, atau peserta...', 'search groups-table-search', 'Cari Kelompok DG', '      '); ?>
+          <input type="search" name="q" value="{{ $groupsSearch }}" class="search groups-table-search" placeholder="Cari leader, pendamping, progres, atau peserta..." aria-label="Cari Kelompok DG">
         </div>
-      </div>
+        <button class="btn tiny secondary" type="submit">Cari</button>
+      </form>
     </section>
 
     <section class="card discipleship-list-card table-card-plain" id="discipleship-groups-list">
@@ -93,11 +97,12 @@
                 </td>
               </tr>
             @endforeach
-            @if ($totalGroupRows === 0)
+            @if ($filteredGroupRows === 0)
               <tr><td colspan="4">Belum ada kelompok.</td></tr>
             @endif
           </tbody>
         </table>
       </div>
+      @include('partials.compact-pagination', ['paginator' => $groupsPagination])
     </section>
 @endsection

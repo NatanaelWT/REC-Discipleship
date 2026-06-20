@@ -184,14 +184,14 @@ function render_central_rekap_toolbar(string $currentPage): void
         if (! is_string($paramKey)) {
             continue;
         }
-        if (in_array($paramKey, ['page', 'rekap_cabang'], true)) {
+        if (in_array($paramKey, ['page', 'branch_id', 'rekap_cabang'], true)) {
             continue;
         }
         $preservedQueryParams[$paramKey] = $paramValue;
     }
-    $buildRekapHref = function (string $branchCode) use ($currentPage, $preservedQueryParams): string {
+    $buildRekapHref = function (int|string|null $branchId) use ($currentPage, $preservedQueryParams): string {
         $params = array_merge([
-            'rekap_cabang' => $branchCode,
+            'branch_id' => $branchId ?? 'all',
         ], $preservedQueryParams);
 
         if (class_exists(AppPageRouteMap::class) && AppPageRouteMap::hasPage($currentPage)) {
@@ -212,12 +212,13 @@ function render_central_rekap_toolbar(string $currentPage): void
     echo "      <div class=\"central-rekap-quick\" aria-label=\"Pilih cabang rekap Pusat Pemuridan\">\n";
     foreach (central_recap_branch_options() as $branchOption) {
         $branchCode = normalize_central_recap_branch((string) ($branchOption['code'] ?? 'all'));
+        $branchId = $branchOption['id'] ?? null;
         $branchLabel = trim((string) ($branchOption['label'] ?? $branchCode));
         if ($branchLabel === '') {
             $branchLabel = $branchCode;
         }
         $chipClass = $branchCode === $selectedBranch ? 'central-rekap-chip active' : 'central-rekap-chip';
-        echo '        <a class="'.h($chipClass).'" href="'.h($buildRekapHref($branchCode)).'">'.h($branchLabel)."</a>\n";
+        echo '        <a class="'.h($chipClass).'" href="'.h($buildRekapHref($branchId)).'">'.h($branchLabel)."</a>\n";
     }
     echo "      </div>\n";
     echo "    </div>\n";
