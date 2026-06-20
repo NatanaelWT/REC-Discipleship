@@ -218,6 +218,26 @@ class DeveloperAccessTest extends TestCase
         $this->assertSame(3, $summary['counts']['branches']);
     }
 
+    public function test_developer_dashboard_omits_storage_and_material_audit(): void
+    {
+        $this->createCoreTables();
+        $this->seedDeveloper();
+        $this->loginAs('developer');
+
+        $summary = app(DeveloperDiagnosticsService::class)->summary();
+
+        $this->assertArrayNotHasKey('storage', $summary);
+        $this->assertArrayNotHasKey('materials', $summary);
+
+        $this->get('/developer')
+            ->assertOk()
+            ->assertSee('Diagnostics')
+            ->assertSee('Runtime')
+            ->assertDontSee('Material Audit')
+            ->assertDontSee('Public storage')
+            ->assertDontSee('Path target');
+    }
+
     public function test_steward_has_no_branch_and_cannot_access_discipleship_or_developer(): void
     {
         $this->createCoreTables();
