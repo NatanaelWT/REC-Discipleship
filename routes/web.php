@@ -43,7 +43,6 @@ Route::group([], function (): void {
 
     Route::prefix('developer')->name('developer.')->middleware('rec.page:developer_dashboard')->group(function (): void {
         Route::get('/', [DeveloperController::class, 'index'])->name('dashboard');
-        Route::post('/branch', [DeveloperController::class, 'switchBranch'])->name('branch');
         Route::get('/users', [DeveloperUserController::class, 'index'])->name('users');
         Route::post('/users', [DeveloperUserController::class, 'store'])->name('users.store');
         Route::post('/users/{user}', [DeveloperUserController::class, 'update'])->name('users.update');

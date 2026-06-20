@@ -16,7 +16,7 @@ class UpdateDashboardMskSessionsRequest extends FormRequest
         $context = app(CurrentUserContext::class);
 
         return $context->isLoggedIn()
-            && ! $context->isCentralDiscipleshipReadonly()
+            && ! $context->isDiscipleshipPreviewReadonly()
             && $context->canAccessPage('discipleship_dashboard')
             && $context->canUseAction('save_msk_sessions');
     }

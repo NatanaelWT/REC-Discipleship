@@ -12,7 +12,7 @@ class SessionAuthenticator
     {
         Auth::login($user);
         $request->session()->regenerate();
-        $request->session()->forget(['developer_branch']);
+        $request->session()->forget(['developer_branch', 'developer_branch_id']);
     }
 
     public function logout(Request $request): void

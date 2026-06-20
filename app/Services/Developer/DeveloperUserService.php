@@ -98,13 +98,7 @@ class DeveloperUserService
         ], $this->branchAttributes($branchId)))->save();
 
         if ($isSelf) {
-            if ($role !== UserAccessRole::Developer) {
-                session()->forget(['developer_branch', 'developer_branch_id']);
-            } else {
-                $selectedBranchId = $this->branches->normalizeAllowedId(session('developer_branch_id'));
-                session()->put('developer_branch_id', $selectedBranchId ?? $this->branches->defaultId());
-                session()->forget('developer_branch');
-            }
+            session()->forget(['developer_branch', 'developer_branch_id']);
         }
 
         return null;

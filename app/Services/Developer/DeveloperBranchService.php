@@ -29,9 +29,4 @@ class DeveloperBranchService
 
         return $branchId;
     }
-
-    public function defaultId(): ?int
-    {
-        return $this->branches->defaultId();
-    }
 }

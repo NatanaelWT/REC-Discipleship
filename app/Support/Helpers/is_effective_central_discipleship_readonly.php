@@ -1,5 +1,8 @@
 <?php
 
-function is_effective_central_discipleship_readonly(): bool {
-    return is_central_discipleship_readonly_session();
+use App\Services\Auth\CurrentUserContext;
+
+function is_effective_central_discipleship_readonly(): bool
+{
+    return app(CurrentUserContext::class)->isDiscipleshipPreviewReadonly();
 }

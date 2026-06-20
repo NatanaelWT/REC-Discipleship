@@ -42,7 +42,7 @@ class DifficultQuestionAdminTest extends TestCase
         $response->assertDontSee('name="answer_text"', false);
     }
 
-    public function test_admin_can_save_answer_through_laravel_route(): void
+    public function test_developer_cannot_save_answer_from_discipleship_preview(): void
     {
         $this->createDifficultQuestionsTable();
         $this->actingAsRecUser('developer', null, 'developer');
@@ -64,12 +64,12 @@ class DifficultQuestionAdminTest extends TestCase
             'answer_text' => 'Jawaban dari admin.',
         ]);
 
-        $response->assertRedirect('/pemuridan/pertanyaan-sulit?answered=1');
+        $response->assertRedirect('/developer?error=access_denied');
         $this->assertDatabaseHas('difficult_questions', [
             'id' => $questionId,
-            'status' => 'answered',
-            'answer' => 'Jawaban dari admin.',
-            'answered_by_username' => 'developer',
+            'status' => 'pending',
+            'answer' => null,
+            'answered_by_username' => null,
         ]);
     }
 

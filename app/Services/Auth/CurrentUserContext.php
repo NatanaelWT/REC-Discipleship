@@ -59,20 +59,9 @@ class CurrentUserContext
     public function branchId(): ?int
     {
         if ($this->isDeveloper()) {
-            $branchId = filter_var(Session::get('developer_branch_id'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-            if ($branchId !== false && $this->branches->isActiveId($branchId)) {
-                return $branchId;
-            }
+            Session::forget(['developer_branch', 'developer_branch_id']);
 
-            $legacySlug = normalize_user_branch((string) Session::get('developer_branch', ''));
-            $branchId = $legacySlug !== '' ? $this->branches->idForSlug($legacySlug) : null;
-            $branchId ??= $this->branches->defaultId();
-            if ($branchId !== null) {
-                Session::put('developer_branch_id', $branchId);
-            }
-            Session::forget('developer_branch');
-
-            return $branchId;
+            return null;
         }
 
         if (! $this->isDiscipleshipBranch()) {
@@ -116,6 +105,11 @@ class CurrentUserContext
     public function isCentralDiscipleshipReadonly(): bool
     {
         return $this->isDiscipleshipCentral();
+    }
+
+    public function isDiscipleshipPreviewReadonly(): bool
+    {
+        return $this->isDiscipleshipCentral() || $this->isDeveloper();
     }
 
     public function canAccessStewardship(): bool
@@ -166,7 +160,11 @@ class CurrentUserContext
         }
 
         if ($this->isDeveloper()) {
-            return true;
+            if (is_worship_action($action)) {
+                return true;
+            }
+
+            return isset(central_readonly_action_map()[$action]);
         }
 
         if (is_worship_action($action)) {

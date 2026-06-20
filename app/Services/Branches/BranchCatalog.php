@@ -123,11 +123,6 @@ class BranchCatalog
         return '';
     }
 
-    public function defaultId(): ?int
-    {
-        return $this->idForSlug('kutisari') ?? ($this->options()[0]['id'] ?? null);
-    }
-
     private function slugForBranch(Branch $branch): string
     {
         $storedCode = Schema::hasColumn('branches', 'code')

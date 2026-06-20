@@ -46,6 +46,20 @@ class DgMeetingReportRecapTest extends TestCase
             ->assertDontSee('Materi Test');
     }
 
+    public function test_developer_views_discipleship_recap_as_readonly_all_branch_preview(): void
+    {
+        $this->createTables();
+        $this->seedReport();
+        $this->actingAsRecUser('developer', null, 'developer');
+
+        $this->assertSame('', current_user_branch());
+        $this->assertTrue(is_effective_central_discipleship_readonly());
+
+        $this->get('/pemuridan/laporan-dg?rekap_cabang=all')
+            ->assertOk()
+            ->assertSee('Materi Test');
+    }
+
     public function test_public_dg_form_normalizes_numeric_ids_for_javascript_selects(): void
     {
         $this->createTables();

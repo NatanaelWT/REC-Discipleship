@@ -19,7 +19,7 @@ class UpdateSpiritualJourneyBridgeStatusRequest extends FormRequest
         return $context->isLoggedIn()
             && $context->canAccessPage('spiritual_journey')
             && $context->canUseAction('save_journey_bridge_status')
-            && ! $context->isCentralDiscipleshipReadonly();
+            && ! $context->isDiscipleshipPreviewReadonly();
     }
 
     /**

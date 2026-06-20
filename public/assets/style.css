@@ -12191,14 +12191,6 @@ textarea:focus-visible {
   font-size: 13px;
 }
 
-.developer-branch-form {
-  display: flex;
-  align-items: end;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.developer-branch-form label,
 .developer-form-grid label,
 .developer-user-edit-form label,
 .developer-password-form label {
@@ -12368,9 +12360,4 @@ textarea:focus-visible {
     justify-content: stretch;
   }
 
-  .developer-branch-form,
-  .developer-branch-form label,
-  .developer-branch-form .btn {
-    width: 100%;
-  }
 }

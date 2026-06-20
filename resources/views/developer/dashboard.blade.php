@@ -6,30 +6,12 @@
 ])
 
 @section('content')
-    @if ($branchChanged)
-      <div class="alert success">Cabang aktif developer diperbarui.</div>
-    @elseif ($branchError === 'branch_invalid')
-      <div class="alert danger">Cabang tidak valid.</div>
-    @endif
-
     <section class="card developer-panel">
       <div class="card-row">
         <div>
           <h2>Diagnostics</h2>
-          <p class="developer-muted">Role: Developer. Cabang pemuridan aktif: {{ user_branch_label($activeBranch) }}.</p>
+          <p class="developer-muted">Role: Developer. Pemuridan lintas cabang hanya lihat.</p>
         </div>
-        <form method="post" action="{{ route('developer.branch') }}" class="developer-branch-form">
-          @csrf
-          <label>
-            <span>Cabang Aktif</span>
-            <select name="branch_id">
-              @foreach ($branchOptions as $branch)
-                <option value="{{ $branch['id'] }}" @selected($branch['id'] === $activeBranchId)>{{ $branch['label'] }}</option>
-              @endforeach
-            </select>
-          </label>
-          <button class="btn secondary" type="submit">Pakai</button>
-        </form>
       </div>
 
       <div class="developer-metric-grid">

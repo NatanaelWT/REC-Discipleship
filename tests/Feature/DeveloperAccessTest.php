@@ -26,7 +26,7 @@ class DeveloperAccessTest extends TestCase
         $response->assertRedirect('/developer');
         $this->assertAuthenticatedAs(User::query()->where('username', 'developer')->firstOrFail());
         $this->assertSame('developer', current_auth_access_scope());
-        $this->assertSame('kutisari', current_user_branch());
+        $this->assertSame('', current_user_branch());
     }
 
     public function test_non_developer_cannot_open_developer_routes(): void
@@ -50,23 +50,33 @@ class DeveloperAccessTest extends TestCase
         $this->assertTrue(branch_can_access_page(current_user_branch(), 'discipleship_dashboard'));
         $this->assertTrue(branch_can_access_page(current_user_branch(), 'worship_penatalayan'));
         $this->assertTrue(branch_can_use_action(current_user_branch(), 'save_worship_penatalayan'));
+        $this->assertFalse(branch_can_use_action(current_user_branch(), 'save_person'));
+        $this->assertTrue(is_effective_central_discipleship_readonly());
         $this->assertTrue(can_manage_public_materials());
-        $this->assertTrue(can_manage_difficult_questions());
+        $this->assertFalse(can_manage_difficult_questions());
         $this->assertTrue(branch_can_access_secure_upload_path(current_user_branch(), 'restricted/example.pdf'));
     }
 
-    public function test_developer_can_switch_active_branch(): void
+    public function test_developer_has_no_active_branch_or_branch_switch_route(): void
     {
         $this->createCoreTables();
         $this->seedDeveloper();
         $this->loginAs('developer');
 
-        $this->post('/developer/branch', ['branch_id' => 2])
-            ->assertRedirect('/developer?branch_changed=1');
+        session()->put('developer_branch_id', 2);
+        session()->put('developer_branch', 'gm');
 
-        $this->assertSame(2, session('developer_branch_id'));
+        $this->get('/developer')
+            ->assertOk()
+            ->assertSee('Pemuridan lintas cabang hanya lihat')
+            ->assertDontSee('Cabang Aktif')
+            ->assertDontSee('Pakai');
+
+        $this->post('/developer/branch', ['branch_id' => 2])->assertNotFound();
+
+        $this->assertNull(session('developer_branch_id'));
         $this->assertNull(session('developer_branch'));
-        $this->assertSame('gm', current_user_branch());
+        $this->assertSame('', current_user_branch());
     }
 
     public function test_developer_can_manage_users_and_reset_passwords(): void

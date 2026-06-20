@@ -27,7 +27,6 @@ class WorshipGlobalScopeTest extends TestCase
         $this->assertSame('Jadwal Global', $builder->recordForMonth('2026-06')['title'] ?? null);
 
         $this->actingAsRecUser('developer', null, 'developer');
-        session()->put('developer_branch_id', 2);
         $builder->saveRecord([
             'month' => '2026-06',
             'title' => 'Jadwal Global Diperbarui',
