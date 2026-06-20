@@ -12243,43 +12243,62 @@ textarea:focus-visible {
 
 .developer-user-list {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
-.developer-user-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-  gap: 14px;
-  padding: 18px 0;
-  border-top: 1px solid rgba(203, 213, 225, 0.78);
+.developer-user-item {
+  overflow: hidden;
+  border: 1px solid rgba(203, 213, 225, 0.86);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
 }
 
-.developer-user-row:first-child {
-  padding-top: 0;
-  border-top: 0;
-}
-
-.developer-user-row:last-child {
-  padding-bottom: 0;
-}
-
-.developer-user-meta {
+.developer-user-toggle {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-}
-
-.developer-user-meta strong {
+  gap: 12px;
+  min-height: 52px;
+  padding: 13px 16px;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 800;
   overflow-wrap: anywhere;
+  cursor: pointer;
+  list-style: none;
 }
 
-.developer-user-meta span {
+.developer-user-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.developer-user-toggle::after {
+  content: '+';
+  flex: 0 0 auto;
   color: #64748b;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.developer-user-item[open] .developer-user-toggle {
+  border-bottom: 1px solid rgba(203, 213, 225, 0.78);
+  background: rgba(248, 250, 252, 0.96);
+}
+
+.developer-user-item[open] .developer-user-toggle::after {
+  content: '\2212';
+}
+
+.developer-user-toggle:focus-visible {
+  outline: 3px solid rgba(217, 119, 6, 0.28);
+  outline-offset: -3px;
+}
+
+.developer-user-detail {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
 }
 
 .developer-user-edit-form {
@@ -12287,10 +12306,15 @@ textarea:focus-visible {
   grid-template-columns:
     minmax(150px, 1fr)
     minmax(140px, 0.9fr)
-    minmax(120px, 0.75fr)
-    auto;
+    minmax(120px, 0.75fr);
   align-items: end;
   gap: 10px;
+}
+
+.developer-user-edit-form .btn {
+  grid-column: 1 / -1;
+  justify-self: end;
+  min-width: 112px;
 }
 
 .developer-password-form {
@@ -12330,7 +12354,7 @@ textarea:focus-visible {
   }
 
   .developer-user-edit-form .btn {
-    grid-column: 2;
+    grid-column: 1 / -1;
     justify-self: end;
   }
 
@@ -12345,10 +12369,6 @@ textarea:focus-visible {
   .developer-user-edit-form,
   .developer-password-form {
     grid-template-columns: 1fr;
-  }
-
-  .developer-user-meta {
-    display: grid;
   }
 
   .developer-user-edit-form .btn {

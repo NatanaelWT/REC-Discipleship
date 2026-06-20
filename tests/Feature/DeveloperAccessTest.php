@@ -103,7 +103,7 @@ class DeveloperAccessTest extends TestCase
         $this->post('/developer/users/'.$managedUserId, [
             'access_scope' => 'pelayan',
             'is_active' => '0',
-        ])->assertRedirect('/developer/users?status=updated');
+        ])->assertRedirect('/developer/users?status=updated&user='.$managedUserId);
 
         $this->assertDatabaseHas('users', [
             'username' => 'managed_user',
@@ -114,7 +114,7 @@ class DeveloperAccessTest extends TestCase
 
         $this->post('/developer/users/'.$managedUserId.'/password', [
             'password' => 'reset-secret',
-        ])->assertRedirect('/developer/users?status=password_reset');
+        ])->assertRedirect('/developer/users?status=password_reset&user='.$managedUserId);
 
         $resetPassword = (string) DB::table('users')->where('username', 'managed_user')->value('password');
         $this->assertTrue(Hash::check('reset-secret', $resetPassword));
@@ -129,13 +129,13 @@ class DeveloperAccessTest extends TestCase
         $this->post('/developer/users/'.$developerId, [
             'access_scope' => 'developer',
             'is_active' => '0',
-        ])->assertRedirect('/developer/users?error=self_deactivate');
+        ])->assertRedirect('/developer/users?error=self_deactivate&user='.$developerId);
 
         $this->post('/developer/users/'.$developerId, [
             'branch_id' => 1,
             'access_scope' => 'pemuridan_cabang',
             'is_active' => '1',
-        ])->assertRedirect('/developer/users?error=last_active_developer');
+        ])->assertRedirect('/developer/users?error=last_active_developer&user='.$developerId);
 
         $this->assertDatabaseHas('users', [
             'username' => 'developer',
@@ -177,7 +177,7 @@ class DeveloperAccessTest extends TestCase
     {
         $this->createCoreTables();
         $developerId = $this->seedDeveloper();
-        $this->seedUser('branch_user', 'pemuridan_cabang');
+        $branchUserId = $this->seedUser('branch_user', 'pemuridan_cabang');
         $this->loginAs('developer');
 
         $this->get('/developer/users')
@@ -188,10 +188,16 @@ class DeveloperAccessTest extends TestCase
             ->assertSee('value="pelayan"', false)
             ->assertSee('Tanpa cabang')
             ->assertSee('branch_user')
+            ->assertSee('<details class="developer-user-item" data-developer-user', false)
+            ->assertSee('<summary class="developer-user-toggle">branch_user</summary>', false)
             ->assertDontSee(route('developer.users.update', $developerId), false)
             ->assertDontSee('name="name"', false)
             ->assertDontSee('name="email"', false)
             ->assertDontSee('value="pusat"', false);
+
+        $this->get('/developer/users?user='.$branchUserId)
+            ->assertOk()
+            ->assertSee('<details class="developer-user-item" data-developer-user open>', false);
     }
 
     public function test_developer_diagnostics_counts_only_active_discipleship_branches(): void

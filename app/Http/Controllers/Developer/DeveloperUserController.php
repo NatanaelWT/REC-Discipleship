@@ -33,6 +33,7 @@ class DeveloperUserController extends Controller
                 ->get(),
             'branchOptions' => $branches->options(),
             'roleOptions' => $users->roleOptions(),
+            'expandedUserId' => max(0, (int) $request->query('user', 0)),
             'statusCode' => trim((string) $request->query('status', '')),
             'errorCode' => trim((string) $request->query('error', '')),
             'errorMessages' => $this->errorMessages(),
@@ -63,14 +64,20 @@ class DeveloperUserController extends Controller
 
         $error = $users->update($user, $request->all(), current_username());
         if ($error !== null) {
-            return redirect()->route('developer.users', ['error' => $error]);
+            return redirect()->route('developer.users', [
+                'error' => $error,
+                'user' => (int) $user->getKey(),
+            ]);
         }
 
         if (! can_manage_users()) {
             return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch())));
         }
 
-        return redirect()->route('developer.users', ['status' => 'updated']);
+        return redirect()->route('developer.users', [
+            'status' => 'updated',
+            'user' => (int) $user->getKey(),
+        ]);
     }
 
     public function resetPassword(Request $request, User $user, DeveloperUserService $users): RedirectResponse
@@ -82,10 +89,16 @@ class DeveloperUserController extends Controller
 
         $error = $users->resetPassword($user, (string) $request->input('password', ''), current_username());
         if ($error !== null) {
-            return redirect()->route('developer.users', ['error' => $error]);
+            return redirect()->route('developer.users', [
+                'error' => $error,
+                'user' => (int) $user->getKey(),
+            ]);
         }
 
-        return redirect()->route('developer.users', ['status' => 'password_reset']);
+        return redirect()->route('developer.users', [
+            'status' => 'password_reset',
+            'user' => (int) $user->getKey(),
+        ]);
     }
 
     private function guard(Request $request): ?RedirectResponse

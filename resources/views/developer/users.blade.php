@@ -72,60 +72,73 @@
             $scope = normalize_auth_access_scope((string) ($user->access_scope ?? 'pemuridan_cabang'));
             $requiresBranch = $scope === 'pemuridan_cabang';
             $branchId = $user->branch_id !== null ? (int) $user->branch_id : null;
-            $branchCode = branch_slug_from_id($branchId);
+            $isExpanded = $expandedUserId === (int) $user->getKey();
           @endphp
-          <div class="developer-user-row">
-            <div class="developer-user-meta">
-              <strong>{{ $user->username }}</strong>
-              <span>{{ auth_access_scope_label($scope) }} &middot; {{ $requiresBranch ? user_branch_label($branchCode) : 'Tanpa cabang' }} &middot; {{ $active ? 'Aktif' : 'Nonaktif' }}</span>
+          <details class="developer-user-item" data-developer-user{{ $isExpanded ? ' open' : '' }}>
+            <summary class="developer-user-toggle">{{ $user->username }}</summary>
+            <div class="developer-user-detail">
+              <form method="post" action="{{ route('developer.users.update', $user) }}" class="developer-user-edit-form" data-role-aware-user-form>
+                @csrf
+                <label data-user-branch-field>
+                  <span>Cabang Pemuridan</span>
+                  <select name="branch_id" data-user-branch-select @if (! $requiresBranch) hidden disabled @else required @endif>
+                    @foreach ($branchOptions as $branch)
+                      <option value="{{ $branch['id'] }}" @selected($branch['id'] === $branchId)>{{ $branch['label'] }}</option>
+                    @endforeach
+                  </select>
+                  <span class="developer-muted" data-user-no-branch @if ($requiresBranch) hidden @endif>Tanpa cabang</span>
+                </label>
+                <label>
+                  <span>Role</span>
+                  <select name="access_scope" data-user-role-select>
+                    @foreach ($roleOptions as $roleValue => $label)
+                      <option value="{{ $roleValue }}" @selected($roleValue === $scope)>{{ $label }}</option>
+                    @endforeach
+                  </select>
+                </label>
+                <label>
+                  <span>Status</span>
+                  <select name="is_active" @if ($isSelf) disabled aria-disabled="true" @endif>
+                    <option value="1" @selected($active)>Aktif</option>
+                    <option value="0" @selected(! $active)>Nonaktif</option>
+                  </select>
+                  @if ($isSelf)
+                    <input type="hidden" name="is_active" value="1">
+                  @endif
+                </label>
+                <button class="btn secondary" type="submit">Simpan</button>
+              </form>
+
+              <form method="post" action="{{ route('developer.users.password', $user) }}" class="developer-password-form">
+                @csrf
+                <label>
+                  <span>Password Baru</span>
+                  <input type="password" name="password" minlength="6" @if (! $isSelf) required @endif @if ($isSelf) disabled aria-disabled="true" @endif autocomplete="new-password">
+                </label>
+                <button class="btn ghost" type="submit" @if ($isSelf) disabled aria-disabled="true" @endif>Reset</button>
+              </form>
             </div>
-
-            <form method="post" action="{{ route('developer.users.update', $user) }}" class="developer-user-edit-form" data-role-aware-user-form>
-              @csrf
-              <label data-user-branch-field>
-                <span>Cabang Pemuridan</span>
-                <select name="branch_id" data-user-branch-select @if (! $requiresBranch) hidden disabled @else required @endif>
-                  @foreach ($branchOptions as $branch)
-                    <option value="{{ $branch['id'] }}" @selected($branch['id'] === $branchId)>{{ $branch['label'] }}</option>
-                  @endforeach
-                </select>
-                <span class="developer-muted" data-user-no-branch @if ($requiresBranch) hidden @endif>Tanpa cabang</span>
-              </label>
-              <label>
-                <span>Role</span>
-                <select name="access_scope" data-user-role-select>
-                  @foreach ($roleOptions as $roleValue => $label)
-                    <option value="{{ $roleValue }}" @selected($roleValue === $scope)>{{ $label }}</option>
-                  @endforeach
-                </select>
-              </label>
-              <label>
-                <span>Status</span>
-                <select name="is_active" @if ($isSelf) disabled aria-disabled="true" @endif>
-                  <option value="1" @selected($active)>Aktif</option>
-                  <option value="0" @selected(! $active)>Nonaktif</option>
-                </select>
-                @if ($isSelf)
-                  <input type="hidden" name="is_active" value="1">
-                @endif
-              </label>
-              <button class="btn secondary" type="submit">Simpan</button>
-            </form>
-
-            <form method="post" action="{{ route('developer.users.password', $user) }}" class="developer-password-form">
-              @csrf
-              <label>
-                <span>Password Baru</span>
-                <input type="password" name="password" minlength="6" @if (! $isSelf) required @endif @if ($isSelf) disabled aria-disabled="true" @endif autocomplete="new-password">
-              </label>
-              <button class="btn ghost" type="submit" @if ($isSelf) disabled aria-disabled="true" @endif>Reset</button>
-            </form>
-          </div>
+          </details>
         @endforeach
       </div>
     </section>
 
     <script>
+      var developerUserItems = document.querySelectorAll('[data-developer-user]');
+      developerUserItems.forEach(function (item) {
+        item.addEventListener('toggle', function () {
+          if (!item.open) {
+            return;
+          }
+
+          developerUserItems.forEach(function (otherItem) {
+            if (otherItem !== item) {
+              otherItem.open = false;
+            }
+          });
+        });
+      });
+
       document.querySelectorAll('[data-role-aware-user-form]').forEach(function (form) {
         var roleSelect = form.querySelector('[data-user-role-select]');
         var branchSelect = form.querySelector('[data-user-branch-select]');
