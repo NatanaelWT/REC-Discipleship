@@ -22,7 +22,7 @@ Artisan::command('developer:ensure-user', function (DeveloperUserService $users)
         return Command::FAILURE;
     }
 
-    $this->info('Developer user ensured: ' . $result['username'] . ' <' . $result['email'] . '>');
+    $this->info('Developer user ensured: ' . $result['username']);
 
     return Command::SUCCESS;
 })->purpose('Create or update the developer superuser from DEVELOPER_* environment variables');

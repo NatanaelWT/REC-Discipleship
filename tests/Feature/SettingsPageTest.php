@@ -54,8 +54,6 @@ class SettingsPageTest extends TestCase
         DB::table('users')->updateOrInsert(
             ['username' => 'admin_settings_test'],
             [
-                'name' => 'admin_settings_test',
-                'email' => 'admin_settings_test@rec.local',
                 'password' => 'old-secret',
                 'branch_id' => 1,
                 'access_scope' => 'pemuridan_cabang',
@@ -76,9 +74,6 @@ class SettingsPageTest extends TestCase
         Schema::create('users', function (Blueprint $table): void {
             $table->id();
             $table->string('username', 120)->unique();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
             $table->string('password', 255);
             $table->rememberToken();
             $table->unsignedBigInteger('branch_id')->nullable()->index();

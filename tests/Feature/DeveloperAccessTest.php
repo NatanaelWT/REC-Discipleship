@@ -32,7 +32,7 @@ class DeveloperAccessTest extends TestCase
     public function test_non_developer_cannot_open_developer_routes(): void
     {
         $this->createCoreTables();
-        $this->seedUser('branch_user', 'branch_user@rec.local', 'pemuridan_cabang');
+        $this->seedUser('branch_user', 'pemuridan_cabang');
         $this->loginAs('branch_user');
 
         $this->get('/developer')->assertRedirect('/pemuridan/dashboard?error=access_denied');
@@ -77,8 +77,6 @@ class DeveloperAccessTest extends TestCase
 
         $this->post('/developer/users', [
             'username' => 'managed_user',
-            'name' => 'Managed User',
-            'email' => 'managed_user@rec.local',
             'password' => 'new-secret',
             'branch_id' => 2,
             'access_scope' => 'pemuridan_cabang',
@@ -91,16 +89,12 @@ class DeveloperAccessTest extends TestCase
 
         $managedUserId = (int) DB::table('users')->where('username', 'managed_user')->value('id');
         $this->post('/developer/users/'.$managedUserId, [
-            'name' => 'Managed User Updated',
-            'email' => 'managed_user_updated@rec.local',
             'access_scope' => 'pelayan',
             'is_active' => '0',
         ])->assertRedirect('/developer/users?status=updated');
 
         $this->assertDatabaseHas('users', [
             'username' => 'managed_user',
-            'name' => 'Managed User Updated',
-            'email' => 'managed_user_updated@rec.local',
             'branch_id' => null,
             'access_scope' => 'pelayan',
             'is_active' => false,
@@ -121,15 +115,11 @@ class DeveloperAccessTest extends TestCase
         $this->loginAs('developer');
 
         $this->post('/developer/users/'.$developerId, [
-            'name' => 'Developer',
-            'email' => 'developer@rec.local',
             'access_scope' => 'developer',
             'is_active' => '0',
         ])->assertRedirect('/developer/users?error=self_deactivate');
 
         $this->post('/developer/users/'.$developerId, [
-            'name' => 'Developer',
-            'email' => 'developer@rec.local',
             'branch_id' => 1,
             'access_scope' => 'pemuridan_cabang',
             'is_active' => '1',
@@ -174,7 +164,8 @@ class DeveloperAccessTest extends TestCase
     public function test_user_management_uses_roles_and_has_no_central_branch_option(): void
     {
         $this->createCoreTables();
-        $this->seedDeveloper();
+        $developerId = $this->seedDeveloper();
+        $this->seedUser('branch_user', 'pemuridan_cabang');
         $this->loginAs('developer');
 
         $this->get('/developer/users')
@@ -184,6 +175,10 @@ class DeveloperAccessTest extends TestCase
             ->assertSee('value="pemuridan_pusat"', false)
             ->assertSee('value="pelayan"', false)
             ->assertSee('Tanpa cabang')
+            ->assertSee('branch_user')
+            ->assertDontSee(route('developer.users.update', $developerId), false)
+            ->assertDontSee('name="name"', false)
+            ->assertDontSee('name="email"', false)
             ->assertDontSee('value="pusat"', false);
     }
 
@@ -214,7 +209,7 @@ class DeveloperAccessTest extends TestCase
     public function test_steward_has_no_branch_and_cannot_access_discipleship_or_developer(): void
     {
         $this->createCoreTables();
-        $this->seedUser('keziaae', 'keziaae@rec.local', 'pelayan', ['branch_id' => null]);
+        $this->seedUser('keziaae', 'pelayan', ['branch_id' => null]);
         $this->loginAs('keziaae');
         RuntimeBootstrap::load();
 
@@ -234,8 +229,6 @@ class DeveloperAccessTest extends TestCase
 
         $this->post('/developer/users', [
             'username' => 'missing_branch',
-            'name' => 'Missing Branch',
-            'email' => 'missing-branch@rec.local',
             'password' => 'new-secret',
             'access_scope' => 'pemuridan_cabang',
             'is_active' => '1',
@@ -254,9 +247,6 @@ class DeveloperAccessTest extends TestCase
         Schema::create('users', function (Blueprint $table): void {
             $table->id();
             $table->string('username', 120)->nullable()->unique();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
             $table->unsignedBigInteger('branch_id')->nullable()->index();
@@ -303,7 +293,7 @@ class DeveloperAccessTest extends TestCase
 
     private function seedDeveloper(): int
     {
-        return $this->seedUser('developer', 'developer@rec.local', 'developer', [
+        return $this->seedUser('developer', 'developer', [
             'password' => Hash::make('secret-dev'),
             'branch_id' => null,
         ]);
@@ -312,12 +302,10 @@ class DeveloperAccessTest extends TestCase
     /**
      * @param  array<string, mixed>  $overrides
      */
-    private function seedUser(string $username, string $email, string $scope, array $overrides = []): int
+    private function seedUser(string $username, string $scope, array $overrides = []): int
     {
         return (int) DB::table('users')->insertGetId(array_merge([
             'username' => $username,
-            'name' => ucfirst(str_replace('_', ' ', $username)),
-            'email' => $email,
             'password' => 'secret-test',
             'branch_id' => $scope === 'pemuridan_cabang' ? 1 : null,
             'access_scope' => $scope,

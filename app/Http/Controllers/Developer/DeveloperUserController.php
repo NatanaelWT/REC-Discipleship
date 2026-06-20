@@ -27,7 +27,10 @@ class DeveloperUserController extends Controller
         return view('developer.users', [
             'settings' => ['church_name' => app_church_name()],
             'currentPage' => 'developer_users',
-            'users' => User::query()->orderBy('username')->get(),
+            'users' => User::query()
+                ->where('access_scope', '!=', 'developer')
+                ->orderBy('username')
+                ->get(),
             'branchOptions' => $branches->options(),
             'roleOptions' => $users->roleOptions(),
             'statusCode' => trim((string) $request->query('status', '')),
@@ -107,7 +110,6 @@ class DeveloperUserController extends Controller
             'missing_required' => 'Isi semua kolom wajib.',
             'username_invalid' => 'Username harus 3-120 karakter dan hanya huruf, angka, titik, garis bawah, atau strip.',
             'username_taken' => 'Username sudah dipakai.',
-            'email_taken' => 'Email sudah dipakai.',
             'password_short' => 'Password minimal 6 karakter.',
             'role_invalid' => 'Role tidak valid.',
             'branch_invalid' => 'Cabang tidak valid.',

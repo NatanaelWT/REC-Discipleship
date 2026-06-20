@@ -12293,8 +12293,6 @@ textarea:focus-visible {
 .developer-user-edit-form {
   display: grid;
   grid-template-columns:
-    minmax(150px, 1.1fr)
-    minmax(220px, 1.5fr)
     minmax(150px, 1fr)
     minmax(140px, 0.9fr)
     minmax(120px, 0.75fr)

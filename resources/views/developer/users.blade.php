@@ -27,14 +27,6 @@
           <input type="text" name="username" required maxlength="120" autocomplete="off">
         </label>
         <label>
-          <span>Nama</span>
-          <input type="text" name="name" required maxlength="120" autocomplete="name">
-        </label>
-        <label>
-          <span>Email</span>
-          <input type="email" name="email" required maxlength="255" autocomplete="email">
-        </label>
-        <label>
           <span>Password Awal</span>
           <input type="password" name="password" required minlength="6" autocomplete="new-password">
         </label>
@@ -90,14 +82,6 @@
 
             <form method="post" action="{{ route('developer.users.update', $user) }}" class="developer-user-edit-form" data-role-aware-user-form>
               @csrf
-              <label>
-                <span>Nama</span>
-                <input type="text" name="name" value="{{ $user->name }}" required maxlength="120">
-              </label>
-              <label>
-                <span>Email</span>
-                <input type="email" name="email" value="{{ $user->email }}" required maxlength="255">
-              </label>
               <label data-user-branch-field>
                 <span>Cabang Pemuridan</span>
                 <select name="branch_id" data-user-branch-select @if (! $requiresBranch) hidden disabled @else required @endif>

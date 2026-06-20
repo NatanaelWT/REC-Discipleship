@@ -13,8 +13,6 @@ abstract class TestCase extends BaseTestCase
         $user->forceFill([
             'id' => 999999,
             'username' => $username,
-            'name' => $username,
-            'email' => $username.'@rec.local',
             'branch_id' => match ($branch) {
                 'kutisari' => 1,
                 'gm' => 2,

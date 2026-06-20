@@ -112,9 +112,6 @@ class AuthLoginTest extends TestCase
         Schema::create('users', function (Blueprint $table): void {
             $table->id();
             $table->string('username', 120)->nullable()->unique();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
             $table->unsignedBigInteger('branch_id')->nullable()->index();
@@ -142,8 +139,6 @@ class AuthLoginTest extends TestCase
     {
         DB::table('users')->insert(array_merge([
             'username' => 'auth_user_test',
-            'name' => 'auth_user_test',
-            'email' => 'auth_user_test@rec.local',
             'password' => 'secret-test',
             'branch_id' => 1,
             'access_scope' => 'pemuridan_cabang',

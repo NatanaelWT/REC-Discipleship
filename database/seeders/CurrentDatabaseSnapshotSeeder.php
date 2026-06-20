@@ -60,9 +60,6 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             0 => [
                 'id' => 9,
                 'username' => 'keziaae',
-                'name' => 'keziaae',
-                'email' => 'keziaae@rec.local',
-                'email_verified_at' => null,
                 'password' => 'kezia',
                 'branch_id' => null,
                 'access_scope' => 'pelayan',
@@ -74,9 +71,6 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             1 => [
                 'id' => 10,
                 'username' => 'reckutisari',
-                'name' => 'reckutisari',
-                'email' => 'reckutisari@rec.local',
-                'email_verified_at' => null,
                 'password' => 'adminreckutisari',
                 'branch_id' => 1,
                 'access_scope' => 'pemuridan_cabang',
@@ -88,9 +82,6 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             2 => [
                 'id' => 11,
                 'username' => 'recgm',
-                'name' => 'recgm',
-                'email' => 'recgm@rec.local',
-                'email_verified_at' => null,
                 'password' => 'adminrecgm',
                 'branch_id' => 2,
                 'access_scope' => 'pemuridan_cabang',
@@ -102,9 +93,6 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             3 => [
                 'id' => 12,
                 'username' => 'recdarmo',
-                'name' => 'recdarmo',
-                'email' => 'recdarmo@rec.local',
-                'email_verified_at' => null,
                 'password' => 'adminrecdarmo',
                 'branch_id' => 3,
                 'access_scope' => 'pemuridan_cabang',
@@ -116,9 +104,6 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             4 => [
                 'id' => 13,
                 'username' => 'recmerr',
-                'name' => 'recmerr',
-                'email' => 'recmerr@rec.local',
-                'email_verified_at' => null,
                 'password' => 'adminrecmerr',
                 'branch_id' => 4,
                 'access_scope' => 'pemuridan_cabang',
@@ -130,9 +115,6 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             5 => [
                 'id' => 14,
                 'username' => 'recbatam',
-                'name' => 'recbatam',
-                'email' => 'recbatam@rec.local',
-                'email_verified_at' => null,
                 'password' => 'adminrecbatam',
                 'branch_id' => 5,
                 'access_scope' => 'pemuridan_cabang',
@@ -144,9 +126,6 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             6 => [
                 'id' => 15,
                 'username' => 'recnginden',
-                'name' => 'recnginden',
-                'email' => 'recnginden@rec.local',
-                'email_verified_at' => null,
                 'password' => 'adminrecnginden',
                 'branch_id' => 6,
                 'access_scope' => 'pemuridan_cabang',
@@ -158,9 +137,6 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             7 => [
                 'id' => 16,
                 'username' => 'recpusat',
-                'name' => 'recpusat',
-                'email' => 'recpusat@rec.local',
-                'email_verified_at' => null,
                 'password' => 'adminrecpusat',
                 'branch_id' => null,
                 'access_scope' => 'pemuridan_pusat',
