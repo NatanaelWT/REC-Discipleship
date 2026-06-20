@@ -3,14 +3,12 @@
 namespace App\Services\DiscipleshipGroups;
 
 use App\Models\DiscipleshipGroup;
-use App\Models\DiscipleshipGroupLeadership;
-use App\Models\DiscipleshipGroupMembership;
 use App\Models\DiscipleshipPerson;
 
 class DiscipleshipGroupPublicFormData
 {
     /**
-     * @return array{leaders: array<int, array<string, string>>, groups: array<int, array<string, mixed>>, group_map: array<string, array<string, mixed>>}
+     * @return array{leaders: array<int, array<string, mixed>>, groups: array<int, array<string, mixed>>, group_map: array<int, array<string, mixed>>}
      */
     public function forBranch(string $branchCode): array
     {
@@ -34,19 +32,16 @@ class DiscipleshipGroupPublicFormData
             ->orderBy('id')
             ->get()
             ->each(function (DiscipleshipGroup $group) use (&$groupsById, &$leadersById): void {
-                $groupId = trim((string) $group->public_id);
-                if ($groupId === '') {
-                    return;
-                }
+                $groupId = (int) $group->getKey();
 
                 $leader = $this->leaderForGroup($group);
                 if ($leader === null) {
                     return;
                 }
 
-                $leaderId = trim((string) $leader->public_id);
+                $leaderId = (int) $leader->getKey();
                 $leaderName = trim((string) $leader->full_name);
-                if ($leaderId === '' || $leaderName === '') {
+                if ($leaderId < 1 || $leaderName === '') {
                     return;
                 }
 
@@ -88,8 +83,8 @@ class DiscipleshipGroupPublicFormData
 
         $groupMap = [];
         foreach ($groups as $groupRow) {
-            $groupId = trim((string) ($groupRow['id'] ?? ''));
-            if ($groupId !== '') {
+            $groupId = (int) ($groupRow['id'] ?? 0);
+            if ($groupId > 0) {
                 $groupMap[$groupId] = $groupRow;
             }
         }
@@ -124,7 +119,7 @@ class DiscipleshipGroupPublicFormData
     }
 
     /**
-     * @return array<int, array{id: string, name: string}>
+     * @return array<int, array{id: int, name: string}>
      */
     private function memberRows(DiscipleshipGroup $group): array
     {
@@ -142,9 +137,9 @@ class DiscipleshipGroupPublicFormData
                 continue;
             }
 
-            $memberId = trim((string) $membership->person->public_id);
+            $memberId = (int) $membership->person->getKey();
             $memberName = trim((string) $membership->person->full_name);
-            if ($memberId === '' || $memberName === '') {
+            if ($memberId < 1 || $memberName === '') {
                 continue;
             }
 

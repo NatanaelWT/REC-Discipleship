@@ -6,16 +6,13 @@ use App\Models\Concerns\ResolvesBranchSlug;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Schema;
 
 class DiscipleshipPerson extends Model
 {
     use ResolvesBranchSlug;
 
     protected $fillable = [
-        'public_id',
         'branch_id',
-        'member_public_id',
         'full_name',
         'phone',
         'gender',
@@ -33,21 +30,13 @@ class DiscipleshipPerson extends Model
 
     public function memberships(): HasMany
     {
-        if (Schema::hasTable('discipleship_group_people')) {
-            return $this->hasMany(DiscipleshipGroupPerson::class, 'person_id')
-                ->where('role', 'member');
-        }
-
-        return $this->hasMany(DiscipleshipGroupMembership::class, 'person_id');
+        return $this->hasMany(DiscipleshipGroupPerson::class, 'person_id')
+            ->where('role', 'member');
     }
 
     public function leaderships(): HasMany
     {
-        if (Schema::hasTable('discipleship_group_people')) {
-            return $this->hasMany(DiscipleshipGroupPerson::class, 'person_id')
-                ->where('role', '!=', 'member');
-        }
-
-        return $this->hasMany(DiscipleshipGroupLeadership::class, 'person_id');
+        return $this->hasMany(DiscipleshipGroupPerson::class, 'person_id')
+            ->where('role', '!=', 'member');
     }
 }

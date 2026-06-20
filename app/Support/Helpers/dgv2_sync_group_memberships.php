@@ -1,9 +1,10 @@
 <?php
 
-function dgv2_sync_group_memberships(array &$model, string $groupId, array $memberIds, string $stage): void {
+function dgv2_sync_group_memberships(array &$model, string $groupId, array $memberIds, string $stage): void
+{
     $activeMembershipIds = [];
     foreach ($model['group_memberships'] as $index => $membership) {
-        if (!is_array($membership) || !dgv2_is_current_period($membership)) {
+        if (! is_array($membership) || ! dgv2_is_current_period($membership)) {
             continue;
         }
         if (trim((string) ($membership['group_id'] ?? '')) !== $groupId) {
@@ -16,12 +17,13 @@ function dgv2_sync_group_memberships(array &$model, string $groupId, array $memb
     }
 
     foreach ($activeMembershipIds as $personId => $index) {
-        if (!in_array($personId, $memberIds, true)) {
+        if (! in_array($personId, $memberIds, true)) {
             $model['group_memberships'][$index]['end_date'] = today_date();
             $model['group_memberships'][$index]['status'] = 'closed';
             $model['group_memberships'][$index]['reason_end'] = 'removed_from_group';
             $model['group_memberships'][$index]['updated_at'] = now_iso();
             unset($activeMembershipIds[$personId]);
+
             continue;
         }
         $currentStage = normalize_dg_progress_value((string) ($model['group_memberships'][$index]['stage'] ?? ''));
@@ -39,7 +41,7 @@ function dgv2_sync_group_memberships(array &$model, string $groupId, array $memb
             continue;
         }
         $model['group_memberships'][] = [
-            'id' => generate_id('gmb'),
+            'id' => temporary_model_id('membership'),
             'person_id' => $personId,
             'group_id' => $groupId,
             'role' => 'member',

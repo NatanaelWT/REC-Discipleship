@@ -34,8 +34,8 @@ abstract class MskParticipantWriteRequest extends FormRequest
     public function payload(): array
     {
         return [
-            'public_id' => trim((string) $this->input('id', '')),
-            'member_public_id' => trim((string) $this->input('member_id', '')),
+            'id' => (int) $this->input('id', 0),
+            'discipleship_person_id' => (int) $this->input('member_id', 0),
             'full_name' => trim((string) $this->input('full_name', '')),
             'gender' => normalize_member_gender_value((string) $this->input('gender', '')),
             'birth_date_input' => trim((string) $this->input('birth_date', '')),

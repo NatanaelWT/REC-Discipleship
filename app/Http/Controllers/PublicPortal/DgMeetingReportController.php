@@ -94,13 +94,10 @@ class DgMeetingReportController extends Controller
         try {
             DB::transaction(function () use ($request, $meetingPhotos): void {
                 $reportData = [
-                    'public_id' => $this->generatePublicId(),
                     'branch_id' => branch_id_from_slug($request->publicBranch()),
                     'leader_person_id' => $request->leaderPersonId(),
-                    'leader_person_public_id' => $request->leaderPublicId(),
                     'leader_name_snapshot' => $request->leaderName(),
                     'discipleship_group_id' => $request->discipleshipGroupId(),
-                    'discipleship_group_public_id' => $request->groupPublicId(),
                     'group_name_snapshot' => $request->groupName(),
                     'meeting_date' => $request->meetingDate(),
                     'material_topic' => $request->materialLabel(),
@@ -117,16 +114,14 @@ class DgMeetingReportController extends Controller
                 ];
 
                 if (Schema::hasColumn('discipleship_meeting_reports', 'absences')) {
-                    $reportData['absences'] = array_map(static fn (string $memberId) => [
-                        'person_id' => $request->memberRecordId($memberId),
-                        'person_public_id' => $memberId,
+                    $reportData['absences'] = array_map(static fn (int $memberId) => [
+                        'person_id' => $memberId,
                         'person_name_snapshot' => $request->memberName($memberId),
                     ], $request->absentMemberIds());
                 }
                 if (Schema::hasColumn('discipleship_meeting_reports', 'meditation_sharers')) {
-                    $reportData['meditation_sharers'] = array_map(static fn (string $memberId) => [
-                        'person_id' => $request->memberRecordId($memberId),
-                        'person_public_id' => $memberId,
+                    $reportData['meditation_sharers'] = array_map(static fn (int $memberId) => [
+                        'person_id' => $memberId,
                         'person_name_snapshot' => $request->memberName($memberId),
                     ], $request->meditationSharerIds());
                 }
@@ -143,41 +138,6 @@ class DgMeetingReportController extends Controller
 
                 $report = DiscipleshipMeetingReport::query()->create($reportData);
 
-                if (Schema::hasTable('discipleship_meeting_report_absences')) {
-                    foreach ($request->absentMemberIds() as $memberId) {
-                        $report->absences()->create([
-                            'person_id' => $request->memberRecordId($memberId),
-                            'person_public_id' => $memberId,
-                            'person_name_snapshot' => $request->memberName($memberId),
-                        ]);
-                    }
-                }
-
-                if (Schema::hasTable('discipleship_meeting_report_meditation_sharers')) {
-                    foreach ($request->meditationSharerIds() as $memberId) {
-                        $report->meditationSharers()->create([
-                            'person_id' => $request->memberRecordId($memberId),
-                            'person_public_id' => $memberId,
-                            'person_name_snapshot' => $request->memberName($memberId),
-                        ]);
-                    }
-                }
-
-                if (Schema::hasTable('discipleship_meeting_report_photos')) {
-                    foreach (array_values($meetingPhotos) as $sortOrder => $photo) {
-                        $relativePath = sanitize_relative_upload_path((string) ($photo['path'] ?? ''));
-                        if ($relativePath === '') {
-                            continue;
-                        }
-
-                        $report->photos()->create([
-                            'relative_path' => $relativePath,
-                            'original_file_name' => trim((string) ($photo['name'] ?? '')) ?: null,
-                            'sort_order' => $sortOrder,
-                        ]);
-                    }
-                }
-
                 $report->fresh();
             });
         } catch (Throwable) {
@@ -193,21 +153,5 @@ class DgMeetingReportController extends Controller
             'branch' => $publicBranch,
             'submitted' => 1,
         ]);
-    }
-
-    private function generatePublicId(): string
-    {
-        do {
-            $id = function_exists('generate_id')
-                ? generate_id('dg_report')
-                : 'dg_report_'.bin2hex(random_bytes(4));
-        } while ($this->publicIdExists($id));
-
-        return $id;
-    }
-
-    private function publicIdExists(string $publicId): bool
-    {
-        return DiscipleshipMeetingReport::query()->where('public_id', $publicId)->exists();
     }
 }

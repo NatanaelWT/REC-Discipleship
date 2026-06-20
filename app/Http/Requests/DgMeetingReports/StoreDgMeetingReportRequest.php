@@ -25,12 +25,12 @@ class StoreDgMeetingReportRequest extends FormRequest
     private array $groupMemberMap = [];
 
     /**
-     * @var array<int, string>
+     * @var array<int, int>
      */
     private array $absentMemberIds = [];
 
     /**
-     * @var array<int, string>
+     * @var array<int, int>
      */
     private array $meditationSharerIds = [];
 
@@ -105,14 +105,14 @@ class StoreDgMeetingReportRequest extends FormRequest
                 }
             }
 
-            $leaderId = $this->leaderPublicId();
-            $groupId = $this->groupPublicId();
+            $leaderId = $this->leaderId();
+            $groupId = $this->groupId();
 
             if (count($groupMap) === 0) {
                 $this->addFirstError($validator, 'Belum ada Kelompok DG yang bisa dipilih.');
-            } elseif ($leaderId === '' || ! isset($leaderMap[$leaderId])) {
+            } elseif ($leaderId < 1 || ! isset($leaderMap[$leaderId])) {
                 $this->addFirstError($validator, 'Pilih nama pemimpin DG terlebih dahulu.');
-            } elseif ($groupId === '' || ! isset($groupMap[$groupId]) || ! is_array($groupMap[$groupId])) {
+            } elseif ($groupId < 1 || ! isset($groupMap[$groupId]) || ! is_array($groupMap[$groupId])) {
                 $this->addFirstError($validator, 'Pilih kelompok DG terlebih dahulu.');
             } else {
                 $this->groupRow = $groupMap[$groupId];
@@ -196,14 +196,14 @@ class StoreDgMeetingReportRequest extends FormRequest
         return $this->publicBranch;
     }
 
-    public function leaderPublicId(): string
+    public function leaderId(): int
     {
-        return trim((string) $this->input('leader_id', ''));
+        return (int) $this->input('leader_id', 0);
     }
 
-    public function groupPublicId(): string
+    public function groupId(): int
     {
-        return trim((string) $this->input('group_id', ''));
+        return (int) $this->input('group_id', 0);
     }
 
     public function leaderPersonId(): ?int
@@ -290,7 +290,7 @@ class StoreDgMeetingReportRequest extends FormRequest
     }
 
     /**
-     * @return array<int, string>
+     * @return array<int, int>
      */
     public function absentMemberIds(): array
     {
@@ -298,21 +298,16 @@ class StoreDgMeetingReportRequest extends FormRequest
     }
 
     /**
-     * @return array<int, string>
+     * @return array<int, int>
      */
     public function meditationSharerIds(): array
     {
         return $this->meditationSharerIds;
     }
 
-    public function memberName(string $personPublicId): ?string
+    public function memberName(int $personId): ?string
     {
-        return $this->nullableText($this->groupMemberMap[$personPublicId] ?? null);
-    }
-
-    public function memberRecordId(string $personPublicId): ?int
-    {
-        return $this->personRecordId($personPublicId);
+        return $this->nullableText($this->groupMemberMap[$personId] ?? null);
     }
 
     private function addFirstError(Validator $validator, string $message): void
@@ -344,9 +339,9 @@ class StoreDgMeetingReportRequest extends FormRequest
                 continue;
             }
 
-            $memberId = trim((string) ($memberRow['id'] ?? ''));
+            $memberId = (int) ($memberRow['id'] ?? 0);
             $memberName = trim((string) ($memberRow['name'] ?? ''));
-            if ($memberId !== '' && $memberName !== '') {
+            if ($memberId > 0 && $memberName !== '') {
                 $memberMap[$memberId] = $memberName;
             }
         }
@@ -355,7 +350,7 @@ class StoreDgMeetingReportRequest extends FormRequest
     }
 
     /**
-     * @return array<int, string>
+     * @return array<int, int>
      */
     private function filteredMemberIds(mixed $rawIds): array
     {
@@ -365,8 +360,8 @@ class StoreDgMeetingReportRequest extends FormRequest
 
         $ids = [];
         foreach ($rawIds as $memberId) {
-            $memberId = trim((string) $memberId);
-            if ($memberId === '' || ! isset($this->groupMemberMap[$memberId]) || in_array($memberId, $ids, true)) {
+            $memberId = (int) $memberId;
+            if ($memberId < 1 || ! isset($this->groupMemberMap[$memberId]) || in_array($memberId, $ids, true)) {
                 continue;
             }
 
@@ -376,34 +371,29 @@ class StoreDgMeetingReportRequest extends FormRequest
         return $ids;
     }
 
-    private function personRecordId(string $publicId): ?int
+    private function personRecordId(int $personId): ?int
     {
-        $publicId = trim($publicId);
-        if ($publicId === '') {
+        if ($personId < 1) {
             return null;
         }
 
         $id = DiscipleshipPerson::query()
             ->where('branch_id', branch_id_from_slug($this->publicBranch))
-            ->where(static function ($query) use ($publicId): void {
-                $query->where('public_id', $publicId)
-                    ->orWhere('member_public_id', $publicId);
-            })
+            ->whereKey($personId)
             ->value('id');
 
         return $id === null ? null : (int) $id;
     }
 
-    private function discipleshipGroupRecordId(string $publicId): ?int
+    private function discipleshipGroupRecordId(int $groupId): ?int
     {
-        $publicId = trim($publicId);
-        if ($publicId === '') {
+        if ($groupId < 1) {
             return null;
         }
 
         $id = DiscipleshipGroup::query()
             ->where('branch_id', branch_id_from_slug($this->publicBranch))
-            ->where('public_id', $publicId)
+            ->whereKey($groupId)
             ->value('id');
 
         return $id === null ? null : (int) $id;

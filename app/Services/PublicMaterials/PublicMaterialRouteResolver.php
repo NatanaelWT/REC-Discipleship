@@ -7,21 +7,19 @@ use App\Models\PublicMaterialFile;
 
 class PublicMaterialRouteResolver
 {
-    public function __construct(private readonly PublicMaterialCatalog $catalog)
-    {
-    }
+    public function __construct(private readonly PublicMaterialCatalog $catalog) {}
 
     /**
      * @return array{0: PublicMaterialMenuKey, 1: PublicMaterialFile}|null
      */
-    public function resolve(string $menuKey, string $publicId): ?array
+    public function resolve(string $menuKey, int $fileId): ?array
     {
         $menu = $this->catalog->menu($menuKey);
         if (! $menu instanceof PublicMaterialMenuKey) {
             return null;
         }
 
-        $file = PublicMaterialFile::query()->where('public_id', trim($publicId))->first();
+        $file = PublicMaterialFile::query()->find($fileId);
         if (! $file instanceof PublicMaterialFile) {
             return null;
         }

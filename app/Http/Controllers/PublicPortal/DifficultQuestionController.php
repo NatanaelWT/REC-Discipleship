@@ -35,7 +35,6 @@ class DifficultQuestionController extends Controller
             $now = now();
 
             DifficultQuestion::query()->create([
-                'public_id' => $this->generatePublicId(),
                 'asker_name' => trim((string) $request->input('asker_name', '')) ?: null,
                 'question' => (string) $request->input('question_text', ''),
                 'password_hash' => $passwordService->passwordHash($password),
@@ -54,14 +53,5 @@ class DifficultQuestionController extends Controller
         session()->forget('difficult_question_old');
 
         return redirect()->route('public.difficult-question.submit', ['submitted' => 1]);
-    }
-
-    private function generatePublicId(): string
-    {
-        do {
-            $id = 'dq_'.bin2hex(random_bytes(4));
-        } while (DifficultQuestion::query()->where('public_id', $id)->exists());
-
-        return $id;
     }
 }

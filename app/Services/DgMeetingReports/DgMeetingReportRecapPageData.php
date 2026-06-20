@@ -4,12 +4,7 @@ namespace App\Services\DgMeetingReports;
 
 use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
-use App\Models\DiscipleshipGroupLeadership;
-use App\Models\DiscipleshipGroupMembership;
 use App\Models\DiscipleshipMeetingReport;
-use App\Models\DiscipleshipMeetingReportAbsence;
-use App\Models\DiscipleshipMeetingReportMeditationSharer;
-use App\Models\DiscipleshipMeetingReportPhoto;
 use App\Models\DiscipleshipPerson;
 use DateTimeInterface;
 use Illuminate\Http\Request;
@@ -75,8 +70,8 @@ class DgMeetingReportRecapPageData
     }
 
     /**
-     * @param array<int, string> $branchCodes
-     * @param array<string, string> $branchLabels
+     * @param  array<int, string>  $branchCodes
+     * @param  array<string, string>  $branchLabels
      * @return array<string, array<string, mixed>>
      */
     private function people(array $branchCodes, bool $centralReadOnly, array $branchLabels): array
@@ -88,7 +83,7 @@ class DgMeetingReportRecapPageData
         $people = [];
         foreach (DiscipleshipPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get() as $person) {
             $branchCode = normalize_public_branch_code((string) $person->branch_code);
-            $effectiveId = $this->effectiveId($branchCode, (string) $person->public_id);
+            $effectiveId = $this->effectiveId($branchCode, (string) $person->getKey());
             if ($effectiveId === '') {
                 continue;
             }
@@ -103,13 +98,11 @@ class DgMeetingReportRecapPageData
 
             $people[$effectiveId] = [
                 'id' => $effectiveId,
-                'public_id' => (string) $person->public_id,
                 'branch_code' => $branchCode,
                 'branch_label' => $branchLabels[$branchCode] ?? strtoupper($branchCode),
                 'name' => $name,
                 'full_name' => $name,
-                'member_id' => trim((string) ($person->member_public_id ?? '')),
-                'member_public_id' => trim((string) ($person->member_public_id ?? '')),
+                'member_id' => $effectiveId,
                 'phone' => trim((string) ($person->phone ?? '')),
                 'gender' => trim((string) ($person->gender ?? '')),
                 'status' => trim((string) ($person->status ?? 'active')) ?: 'active',
@@ -123,9 +116,9 @@ class DgMeetingReportRecapPageData
     }
 
     /**
-     * @param array<int, string> $branchCodes
-     * @param array<string, string> $branchLabels
-     * @param array<string, array<string, mixed>> $people
+     * @param  array<int, string>  $branchCodes
+     * @param  array<string, string>  $branchLabels
+     * @param  array<string, array<string, mixed>>  $people
      * @return array<int, array<string, mixed>>
      */
     private function groups(array $branchCodes, bool $centralReadOnly, array $branchLabels, array $people): array
@@ -145,13 +138,13 @@ class DgMeetingReportRecapPageData
 
         foreach ($groups as $group) {
             $branchCode = normalize_public_branch_code((string) $group->branch_code);
-            $groupId = $this->effectiveId($branchCode, (string) $group->public_id);
+            $groupId = $this->effectiveId($branchCode, (string) $group->getKey());
             if ($groupId === '') {
                 continue;
             }
 
-            $leaderId = $this->currentLeaderId($branchCode, $leadershipsByGroup[(string) $group->public_id] ?? []);
-            $memberIds = $this->activeMemberIds($branchCode, $membershipsByGroup[(string) $group->public_id] ?? []);
+            $leaderId = $this->currentLeaderId($branchCode, $leadershipsByGroup[(string) $group->getKey()] ?? []);
+            $memberIds = $this->activeMemberIds($branchCode, $membershipsByGroup[(string) $group->getKey()] ?? []);
             $memberNames = [];
             foreach ($memberIds as $memberId) {
                 $memberNames[$memberId] = trim((string) ($people[$memberId]['name'] ?? ''));
@@ -164,7 +157,6 @@ class DgMeetingReportRecapPageData
 
             $rows[] = [
                 'id' => $groupId,
-                'public_id' => (string) $group->public_id,
                 'branch_code' => $branchCode,
                 'branch_label' => $branchLabels[$branchCode] ?? strtoupper($branchCode),
                 'name' => $name,
@@ -182,24 +174,25 @@ class DgMeetingReportRecapPageData
     }
 
     /**
-     * @param array<int, string> $branchCodes
-     * @return array<string, array<int, DiscipleshipGroupLeadership>>
+     * @param  array<int, string>  $branchCodes
+     * @return array<string, array<int, DiscipleshipGroupPerson>>
      */
     private function leadershipsByGroup(array $branchCodes): array
     {
-        if (! Schema::hasTable('discipleship_group_people') && ! Schema::hasTable('discipleship_group_leaderships')) {
+        if (! Schema::hasTable('discipleship_group_people')) {
             return [];
         }
 
         $rows = [];
-        $query = Schema::hasTable('discipleship_group_people')
-            ? DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', '!=', 'member')->orderBy('id')
-            : DiscipleshipGroupLeadership::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id');
+        $query = DiscipleshipGroupPerson::query()
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+            ->where('role', '!=', 'member')
+            ->orderBy('id');
 
         foreach ($query->get() as $leadership) {
-            $groupPublicId = trim((string) ($leadership->group_public_id ?? ''));
-            if ($groupPublicId !== '') {
-                $rows[$groupPublicId][] = $leadership;
+            $groupId = (int) ($leadership->discipleship_group_id ?? 0);
+            if ($groupId > 0) {
+                $rows[(string) $groupId][] = $leadership;
             }
         }
 
@@ -207,24 +200,25 @@ class DgMeetingReportRecapPageData
     }
 
     /**
-     * @param array<int, string> $branchCodes
-     * @return array<string, array<int, DiscipleshipGroupMembership>>
+     * @param  array<int, string>  $branchCodes
+     * @return array<string, array<int, DiscipleshipGroupPerson>>
      */
     private function membershipsByGroup(array $branchCodes): array
     {
-        if (! Schema::hasTable('discipleship_group_people') && ! Schema::hasTable('discipleship_group_memberships')) {
+        if (! Schema::hasTable('discipleship_group_people')) {
             return [];
         }
 
         $rows = [];
-        $query = Schema::hasTable('discipleship_group_people')
-            ? DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', 'member')->orderBy('id')
-            : DiscipleshipGroupMembership::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id');
+        $query = DiscipleshipGroupPerson::query()
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+            ->where('role', 'member')
+            ->orderBy('id');
 
         foreach ($query->get() as $membership) {
-            $groupPublicId = trim((string) ($membership->group_public_id ?? ''));
-            if ($groupPublicId !== '') {
-                $rows[$groupPublicId][] = $membership;
+            $groupId = (int) ($membership->discipleship_group_id ?? 0);
+            if ($groupId > 0) {
+                $rows[(string) $groupId][] = $membership;
             }
         }
 
@@ -232,7 +226,7 @@ class DgMeetingReportRecapPageData
     }
 
     /**
-     * @param array<int, DiscipleshipGroupLeadership> $leaderships
+     * @param  array<int, DiscipleshipGroupPerson>  $leaderships
      */
     private function currentLeaderId(string $branchCode, array $leaderships): string
     {
@@ -258,11 +252,11 @@ class DgMeetingReportRecapPageData
             return '';
         }
 
-        return $this->effectiveId($branchCode, (string) ($selected['person_public_id'] ?? ''));
+        return $this->effectiveId($branchCode, (string) ($selected['person_id'] ?? ''));
     }
 
     /**
-     * @param array<int, DiscipleshipGroupMembership> $memberships
+     * @param  array<int, DiscipleshipGroupPerson>  $memberships
      * @return array<int, string>
      */
     private function activeMemberIds(string $branchCode, array $memberships): array
@@ -274,7 +268,7 @@ class DgMeetingReportRecapPageData
                 continue;
             }
 
-            $personId = $this->effectiveId($branchCode, (string) ($membership->person_public_id ?? ''));
+            $personId = $this->effectiveId($branchCode, (string) ($membership->person_id ?? ''));
             if ($personId !== '' && ! in_array($personId, $ids, true)) {
                 $ids[] = $personId;
             }
@@ -289,7 +283,7 @@ class DgMeetingReportRecapPageData
     private function periodRow(object $row): array
     {
         return [
-            'person_public_id' => (string) ($row->person_public_id ?? ''),
+            'person_id' => (string) ($row->person_id ?? ''),
             'status' => strtolower(trim((string) ($row->status ?? 'active'))) ?: 'active',
             'start_date' => $this->dateString($row->started_on ?? $row->start_date ?? null),
             'end_date' => $this->dateString($row->ended_on ?? $row->end_date ?? null),
@@ -299,7 +293,7 @@ class DgMeetingReportRecapPageData
     }
 
     /**
-     * @param array<string, mixed> $row
+     * @param  array<string, mixed>  $row
      */
     private function periodRowSort(array $row): string
     {
@@ -309,9 +303,9 @@ class DgMeetingReportRecapPageData
     }
 
     /**
-     * @param array<int, string> $branchCodes
-     * @param array<string, string> $branchLabels
-     * @param array<string, array<string, mixed>> $people
+     * @param  array<int, string>  $branchCodes
+     * @param  array<string, string>  $branchLabels
+     * @param  array<string, array<string, mixed>>  $people
      * @return array<int, array<string, mixed>>
      */
     private function reports(array $branchCodes, bool $centralReadOnly, array $branchLabels, array $people): array
@@ -331,8 +325,8 @@ class DgMeetingReportRecapPageData
         foreach ($reports as $report) {
             $branchCode = normalize_public_branch_code((string) $report->branch_code);
             $branchLabel = $branchLabels[$branchCode] ?? strtoupper($branchCode);
-            $leaderId = $this->effectiveId($branchCode, (string) ($report->leader_person_public_id ?? ''));
-            $groupId = $this->effectiveId($branchCode, (string) ($report->discipleship_group_public_id ?? ''));
+            $leaderId = $this->effectiveId($branchCode, (string) ($report->leader_person_id ?? ''));
+            $groupId = $this->effectiveId($branchCode, (string) ($report->discipleship_group_id ?? ''));
             $leaderName = trim((string) ($report->leader_name_snapshot ?? ''));
             $groupName = trim((string) ($report->group_name_snapshot ?? 'Kelompok')) ?: 'Kelompok';
             if ($centralReadOnly) {
@@ -343,7 +337,7 @@ class DgMeetingReportRecapPageData
             }
 
             $rows[] = [
-                'id' => $this->effectiveId($branchCode, (string) $report->public_id),
+                'id' => $this->effectiveId($branchCode, (string) $report->getKey()),
                 'branch_code' => $branchCode,
                 'branch_label' => $branchLabel,
                 'leader_id' => $leaderId,
@@ -354,11 +348,11 @@ class DgMeetingReportRecapPageData
                 'material_topic' => trim((string) ($report->material_topic ?? '')),
                 'group_progress' => normalize_dg_progress_value((string) ($report->group_progress_snapshot ?? '')) ?: 'DG 1',
                 'absence_reason' => trim((string) ($report->absence_reason ?? '')),
-                'absent_member_ids' => $this->personPublicIds($branchCode, $report->absenceItems()),
+                'absent_member_ids' => $this->personIds($branchCode, $report->absenceItems()),
                 'absent_member_names' => $this->personNames($branchCode, $centralReadOnly, $branchLabel, $people, $report->absenceItems()),
                 'additional_notes' => trim((string) ($report->additional_notes ?? '')),
                 'meditation_min_times' => max(0, (int) $report->meditation_min_times),
-                'meditation_sharer_ids' => $this->personPublicIds($branchCode, $report->meditationSharerItems()),
+                'meditation_sharer_ids' => $this->personIds($branchCode, $report->meditationSharerItems()),
                 'meditation_sharer_names' => $this->personNames($branchCode, $centralReadOnly, $branchLabel, $people, $report->meditationSharerItems()),
                 'meeting_photos' => $this->photos($report->photoItems()),
                 'quality_pray' => $report->prayed_for_members ? 'true' : 'false',
@@ -376,14 +370,14 @@ class DgMeetingReportRecapPageData
     }
 
     /**
-     * @param iterable<int, DiscipleshipMeetingReportAbsence|DiscipleshipMeetingReportMeditationSharer> $peopleRows
+     * @param  iterable<int, array<string, mixed>>  $peopleRows
      * @return array<int, string>
      */
-    private function personPublicIds(string $branchCode, iterable $peopleRows): array
+    private function personIds(string $branchCode, iterable $peopleRows): array
     {
         $ids = [];
         foreach ($peopleRows as $row) {
-            $personId = $this->effectiveId($branchCode, $this->rowString($row, 'person_public_id'));
+            $personId = $this->effectiveId($branchCode, $this->rowString($row, 'person_id'));
             if ($personId !== '' && ! in_array($personId, $ids, true)) {
                 $ids[] = $personId;
             }
@@ -393,8 +387,8 @@ class DgMeetingReportRecapPageData
     }
 
     /**
-     * @param array<string, array<string, mixed>> $people
-     * @param iterable<int, DiscipleshipMeetingReportAbsence|DiscipleshipMeetingReportMeditationSharer> $peopleRows
+     * @param  array<string, array<string, mixed>>  $people
+     * @param  iterable<int, array<string, mixed>>  $peopleRows
      * @return array<int, string>
      */
     private function personNames(
@@ -406,7 +400,7 @@ class DgMeetingReportRecapPageData
     ): array {
         $names = [];
         foreach ($peopleRows as $row) {
-            $personId = $this->effectiveId($branchCode, $this->rowString($row, 'person_public_id'));
+            $personId = $this->effectiveId($branchCode, $this->rowString($row, 'person_id'));
             $name = trim((string) ($people[$personId]['name'] ?? ''));
             if ($name === '') {
                 $name = $this->rowString($row, 'person_name_snapshot');
@@ -424,7 +418,7 @@ class DgMeetingReportRecapPageData
     }
 
     /**
-     * @param iterable<int, DiscipleshipMeetingReportPhoto> $photos
+     * @param  iterable<int, array<string, mixed>>  $photos
      * @return array<int, array{path: string, name: string}>
      */
     private function photos(iterable $photos): array
@@ -458,17 +452,9 @@ class DgMeetingReportRecapPageData
         return '';
     }
 
-    private function effectiveId(string $branchCode, string $publicId): string
+    private function effectiveId(string $branchCode, string $id): string
     {
-        $branchCode = normalize_public_branch_code($branchCode);
-        $publicId = trim($publicId);
-        if ($publicId === '') {
-            return '';
-        }
-
-        return is_effective_central_discipleship_readonly()
-            ? scoped_virtual_id($branchCode, $publicId)
-            : $publicId;
+        return trim($id);
     }
 
     private function timestampString(mixed $value): string

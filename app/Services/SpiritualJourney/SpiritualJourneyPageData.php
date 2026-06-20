@@ -4,8 +4,6 @@ namespace App\Services\SpiritualJourney;
 
 use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
-use App\Models\DiscipleshipGroupLeadership;
-use App\Models\DiscipleshipGroupMembership;
 use App\Models\DiscipleshipPerson;
 use App\Models\DiscipleshipRelationship;
 use App\Services\DiscipleshipTargets\DiscipleshipTargetReader;
@@ -19,8 +17,7 @@ class SpiritualJourneyPageData
     public function __construct(
         private readonly MskParticipantTableData $mskParticipantTableData,
         private readonly DiscipleshipTargetReader $targetReader,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -91,8 +88,8 @@ class SpiritualJourneyPageData
     }
 
     /**
-     * @param array<int, string> $branchCodes
-     * @param array<string, string> $branchLabels
+     * @param  array<int, string>  $branchCodes
+     * @param  array<string, string>  $branchLabels
      * @return array<string, array<string, mixed>>
      */
     private function loadPeople(array $branchCodes, bool $centralReadOnly, array $branchLabels): array
@@ -104,7 +101,7 @@ class SpiritualJourneyPageData
         $rows = [];
         foreach (DiscipleshipPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get() as $person) {
             $branchCode = normalize_public_branch_code((string) $person->branch_code);
-            $effectiveId = $this->effectiveId($branchCode, (string) $person->public_id);
+            $effectiveId = $this->effectiveId($branchCode, (string) $person->getKey());
             if ($effectiveId === '') {
                 continue;
             }
@@ -116,11 +113,9 @@ class SpiritualJourneyPageData
 
             $rows[$effectiveId] = [
                 'id' => $effectiveId,
-                'public_id' => (string) $person->public_id,
                 'branch_code' => $branchCode,
                 'branch_label' => $branchLabels[$branchCode] ?? strtoupper($branchCode),
-                'member_id' => trim((string) ($person->member_public_id ?? '')),
-                'member_public_id' => trim((string) ($person->member_public_id ?? '')),
+                'member_id' => $effectiveId,
                 'name' => $displayName !== '' ? $displayName : '-',
                 'full_name' => $displayName !== '' ? $displayName : '-',
                 'phone' => trim((string) ($person->phone ?? '')),
@@ -139,8 +134,8 @@ class SpiritualJourneyPageData
     }
 
     /**
-     * @param array<int, string> $branchCodes
-     * @param array<string, string> $branchLabels
+     * @param  array<int, string>  $branchCodes
+     * @param  array<string, string>  $branchLabels
      * @return array<string, array<string, mixed>>
      */
     private function loadGroups(array $branchCodes, array $branchLabels): array
@@ -152,14 +147,13 @@ class SpiritualJourneyPageData
         $rows = [];
         foreach (DiscipleshipGroup::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get() as $group) {
             $branchCode = normalize_public_branch_code((string) $group->branch_code);
-            $effectiveId = $this->effectiveId($branchCode, (string) $group->public_id);
+            $effectiveId = $this->effectiveId($branchCode, (string) $group->getKey());
             if ($effectiveId === '') {
                 continue;
             }
 
             $rows[$effectiveId] = [
                 'id' => $effectiveId,
-                'public_id' => (string) $group->public_id,
                 'branch_code' => $branchCode,
                 'branch_label' => $branchLabels[$branchCode] ?? strtoupper($branchCode),
                 'name' => trim((string) ($group->name ?? 'Kelompok')) ?: 'Kelompok',
@@ -167,8 +161,9 @@ class SpiritualJourneyPageData
                 'start_stage' => normalize_dg_progress_value((string) ($group->start_stage ?? '')),
                 'current_stage' => normalize_dg_progress_value((string) ($group->current_stage ?? '')),
                 'progress' => normalize_dg_progress_value((string) ($group->current_stage ?? $group->start_stage ?? '')),
-                'parent_group_id' => $this->effectiveId($branchCode, (string) ($group->parent_group_public_id ?? '')),
-                'parent_group_public_id' => trim((string) ($group->parent_group_public_id ?? '')),
+                'parent_group_id' => $group->parent_group_id !== null
+                    ? $this->effectiveId($branchCode, (string) $group->parent_group_id)
+                    : '',
                 'notes' => trim((string) ($group->notes ?? '')),
                 'created_at' => $this->timestampString($group->created_at ?? null),
                 'updated_at' => $this->timestampString($group->updated_at ?? null),
@@ -179,39 +174,40 @@ class SpiritualJourneyPageData
     }
 
     /**
-     * @param array<int, string> $branchCodes
+     * @param  array<int, string>  $branchCodes
      * @return array<int, array<string, mixed>>
      */
     private function loadMemberships(array $branchCodes): array
     {
-        if (! Schema::hasTable('discipleship_group_people') && ! Schema::hasTable('discipleship_group_memberships')) {
+        if (! Schema::hasTable('discipleship_group_people')) {
             return [];
         }
 
         $rows = [];
-        $query = Schema::hasTable('discipleship_group_people')
-            ? DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', 'member')->orderBy('id')
-            : DiscipleshipGroupMembership::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id');
+        $query = DiscipleshipGroupPerson::query()
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+            ->where('role', 'member')
+            ->orderBy('id');
 
         foreach ($query->get() as $membership) {
             $branchCode = normalize_public_branch_code((string) $membership->branch_code);
-            $groupId = $this->effectiveId($branchCode, (string) $membership->group_public_id);
-            $personId = $this->effectiveId($branchCode, (string) $membership->person_public_id);
+            $groupId = $this->effectiveId($branchCode, (string) $membership->discipleship_group_id);
+            $personId = $this->effectiveId($branchCode, (string) $membership->person_id);
             if ($groupId === '' || $personId === '') {
                 continue;
             }
 
             $rows[] = [
-                'id' => (string) $membership->public_id,
+                'id' => (string) $membership->getKey(),
                 'branch_code' => $branchCode,
                 'group_id' => $groupId,
                 'person_id' => $personId,
                 'role' => strtolower(trim((string) ($membership->role ?? 'member'))) ?: 'member',
                 'stage' => normalize_dg_progress_value((string) ($membership->stage ?? '')),
                 'status' => strtolower(trim((string) ($membership->status ?? 'active'))) ?: 'active',
-                'start_date' => $this->dateString($membership->started_on ?? $membership->start_date ?? null),
-                'end_date' => $this->dateString($membership->ended_on ?? $membership->end_date ?? null),
-                'reason_end' => trim((string) ($membership->end_reason ?? $membership->reason_end ?? '')),
+                'start_date' => $this->dateString($membership->started_on ?? null),
+                'end_date' => $this->dateString($membership->ended_on ?? null),
+                'reason_end' => trim((string) ($membership->end_reason ?? '')),
                 'created_at' => $this->timestampString($membership->created_at ?? null),
                 'updated_at' => $this->timestampString($membership->updated_at ?? null),
             ];
@@ -221,39 +217,40 @@ class SpiritualJourneyPageData
     }
 
     /**
-     * @param array<int, string> $branchCodes
+     * @param  array<int, string>  $branchCodes
      * @return array<int, array<string, mixed>>
      */
     private function loadLeaderships(array $branchCodes): array
     {
-        if (! Schema::hasTable('discipleship_group_people') && ! Schema::hasTable('discipleship_group_leaderships')) {
+        if (! Schema::hasTable('discipleship_group_people')) {
             return [];
         }
 
         $rows = [];
-        $query = Schema::hasTable('discipleship_group_people')
-            ? DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', '!=', 'member')->orderBy('id')
-            : DiscipleshipGroupLeadership::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id');
+        $query = DiscipleshipGroupPerson::query()
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+            ->where('role', '!=', 'member')
+            ->orderBy('id');
 
         foreach ($query->get() as $leadership) {
             $branchCode = normalize_public_branch_code((string) $leadership->branch_code);
-            $groupId = $this->effectiveId($branchCode, (string) $leadership->group_public_id);
-            $personId = $this->effectiveId($branchCode, (string) $leadership->person_public_id);
+            $groupId = $this->effectiveId($branchCode, (string) $leadership->discipleship_group_id);
+            $personId = $this->effectiveId($branchCode, (string) $leadership->person_id);
             if ($groupId === '' || $personId === '') {
                 continue;
             }
 
             $rows[] = [
-                'id' => (string) $leadership->public_id,
+                'id' => (string) $leadership->getKey(),
                 'branch_code' => $branchCode,
                 'group_id' => $groupId,
                 'person_id' => $personId,
                 'leader_person_id' => $personId,
                 'role' => strtolower(trim((string) ($leadership->role ?? 'leader'))) ?: 'leader',
                 'status' => strtolower(trim((string) ($leadership->status ?? 'active'))) ?: 'active',
-                'start_date' => $this->dateString($leadership->started_on ?? $leadership->start_date ?? null),
-                'end_date' => $this->dateString($leadership->ended_on ?? $leadership->end_date ?? null),
-                'reason_change' => trim((string) ($leadership->end_reason ?? $leadership->reason_change ?? '')),
+                'start_date' => $this->dateString($leadership->started_on ?? null),
+                'end_date' => $this->dateString($leadership->ended_on ?? null),
+                'reason_change' => trim((string) ($leadership->end_reason ?? '')),
                 'created_at' => $this->timestampString($leadership->created_at ?? null),
                 'updated_at' => $this->timestampString($leadership->updated_at ?? null),
             ];
@@ -263,7 +260,7 @@ class SpiritualJourneyPageData
     }
 
     /**
-     * @param array<int, string> $branchCodes
+     * @param  array<int, string>  $branchCodes
      * @return array<int, array<string, mixed>>
      */
     private function loadRelationships(array $branchCodes): array
@@ -275,18 +272,20 @@ class SpiritualJourneyPageData
         $rows = [];
         foreach (DiscipleshipRelationship::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->orderBy('id')->get() as $relationship) {
             $branchCode = normalize_public_branch_code((string) $relationship->branch_code);
-            $mentorId = $this->effectiveId($branchCode, (string) $relationship->mentor_person_public_id);
-            $discipleId = $this->effectiveId($branchCode, (string) $relationship->disciple_person_public_id);
+            $mentorId = $this->effectiveId($branchCode, (string) $relationship->mentor_person_id);
+            $discipleId = $this->effectiveId($branchCode, (string) $relationship->disciple_person_id);
             if ($mentorId === '' || $discipleId === '') {
                 continue;
             }
 
             $rows[] = [
-                'id' => (string) $relationship->public_id,
+                'id' => (string) $relationship->getKey(),
                 'branch_code' => $branchCode,
                 'mentor_person_id' => $mentorId,
                 'disciple_person_id' => $discipleId,
-                'context_group_id' => $this->effectiveId($branchCode, (string) ($relationship->context_group_public_id ?? '')),
+                'context_group_id' => $relationship->context_group_id !== null
+                    ? $this->effectiveId($branchCode, (string) $relationship->context_group_id)
+                    : '',
                 'relation_type' => trim((string) ($relationship->relation_type ?? 'mentor')),
                 'stage_at_start' => normalize_dg_progress_value((string) ($relationship->stage_at_start ?? '')),
                 'status' => strtolower(trim((string) ($relationship->status ?? 'active'))) ?: 'active',
@@ -303,7 +302,7 @@ class SpiritualJourneyPageData
     }
 
     /**
-     * @param array<int, string> $branchCodes
+     * @param  array<int, string>  $branchCodes
      * @return array<string, int>
      */
     private function targetValues(array $branchCodes, string $selectedBranch): array
@@ -335,17 +334,9 @@ class SpiritualJourneyPageData
         return $totals;
     }
 
-    private function effectiveId(string $branchCode, string $publicId): string
+    private function effectiveId(string $branchCode, string $id): string
     {
-        $branchCode = normalize_public_branch_code($branchCode);
-        $publicId = trim($publicId);
-        if ($publicId === '') {
-            return '';
-        }
-
-        return is_effective_central_discipleship_readonly()
-            ? scoped_virtual_id($branchCode, $publicId)
-            : $publicId;
+        return trim($id);
     }
 
     private function timestampString(mixed $value): string

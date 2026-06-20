@@ -19,7 +19,7 @@ class MaterialDownloadController extends Controller
         StreamPublicMaterialRequest $request,
         PublicMaterialRouteResolver $resolver,
     ): RedirectResponse|Response {
-        $resolved = $resolver->resolve($request->materialMenuKey(), $request->publicFileId());
+        $resolved = $resolver->resolve($request->materialMenuKey(), $request->fileId());
         if ($resolved === null) {
             return response('File tidak ditemukan.', 404);
         }
@@ -28,7 +28,7 @@ class MaterialDownloadController extends Controller
 
         return redirect()->route('materials.download', [
             'menu' => $menu->value,
-            'churchFile' => $file->public_id,
+            'churchFile' => $file->getKey(),
         ]);
     }
 

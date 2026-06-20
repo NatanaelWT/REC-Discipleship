@@ -22,7 +22,6 @@ class DifficultQuestionAdminTest extends TestCase
         $this->loginAsCentralDiscipleshipAdmin();
 
         DB::table('difficult_questions')->insert([
-            'public_id' => 'dq_test_1',
             'asker_name' => 'Tester',
             'question' => 'Apa arti pemuridan?',
             'password_hash' => null,
@@ -48,8 +47,7 @@ class DifficultQuestionAdminTest extends TestCase
         $this->createDifficultQuestionsTable();
         $this->actingAsRecUser('developer', null, 'developer');
 
-        DB::table('difficult_questions')->insert([
-            'public_id' => 'dq_test_2',
+        $questionId = DB::table('difficult_questions')->insertGetId([
             'asker_name' => 'Tester',
             'question' => 'Pertanyaan uji',
             'password_hash' => null,
@@ -62,13 +60,13 @@ class DifficultQuestionAdminTest extends TestCase
             'updated_at' => '2026-06-13 08:00:00',
         ]);
 
-        $response = $this->post('/pemuridan/pertanyaan-sulit/dq_test_2/jawaban', [
+        $response = $this->post("/pemuridan/pertanyaan-sulit/{$questionId}/jawaban", [
             'answer_text' => 'Jawaban dari admin.',
         ]);
 
         $response->assertRedirect('/pemuridan/pertanyaan-sulit?answered=1');
         $this->assertDatabaseHas('difficult_questions', [
-            'public_id' => 'dq_test_2',
+            'id' => $questionId,
             'status' => 'answered',
             'answer' => 'Jawaban dari admin.',
             'answered_by_username' => 'developer',
@@ -82,7 +80,6 @@ class DifficultQuestionAdminTest extends TestCase
         session()->put('difficult_answer_lookup_hash', 'lookup-public');
 
         DB::table('difficult_questions')->insert([
-            'public_id' => 'dq_public_1',
             'asker_name' => 'Penanya',
             'question' => 'Apakah jawaban publik tampil?',
             'password_hash' => null,
@@ -109,7 +106,6 @@ class DifficultQuestionAdminTest extends TestCase
         $this->loginAsCentralDiscipleshipAdmin();
 
         $questionId = DB::table('difficult_questions')->insertGetId([
-            'public_id' => 'dq_readonly',
             'asker_name' => 'Tester',
             'question' => 'Pertanyaan read only',
             'password_hash' => null,
@@ -122,7 +118,7 @@ class DifficultQuestionAdminTest extends TestCase
             'updated_at' => '2026-06-13 08:00:00',
         ]);
 
-        $this->post('/pemuridan/pertanyaan-sulit/dq_readonly/jawaban', [
+        $this->post("/pemuridan/pertanyaan-sulit/{$questionId}/jawaban", [
             'answer_text' => 'Tidak boleh disimpan.',
         ])->assertRedirect('/pemuridan/dashboard?error=access_denied');
 
@@ -139,7 +135,6 @@ class DifficultQuestionAdminTest extends TestCase
 
         Schema::create('difficult_questions', function (Blueprint $table): void {
             $table->id();
-            $table->string('public_id', 120)->unique();
             $table->string('asker_name')->nullable();
             $table->longText('question');
             $table->string('password_hash')->nullable();

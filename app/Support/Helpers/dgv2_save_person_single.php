@@ -1,6 +1,7 @@
 <?php
 
-function dgv2_save_person_single(array &$model, array $payload, array $members, array $mskClasses): array {
+function dgv2_save_person_single(array &$model, array $payload, array $members, array $mskClasses): array
+{
     $identityById = [];
     foreach (dgv2_identity_sources($members, $mskClasses) as $row) {
         $identityById[(string) ($row['id'] ?? '')] = $row;
@@ -13,7 +14,7 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
 
     if ($leaderId === '' && $groupId !== '') {
         foreach ($model['group_leaderships'] as $leadership) {
-            if (!is_array($leadership) || !dgv2_is_current_period($leadership)) {
+            if (! is_array($leadership) || ! dgv2_is_current_period($leadership)) {
                 continue;
             }
             if (trim((string) ($leadership['group_id'] ?? '')) !== $groupId) {
@@ -32,7 +33,7 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
     $personIndex = null;
     $person = null;
     foreach ($model['discipleship_persons'] as $index => $row) {
-        if (!is_array($row)) {
+        if (! is_array($row)) {
             continue;
         }
         if ($id !== '' && trim((string) ($row['id'] ?? '')) === $id) {
@@ -52,7 +53,7 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
     $memberId = $canonicalMemberId;
 
     foreach ($model['discipleship_persons'] as $row) {
-        if (!is_array($row)) {
+        if (! is_array($row)) {
             continue;
         }
         $rowId = trim((string) ($row['id'] ?? ''));
@@ -64,7 +65,7 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
         }
     }
 
-    $personId = $id !== '' ? $id : generate_id('person');
+    $personId = $id !== '' ? $id : temporary_model_id('person');
     $now = now_iso();
     $row = [
         'id' => $personId,
@@ -91,7 +92,7 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
 
     dgv2_close_active_relation_for_disciple($model, $personId);
     foreach ($model['group_memberships'] as &$membership) {
-        if (!is_array($membership) || !dgv2_is_current_period($membership)) {
+        if (! is_array($membership) || ! dgv2_is_current_period($membership)) {
             continue;
         }
         if (trim((string) ($membership['person_id'] ?? '')) !== $personId) {
@@ -111,7 +112,7 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
         $groupStage = '';
         if ($groupId !== '') {
             foreach ($model['discipleship_groups'] as $group) {
-                if (!is_array($group) || trim((string) ($group['id'] ?? '')) !== $groupId) {
+                if (! is_array($group) || trim((string) ($group['id'] ?? '')) !== $groupId) {
                     continue;
                 }
                 $groupStage = normalize_dg_progress_value((string) ($group['current_stage'] ?? $group['start_stage'] ?? ''));
@@ -123,7 +124,7 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
     if ($groupId !== '') {
         $groupStage = 'DG 1';
         foreach ($model['discipleship_groups'] as $group) {
-            if (!is_array($group) || trim((string) ($group['id'] ?? '')) !== $groupId) {
+            if (! is_array($group) || trim((string) ($group['id'] ?? '')) !== $groupId) {
                 continue;
             }
             $groupStage = normalize_dg_progress_value((string) ($group['current_stage'] ?? $group['start_stage'] ?? ''));
@@ -134,5 +135,6 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
         }
         dgv2_sync_group_memberships($model, $groupId, array_values(array_unique(array_merge([$personId], dgv2_group_active_member_ids($model, $groupId)))), $groupStage);
     }
+
     return ['ok' => true, 'person_id' => $personId];
 }

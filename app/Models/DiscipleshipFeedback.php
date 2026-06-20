@@ -5,15 +5,12 @@ namespace App\Models;
 use App\Models\Concerns\ResolvesBranchSlug;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Schema;
 
 class DiscipleshipFeedback extends Model
 {
     use ResolvesBranchSlug;
 
     protected $fillable = [
-        'public_id',
         'branch_id',
         'feedback_session',
         'discipleship_group_id',
@@ -35,15 +32,6 @@ class DiscipleshipFeedback extends Model
         'notes' => 'array',
     ];
 
-    public function getTable()
-    {
-        if (Schema::hasTable('discipleship_feedbacks')) {
-            return 'discipleship_feedbacks';
-        }
-
-        return 'discipleship_member_feedback_journals';
-    }
-
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
@@ -62,15 +50,5 @@ class DiscipleshipFeedback extends Model
     public function respondent(): BelongsTo
     {
         return $this->belongsTo(DiscipleshipPerson::class, 'respondent_person_id');
-    }
-
-    public function ratings(): HasMany
-    {
-        return $this->hasMany(DiscipleshipMemberFeedbackRating::class, 'discipleship_member_feedback_journal_id');
-    }
-
-    public function notes(): HasMany
-    {
-        return $this->hasMany(DiscipleshipMemberFeedbackNote::class, 'discipleship_member_feedback_journal_id');
     }
 }

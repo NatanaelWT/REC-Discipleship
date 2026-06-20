@@ -4,17 +4,15 @@ namespace App\Models;
 
 use App\Models\Concerns\ResolvesBranchSlug;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MskParticipant extends Model
 {
     use ResolvesBranchSlug;
 
     protected $fillable = [
-        'public_id',
         'branch_id',
-        'member_public_id',
+        'discipleship_person_id',
         'full_name',
         'gender',
         'birth_date',
@@ -38,19 +36,9 @@ class MskParticipant extends Model
         'photos' => 'array',
     ];
 
-    public function getRouteKeyName(): string
+    public function discipleshipPerson(): BelongsTo
     {
-        return 'public_id';
-    }
-
-    public function sessions(): HasMany
-    {
-        return $this->hasMany(MskParticipantSession::class);
-    }
-
-    public function photos(): HasMany
-    {
-        return $this->hasMany(MskParticipantPhoto::class);
+        return $this->belongsTo(DiscipleshipPerson::class);
     }
 
     /**
@@ -58,45 +46,12 @@ class MskParticipant extends Model
      */
     public function toViewArray(): array
     {
-        $relations = [];
-        if (! $this->hasJsonColumn('session_numbers') && Schema::hasTable('msk_participant_sessions')) {
-            $relations[] = 'sessions';
-        }
-        if (! $this->hasJsonColumn('photos') && Schema::hasTable('msk_participant_photos')) {
-            $relations[] = 'photos';
-        }
-        if ($relations !== []) {
-            $this->loadMissing($relations);
-        }
-
         $photos = $this->jsonPhotos();
-        if ($photos === null) {
-            $photos = Schema::hasTable('msk_participant_photos')
-                ? ($this->relationLoaded('photos') ? $this->getRelation('photos') : $this->photos()->get())
-                    ->map(static fn (MskParticipantPhoto $photo): array => [
-                        'path' => (string) $photo->path,
-                        'name' => (string) ($photo->original_name ?? 'Foto'),
-                    ])
-                    ->values()
-                    ->all()
-                : [];
-        }
-
-        $sessionNumbers = $this->jsonSessionNumbers();
-        if ($sessionNumbers === null) {
-            $sessionNumbers = Schema::hasTable('msk_participant_sessions')
-                ? ($this->relationLoaded('sessions') ? $this->getRelation('sessions') : $this->sessions()->get())
-                    ->pluck('session_number')
-                    ->map(static fn (mixed $number): int => (int) $number)
-                    ->sort()
-                    ->values()
-                    ->all()
-                : [];
-        }
+        $sessionNumbers = normalize_msk_session_numbers($this->session_numbers ?? []);
 
         return [
-            'id' => (string) $this->public_id,
-            'member_id' => (string) ($this->member_public_id ?? ''),
+            'id' => (string) $this->getKey(),
+            'member_id' => $this->discipleship_person_id !== null ? (string) $this->discipleship_person_id : '',
             'full_name' => (string) ($this->full_name ?? ''),
             'gender' => (string) ($this->gender ?? ''),
             'birth_date' => $this->birth_date !== null ? $this->birth_date->format('Y-m-d') : '',
@@ -117,32 +72,9 @@ class MskParticipant extends Model
         ];
     }
 
-    private function hasJsonColumn(string $column): bool
+    /** @return array<int, array{path: string, name: string}> */
+    private function jsonPhotos(): array
     {
-        return array_key_exists($column, $this->getAttributes());
-    }
-
-    /**
-     * @return array<int, int>|null
-     */
-    private function jsonSessionNumbers(): ?array
-    {
-        if (! array_key_exists('session_numbers', $this->getAttributes())) {
-            return null;
-        }
-
-        return normalize_msk_session_numbers($this->session_numbers ?? []);
-    }
-
-    /**
-     * @return array<int, array{path: string, name: string}>|null
-     */
-    private function jsonPhotos(): ?array
-    {
-        if (! array_key_exists('photos', $this->getAttributes())) {
-            return null;
-        }
-
         $photos = [];
         $rawPhotos = is_array($this->photos) ? $this->photos : [];
         foreach ($rawPhotos as $photo) {

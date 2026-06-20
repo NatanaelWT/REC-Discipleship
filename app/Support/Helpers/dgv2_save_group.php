@@ -1,6 +1,7 @@
 <?php
 
-function dgv2_save_group(array &$model, array $payload, array $peopleById): array {
+function dgv2_save_group(array &$model, array $payload, array $peopleById): array
+{
     $id = trim((string) ($payload['id'] ?? ''));
     $leaderId = trim((string) ($payload['leader_id'] ?? ''));
     $assistantId = trim((string) ($payload['assistant_id'] ?? ''));
@@ -8,24 +9,24 @@ function dgv2_save_group(array &$model, array $payload, array $peopleById): arra
     $notes = trim((string) ($payload['notes'] ?? ''));
     $parentGroupId = trim((string) ($payload['parent_group_id'] ?? ''));
     $memberIds = $payload['member_ids'] ?? [];
-    if (!is_array($memberIds)) {
+    if (! is_array($memberIds)) {
         $memberIds = [];
     }
     $memberIds = array_values(array_unique(array_filter(array_map('strval', $memberIds), static function (string $value): bool {
         return trim($value) !== '';
     })));
 
-    if ($leaderId === '' || !isset($peopleById[$leaderId])) {
+    if ($leaderId === '' || ! isset($peopleById[$leaderId])) {
         return ['ok' => false, 'error' => 'invalid_group'];
     }
     if ($assistantId === $leaderId) {
         $assistantId = '';
     }
-    if ($assistantId !== '' && !isset($peopleById[$assistantId])) {
+    if ($assistantId !== '' && ! isset($peopleById[$assistantId])) {
         return ['ok' => false, 'error' => 'invalid_group'];
     }
     foreach ($memberIds as $personId) {
-        if (!isset($peopleById[$personId])) {
+        if (! isset($peopleById[$personId])) {
             return ['ok' => false, 'error' => 'invalid_group'];
         }
     }
@@ -36,7 +37,7 @@ function dgv2_save_group(array &$model, array $payload, array $peopleById): arra
     $parentGroup = null;
     if ($parentGroupId !== '') {
         foreach ($model['discipleship_groups'] as $group) {
-            if (!is_array($group)) {
+            if (! is_array($group)) {
                 continue;
             }
             if (trim((string) ($group['id'] ?? '')) !== $parentGroupId) {
@@ -57,7 +58,7 @@ function dgv2_save_group(array &$model, array $payload, array $peopleById): arra
             ? dgv2_group_historical_member_ids($model, $parentGroupId)
             : dgv2_group_active_member_ids($model, $parentGroupId);
         foreach ($memberIds as $personId) {
-            if (!in_array($personId, $parentMemberIds, true)) {
+            if (! in_array($personId, $parentMemberIds, true)) {
                 return ['ok' => false, 'error' => 'invalid_group'];
             }
         }
@@ -74,7 +75,7 @@ function dgv2_save_group(array &$model, array $payload, array $peopleById): arra
     $groupIndex = null;
     $existing = null;
     foreach ($model['discipleship_groups'] as $index => $group) {
-        if (!is_array($group)) {
+        if (! is_array($group)) {
             continue;
         }
         if ($id !== '' && trim((string) ($group['id'] ?? '')) === $id) {
@@ -84,7 +85,7 @@ function dgv2_save_group(array &$model, array $payload, array $peopleById): arra
         }
     }
 
-    $groupId = $id !== '' ? $id : generate_id('grp');
+    $groupId = $id !== '' ? $id : temporary_model_id('group');
     $now = now_iso();
     $row = [
         'id' => $groupId,
@@ -107,7 +108,7 @@ function dgv2_save_group(array &$model, array $payload, array $peopleById): arra
     if ($parentGroupId !== '') {
         if ($groupIndex === null) {
             foreach ($model['discipleship_groups'] as &$group) {
-                if (!is_array($group) || trim((string) ($group['id'] ?? '')) !== $parentGroupId) {
+                if (! is_array($group) || trim((string) ($group['id'] ?? '')) !== $parentGroupId) {
                     continue;
                 }
                 $group['status'] = 'completed';
@@ -115,7 +116,7 @@ function dgv2_save_group(array &$model, array $payload, array $peopleById): arra
             }
             unset($group);
             foreach ($model['group_memberships'] as &$membership) {
-                if (!is_array($membership) || !dgv2_is_current_period($membership)) {
+                if (! is_array($membership) || ! dgv2_is_current_period($membership)) {
                     continue;
                 }
                 if (trim((string) ($membership['group_id'] ?? '')) !== $parentGroupId) {
@@ -128,7 +129,7 @@ function dgv2_save_group(array &$model, array $payload, array $peopleById): arra
             }
             unset($membership);
             foreach ($model['group_leaderships'] as &$leadership) {
-                if (!is_array($leadership) || !dgv2_is_current_period($leadership)) {
+                if (! is_array($leadership) || ! dgv2_is_current_period($leadership)) {
                     continue;
                 }
                 if (trim((string) ($leadership['group_id'] ?? '')) !== $parentGroupId) {
@@ -149,7 +150,7 @@ function dgv2_save_group(array &$model, array $payload, array $peopleById): arra
 
         $hasMultiplication = false;
         foreach ($model['group_multiplications'] as $multiplication) {
-            if (!is_array($multiplication)) {
+            if (! is_array($multiplication)) {
                 continue;
             }
             if (trim((string) ($multiplication['new_group_id'] ?? '')) === $groupId) {
@@ -157,9 +158,9 @@ function dgv2_save_group(array &$model, array $payload, array $peopleById): arra
                 break;
             }
         }
-        if (!$hasMultiplication) {
+        if (! $hasMultiplication) {
             $model['group_multiplications'][] = [
-                'id' => generate_id('gmx'),
+                'id' => temporary_model_id('multiplication'),
                 'new_group_id' => $groupId,
                 'source_group_id' => $parentGroupId,
                 'initiated_by_person_id' => $leaderId,
@@ -170,5 +171,6 @@ function dgv2_save_group(array &$model, array $payload, array $peopleById): arra
             ];
         }
     }
+
     return ['ok' => true, 'group_id' => $groupId];
 }

@@ -74,7 +74,7 @@ class PublicMaterialManagementTest extends TestCase
         $this->assertNotNull($row);
         $this->assertSame(PublicMaterialMenuKey::MateriDg1->value, $row->menu);
         $this->assertSame('Materi Baru Pusat.pdf', $row->original_file_name);
-        $this->assertStringStartsWith($this->test_relative_folder(PublicMaterialMenuKey::MateriDg1).'/file_', (string) $row->relative_path);
+        $this->assertStringStartsWith($this->test_relative_folder(PublicMaterialMenuKey::MateriDg1).'/', (string) $row->relative_path);
         $this->assertFileExists(storage_path('app/public/'.(string) $row->relative_path));
         $this->assertFileDoesNotExist(rec_runtime_path((string) $row->relative_path));
     }
@@ -84,9 +84,9 @@ class PublicMaterialManagementTest extends TestCase
         $fileName = 'file_public_only_20260617000000.pdf';
         $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Public material');
 
-        $this->insertMaterialFile('church_file_public_only', 'File Public Only', $fileName);
+        $fileId = $this->insertMaterialFile('church_file_public_only', 'File Public Only', $fileName);
 
-        $response = $this->get('/materi/materi_dg_1/church_file_public_only/preview?raw=1');
+        $response = $this->get("/materi/materi_dg_1/{$fileId}/preview?raw=1");
 
         $response->assertOk();
         $this->assertStringStartsWith('application/pdf', (string) $response->headers->get('Content-Type'));
@@ -97,14 +97,14 @@ class PublicMaterialManagementTest extends TestCase
         $fileName = 'file_wrong_menu_20260617000000.pdf';
         $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg2, $fileName, 'Wrong menu material');
 
-        $this->insertMaterialFile(
+        $fileId = $this->insertMaterialFile(
             'church_file_wrong_menu',
             'Wrong Menu File',
             $fileName,
             PublicMaterialMenuKey::MateriDg2,
         );
 
-        $response = $this->get('/materi/materi_dg_1/church_file_wrong_menu/preview?raw=1');
+        $response = $this->get("/materi/materi_dg_1/{$fileId}/preview?raw=1");
 
         $response->assertNotFound();
     }
@@ -158,15 +158,15 @@ class PublicMaterialManagementTest extends TestCase
     public function test_developer_can_rename_public_material_file(): void
     {
         $this->loginAsMaterialManager();
-        $this->seedExistingMaterialFile();
+        $fileId = $this->seedExistingMaterialFile();
 
-        $response = $this->post('/materi/materi_dg_1/church_file_test/rename', [
+        $response = $this->post("/materi/materi_dg_1/{$fileId}/rename", [
             'title' => 'Nama File Baru.pdf',
         ]);
 
         $response->assertRedirect('/materi/materi_dg_1?material_status=renamed');
         $this->assertDatabaseHas('public_material_files', [
-            'public_id' => 'church_file_test',
+            'id' => $fileId,
             'menu' => PublicMaterialMenuKey::MateriDg1->value,
             'title' => 'Nama File Baru',
             'original_file_name' => 'Nama File Baru.pdf',
@@ -209,7 +209,6 @@ class PublicMaterialManagementTest extends TestCase
         Schema::create('public_material_files', function (Blueprint $table): void {
             $table->id();
             $table->string('menu', 80)->index();
-            $table->string('public_id', 120)->unique();
             $table->string('title')->nullable();
             $table->string('category_name', 120)->nullable();
             $table->longText('description')->nullable();
@@ -221,12 +220,12 @@ class PublicMaterialManagementTest extends TestCase
         });
     }
 
-    private function seedExistingMaterialFile(): void
+    private function seedExistingMaterialFile(): int
     {
         $fileName = 'file_existing_20260617000000.pdf';
         $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Existing material');
 
-        $this->insertMaterialFileWithPath(
+        return $this->insertMaterialFileWithPath(
             'church_file_test',
             'Nama Lama',
             $this->test_relative_folder(PublicMaterialMenuKey::MateriDg1).'/'.$fileName,
@@ -240,8 +239,8 @@ class PublicMaterialManagementTest extends TestCase
         string $title,
         string $fileName,
         PublicMaterialMenuKey $menu = PublicMaterialMenuKey::MateriDg1,
-    ): void {
-        $this->insertMaterialFileWithPath(
+    ): int {
+        return $this->insertMaterialFileWithPath(
             $publicId,
             $title,
             $this->test_relative_folder($menu).'/'.$fileName,
@@ -256,10 +255,9 @@ class PublicMaterialManagementTest extends TestCase
         string $relativePath,
         string $originalFileName,
         PublicMaterialMenuKey $menu,
-    ): void {
-        DB::table('public_material_files')->insert([
+    ): int {
+        return DB::table('public_material_files')->insertGetId([
             'menu' => $menu->value,
-            'public_id' => $publicId,
             'title' => $title,
             'relative_path' => $relativePath,
             'original_file_name' => $originalFileName,

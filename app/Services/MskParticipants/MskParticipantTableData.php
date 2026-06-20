@@ -3,8 +3,6 @@
 namespace App\Services\MskParticipants;
 
 use App\Models\MskParticipant;
-use App\Models\MskParticipantPhoto;
-use App\Models\MskParticipantSession;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -12,9 +10,7 @@ use Throwable;
 
 class MskParticipantTableData
 {
-    /**
-     * @param array<int, string>|null $branchCodes
-     */
+    /** @param array<int, string>|null $branchCodes */
     public function countParticipants(?array $branchCodes = null): int
     {
         if (! $this->hasTables()) {
@@ -35,7 +31,7 @@ class MskParticipantTableData
     }
 
     /**
-     * @param array<int, string> $branchCodes
+     * @param  array<int, string>  $branchCodes
      * @return array<int, array<string, mixed>>
      */
     public function participantsForBranches(array $branchCodes): array
@@ -49,23 +45,10 @@ class MskParticipantTableData
             return [];
         }
 
-        $query = MskParticipant::query()
+        return MskParticipant::query()
             ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
             ->orderBy('full_name')
-            ->orderBy('id');
-
-        $with = [];
-        if (! $this->hasJsonColumn('session_numbers') && Schema::hasTable('msk_participant_sessions')) {
-            $with['sessions'] = static fn ($query) => $query->orderBy('session_number');
-        }
-        if (! $this->hasJsonColumn('photos') && Schema::hasTable('msk_participant_photos')) {
-            $with['photos'] = static fn ($query) => $query->orderBy('id');
-        }
-        if ($with !== []) {
-            $query->with($with);
-        }
-
-        return $query
+            ->orderBy('id')
             ->get()
             ->map(static function (MskParticipant $participant): array {
                 $row = $participant->toViewArray();
@@ -78,152 +61,44 @@ class MskParticipantTableData
     }
 
     /**
-     * @param array<int, array<string, mixed>> $participants
+     * @param  array<int, array<string, mixed>>  $participants
      * @return array{inserted: int, updated: int, sessions: int, photos: int}
      */
     public function replaceBranchRows(string $branchCode, array $participants, bool $deleteMissing = false): array
     {
-        $counts = [
-            'inserted' => 0,
-            'updated' => 0,
-            'sessions' => 0,
-            'photos' => 0,
-        ];
-
+        $counts = ['inserted' => 0, 'updated' => 0, 'sessions' => 0, 'photos' => 0];
         $branchCode = normalize_public_branch_code($branchCode);
-        if ($branchCode === '' || ! $this->hasTables()) {
+        $branchId = branch_id_from_slug($branchCode);
+        if ($branchCode === '' || $branchId === null || ! $this->hasTables()) {
             return $counts;
         }
 
-        DB::transaction(function () use ($branchCode, $participants, $deleteMissing, &$counts): void {
-            $existingIdsByPublicId = MskParticipant::query()
-                ->where('branch_id', branch_id_from_slug($branchCode))
-                ->pluck('id', 'public_id')
-                ->all();
-
-            $participantRows = [];
-            $sessionNumbersByPublicId = [];
-            $photosByPublicId = [];
-            $seenPublicIds = [];
-
-            foreach ($participants as $participantRow) {
-                if (! is_array($participantRow)) {
+        DB::transaction(function () use ($branchId, $participants, $deleteMissing, &$counts): void {
+            $seenIds = [];
+            foreach ($participants as $row) {
+                if (! is_array($row)) {
                     continue;
                 }
 
-                $publicId = trim((string) ($participantRow['id'] ?? ''));
-                if ($publicId === '') {
-                    $publicId = generate_id('msk');
-                }
+                $participantId = (int) ($row['id'] ?? 0);
+                $participant = $participantId > 0
+                    ? MskParticipant::query()->where('branch_id', $branchId)->whereKey($participantId)->first()
+                    : null;
+                $isNew = ! $participant instanceof MskParticipant;
+                $participant ??= new MskParticipant;
+                $participant->fill($this->participantAttributes($branchId, $row));
+                $participant->save();
 
-                $participantRows[] = $this->participantTableRow($branchCode, $publicId, $participantRow);
-                $sessionNumbersByPublicId[$publicId] = normalize_msk_session_numbers($participantRow['session_numbers'] ?? []);
-                $photosByPublicId[$publicId] = extract_msk_participant_photos($participantRow);
-                $seenPublicIds[] = $publicId;
-
-                if (isset($existingIdsByPublicId[$publicId])) {
-                    $counts['updated']++;
-                } else {
-                    $counts['inserted']++;
-                }
+                $seenIds[] = (int) $participant->getKey();
+                $counts[$isNew ? 'inserted' : 'updated']++;
+                $counts['sessions'] += count(normalize_msk_session_numbers($row['session_numbers'] ?? []));
+                $counts['photos'] += count(extract_msk_participant_photos($row));
             }
-
-            $seenPublicIds = array_values(array_unique($seenPublicIds));
-
-            if ($participantRows !== []) {
-                DB::table('msk_participants')->upsert(
-                    $participantRows,
-                    ['branch_id', 'public_id'],
-                    [
-                        'member_public_id',
-                        'full_name',
-                        'gender',
-                        'birth_date',
-                        'birth_day_month',
-                        'birth_place',
-                        'address',
-                        'email',
-                        'whatsapp',
-                        'batch_month',
-                        'notes',
-                        'completed_at',
-                        'journey_bridge_status',
-                        'status',
-                        'updated_at',
-                    ],
-                );
-            }
-
-            $participantIdsByPublicId = MskParticipant::query()
-                ->where('branch_id', branch_id_from_slug($branchCode))
-                ->whereIn('public_id', $seenPublicIds)
-                ->pluck('id', 'public_id')
-                ->all();
-
-            $participantIds = array_values(array_map('intval', array_values($participantIdsByPublicId)));
-            if ($participantIds !== []) {
-                if (Schema::hasTable('msk_participant_sessions')) {
-                    MskParticipantSession::query()->whereIn('msk_participant_id', $participantIds)->delete();
-                }
-                if (Schema::hasTable('msk_participant_photos')) {
-                    MskParticipantPhoto::query()->whereIn('msk_participant_id', $participantIds)->delete();
-                }
-            }
-
-            $now = now();
-            $sessionRows = [];
-            foreach ($sessionNumbersByPublicId as $publicId => $numbers) {
-                $participantId = (int) ($participantIdsByPublicId[$publicId] ?? 0);
-                if ($participantId <= 0) {
-                    continue;
-                }
-                foreach ($numbers as $number) {
-                    $sessionRows[] = [
-                        'msk_participant_id' => $participantId,
-                        'session_number' => (int) $number,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                }
-            }
-            foreach (array_chunk($sessionRows, 500) as $chunk) {
-                if ($chunk !== [] && Schema::hasTable('msk_participant_sessions')) {
-                    DB::table('msk_participant_sessions')->insert($chunk);
-                }
-            }
-            $counts['sessions'] = count($sessionRows);
-
-            $photoRows = [];
-            foreach ($photosByPublicId as $publicId => $photos) {
-                $participantId = (int) ($participantIdsByPublicId[$publicId] ?? 0);
-                if ($participantId <= 0 || ! is_array($photos)) {
-                    continue;
-                }
-                foreach ($photos as $photo) {
-                    $photoPath = sanitize_relative_upload_path((string) ($photo['path'] ?? ''));
-                    if ($photoPath === '') {
-                        continue;
-                    }
-                    $photoRows[] = [
-                        'msk_participant_id' => $participantId,
-                        'path' => $photoPath,
-                        'original_name' => trim((string) ($photo['name'] ?? '')) ?: 'Foto',
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                }
-            }
-            foreach (array_chunk($photoRows, 500) as $chunk) {
-                if ($chunk !== [] && Schema::hasTable('msk_participant_photos')) {
-                    DB::table('msk_participant_photos')->insert($chunk);
-                }
-            }
-            $counts['photos'] = count($photoRows);
 
             if ($deleteMissing) {
                 MskParticipant::query()
-                    ->where('branch_id', branch_id_from_slug($branchCode))
-                    ->when($seenPublicIds !== [], static fn ($query) => $query->whereNotIn('public_id', $seenPublicIds))
+                    ->where('branch_id', $branchId)
+                    ->when($seenIds !== [], static fn ($query) => $query->whereNotIn('id', $seenIds))
                     ->delete();
             }
         });
@@ -233,13 +108,11 @@ class MskParticipantTableData
 
     public function hasTables(): bool
     {
-        return Schema::hasTable('msk_participants')
-            && ($this->usesJsonPayloads()
-                || (Schema::hasTable('msk_participant_sessions') && Schema::hasTable('msk_participant_photos')));
+        return Schema::hasTable('msk_participants');
     }
 
     /**
-     * @param array<int, string> $branchCodes
+     * @param  array<int, string>  $branchCodes
      * @return array<int, string>
      */
     private function normalizeBranchCodes(array $branchCodes): array
@@ -256,21 +129,18 @@ class MskParticipantTableData
     }
 
     /**
-     * @param array<string, mixed> $row
+     * @param  array<string, mixed>  $row
      * @return array<string, mixed>
      */
-    private function participantTableRow(string $branchCode, string $publicId, array $row): array
+    private function participantAttributes(int $branchId, array $row): array
     {
         $createdAt = $this->timestampFrom([$row['created_at'] ?? null]) ?? now();
         $updatedAt = $this->timestampFrom([$row['updated_at'] ?? null, $row['created_at'] ?? null]) ?? $createdAt;
         $birthDate = normalize_ymd_date((string) ($row['birth_date'] ?? ''));
-        $sessionNumbers = normalize_msk_session_numbers($row['session_numbers'] ?? []);
-        $photos = extract_msk_participant_photos($row);
 
-        $data = [
-            'branch_id' => branch_id_from_slug($branchCode),
-            'public_id' => $publicId,
-            'member_public_id' => $this->nullableString($row['member_id'] ?? null),
+        return [
+            'branch_id' => $branchId,
+            'discipleship_person_id' => (int) ($row['member_id'] ?? 0) ?: null,
             'full_name' => $this->nullableString($row['full_name'] ?? null),
             'gender' => $this->nullableString(normalize_member_gender_value((string) ($row['gender'] ?? ''))),
             'birth_date' => $birthDate !== '' ? $birthDate : null,
@@ -284,33 +154,14 @@ class MskParticipantTableData
             'completed_at' => $this->nullableString($row['completed_at'] ?? null),
             'journey_bridge_status' => normalize_journey_bridge_status((string) ($row['journey_bridge_status'] ?? 'belum')),
             'status' => normalize_msk_participant_status((string) ($row['status'] ?? 'active')),
+            'session_numbers' => normalize_msk_session_numbers($row['session_numbers'] ?? []),
+            'photos' => extract_msk_participant_photos($row),
             'created_at' => $createdAt,
             'updated_at' => $updatedAt,
         ];
-
-        if ($this->hasJsonColumn('session_numbers')) {
-            $data['session_numbers'] = json_encode($sessionNumbers);
-        }
-        if ($this->hasJsonColumn('photos')) {
-            $data['photos'] = json_encode($photos);
-        }
-
-        return $data;
     }
 
-    private function usesJsonPayloads(): bool
-    {
-        return $this->hasJsonColumn('session_numbers') || $this->hasJsonColumn('photos');
-    }
-
-    private function hasJsonColumn(string $column): bool
-    {
-        return Schema::hasColumn('msk_participants', $column);
-    }
-
-    /**
-     * @param array<int, mixed> $candidates
-     */
+    /** @param array<int, mixed> $candidates */
     private function timestampFrom(array $candidates): ?CarbonImmutable
     {
         foreach ($candidates as $candidate) {

@@ -4,11 +4,7 @@ namespace App\Services\DiscipleshipGroups;
 
 use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
-use App\Models\DiscipleshipGroupLeadership;
-use App\Models\DiscipleshipGroupMembership;
 use App\Models\DiscipleshipPerson;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Schema;
 
 class DiscipleshipGroupIndexData
 {
@@ -70,8 +66,8 @@ class DiscipleshipGroupIndexData
     }
 
     /**
-     * @param array<int, string> $branchCodes
-     * @param array<string, string> $branchLabels
+     * @param  array<int, string>  $branchCodes
+     * @param  array<string, string>  $branchLabels
      * @return array<string, array<string, mixed>>
      */
     private function loadPeople(array $branchCodes, bool $centralReadOnly, array $branchLabels): array
@@ -85,7 +81,7 @@ class DiscipleshipGroupIndexData
 
         foreach ($people as $person) {
             $branchCode = normalize_public_branch_code((string) $person->branch_code);
-            $effectiveId = $this->effectiveId($branchCode, (string) $person->public_id);
+            $effectiveId = $this->effectiveId($branchCode, (string) $person->getKey());
             if ($effectiveId === '') {
                 continue;
             }
@@ -107,8 +103,7 @@ class DiscipleshipGroupIndexData
                 'occupation' => trim((string) ($person->occupation ?? '')),
                 'branch_code' => $branchCode,
                 'branch_label' => $branchLabels[$branchCode] ?? strtoupper($branchCode),
-                'public_id' => (string) $person->public_id,
-                'member_public_id' => trim((string) ($person->member_public_id ?? '')),
+                'member_id' => $effectiveId,
                 'created_at' => $this->stringTimestamp($person->created_at ?? null),
                 'updated_at' => $this->stringTimestamp($person->updated_at ?? null),
             ];
@@ -118,8 +113,8 @@ class DiscipleshipGroupIndexData
     }
 
     /**
-     * @param array<int, string> $branchCodes
-     * @param array<string, string> $branchLabels
+     * @param  array<int, string>  $branchCodes
+     * @param  array<string, string>  $branchLabels
      * @return array<string, array<string, mixed>>
      */
     private function loadGroups(array $branchCodes, bool $centralReadOnly, array $branchLabels): array
@@ -133,22 +128,22 @@ class DiscipleshipGroupIndexData
 
         foreach ($groups as $group) {
             $branchCode = normalize_public_branch_code((string) $group->branch_code);
-            $effectiveId = $this->effectiveId($branchCode, (string) $group->public_id);
+            $effectiveId = $this->effectiveId($branchCode, (string) $group->getKey());
             if ($effectiveId === '') {
                 continue;
             }
 
             $groupsById[$effectiveId] = [
                 'id' => $effectiveId,
-                'public_id' => (string) $group->public_id,
                 'branch_code' => $branchCode,
                 'branch_label' => $branchLabels[$branchCode] ?? strtoupper($branchCode),
                 'name' => trim((string) ($group->name ?? 'Kelompok')) ?: 'Kelompok',
                 'status' => strtolower(trim((string) ($group->status ?? 'active'))) ?: 'active',
                 'start_stage' => normalize_dg_progress_value((string) ($group->start_stage ?? '')),
                 'current_stage' => normalize_dg_progress_value((string) ($group->current_stage ?? '')),
-                'parent_group_id' => $this->effectiveId($branchCode, (string) ($group->parent_group_public_id ?? '')),
-                'parent_group_public_id' => trim((string) ($group->parent_group_public_id ?? '')),
+                'parent_group_id' => $group->parent_group_id !== null
+                    ? $this->effectiveId($branchCode, (string) $group->parent_group_id)
+                    : '',
                 'notes' => trim((string) ($group->notes ?? '')),
                 'created_at' => $this->stringTimestamp($group->created_at ?? null),
                 'updated_at' => $this->stringTimestamp($group->updated_at ?? null),
@@ -159,63 +154,31 @@ class DiscipleshipGroupIndexData
     }
 
     /**
-     * @param array<int, string> $branchCodes
+     * @param  array<int, string>  $branchCodes
      * @return array<int, array<string, mixed>>
      */
     private function loadLeaderships(array $branchCodes, bool $centralReadOnly): array
     {
         $rows = [];
 
-        if (Schema::hasTable('discipleship_group_people')) {
-            foreach (DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', '!=', 'member')->orderBy('id')->get() as $leadership) {
-                $branchCode = normalize_public_branch_code((string) $leadership->branch_code);
-                $groupId = $this->effectiveId($branchCode, (string) $leadership->group_public_id);
-                $personId = $this->effectiveId($branchCode, (string) $leadership->person_public_id);
-                if ($groupId === '' || $personId === '') {
-                    continue;
-                }
-
-                $rows[] = [
-                    'id' => (string) $leadership->public_id,
-                    'branch_code' => $branchCode,
-                    'group_id' => $groupId,
-                    'leader_person_id' => $personId,
-                    'role' => strtolower(trim((string) ($leadership->role ?? 'leader'))) ?: 'leader',
-                    'status' => strtolower(trim((string) ($leadership->status ?? 'active'))) ?: 'active',
-                    'start_date' => $this->dateString($leadership->started_on ?? null),
-                    'end_date' => $this->dateString($leadership->ended_on ?? null),
-                    'reason_change' => trim((string) ($leadership->end_reason ?? '')),
-                    'created_at' => $this->stringTimestamp($leadership->created_at ?? null),
-                    'updated_at' => $this->stringTimestamp($leadership->updated_at ?? null),
-                ];
-            }
-
-            return $rows;
-        }
-
-        $leaderships = DiscipleshipGroupLeadership::query()
-            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-            ->orderBy('id')
-            ->get();
-
-        foreach ($leaderships as $leadership) {
+        foreach (DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', '!=', 'member')->orderBy('id')->get() as $leadership) {
             $branchCode = normalize_public_branch_code((string) $leadership->branch_code);
-            $groupId = $this->effectiveId($branchCode, (string) $leadership->group_public_id);
-            $personId = $this->effectiveId($branchCode, (string) $leadership->person_public_id);
+            $groupId = $this->effectiveId($branchCode, (string) $leadership->discipleship_group_id);
+            $personId = $this->effectiveId($branchCode, (string) $leadership->person_id);
             if ($groupId === '' || $personId === '') {
                 continue;
             }
 
             $rows[] = [
-                'id' => (string) $leadership->public_id,
+                'id' => (string) $leadership->getKey(),
                 'branch_code' => $branchCode,
                 'group_id' => $groupId,
                 'leader_person_id' => $personId,
                 'role' => strtolower(trim((string) ($leadership->role ?? 'leader'))) ?: 'leader',
                 'status' => strtolower(trim((string) ($leadership->status ?? 'active'))) ?: 'active',
-                'start_date' => $this->dateString($leadership->start_date ?? null),
-                'end_date' => $this->dateString($leadership->end_date ?? null),
-                'reason_change' => trim((string) ($leadership->reason_change ?? '')),
+                'start_date' => $this->dateString($leadership->started_on ?? null),
+                'end_date' => $this->dateString($leadership->ended_on ?? null),
+                'reason_change' => trim((string) ($leadership->end_reason ?? '')),
                 'created_at' => $this->stringTimestamp($leadership->created_at ?? null),
                 'updated_at' => $this->stringTimestamp($leadership->updated_at ?? null),
             ];
@@ -225,65 +188,32 @@ class DiscipleshipGroupIndexData
     }
 
     /**
-     * @param array<int, string> $branchCodes
+     * @param  array<int, string>  $branchCodes
      * @return array<int, array<string, mixed>>
      */
     private function loadMemberships(array $branchCodes, bool $centralReadOnly): array
     {
         $rows = [];
 
-        if (Schema::hasTable('discipleship_group_people')) {
-            foreach (DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', 'member')->orderBy('id')->get() as $membership) {
-                $branchCode = normalize_public_branch_code((string) $membership->branch_code);
-                $groupId = $this->effectiveId($branchCode, (string) $membership->group_public_id);
-                $personId = $this->effectiveId($branchCode, (string) $membership->person_public_id);
-                if ($groupId === '' || $personId === '') {
-                    continue;
-                }
-
-                $rows[] = [
-                    'id' => (string) $membership->public_id,
-                    'branch_code' => $branchCode,
-                    'group_id' => $groupId,
-                    'person_id' => $personId,
-                    'role' => strtolower(trim((string) ($membership->role ?? 'member'))) ?: 'member',
-                    'stage' => normalize_dg_progress_value((string) ($membership->stage ?? '')),
-                    'status' => strtolower(trim((string) ($membership->status ?? 'active'))) ?: 'active',
-                    'start_date' => $this->dateString($membership->started_on ?? null),
-                    'end_date' => $this->dateString($membership->ended_on ?? null),
-                    'reason_end' => trim((string) ($membership->end_reason ?? '')),
-                    'created_at' => $this->stringTimestamp($membership->created_at ?? null),
-                    'updated_at' => $this->stringTimestamp($membership->updated_at ?? null),
-                ];
-            }
-
-            return $rows;
-        }
-
-        $memberships = DiscipleshipGroupMembership::query()
-            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
-            ->orderBy('id')
-            ->get();
-
-        foreach ($memberships as $membership) {
+        foreach (DiscipleshipGroupPerson::query()->whereIn('branch_id', branch_ids_from_slugs($branchCodes))->where('role', 'member')->orderBy('id')->get() as $membership) {
             $branchCode = normalize_public_branch_code((string) $membership->branch_code);
-            $groupId = $this->effectiveId($branchCode, (string) $membership->group_public_id);
-            $personId = $this->effectiveId($branchCode, (string) $membership->person_public_id);
+            $groupId = $this->effectiveId($branchCode, (string) $membership->discipleship_group_id);
+            $personId = $this->effectiveId($branchCode, (string) $membership->person_id);
             if ($groupId === '' || $personId === '') {
                 continue;
             }
 
             $rows[] = [
-                'id' => (string) $membership->public_id,
+                'id' => (string) $membership->getKey(),
                 'branch_code' => $branchCode,
                 'group_id' => $groupId,
                 'person_id' => $personId,
                 'role' => strtolower(trim((string) ($membership->role ?? 'member'))) ?: 'member',
                 'stage' => normalize_dg_progress_value((string) ($membership->stage ?? '')),
                 'status' => strtolower(trim((string) ($membership->status ?? 'active'))) ?: 'active',
-                'start_date' => $this->dateString($membership->start_date ?? null),
-                'end_date' => $this->dateString($membership->end_date ?? null),
-                'reason_end' => trim((string) ($membership->reason_end ?? '')),
+                'start_date' => $this->dateString($membership->started_on ?? null),
+                'end_date' => $this->dateString($membership->ended_on ?? null),
+                'reason_end' => trim((string) ($membership->end_reason ?? '')),
                 'created_at' => $this->stringTimestamp($membership->created_at ?? null),
                 'updated_at' => $this->stringTimestamp($membership->updated_at ?? null),
             ];
@@ -293,7 +223,7 @@ class DiscipleshipGroupIndexData
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      * @return array<string, mixed>
      */
     private function prepareRows(array $context): array
@@ -522,7 +452,7 @@ class DiscipleshipGroupIndexData
                 $memberFirstNames[] = $memberFirstName;
             }
             $memberLabel = count($memberFirstNames) > 0 ? implode(', ', $memberFirstNames) : '-';
-            $leaderSummary = $assistantId !== '' && $assistantName !== '-' ? 'Pendamping: ' . $assistantName : 'Tanpa pendamping';
+            $leaderSummary = $assistantId !== '' && $assistantName !== '-' ? 'Pendamping: '.$assistantName : 'Tanpa pendamping';
             $progressToneClass = 'is-neutral';
             if (stripos($progressLabel, 'DG 1') !== false) {
                 $progressToneClass = 'is-dg1';
@@ -560,7 +490,7 @@ class DiscipleshipGroupIndexData
                     ? ($isActiveGroup ? 'Nama depan peserta aktif dalam kelompok' : 'Riwayat nama depan peserta kelompok')
                     : ($isActiveGroup ? 'Tambahkan peserta dari pohon DG' : 'Belum ada riwayat anggota'),
                 'progress_helper_text' => $memberCount > 0
-                    ? ($memberCount . ($isActiveGroup ? ' peserta aktif' : ' peserta riwayat'))
+                    ? ($memberCount.($isActiveGroup ? ' peserta aktif' : ' peserta riwayat'))
                     : ($isActiveGroup ? 'Belum ada peserta aktif' : 'Belum ada riwayat peserta'),
             ];
         }
@@ -577,17 +507,9 @@ class DiscipleshipGroupIndexData
         ];
     }
 
-    private function effectiveId(string $branchCode, string $publicId): string
+    private function effectiveId(string $branchCode, string $id): string
     {
-        $branchCode = normalize_public_branch_code($branchCode);
-        $publicId = trim($publicId);
-        if ($publicId === '') {
-            return '';
-        }
-
-        return is_effective_central_discipleship_readonly()
-            ? scoped_virtual_id($branchCode, $publicId)
-            : $publicId;
+        return trim($id);
     }
 
     private function stringTimestamp(mixed $value): string

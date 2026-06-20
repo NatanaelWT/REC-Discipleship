@@ -1,6 +1,7 @@
 <?php
 
-function dgv2_save_person_external(array &$model, array $payload): array {
+function dgv2_save_person_external(array &$model, array $payload): array
+{
     $leaderId = trim((string) ($payload['leader_id'] ?? ''));
     $groupId = trim((string) ($payload['group_id'] ?? ''));
     $fullName = trim((string) ($payload['full_name'] ?? ''));
@@ -14,7 +15,7 @@ function dgv2_save_person_external(array &$model, array $payload): array {
     }
 
     foreach ($model['discipleship_persons'] as $row) {
-        if (!is_array($row)) {
+        if (! is_array($row)) {
             continue;
         }
         $rowStatus = strtolower(trim((string) ($row['status'] ?? 'active')));
@@ -25,7 +26,7 @@ function dgv2_save_person_external(array &$model, array $payload): array {
         }
     }
 
-    $personId = generate_id('person');
+    $personId = temporary_model_id('person');
     $now = now_iso();
     $model['discipleship_persons'][] = [
         'id' => $personId,

@@ -20,13 +20,13 @@ class StreamPublicMaterialRequest extends FormRequest
         $routeMenu = $this->route('menu');
         $menuKey = trim((string) ($routeMenu ?? $this->query('menu', '')));
         $routeFile = $this->route('churchFile');
-        $publicFileId = $routeFile instanceof PublicMaterialFile
-            ? (string) $routeFile->public_id
+        $fileId = $routeFile instanceof PublicMaterialFile
+            ? (int) $routeFile->getKey()
             : trim((string) ($routeFile ?? $this->query('id', '')));
 
         $this->merge([
             'menu' => normalize_public_material_menu($menuKey),
-            'id' => $publicFileId,
+            'id' => $fileId,
         ]);
     }
 
@@ -37,7 +37,7 @@ class StreamPublicMaterialRequest extends FormRequest
     {
         return [
             'menu' => ['nullable', 'string', 'max:120'],
-            'id' => ['nullable', 'string', 'max:120'],
+            'id' => ['nullable', 'integer', 'min:1'],
             'raw' => ['nullable'],
         ];
     }
@@ -47,9 +47,9 @@ class StreamPublicMaterialRequest extends FormRequest
         return (string) $this->input('menu', '');
     }
 
-    public function publicFileId(): string
+    public function fileId(): int
     {
-        return (string) $this->input('id', '');
+        return (int) $this->input('id', 0);
     }
 
     public function rawPreview(): bool

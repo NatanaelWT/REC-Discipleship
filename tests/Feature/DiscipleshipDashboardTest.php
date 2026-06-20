@@ -31,25 +31,19 @@ class DiscipleshipDashboardTest extends TestCase
         $this->seedDashboardData();
 
         $this->actingAsRecUser();
+        $participantId = (int) DB::table('msk_participants')->where('full_name', 'Peserta MSK Dashboard')->value('id');
 
         $response = $this->post('/pemuridan/dashboard/msk-sessions', [
             'action' => 'save_msk_sessions',
-            'id' => 'msk-dashboard',
+            'id' => $participantId,
             'return_page' => 'discipleship_dashboard',
             'session_numbers' => ['1', '2', '3', '4'],
         ]);
 
         $response->assertRedirect('/pemuridan/dashboard?msk_session_saved=1');
 
-        $participantId = (int) DB::table('msk_participants')
-            ->where('public_id', 'msk-dashboard')
-            ->value('id');
-
-        $this->assertDatabaseHas('msk_participant_sessions', [
-            'msk_participant_id' => $participantId,
-            'session_number' => 4,
-        ]);
-        $this->assertSame(4, DB::table('msk_participant_sessions')->where('msk_participant_id', $participantId)->count());
+        $sessions = json_decode((string) DB::table('msk_participants')->where('id', $participantId)->value('session_numbers'), true);
+        $this->assertSame([1, 2, 3, 4], $sessions);
     }
 
     public function test_central_discipleship_user_cannot_update_branch_data(): void
@@ -57,24 +51,21 @@ class DiscipleshipDashboardTest extends TestCase
         $this->createDashboardTables();
         $this->seedDashboardData();
         $this->actingAsRecUser('recpusat', null, 'pemuridan_pusat');
+        $participantId = (int) DB::table('msk_participants')->where('full_name', 'Peserta MSK Dashboard')->value('id');
 
         $this->post('/pemuridan/dashboard/msk-sessions', [
-            'id' => 'msk-dashboard',
+            'id' => $participantId,
             'session_numbers' => ['1', '2', '3', '4'],
         ])->assertRedirect('/pemuridan/dashboard?error=access_denied');
 
-        $participantId = (int) DB::table('msk_participants')->where('public_id', 'msk-dashboard')->value('id');
-        $this->assertSame(2, DB::table('msk_participant_sessions')->where('msk_participant_id', $participantId)->count());
+        $sessions = json_decode((string) DB::table('msk_participants')->where('id', $participantId)->value('session_numbers'), true);
+        $this->assertSame([1, 2], $sessions);
     }
 
     private function createDashboardTables(): void
     {
-        Schema::dropIfExists('msk_participant_photos');
-        Schema::dropIfExists('msk_participant_sessions');
         Schema::dropIfExists('msk_participants');
-        Schema::dropIfExists('discipleship_group_multiplications');
-        Schema::dropIfExists('discipleship_group_leaderships');
-        Schema::dropIfExists('discipleship_group_memberships');
+        Schema::dropIfExists('discipleship_group_people');
         Schema::dropIfExists('discipleship_relationships');
         Schema::dropIfExists('discipleship_groups');
         Schema::dropIfExists('discipleship_people');
@@ -93,9 +84,7 @@ class DiscipleshipDashboardTest extends TestCase
 
         Schema::create('discipleship_people', function (Blueprint $table): void {
             $table->id();
-            $table->string('public_id');
             $table->unsignedBigInteger('branch_id');
-            $table->string('member_public_id')->nullable();
             $table->string('full_name')->nullable();
             $table->string('phone')->nullable();
             $table->string('gender')->nullable();
@@ -109,28 +98,25 @@ class DiscipleshipDashboardTest extends TestCase
 
         Schema::create('discipleship_groups', function (Blueprint $table): void {
             $table->id();
-            $table->string('public_id');
             $table->unsignedBigInteger('branch_id');
             $table->string('name');
             $table->string('status')->default('active');
             $table->string('start_stage')->nullable();
             $table->string('current_stage')->nullable();
             $table->unsignedBigInteger('parent_group_id')->nullable();
-            $table->string('parent_group_public_id')->nullable();
+            $table->unsignedBigInteger('source_group_id')->nullable();
+            $table->unsignedBigInteger('initiated_by_person_id')->nullable();
+            $table->date('multiplied_at')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
         });
 
         Schema::create('discipleship_relationships', function (Blueprint $table): void {
             $table->id();
-            $table->string('public_id')->nullable();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('mentor_person_id')->nullable();
-            $table->string('mentor_person_public_id')->nullable();
             $table->unsignedBigInteger('disciple_person_id')->nullable();
-            $table->string('disciple_person_public_id')->nullable();
             $table->unsignedBigInteger('context_group_id')->nullable();
-            $table->string('context_group_public_id')->nullable();
             $table->string('relation_type')->nullable();
             $table->string('stage_at_start')->nullable();
             $table->string('status')->default('active');
@@ -141,59 +127,24 @@ class DiscipleshipDashboardTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_group_memberships', function (Blueprint $table): void {
+        Schema::create('discipleship_group_people', function (Blueprint $table): void {
             $table->id();
-            $table->string('public_id')->nullable();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('discipleship_group_id');
-            $table->string('group_public_id');
             $table->unsignedBigInteger('person_id')->nullable();
-            $table->string('person_public_id')->nullable();
             $table->string('role')->default('member');
             $table->string('stage')->nullable();
             $table->string('status')->default('active');
-            $table->date('start_date')->nullable();
-            $table->date('end_date')->nullable();
-            $table->string('reason_end')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('discipleship_group_leaderships', function (Blueprint $table): void {
-            $table->id();
-            $table->string('public_id')->nullable();
-            $table->unsignedBigInteger('branch_id');
-            $table->unsignedBigInteger('discipleship_group_id');
-            $table->string('group_public_id');
-            $table->unsignedBigInteger('person_id')->nullable();
-            $table->string('person_public_id')->nullable();
-            $table->string('role')->default('leader');
-            $table->string('status')->default('active');
-            $table->date('start_date')->nullable();
-            $table->date('end_date')->nullable();
-            $table->string('reason_change')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('discipleship_group_multiplications', function (Blueprint $table): void {
-            $table->id();
-            $table->string('public_id')->nullable();
-            $table->unsignedBigInteger('branch_id');
-            $table->unsignedBigInteger('initiated_by_person_id')->nullable();
-            $table->string('initiated_by_person_public_id')->nullable();
-            $table->unsignedBigInteger('source_group_id')->nullable();
-            $table->string('source_group_public_id')->nullable();
-            $table->unsignedBigInteger('new_group_id')->nullable();
-            $table->string('new_group_public_id')->nullable();
-            $table->date('multiplication_date')->nullable();
-            $table->text('notes')->nullable();
+            $table->date('started_on')->nullable();
+            $table->date('ended_on')->nullable();
+            $table->string('end_reason')->nullable();
             $table->timestamps();
         });
 
         Schema::create('msk_participants', function (Blueprint $table): void {
             $table->id();
-            $table->string('public_id');
             $table->unsignedBigInteger('branch_id');
-            $table->string('member_public_id')->nullable();
+            $table->unsignedBigInteger('discipleship_person_id')->nullable()->unique();
             $table->string('full_name')->nullable();
             $table->string('gender')->nullable();
             $table->date('birth_date')->nullable();
@@ -207,21 +158,8 @@ class DiscipleshipDashboardTest extends TestCase
             $table->string('completed_at')->nullable();
             $table->string('journey_bridge_status')->default('belum');
             $table->string('status')->default('active');
-            $table->timestamps();
-        });
-
-        Schema::create('msk_participant_sessions', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('msk_participant_id');
-            $table->unsignedTinyInteger('session_number');
-            $table->timestamps();
-        });
-
-        Schema::create('msk_participant_photos', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('msk_participant_id');
-            $table->string('path');
-            $table->string('original_name')->nullable();
+            $table->json('session_numbers')->nullable();
+            $table->json('photos')->nullable();
             $table->timestamps();
         });
     }
@@ -240,9 +178,7 @@ class DiscipleshipDashboardTest extends TestCase
         ]);
 
         $leaderId = DB::table('discipleship_people')->insertGetId([
-            'public_id' => 'person-leader',
             'branch_id' => 1,
-            'member_public_id' => 'member-leader',
             'full_name' => 'Leader Dashboard',
             'phone' => '0811111111',
             'gender' => 'Laki-laki',
@@ -252,9 +188,7 @@ class DiscipleshipDashboardTest extends TestCase
         ]);
 
         $memberId = DB::table('discipleship_people')->insertGetId([
-            'public_id' => 'person-member',
             'branch_id' => 1,
-            'member_public_id' => 'member-member',
             'full_name' => 'Anggota Dashboard',
             'phone' => '0822222222',
             'gender' => 'Perempuan',
@@ -264,7 +198,6 @@ class DiscipleshipDashboardTest extends TestCase
         ]);
 
         $groupId = DB::table('discipleship_groups')->insertGetId([
-            'public_id' => 'group-dashboard',
             'branch_id' => 1,
             'name' => 'Kelompok Dashboard',
             'status' => 'active',
@@ -274,44 +207,34 @@ class DiscipleshipDashboardTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('discipleship_group_leaderships')->insert([
-            'public_id' => 'leadership-dashboard',
+        DB::table('discipleship_group_people')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
-            'group_public_id' => 'group-dashboard',
             'person_id' => $leaderId,
-            'person_public_id' => 'person-leader',
             'role' => 'leader',
             'status' => 'active',
-            'start_date' => '2026-01-01',
+            'started_on' => '2026-01-01',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        DB::table('discipleship_group_memberships')->insert([
-            'public_id' => 'membership-dashboard',
+        DB::table('discipleship_group_people')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
-            'group_public_id' => 'group-dashboard',
             'person_id' => $memberId,
-            'person_public_id' => 'person-member',
             'role' => 'member',
             'stage' => 'DG 1',
             'status' => 'active',
-            'start_date' => '2026-01-01',
+            'started_on' => '2026-01-01',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         DB::table('discipleship_relationships')->insert([
-            'public_id' => 'relation-dashboard',
             'branch_id' => 1,
             'mentor_person_id' => $leaderId,
-            'mentor_person_public_id' => 'person-leader',
             'disciple_person_id' => $memberId,
-            'disciple_person_public_id' => 'person-member',
             'context_group_id' => $groupId,
-            'context_group_public_id' => 'group-dashboard',
             'relation_type' => 'discipleship',
             'stage_at_start' => 'DG 1',
             'status' => 'active',
@@ -321,32 +244,18 @@ class DiscipleshipDashboardTest extends TestCase
         ]);
 
         $participantId = DB::table('msk_participants')->insertGetId([
-            'public_id' => 'msk-dashboard',
             'branch_id' => 1,
-            'member_public_id' => 'member-msk-dashboard',
+            'discipleship_person_id' => null,
             'full_name' => 'Peserta MSK Dashboard',
             'gender' => 'Laki-laki',
             'whatsapp' => '0833333333',
             'batch_month' => '2026-06',
             'journey_bridge_status' => 'belum',
             'status' => 'active',
+            'session_numbers' => json_encode([1, 2]),
+            'photos' => json_encode([]),
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
-
-        DB::table('msk_participant_sessions')->insert([
-            [
-                'msk_participant_id' => $participantId,
-                'session_number' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'msk_participant_id' => $participantId,
-                'session_number' => 2,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
         ]);
     }
 }

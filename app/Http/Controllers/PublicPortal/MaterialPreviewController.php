@@ -21,7 +21,7 @@ class MaterialPreviewController extends Controller
         StreamPublicMaterialRequest $request,
         PublicMaterialRouteResolver $resolver,
     ): RedirectResponse|Response {
-        $resolved = $resolver->resolve($request->materialMenuKey(), $request->publicFileId());
+        $resolved = $resolver->resolve($request->materialMenuKey(), $request->fileId());
         if ($resolved === null) {
             return response('File tidak ditemukan.', 404);
         }
@@ -30,7 +30,7 @@ class MaterialPreviewController extends Controller
 
         return redirect()->route('materials.preview', array_filter([
             'menu' => $menu->value,
-            'churchFile' => $file->public_id,
+            'churchFile' => $file->getKey(),
             'raw' => $request->rawPreview() ? '1' : null,
         ]));
     }
@@ -66,7 +66,7 @@ class MaterialPreviewController extends Controller
         if (! is_public_material_previewable_path($path)) {
             return redirect()->route('materials.download', [
                 'menu' => $menu->value,
-                'churchFile' => $churchFile->public_id,
+                'churchFile' => $churchFile->getKey(),
             ]);
         }
 
@@ -89,7 +89,7 @@ class MaterialPreviewController extends Controller
                 'previewTitle' => $previewTitle,
                 'rawUrl' => route('materials.preview', [
                     'menu' => $menu->value,
-                    'churchFile' => $churchFile->public_id,
+                    'churchFile' => $churchFile->getKey(),
                     'raw' => '1',
                 ]),
                 'showFeedbackButton' => $showFeedbackButton,

@@ -11,14 +11,10 @@ class DiscipleshipRelationship extends Model
     use ResolvesBranchSlug;
 
     protected $fillable = [
-        'public_id',
         'branch_id',
         'mentor_person_id',
-        'mentor_person_public_id',
         'disciple_person_id',
-        'disciple_person_public_id',
         'context_group_id',
-        'context_group_public_id',
         'relation_type',
         'stage_at_start',
         'status',

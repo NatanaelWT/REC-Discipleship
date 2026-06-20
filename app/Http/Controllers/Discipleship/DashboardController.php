@@ -27,9 +27,9 @@ class DashboardController extends Controller
         UpdateDashboardMskSessionsRequest $request,
         DashboardMskSessionUpdater $updater,
     ): RedirectResponse {
-        $participantId = $request->participantPublicId();
+        $participantId = $request->participantId();
         $redirectParams = [];
-        if ($participantId !== '') {
+        if ($participantId > 0) {
             $redirectParams['edit_msk_sessions'] = $participantId;
         }
 

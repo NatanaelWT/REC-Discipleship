@@ -7,17 +7,16 @@ use Illuminate\Support\Facades\Schema;
 
 class SpiritualJourneyBridgeStatusService
 {
-    public function update(string $participantPublicId, string $status): bool
+    public function update(int $participantId, string $status): bool
     {
-        $participantPublicId = trim($participantPublicId);
-        if ($participantPublicId === '' || ! Schema::hasTable('msk_participants')) {
+        if ($participantId < 1 || ! Schema::hasTable('msk_participants')) {
             return false;
         }
 
         $branchCode = normalize_public_branch_code(current_user_branch());
         $participant = MskParticipant::query()
             ->where('branch_id', branch_id_from_slug($branchCode))
-            ->where('public_id', $participantPublicId)
+            ->whereKey($participantId)
             ->first();
 
         if (! $participant instanceof MskParticipant) {

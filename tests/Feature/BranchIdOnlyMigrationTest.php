@@ -31,9 +31,9 @@ class BranchIdOnlyMigrationTest extends TestCase
         $this->assertDatabaseHas('users', ['username' => 'branch_user', 'branch_id' => 2]);
         $this->assertDatabaseHas('users', ['username' => 'central_user', 'branch_id' => null]);
         $this->assertDatabaseMissing('branches', ['label' => 'Pusat']);
-        $this->assertDatabaseHas('msk_participants', ['public_id' => 'msk-1', 'branch_id' => 1]);
+        $this->assertDatabaseHas('msk_participants', ['legacy_key' => 'msk-1', 'branch_id' => 1]);
 
-        $this->assertTrue($this->hasIndex('msk_participants', ['branch_id', 'public_id'], true));
+        $this->assertTrue($this->hasIndex('msk_participants', ['branch_id', 'legacy_key'], true));
     }
 
     private function createLegacyTables(): void
@@ -62,11 +62,11 @@ class BranchIdOnlyMigrationTest extends TestCase
 
         Schema::create('msk_participants', function (Blueprint $table): void {
             $table->id();
-            $table->string('public_id');
+            $table->string('legacy_key');
             $table->string('branch_code', 40);
             $table->unsignedBigInteger('branch_id')->nullable();
             $table->timestamps();
-            $table->unique(['branch_code', 'public_id'], 'msk_legacy_branch_public_unique');
+            $table->unique(['branch_code', 'legacy_key'], 'msk_legacy_branch_key_unique');
         });
 
         Schema::create('worship_schedules', function (Blueprint $table): void {
@@ -127,7 +127,7 @@ class BranchIdOnlyMigrationTest extends TestCase
             ],
         ]);
         DB::table('msk_participants')->insert([
-            'public_id' => 'msk-1',
+            'legacy_key' => 'msk-1',
             'branch_code' => 'kutisari',
             'branch_id' => null,
             'created_at' => now(),

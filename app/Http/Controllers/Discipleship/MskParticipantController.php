@@ -46,7 +46,7 @@ class MskParticipantController extends Controller
         MskParticipantWriter $writer,
     ): RedirectResponse {
         RuntimeBootstrap::boot($request);
-        $request->merge(['id' => $participant->public_id]);
+        $request->merge(['id' => $participant->getKey()]);
 
         return $this->saveParticipantFromRequest($request, $writer);
     }
@@ -122,7 +122,7 @@ class MskParticipantController extends Controller
     private function saveParticipantFromRequest(MskParticipantWriteRequest $request, MskParticipantWriter $writer): RedirectResponse
     {
         $payload = $request->payload();
-        $redirectParams = $this->baseRedirectParams($payload['public_id'] ?? '', $payload['batch_month'] ?? '');
+        $redirectParams = $this->baseRedirectParams((int) ($payload['id'] ?? 0), $payload['batch_month'] ?? '');
 
         if ($payload['full_name'] === '') {
             return redirect()->route('discipleship.msk-classes', $redirectParams + ['error' => 'missing_msk_name']);
@@ -154,11 +154,11 @@ class MskParticipantController extends Controller
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
-    private function baseRedirectParams(string $id, string $batchMonth): array
+    private function baseRedirectParams(int $id, string $batchMonth): array
     {
         $params = [];
-        if (trim($id) !== '') {
-            $params['edit'] = trim($id);
+        if ($id > 0) {
+            $params['edit'] = $id;
         }
         if ($batchMonth !== '') {
             $params['batch_month'] = $batchMonth;

@@ -5,8 +5,6 @@ namespace App\Http\Controllers\PublicPortal;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MemberFeedbackJournals\StoreMemberFeedbackJournalRequest;
 use App\Models\DiscipleshipFeedback;
-use App\Models\DiscipleshipGroup;
-use App\Models\DiscipleshipPerson;
 use App\Services\MemberFeedbackJournals\MemberFeedbackFormData;
 use App\Services\MemberFeedbackJournals\MemberFeedbackQuestionCatalog;
 use App\Support\RuntimeBootstrap;
@@ -98,9 +96,9 @@ class MemberFeedbackJournalController extends Controller
         try {
             DB::transaction(function () use ($request, $questionCatalog): void {
                 $groupRow = $request->groupRow();
-                $groupPublicId = trim((string) $request->input('group_id', ''));
-                $leaderPublicId = trim((string) ($groupRow['leader_id'] ?? ''));
-                $respondentPublicId = trim((string) $request->input('respondent_person_id', ''));
+                $groupId = $request->groupId();
+                $leaderId = (int) ($groupRow['leader_id'] ?? 0);
+                $respondentId = $request->respondentPersonId();
                 $groupName = trim((string) ($groupRow['name'] ?? ''));
                 if ($groupName === '') {
                     $groupName = 'Kelompok';
@@ -115,12 +113,11 @@ class MemberFeedbackJournalController extends Controller
                 $notes = [];
 
                 $journalData = [
-                    'public_id' => $this->generatePublicId(),
                     'branch_id' => branch_id_from_slug($request->publicBranch()),
                     'feedback_session' => $request->feedbackSession(),
-                    'discipleship_group_id' => $this->discipleshipGroupRecordId($groupPublicId, $request->publicBranch()),
-                    'leader_person_id' => $this->peopleRecordId($leaderPublicId, $request->publicBranch()),
-                    'respondent_person_id' => $this->peopleRecordId($respondentPublicId, $request->publicBranch()),
+                    'discipleship_group_id' => $groupId,
+                    'leader_person_id' => $leaderId,
+                    'respondent_person_id' => $respondentId,
                     'respondent_name_snapshot' => $request->respondentName(),
                     'leader_name_snapshot' => trim((string) ($groupRow['leader_name'] ?? '')) ?: null,
                     'group_name_snapshot' => $groupName,
@@ -153,12 +150,6 @@ class MemberFeedbackJournalController extends Controller
                     ];
                 }
 
-                foreach ($ratings as $ratingRow) {
-                    if (Schema::hasTable('discipleship_member_feedback_ratings')) {
-                        $journal->ratings()->create($ratingRow);
-                    }
-                }
-
                 foreach ($request->noteValues() as $noteKey => $content) {
                     $noteRow = [
                         'section_key' => $request->noteSectionKeys()[$noteKey] ?? null,
@@ -167,9 +158,6 @@ class MemberFeedbackJournalController extends Controller
                     ];
 
                     $notes[] = $noteRow;
-                    if (Schema::hasTable('discipleship_member_feedback_notes')) {
-                        $journal->notes()->create($noteRow);
-                    }
                 }
 
                 $updateData = [];
@@ -199,49 +187,5 @@ class MemberFeedbackJournalController extends Controller
             'cabang' => $publicBranch,
             'feedback_session' => $feedbackSession,
         ]);
-    }
-
-    private function generatePublicId(): string
-    {
-        do {
-            $id = function_exists('generate_id')
-                ? generate_id('dg_member_feedback')
-                : 'dg_member_feedback_'.bin2hex(random_bytes(4));
-        } while (DiscipleshipFeedback::query()->where('public_id', $id)->exists());
-
-        return $id;
-    }
-
-    private function discipleshipGroupRecordId(string $publicId, string $branchCode): ?int
-    {
-        $publicId = trim($publicId);
-        if ($publicId === '') {
-            return null;
-        }
-
-        $id = DiscipleshipGroup::query()
-            ->where('branch_id', branch_id_from_slug(normalize_public_branch_code($branchCode)))
-            ->where('public_id', $publicId)
-            ->value('id');
-
-        return $id === null ? null : (int) $id;
-    }
-
-    private function peopleRecordId(string $publicId, string $branchCode): ?int
-    {
-        $publicId = trim($publicId);
-        if ($publicId === '') {
-            return null;
-        }
-
-        $id = DiscipleshipPerson::query()
-            ->where('branch_id', branch_id_from_slug(normalize_public_branch_code($branchCode)))
-            ->where(static function ($query) use ($publicId): void {
-                $query->where('public_id', $publicId)
-                    ->orWhere('member_public_id', $publicId);
-            })
-            ->value('id');
-
-        return $id === null ? null : (int) $id;
     }
 }

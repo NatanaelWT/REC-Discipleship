@@ -1,10 +1,11 @@
 <?php
 
-function dgv2_sync_group_leaderships(array &$model, string $groupId, string $leaderId, string $assistantId): void {
+function dgv2_sync_group_leaderships(array &$model, string $groupId, string $leaderId, string $assistantId): void
+{
     $hasActiveLeader = false;
     $hasActiveAssistant = false;
     foreach ($model['group_leaderships'] as &$leadership) {
-        if (!is_array($leadership) || !dgv2_is_current_period($leadership)) {
+        if (! is_array($leadership) || ! dgv2_is_current_period($leadership)) {
             continue;
         }
         if (trim((string) ($leadership['group_id'] ?? '')) !== $groupId) {
@@ -19,6 +20,7 @@ function dgv2_sync_group_leaderships(array &$model, string $groupId, string $lea
             } else {
                 $hasActiveLeader = true;
             }
+
             continue;
         }
         $leadership['end_date'] = today_date();
@@ -28,9 +30,9 @@ function dgv2_sync_group_leaderships(array &$model, string $groupId, string $lea
     }
     unset($leadership);
 
-    if ($leaderId !== '' && !$hasActiveLeader) {
+    if ($leaderId !== '' && ! $hasActiveLeader) {
         $model['group_leaderships'][] = [
-            'id' => generate_id('gld'),
+            'id' => temporary_model_id('leadership'),
             'group_id' => $groupId,
             'leader_person_id' => $leaderId,
             'role' => 'leader',
@@ -42,9 +44,9 @@ function dgv2_sync_group_leaderships(array &$model, string $groupId, string $lea
             'updated_at' => now_iso(),
         ];
     }
-    if ($assistantId !== '' && !$hasActiveAssistant) {
+    if ($assistantId !== '' && ! $hasActiveAssistant) {
         $model['group_leaderships'][] = [
-            'id' => generate_id('gld'),
+            'id' => temporary_model_id('leadership'),
             'group_id' => $groupId,
             'leader_person_id' => $assistantId,
             'role' => 'co_leader',

@@ -10,7 +10,6 @@ class PublicMaterialFile extends Model
 
     protected $fillable = [
         'menu',
-        'public_id',
         'title',
         'category_name',
         'description',
@@ -23,9 +22,4 @@ class PublicMaterialFile extends Model
     protected $casts = [
         'size_bytes' => 'integer',
     ];
-
-    public function getRouteKeyName(): string
-    {
-        return 'public_id';
-    }
 }

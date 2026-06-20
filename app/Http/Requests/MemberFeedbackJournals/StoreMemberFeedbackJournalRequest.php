@@ -86,17 +86,17 @@ class StoreMemberFeedbackJournalRequest extends FormRequest
 
             $formData = app(MemberFeedbackFormData::class)->forBranch($this->publicBranch);
             $groupMap = $formData['group_map'];
-            $groupId = trim((string) $this->input('group_id', ''));
-            $respondentPersonId = trim((string) $this->input('respondent_person_id', ''));
+            $groupId = (int) $this->input('group_id', 0);
+            $respondentPersonId = (int) $this->input('respondent_person_id', 0);
 
             if (count($groupMap) === 0) {
                 $validator->errors()->add('public_member_feedback_error', 'Belum ada Kelompok DG yang bisa dipilih.');
-            } elseif ($groupId === '' || ! isset($groupMap[$groupId]) || ! is_array($groupMap[$groupId])) {
+            } elseif ($groupId < 1 || ! isset($groupMap[$groupId]) || ! is_array($groupMap[$groupId])) {
                 $validator->errors()->add('public_member_feedback_error', 'Pilih kelompok DG terlebih dahulu.');
             } else {
                 $this->groupRow = $groupMap[$groupId];
                 $memberMap = $this->groupMemberMap($this->groupRow);
-                if ($respondentPersonId === '' || ! isset($memberMap[$respondentPersonId])) {
+                if ($respondentPersonId < 1 || ! isset($memberMap[$respondentPersonId])) {
                     $validator->errors()->add('public_member_feedback_error', 'Pilih nama pengisi sesuai anggota kelompok DG.');
                 } else {
                     $this->respondentName = $memberMap[$respondentPersonId];
@@ -136,6 +136,16 @@ class StoreMemberFeedbackJournalRequest extends FormRequest
         return $this->respondentName;
     }
 
+    public function groupId(): int
+    {
+        return (int) $this->input('group_id', 0);
+    }
+
+    public function respondentPersonId(): int
+    {
+        return (int) $this->input('respondent_person_id', 0);
+    }
+
     /**
      * @return array<string, int>
      */
@@ -145,7 +155,7 @@ class StoreMemberFeedbackJournalRequest extends FormRequest
     }
 
     /**
-     * @return array<string, string>
+     * @return array<int, string>
      */
     public function noteValues(): array
     {
@@ -210,9 +220,9 @@ class StoreMemberFeedbackJournalRequest extends FormRequest
                 continue;
             }
 
-            $memberId = trim((string) ($memberRow['id'] ?? ''));
+            $memberId = (int) ($memberRow['id'] ?? 0);
             $memberName = trim((string) ($memberRow['name'] ?? ''));
-            if ($memberId !== '' && $memberName !== '') {
+            if ($memberId > 0 && $memberName !== '') {
                 $memberMap[$memberId] = $memberName;
             }
         }

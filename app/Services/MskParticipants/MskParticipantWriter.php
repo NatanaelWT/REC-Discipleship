@@ -4,10 +4,7 @@ namespace App\Services\MskParticipants;
 
 use App\Http\Requests\MskParticipants\MskParticipantWriteRequest;
 use App\Models\MskParticipant;
-use App\Models\MskParticipantPhoto;
-use App\Models\MskParticipantSession;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class MskParticipantWriter
 {
@@ -23,14 +20,10 @@ class MskParticipantWriter
     {
         $payload = $request->payload();
         $branchCode = normalize_public_branch_code(current_user_branch());
-        $publicId = trim((string) ($payload['public_id'] ?? ''));
-        if ($publicId === '') {
-            $publicId = generate_id('msk');
-        }
-
-        $existing = $this->participantForBranch($branchCode, $publicId);
+        $participantId = (int) ($payload['id'] ?? 0);
+        $existing = $participantId > 0 ? $this->participantForBranch($branchCode, $participantId) : null;
         $existingViewRow = $existing?->toViewArray() ?? [];
-        $existingLinkedMemberId = trim((string) ($existingViewRow['member_id'] ?? ''));
+        $existingLinkedPersonId = (int) ($existingViewRow['member_id'] ?? 0);
 
         $uploadResult = $this->uploadedPhotos();
         if ($uploadResult['error'] !== '') {
@@ -42,11 +35,11 @@ class MskParticipantWriter
         }
 
         $finalPhotos = $this->mergePhotos($existingViewRow, $payload['remove_photo_paths'] ?? [], $uploadResult['photos']);
-        $participantData = $this->participantData($publicId, $payload, $existingViewRow, $finalPhotos);
-        $wasLinkedMember = $existingLinkedMemberId !== '';
+        $participantData = $this->participantData($participantId, $payload, $existingViewRow, $finalPhotos);
+        $wasLinkedMember = $existingLinkedPersonId > 0;
 
-        $finalLinkedMemberId = trim((string) ($participantData['member_id'] ?? ''));
-        if ($this->memberAlreadyRegisteredInAnotherParticipant($branchCode, $publicId, $finalLinkedMemberId)) {
+        $finalLinkedPersonId = (int) ($participantData['member_id'] ?? 0);
+        if ($this->memberAlreadyRegisteredInAnotherParticipant($branchCode, $participantId, $finalLinkedPersonId)) {
             $this->deleteUploadedPhotos($uploadResult['photos']);
 
             return [
@@ -59,7 +52,7 @@ class MskParticipantWriter
         $savedParticipant = $this->persistParticipant($branchCode, $participantData);
 
         $autoConverted = ! $wasLinkedMember
-            && $finalLinkedMemberId !== ''
+            && $finalLinkedPersonId > 0
             && msk_is_complete($participantData);
 
         $participants = $this->participantsForBranch($branchCode);
@@ -76,7 +69,7 @@ class MskParticipantWriter
     }
 
     /**
-     * @param array<int, int> $sessionNumbers
+     * @param  array<int, int>  $sessionNumbers
      * @return array{auto_converted: bool, error: string}
      */
     public function updateSessions(MskParticipant $participant, array $sessionNumbers): array
@@ -91,13 +84,13 @@ class MskParticipantWriter
         $participantData['session_numbers'] = normalize_msk_session_numbers($sessionNumbers);
         $participantData['updated_at'] = now_iso();
 
-        $wasLinkedMember = trim((string) ($participantData['member_id'] ?? '')) !== '';
+        $wasLinkedMember = (int) ($participantData['member_id'] ?? 0) > 0;
 
         $this->persistParticipant($branchCode, $participantData);
 
         return [
             'auto_converted' => ! $wasLinkedMember
-                && trim((string) ($participantData['member_id'] ?? '')) !== ''
+                && (int) ($participantData['member_id'] ?? 0) > 0
                 && msk_is_complete($participantData),
             'error' => '',
         ];
@@ -128,16 +121,16 @@ class MskParticipantWriter
             return $participant;
         }
 
-        return $this->participantForBranch($branchCode, (string) $participant->public_id);
+        return null;
     }
 
     /**
-     * @param array<string, mixed> $payload
-     * @param array<string, mixed> $existing
-     * @param array<int, array{path: string, name: string}> $photos
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $existing
+     * @param  array<int, array{path: string, name: string}>  $photos
      * @return array<string, mixed>
      */
-    private function participantData(string $publicId, array $payload, array $existing, array $photos): array
+    private function participantData(int $participantId, array $payload, array $existing, array $photos): array
     {
         $birthDate = (string) ($payload['birth_date'] ?? '');
         $batchMonth = normalize_month_value((string) ($payload['batch_month'] ?? ''));
@@ -146,8 +139,8 @@ class MskParticipantWriter
         }
 
         return [
-            'id' => $publicId,
-            'member_id' => trim((string) ($existing['member_id'] ?? $payload['member_public_id'] ?? '')),
+            'id' => $participantId,
+            'member_id' => (int) ($existing['member_id'] ?? $payload['discipleship_person_id'] ?? 0),
             'full_name' => (string) ($payload['full_name'] ?? ''),
             'gender' => (string) ($payload['gender'] ?? ''),
             'birth_date' => $birthDate,
@@ -169,22 +162,21 @@ class MskParticipantWriter
     }
 
     /**
-     * @param array<string, mixed> $participantData
+     * @param  array<string, mixed>  $participantData
      */
     private function persistParticipant(string $branchCode, array $participantData): MskParticipant
     {
         return DB::transaction(function () use ($branchCode, $participantData): MskParticipant {
-            $participant = $this->participantForBranch($branchCode, (string) $participantData['id']);
+            $participantId = (int) ($participantData['id'] ?? 0);
+            $participant = $participantId > 0 ? $this->participantForBranch($branchCode, $participantId) : null;
             $participant ??= new MskParticipant([
                 'branch_id' => branch_id_from_slug($branchCode),
-                'public_id' => (string) $participantData['id'],
             ]);
 
             $birthDate = normalize_ymd_date((string) ($participantData['birth_date'] ?? ''));
             $fill = [
                 'branch_id' => branch_id_from_slug($branchCode),
-                'public_id' => (string) $participantData['id'],
-                'member_public_id' => $this->nullableString($participantData['member_id'] ?? null),
+                'discipleship_person_id' => (int) ($participantData['member_id'] ?? 0) ?: null,
                 'full_name' => $this->nullableString($participantData['full_name'] ?? null),
                 'gender' => $this->nullableString(normalize_member_gender_value((string) ($participantData['gender'] ?? ''))),
                 'birth_date' => $birthDate !== '' ? $birthDate : null,
@@ -198,105 +190,21 @@ class MskParticipantWriter
                 'completed_at' => $this->nullableString($participantData['completed_at'] ?? null),
                 'journey_bridge_status' => normalize_journey_bridge_status((string) ($participantData['journey_bridge_status'] ?? 'belum')),
                 'status' => normalize_msk_participant_status((string) ($participantData['status'] ?? 'active')),
+                'session_numbers' => normalize_msk_session_numbers($participantData['session_numbers'] ?? []),
+                'photos' => is_array($participantData['photos'] ?? null) ? $participantData['photos'] : [],
             ];
-
-            if ($this->hasJsonColumn('session_numbers')) {
-                $fill['session_numbers'] = normalize_msk_session_numbers($participantData['session_numbers'] ?? []);
-            }
-            if ($this->hasJsonColumn('photos')) {
-                $fill['photos'] = is_array($participantData['photos'] ?? null) ? $participantData['photos'] : [];
-            }
 
             $participant->fill($fill);
             $participant->save();
 
-            $this->replaceSessions($participant, $participantData['session_numbers'] ?? []);
-            $this->replacePhotos($participant, is_array($participantData['photos'] ?? null) ? $participantData['photos'] : []);
-
-            return $participant->fresh($this->refreshRelations()) ?? $participant;
+            return $participant->fresh() ?? $participant;
         });
     }
 
     /**
-     * @param mixed $sessionNumbers
-     */
-    private function replaceSessions(MskParticipant $participant, mixed $sessionNumbers): void
-    {
-        if (! Schema::hasTable('msk_participant_sessions')) {
-            if ($this->hasJsonColumn('session_numbers')) {
-                $participant->forceFill([
-                    'session_numbers' => normalize_msk_session_numbers($sessionNumbers),
-                ])->save();
-            }
-
-            return;
-        }
-
-        MskParticipantSession::query()
-            ->where('msk_participant_id', $participant->id)
-            ->delete();
-
-        $now = now();
-        $rows = [];
-        foreach (normalize_msk_session_numbers($sessionNumbers) as $sessionNumber) {
-            $rows[] = [
-                'msk_participant_id' => $participant->id,
-                'session_number' => (int) $sessionNumber,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }
-
-        if ($rows !== []) {
-            MskParticipantSession::query()->insert($rows);
-        }
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $photos
-     */
-    private function replacePhotos(MskParticipant $participant, array $photos): void
-    {
-        if (! Schema::hasTable('msk_participant_photos')) {
-            if ($this->hasJsonColumn('photos')) {
-                $participant->forceFill([
-                    'photos' => $photos,
-                ])->save();
-            }
-
-            return;
-        }
-
-        MskParticipantPhoto::query()
-            ->where('msk_participant_id', $participant->id)
-            ->delete();
-
-        $now = now();
-        $rows = [];
-        foreach ($photos as $photo) {
-            $path = sanitize_relative_upload_path((string) ($photo['path'] ?? ''));
-            if ($path === '') {
-                continue;
-            }
-
-            $rows[] = [
-                'msk_participant_id' => $participant->id,
-                'path' => $path,
-                'original_name' => trim((string) ($photo['name'] ?? '')) ?: 'Foto',
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }
-
-        if ($rows !== []) {
-            MskParticipantPhoto::query()->insert($rows);
-        }
-    }
-
-    /**
-     * @param array<string, mixed> $existing
-     * @param array<int, string> $removePhotoPaths
-     * @param array<int, array{path: string, name: string}> $uploadedPhotos
+     * @param  array<string, mixed>  $existing
+     * @param  array<int, string>  $removePhotoPaths
+     * @param  array<int, array{path: string, name: string}>  $uploadedPhotos
      * @return array<int, array{path: string, name: string}>
      */
     private function mergePhotos(array $existing, array $removePhotoPaths, array $uploadedPhotos): array
@@ -367,7 +275,7 @@ class MskParticipantWriter
     }
 
     /**
-     * @param array<int, array{path: string, name: string}> $photos
+     * @param  array<int, array{path: string, name: string}>  $photos
      */
     private function deleteUploadedPhotos(array $photos): void
     {
@@ -376,29 +284,24 @@ class MskParticipantWriter
         }
     }
 
-    private function memberAlreadyRegisteredInAnotherParticipant(string $branchCode, string $publicId, string $memberPublicId): bool
+    private function memberAlreadyRegisteredInAnotherParticipant(string $branchCode, int $participantId, int $personId): bool
     {
-        if ($memberPublicId === '') {
+        if ($personId < 1) {
             return false;
         }
 
         return MskParticipant::query()
             ->where('branch_id', branch_id_from_slug($branchCode))
-            ->where('member_public_id', $memberPublicId)
-            ->where('public_id', '!=', $publicId)
+            ->where('discipleship_person_id', $personId)
+            ->when($participantId > 0, static fn ($query) => $query->where('id', '!=', $participantId))
             ->exists();
     }
 
-    private function participantForBranch(string $branchCode, string $publicId): ?MskParticipant
+    private function participantForBranch(string $branchCode, int $participantId): ?MskParticipant
     {
         $query = MskParticipant::query()
             ->where('branch_id', branch_id_from_slug($branchCode))
-            ->where('public_id', $publicId);
-
-        $relations = $this->refreshRelations();
-        if ($relations !== []) {
-            $query->with($relations);
-        }
+            ->whereKey($participantId);
 
         return $query->first();
     }
@@ -413,36 +316,10 @@ class MskParticipantWriter
             ->orderBy('full_name')
             ->orderBy('id');
 
-        $relations = $this->refreshRelations();
-        if ($relations !== []) {
-            $query->with($relations);
-        }
-
         return $query->get()
             ->map(static fn (MskParticipant $participant): array => $participant->toViewArray())
             ->values()
             ->all();
-    }
-
-    /**
-     * @return array<int, string>|array<string, \Closure>
-     */
-    private function refreshRelations(): array
-    {
-        $relations = [];
-        if (! $this->hasJsonColumn('session_numbers') && Schema::hasTable('msk_participant_sessions')) {
-            $relations['sessions'] = static fn ($query) => $query->orderBy('session_number');
-        }
-        if (! $this->hasJsonColumn('photos') && Schema::hasTable('msk_participant_photos')) {
-            $relations['photos'] = static fn ($query) => $query->orderBy('id');
-        }
-
-        return $relations;
-    }
-
-    private function hasJsonColumn(string $column): bool
-    {
-        return Schema::hasColumn('msk_participants', $column);
     }
 
     private function nullableString(mixed $value): ?string

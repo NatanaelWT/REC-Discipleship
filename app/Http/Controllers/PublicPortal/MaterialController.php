@@ -8,10 +8,11 @@ use App\Http\Requests\PublicMaterials\ShowPublicMaterialRequest;
 use App\Models\PublicMaterialFile;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
 use App\Support\RuntimeBootstrap;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class MaterialController extends Controller
@@ -92,9 +93,9 @@ class MaterialController extends Controller
         $targetDir = public_material_folder_full_path($folderPath);
         File::ensureDirectoryExists($targetDir);
 
-        $targetFileName = generate_id('file') . '_' . date('YmdHis') . '.' . $extension;
+        $targetFileName = Str::uuid()->toString().'_'.date('YmdHis').'.'.$extension;
         $file->move($targetDir, $targetFileName);
-        $fullPath = $targetDir . '/' . $targetFileName;
+        $fullPath = $targetDir.'/'.$targetFileName;
         @chmod($fullPath, 0644);
         $relativePath = public_material_file_relative_path($folderPath, $targetFileName);
         if ($relativePath === '' || ! is_file($fullPath)) {
@@ -110,7 +111,6 @@ class MaterialController extends Controller
 
         DB::table('public_material_files')->insert([
             'menu' => $menu->value,
-            'public_id' => $this->newPublicMaterialId(),
             'title' => $title,
             'category_name' => null,
             'description' => null,
@@ -155,20 +155,11 @@ class MaterialController extends Controller
     }
 
     /**
-     * @param array<string, string> $query
+     * @param  array<string, string>  $query
      */
     private function redirectToMaterialMenu(PublicMaterialMenuKey $menu, array $query = []): RedirectResponse
     {
         return redirect()->route('materials.show', array_merge(['menu' => $menu->value], $query));
-    }
-
-    private function newPublicMaterialId(): string
-    {
-        do {
-            $id = 'church_file_' . bin2hex(random_bytes(4));
-        } while (DB::table('public_material_files')->where('public_id', $id)->exists());
-
-        return $id;
     }
 
     private function cleanOriginalFileName(string $name): string
@@ -185,8 +176,8 @@ class MaterialController extends Controller
         if ($title === '') {
             $title = trim($fallback);
         }
-        if ($extension !== '' && preg_match('/\.' . preg_quote($extension, '/') . '$/i', $title) === 1) {
-            $title = trim((string) preg_replace('/\.' . preg_quote($extension, '/') . '$/i', '', $title));
+        if ($extension !== '' && preg_match('/\.'.preg_quote($extension, '/').'$/i', $title) === 1) {
+            $title = trim((string) preg_replace('/\.'.preg_quote($extension, '/').'$/i', '', $title));
         }
 
         $title = preg_replace('/[\x00-\x1F\x7F"\\\\]+/', ' ', $title) ?? '';
@@ -204,8 +195,8 @@ class MaterialController extends Controller
         if ($downloadName === '') {
             $downloadName = 'materi';
         }
-        if ($extension !== '' && preg_match('/\.' . preg_quote($extension, '/') . '$/i', $downloadName) !== 1) {
-            $downloadName .= '.' . $extension;
+        if ($extension !== '' && preg_match('/\.'.preg_quote($extension, '/').'$/i', $downloadName) !== 1) {
+            $downloadName .= '.'.$extension;
         }
 
         return function_exists('mb_substr') ? mb_substr($downloadName, 0, 240) : substr($downloadName, 0, 240);

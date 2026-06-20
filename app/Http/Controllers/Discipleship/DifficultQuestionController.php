@@ -38,8 +38,8 @@ class DifficultQuestionController extends Controller
             return redirect()->route('discipleship.difficult-questions', ['error' => 'access_denied']);
         }
 
-        $publicId = trim((string) $request->input('id', ''));
-        if ($publicId === '') {
+        $questionId = (int) $request->input('id', 0);
+        if ($questionId < 1) {
             return redirect()->route('discipleship.difficult-questions', ['error' => 'missing_question']);
         }
 
@@ -48,7 +48,7 @@ class DifficultQuestionController extends Controller
             return redirect()->route('discipleship.difficult-questions', ['error' => 'missing_answer']);
         }
 
-        $question = DifficultQuestion::query()->where('public_id', $publicId)->first();
+        $question = DifficultQuestion::query()->find($questionId);
         if (! $question instanceof DifficultQuestion) {
             return redirect()->route('discipleship.difficult-questions', ['error' => 'question_not_found']);
         }

@@ -166,10 +166,7 @@ class MskParticipantImportService
             }
 
             $existing = $existingIndex !== null ? ($participants[$existingIndex] ?? null) : null;
-            $participantId = $participantIdInput !== '' ? $participantIdInput : trim((string) ($existing['id'] ?? ''));
-            if ($participantId === '') {
-                $participantId = generate_id('msk');
-            }
+            $participantId = $participantIdInput !== '' ? (int) $participantIdInput : (int) ($existing['id'] ?? 0);
             if ($participantIdInput !== '' && $existingIndex === null && isset($mskIndexById[$participantId])) {
                 $importErrors[] = 'Kelas MSK baris '.$excelRowNumber.': participant_id sudah dipakai peserta lain.';
 
@@ -211,6 +208,12 @@ class MskParticipantImportService
 
         if ($fullName === '') {
             $importErrors[] = 'Kelas MSK baris '.$excelRowNumber.': full_name wajib diisi.';
+
+            return null;
+        }
+
+        if ($participantIdInput !== '' && (! ctype_digit($participantIdInput) || (int) $participantIdInput < 1)) {
+            $importErrors[] = 'Kelas MSK baris '.$excelRowNumber.': participant_id harus berupa ID numerik dari hasil export.';
 
             return null;
         }
@@ -313,7 +316,7 @@ class MskParticipantImportService
      * @param  array<string, mixed>  $rowData
      * @return array<string, mixed>
      */
-    private function participantData(string $participantId, array $existing, array $rowData): array
+    private function participantData(int $participantId, array $existing, array $rowData): array
     {
         $birthDate = (string) $rowData['birth_date'];
 

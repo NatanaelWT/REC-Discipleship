@@ -27,14 +27,14 @@ class UpdateDashboardMskSessionsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id' => ['nullable', 'string'],
+            'id' => ['nullable', 'integer', 'min:1'],
             'session_numbers' => ['nullable', 'array'],
         ];
     }
 
-    public function participantPublicId(): string
+    public function participantId(): int
     {
-        return trim((string) $this->input('id', ''));
+        return (int) $this->input('id', 0);
     }
 
     /**

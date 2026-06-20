@@ -2,6 +2,7 @@
 
 use App\Enums\PublicMaterialMenuKey;
 use App\Services\Developer\DeveloperUserService;
+use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Artisan::command('developer:ensure-user', function (DeveloperUserService $users): int {
-    \App\Support\RuntimeBootstrap::load();
+    RuntimeBootstrap::load();
 
     $result = $users->ensureDeveloperUserFromEnvironment();
     if ($result['status'] === 'missing_password') {
@@ -22,10 +23,96 @@ Artisan::command('developer:ensure-user', function (DeveloperUserService $users)
         return Command::FAILURE;
     }
 
-    $this->info('Developer user ensured: ' . $result['username']);
+    $this->info('Developer user ensured: '.$result['username']);
 
     return Command::SUCCESS;
 })->purpose('Create or update the developer superuser from DEVELOPER_* environment variables');
+
+Artisan::command('identifiers:audit', function (): int {
+    $references = [
+        ['discipleship_groups', 'parent_group_id', 'parent_group_public_id', 'discipleship_groups'],
+        ['discipleship_groups', 'source_group_id', 'source_group_public_id', 'discipleship_groups'],
+        ['discipleship_groups', 'initiated_by_person_id', 'initiated_by_person_public_id', 'discipleship_people'],
+        ['discipleship_relationships', 'mentor_person_id', 'mentor_person_public_id', 'discipleship_people'],
+        ['discipleship_relationships', 'disciple_person_id', 'disciple_person_public_id', 'discipleship_people'],
+        ['discipleship_relationships', 'context_group_id', 'context_group_public_id', 'discipleship_groups'],
+        ['discipleship_group_people', 'discipleship_group_id', 'group_public_id', 'discipleship_groups'],
+        ['discipleship_group_people', 'person_id', 'person_public_id', 'discipleship_people'],
+        ['discipleship_meeting_reports', 'leader_person_id', 'leader_person_public_id', 'discipleship_people'],
+        ['discipleship_meeting_reports', 'discipleship_group_id', 'discipleship_group_public_id', 'discipleship_groups'],
+    ];
+
+    $issues = [];
+    foreach ($references as [$table, $foreignColumn, $legacyColumn, $targetTable]) {
+        if (! Schema::hasTable($table)
+            || ! Schema::hasColumn($table, $legacyColumn)
+            || ! Schema::hasColumn($table, $foreignColumn)
+            || ! Schema::hasTable($targetTable)
+            || ! Schema::hasColumn($targetTable, 'public_id')) {
+            continue;
+        }
+
+        $rows = DB::table($table.' as source')
+            ->leftJoin($targetTable.' as target', static function ($join) use ($legacyColumn): void {
+                $join->on('target.branch_id', '=', 'source.branch_id')
+                    ->on('target.public_id', '=', 'source.'.$legacyColumn);
+            })
+            ->whereNotNull('source.'.$legacyColumn)
+            ->where('source.'.$legacyColumn, '!=', '')
+            ->select([
+                'source.id',
+                'source.'.$foreignColumn.' as numeric_id',
+                DB::raw('count(target.id) as match_count'),
+                DB::raw('min(target.id) as resolved_id'),
+            ])
+            ->groupBy('source.id', 'source.'.$foreignColumn)
+            ->get();
+
+        foreach ($rows as $row) {
+            if ((int) $row->match_count !== 1
+                || ($row->numeric_id !== null && (int) $row->numeric_id !== (int) $row->resolved_id)) {
+                $issues[] = [$table, (string) $row->id, $legacyColumn, (string) $row->match_count];
+            }
+        }
+    }
+
+    if (Schema::hasTable('msk_participants') && Schema::hasColumn('msk_participants', 'discipleship_person_id')) {
+        foreach (DB::table('msk_participants')
+            ->whereNotNull('discipleship_person_id')
+            ->select('discipleship_person_id', DB::raw('count(*) as total'))
+            ->groupBy('discipleship_person_id')
+            ->havingRaw('count(*) > 1')
+            ->get() as $duplicate) {
+            $issues[] = ['msk_participants', (string) $duplicate->discipleship_person_id, 'duplicate_person_link', (string) $duplicate->total];
+        }
+    }
+
+    if (Schema::hasTable('discipleship_meeting_reports')
+        && Schema::hasColumn('discipleship_meeting_reports', 'absences')
+        && Schema::hasColumn('discipleship_meeting_reports', 'meditation_sharers')) {
+        foreach (DB::table('discipleship_meeting_reports')->select(['id', 'absences', 'meditation_sharers'])->get() as $report) {
+            foreach (['absences', 'meditation_sharers'] as $column) {
+                $items = json_decode((string) ($report->{$column} ?? '[]'), true);
+                foreach (is_array($items) ? $items : [] as $item) {
+                    if (is_array($item) && (int) ($item['person_id'] ?? 0) < 1) {
+                        $issues[] = ['discipleship_meeting_reports', (string) $report->id, $column, 'missing_person_id'];
+                    }
+                }
+            }
+        }
+    }
+
+    if ($issues !== []) {
+        $this->error('Audit identifier menemukan '.count($issues).' masalah.');
+        $this->table(['Tabel', 'Row/ID', 'Referensi', 'Masalah'], $issues);
+
+        return Command::FAILURE;
+    }
+
+    $this->info('Audit identifier selesai tanpa masalah.');
+
+    return Command::SUCCESS;
+})->purpose('Audit legacy public identifiers before the numeric identifier migration');
 
 /**
  * @return array<int, string>
@@ -36,7 +123,7 @@ $materialPhysicalFiles = static function (PublicMaterialMenuKey $menu): array {
         return [];
     }
 
-    $files = glob($folder . '/*') ?: [];
+    $files = glob($folder.'/*') ?: [];
     $files = array_values(array_filter($files, 'is_file'));
     sort($files, SORT_NATURAL | SORT_FLAG_CASE);
 
@@ -51,11 +138,11 @@ $materialPathBelongsToMenu = static function (PublicMaterialMenuKey $menu, strin
 
     $menuFolder = public_material_folder_relative_path($menu->folder());
 
-    return $path !== $menuFolder && str_starts_with($path, $menuFolder . '/');
+    return $path !== $menuFolder && str_starts_with($path, $menuFolder.'/');
 };
 
 Artisan::command('materials:audit-files', function () use ($materialPhysicalFiles, $materialPathBelongsToMenu): int {
-    \App\Support\RuntimeBootstrap::load();
+    RuntimeBootstrap::load();
 
     if (! Schema::hasTable('public_material_files')) {
         $this->error('Tabel public_material_files tidak ditemukan.');
@@ -64,7 +151,7 @@ Artisan::command('materials:audit-files', function () use ($materialPhysicalFile
     }
 
     $files = DB::table('public_material_files')
-        ->select(['menu', 'public_id', 'title', 'relative_path'])
+        ->select(['id', 'menu', 'title', 'relative_path'])
         ->orderBy('menu')
         ->orderBy('title')
         ->get();
@@ -78,17 +165,18 @@ Artisan::command('materials:audit-files', function () use ($materialPhysicalFile
         if (! $menu instanceof PublicMaterialMenuKey || $path === '' || ! $materialPathBelongsToMenu($menu, $path)) {
             $invalid[] = [
                 (string) ($file->menu ?? ''),
-                (string) $file->public_id,
+                (string) $file->id,
                 (string) $file->title,
                 (string) $file->relative_path,
             ];
+
             continue;
         }
 
         if (public_material_resolve_path($path) === null) {
             $missing[] = [
                 $menu->value,
-                (string) $file->public_id,
+                (string) $file->id,
                 (string) $file->title,
                 $path,
             ];
@@ -120,21 +208,21 @@ Artisan::command('materials:audit-files', function () use ($materialPhysicalFile
         }
     }
 
-    $this->info('Total file materi: ' . (string) $files->count());
-    $this->info('Path invalid: ' . (string) count($invalid));
-    $this->info('File fisik hilang: ' . (string) count($missing));
-    $this->info('File fisik belum terdaftar: ' . (string) count($unregistered));
+    $this->info('Total file materi: '.(string) $files->count());
+    $this->info('Path invalid: '.(string) count($invalid));
+    $this->info('File fisik hilang: '.(string) count($missing));
+    $this->info('File fisik belum terdaftar: '.(string) count($unregistered));
 
     if (count($invalid) > 0) {
         $this->warn('Path invalid:');
-        $this->table(['Menu', 'Public ID', 'Judul', 'Path'], $invalid);
+        $this->table(['Menu', 'ID', 'Judul', 'Path'], $invalid);
 
         return Command::FAILURE;
     }
 
     if (count($missing) > 0) {
         $this->warn('File fisik hilang:');
-        $this->table(['Menu', 'Public ID', 'Judul', 'Path'], $missing);
+        $this->table(['Menu', 'ID', 'Judul', 'Path'], $missing);
 
         return Command::FAILURE;
     }
@@ -152,7 +240,7 @@ Artisan::command('materials:audit-files', function () use ($materialPhysicalFile
 })->purpose('Audit public material file records against public material files');
 
 Artisan::command('materials:sync-files', function () use ($materialPhysicalFiles): int {
-    \App\Support\RuntimeBootstrap::load();
+    RuntimeBootstrap::load();
 
     if (! Schema::hasTable('public_material_files')) {
         $this->error('Tabel public_material_files tidak ditemukan.');
@@ -167,6 +255,7 @@ Artisan::command('materials:sync-files', function () use ($materialPhysicalFiles
         $files = $materialPhysicalFiles($menu);
         if (count($files) === 0) {
             $skipped++;
+
             continue;
         }
 
@@ -193,17 +282,8 @@ Artisan::command('materials:sync-files', function () use ($materialPhysicalFiles
                 $title = basename($fullPath);
             }
 
-            $publicIdBase = 'church_file_' . substr(sha1($relativePath), 0, 8);
-            $publicId = $publicIdBase;
-            $suffix = 1;
-            while (DB::table('public_material_files')->where('public_id', $publicId)->exists()) {
-                $publicId = $publicIdBase . '_' . (string) $suffix;
-                $suffix++;
-            }
-
-            DB::table('public_material_files')->insert([
+            $fileId = DB::table('public_material_files')->insertGetId([
                 'menu' => $menu->value,
-                'public_id' => $publicId,
                 'title' => $title,
                 'category_name' => null,
                 'description' => null,
@@ -217,15 +297,15 @@ Artisan::command('materials:sync-files', function () use ($materialPhysicalFiles
 
             $inserted[] = [
                 $menu->value,
-                $publicId,
+                (string) $fileId,
                 $title,
                 $relativePath,
             ];
         }
     }
 
-    $this->info('Menu dilewati karena folder tidak ditemukan/kosong: ' . (string) $skipped);
-    $this->info('File baru ditambahkan: ' . (string) count($inserted));
+    $this->info('Menu dilewati karena folder tidak ditemukan/kosong: '.(string) $skipped);
+    $this->info('File baru ditambahkan: '.(string) count($inserted));
 
     if (count($inserted) > 0) {
         $this->table(['Menu', 'Public ID', 'Judul', 'Path'], $inserted);

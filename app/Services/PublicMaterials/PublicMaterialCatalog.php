@@ -46,7 +46,7 @@ class PublicMaterialCatalog
         $path = (string) ($file->relative_path ?? '');
 
         return [
-            'id' => (string) $file->public_id,
+            'id' => (string) $file->getKey(),
             'title' => (string) ($file->title ?? ''),
             'category' => (string) ($file->category_name ?? ''),
             'description' => (string) ($file->description ?? ''),

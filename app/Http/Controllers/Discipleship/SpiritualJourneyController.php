@@ -28,7 +28,7 @@ class SpiritualJourneyController extends Controller
     ): RedirectResponse {
         RuntimeBootstrap::boot($request);
 
-        return $this->updateStatusAndRedirect($service, trim((string) $participant->public_id), $request->status());
+        return $this->updateStatusAndRedirect($service, (int) $participant->getKey(), $request->status());
     }
 
     public function updateBridgeStatusFromForm(
@@ -37,15 +37,15 @@ class SpiritualJourneyController extends Controller
     ): RedirectResponse {
         RuntimeBootstrap::boot($request);
 
-        return $this->updateStatusAndRedirect($service, $request->participantPublicId(), $request->status());
+        return $this->updateStatusAndRedirect($service, $request->participantId(), $request->status());
     }
 
     private function updateStatusAndRedirect(
         SpiritualJourneyBridgeStatusService $service,
-        string $participantPublicId,
+        int $participantId,
         string $status,
     ): RedirectResponse {
-        if (! $service->update($participantPublicId, $status)) {
+        if (! $service->update($participantId, $status)) {
             return redirect()->route('discipleship.spiritual-journey');
         }
 

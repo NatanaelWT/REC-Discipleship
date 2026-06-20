@@ -28,23 +28,23 @@ class UpdateSpiritualJourneyBridgeStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id' => ['nullable', 'string'],
+            'id' => ['nullable', 'integer', 'min:1'],
             'journey_bridge_status' => ['required', 'string', 'in:belum,sudah_rg,sudah_kgap,ikut_keduanya'],
         ];
     }
 
-    public function participantPublicId(): string
+    public function participantId(): int
     {
         $participant = $this->route('participant');
         if ($participant instanceof MskParticipant) {
-            return trim((string) $participant->public_id);
+            return (int) $participant->getKey();
         }
 
         if (is_string($participant) || is_int($participant)) {
-            return trim((string) $participant);
+            return (int) $participant;
         }
 
-        return trim((string) $this->input('id', ''));
+        return (int) $this->input('id', 0);
     }
 
     public function status(): string

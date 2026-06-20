@@ -8,9 +8,7 @@ use Illuminate\Http\Request;
 
 class DifficultQuestionAdminPageData
 {
-    public function __construct(private DifficultQuestionStatusLabel $statusLabel)
-    {
-    }
+    public function __construct(private DifficultQuestionStatusLabel $statusLabel) {}
 
     /**
      * @return array<string, mixed>
@@ -51,7 +49,7 @@ class DifficultQuestionAdminPageData
      */
     private function adminItem(DifficultQuestion $question): array
     {
-        $publicId = trim((string) $question->public_id);
+        $questionId = (int) $question->getKey();
         $questionText = trim((string) $question->question);
         $answerText = trim((string) $question->answer);
         $askerName = trim((string) $question->asker_name);
@@ -68,7 +66,7 @@ class DifficultQuestionAdminPageData
 
         return [
             'model' => $question,
-            'publicId' => $publicId,
+            'id' => $questionId,
             'questionText' => $questionText,
             'answerText' => $answerText,
             'askerName' => $askerName,

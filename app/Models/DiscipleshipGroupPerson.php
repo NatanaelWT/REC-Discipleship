@@ -11,12 +11,9 @@ class DiscipleshipGroupPerson extends Model
     use ResolvesBranchSlug;
 
     protected $fillable = [
-        'public_id',
         'branch_id',
         'discipleship_group_id',
-        'group_public_id',
         'person_id',
-        'person_public_id',
         'role',
         'stage',
         'status',

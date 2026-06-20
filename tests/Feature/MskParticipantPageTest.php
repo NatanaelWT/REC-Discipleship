@@ -16,6 +16,16 @@ class MskParticipantPageTest extends TestCase
         $response->assertNotFound();
     }
 
+    public function test_legacy_string_participant_route_is_rejected(): void
+    {
+        $this->createMskTables();
+        $this->actingAsRecUser();
+
+        $this->post('/pemuridan/msk/msk_legacy/sesi', [
+            'session_numbers' => [1],
+        ])->assertNotFound();
+    }
+
     public function test_msk_page_renders_for_logged_in_branch_user(): void
     {
         $this->createMskTables();
@@ -59,27 +69,44 @@ class MskParticipantPageTest extends TestCase
             ->where('full_name', 'Peserta MSK Baru')
             ->value('id');
 
-        $this->assertDatabaseHas('msk_participant_sessions', [
-            'msk_participant_id' => $participantId,
-            'session_number' => 1,
+        $sessions = json_decode((string) DB::table('msk_participants')->where('id', $participantId)->value('session_numbers'), true);
+        $this->assertSame([1, 2], $sessions);
+    }
+
+    public function test_branch_user_cannot_update_participant_from_another_branch(): void
+    {
+        $this->createMskTables();
+        $participantId = DB::table('msk_participants')->insertGetId([
+            'branch_id' => 2,
+            'full_name' => 'Peserta GM',
+            'batch_month' => '2026-06',
+            'journey_bridge_status' => 'belum',
+            'status' => 'active',
+            'session_numbers' => json_encode([1]),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
-        $this->assertDatabaseHas('msk_participant_sessions', [
-            'msk_participant_id' => $participantId,
-            'session_number' => 2,
-        ]);
+
+        $this->actingAsRecUser();
+
+        $this->post("/pemuridan/msk/{$participantId}/sesi", [
+            'id' => $participantId,
+            'session_numbers' => [1, 2, 3],
+        ])->assertRedirect('/pemuridan/msk?error=invalid_msk_participant');
+
+        $sessions = json_decode((string) DB::table('msk_participants')->where('id', $participantId)->value('session_numbers'), true);
+        $this->assertSame([1], $sessions);
     }
 
     private function createMskTables(): void
     {
-        Schema::dropIfExists('msk_participant_photos');
-        Schema::dropIfExists('msk_participant_sessions');
         Schema::dropIfExists('msk_participants');
 
         Schema::create('msk_participants', function (Blueprint $table): void {
             $table->id();
-            $table->string('public_id');
             $table->unsignedBigInteger('branch_id');
-            $table->string('member_public_id')->nullable();
+            $table->unsignedBigInteger('discipleship_person_id')->nullable()->unique();
             $table->string('full_name')->nullable();
             $table->string('gender')->nullable();
             $table->date('birth_date')->nullable();
@@ -93,21 +120,8 @@ class MskParticipantPageTest extends TestCase
             $table->string('completed_at')->nullable();
             $table->string('journey_bridge_status')->default('belum');
             $table->string('status')->default('active');
-            $table->timestamps();
-        });
-
-        Schema::create('msk_participant_sessions', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('msk_participant_id');
-            $table->unsignedTinyInteger('session_number');
-            $table->timestamps();
-        });
-
-        Schema::create('msk_participant_photos', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('msk_participant_id');
-            $table->string('path');
-            $table->string('original_name')->nullable();
+            $table->json('session_numbers')->nullable();
+            $table->json('photos')->nullable();
             $table->timestamps();
         });
     }
