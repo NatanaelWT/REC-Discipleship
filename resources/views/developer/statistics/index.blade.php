@@ -24,6 +24,9 @@
         $y = $chartHeight - $chartPadY - (($row['count'] / $chartMax) * ($chartHeight - ($chartPadY * 2)));
         return number_format($x, 2, '.', '').','.number_format($y, 2, '.', '');
     })->implode(' ');
+    $visitorCollection = collect($visitors)->values();
+    $visibleVisitors = $visitorCollection->take(10);
+    $remainingVisitors = $visitorCollection->slice(10)->values();
   @endphp
 
   <section class="card analytics-filter-card">
@@ -103,11 +106,21 @@
   </div>
 
   <section class="card table-card-plain analytics-visitors-card">
-    <div class="analytics-section-head"><div><span>Pengunjung</span><h3>Paling aktif</h3></div><small>Maksimal 50 pengunjung</small></div>
+    <div class="analytics-section-head"><div><span>Pengunjung</span><h3>Paling aktif</h3></div><small>10 teratas dari maksimal 50</small></div>
     <div class="table-wrap"><table class="table"><thead><tr><th>Pengunjung</th><th>Bahasa / perangkat</th><th>Page view</th><th>Sesi</th><th>Terakhir</th><th></th></tr></thead><tbody>
-      @forelse ($visitors as $visitor)
-        <tr><td><strong>{{ $visitor['label'] }}</strong><small>{{ substr($visitor['visitor_hash'], 0, 12) }}…</small></td><td>{{ $visitor['language'] }}<small>{{ $visitor['device'] }}</small></td><td>{{ number_format($visitor['page_views'], 0, ',', '.') }}</td><td>{{ number_format($visitor['sessions'], 0, ',', '.') }}</td><td>{{ $visitor['last_seen_at']->format('d-m-Y H:i') }}</td><td><a class="button secondary small" href="{{ route('developer.statistics', array_merge(request()->except('visitor'), ['visitor' => $visitor['visitor_hash']])) }}">Lihat</a></td></tr>
-      @empty<tr><td colspan="6">Belum ada pengunjung pada periode ini.</td></tr>@endforelse
+      @if ($visibleVisitors->isNotEmpty())
+        @include('developer.statistics._visitor-rows', ['rows' => $visibleVisitors, 'rowClass' => 'analytics-primary-visitor-row'])
+      @else
+        <tr><td colspan="6">Belum ada pengunjung pada periode ini.</td></tr>
+      @endif
     </tbody></table></div>
+    @if ($remainingVisitors->isNotEmpty())
+      <details class="analytics-table-more">
+        <summary><span>Lihat {{ $remainingVisitors->count() }} pengunjung lainnya</span><span class="analytics-disclosure-icon" aria-hidden="true"></span></summary>
+        <div class="table-wrap"><table class="table"><thead><tr><th>Pengunjung</th><th>Bahasa / perangkat</th><th>Page view</th><th>Sesi</th><th>Terakhir</th><th></th></tr></thead><tbody>
+          @include('developer.statistics._visitor-rows', ['rows' => $remainingVisitors])
+        </tbody></table></div>
+      </details>
+    @endif
   </section>
 @endsection

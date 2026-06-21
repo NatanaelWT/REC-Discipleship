@@ -3,15 +3,28 @@
     <div><span>{{ $kicker ?? 'Distribusi' }}</span><h3>{{ $title }}</h3></div>
     @if (! empty($note))<small>{{ $note }}</small>@endif
   </div>
-  @php $rowMax = max(1, collect($rows)->max('count') ?? 1); @endphp
-  <div class="analytics-bars">
-    @forelse ($rows as $row)
-      <div class="analytics-bar-row">
-        <div class="analytics-bar-label"><strong>{{ $row['label'] }}</strong><span>{{ number_format($row['count'], 0, ',', '.') }} akses · {{ number_format($row['visitors'], 0, ',', '.') }} pengunjung</span></div>
-        <div class="analytics-bar-track" aria-hidden="true"><span style="width: {{ max(2, round(($row['count'] / $rowMax) * 100, 2)) }}%"></span></div>
-      </div>
+  @php
+    $rowCollection = collect($rows)->values();
+    $visibleLimit = max(1, (int) ($initialLimit ?? 5));
+    $visibleRows = $rowCollection->take($visibleLimit);
+    $remainingRows = $rowCollection->slice($visibleLimit)->values();
+    $rowMax = max(1, $rowCollection->max('count') ?? 1);
+  @endphp
+  <div class="analytics-bars" data-visible-rows="{{ $visibleRows->count() }}">
+    @forelse ($visibleRows as $row)
+      @include('developer.statistics._bar-row', ['row' => $row, 'rowMax' => $rowMax])
     @empty
       <div class="analytics-empty">Belum ada data pada periode ini.</div>
     @endforelse
   </div>
+  @if ($remainingRows->isNotEmpty())
+    <details class="analytics-more">
+      <summary><span>Lihat {{ $remainingRows->count() }} lainnya</span><span class="analytics-disclosure-icon" aria-hidden="true"></span></summary>
+      <div class="analytics-bars analytics-bars-extra">
+        @foreach ($remainingRows as $row)
+          @include('developer.statistics._bar-row', ['row' => $row, 'rowMax' => $rowMax])
+        @endforeach
+      </div>
+    </details>
+  @endif
 </section>

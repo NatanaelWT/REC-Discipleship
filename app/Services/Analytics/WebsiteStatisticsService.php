@@ -67,6 +67,11 @@ class WebsiteStatisticsService
         foreach ($accessHours as $hour => $values) {
             $accessHours[$hour]['visitors'] = count($hourVisitors[$hour]);
         }
+        $accessHours = collect($accessHours)
+            ->filter(static fn (array $row): bool => $row['count'] > 0)
+            ->sort(static fn (array $left, array $right): int => ($right['count'] <=> $left['count']) ?: ($left['key'] <=> $right['key']))
+            ->values()
+            ->all();
 
         $optionQuery = WebsitePageView::query()
             ->whereBetween('occurred_at', [$filters['from_utc'], $filters['to_utc']])
@@ -84,7 +89,7 @@ class WebsiteStatisticsService
             ])->values()->all(),
             'topPages' => $this->grouped(clone $human, 'route_name', 'path', 10),
             'languages' => $this->grouped(clone $human, 'language_code', 'language_name', 15),
-            'accessHours' => array_values($accessHours),
+            'accessHours' => $accessHours,
             'devices' => $this->grouped(clone $human, 'device_type', 'device_type', 10),
             'browsers' => $this->grouped(clone $human, 'browser_name', 'browser_name', 10),
             'operatingSystems' => $this->grouped(clone $human, 'os_name', 'os_name', 10),
