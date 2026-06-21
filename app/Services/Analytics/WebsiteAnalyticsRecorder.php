@@ -12,6 +12,7 @@ class WebsiteAnalyticsRecorder
 {
     public function __construct(
         private readonly AnalyticsVisitorIdentity $identities,
+        private readonly BrowserLanguageClassifier $languages,
         private readonly WebsiteAnalyticsWriter $writer,
     ) {}
 
@@ -32,7 +33,12 @@ class WebsiteAnalyticsRecorder
             (string) $request->headers->get('sec-purpose'),
             (string) $request->headers->get('x-moz'),
         ])));
-        $this->writer->record($activity, $identity, str_contains($purpose, 'prefetch'));
+        $this->writer->record(
+            $activity,
+            $identity,
+            str_contains($purpose, 'prefetch'),
+            $this->languages->classify($request->headers->get('Accept-Language')),
+        );
     }
 
     private function tablesAvailable(): bool

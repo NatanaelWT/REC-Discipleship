@@ -12,12 +12,11 @@ use Illuminate\Support\Str;
 class WebsiteAnalyticsWriter
 {
     public function __construct(
-        private readonly GeoIpLocationResolver $locations,
         private readonly WebsiteClientClassifier $clients,
     ) {}
 
     /** @param array{visitor_hash:string,identity_source:string} $identity */
-    public function record(ActivityRequest $activity, array $identity, bool $prefetch = false): ?WebsitePageView
+    public function record(ActivityRequest $activity, array $identity, bool $prefetch = false, array $language = []): ?WebsitePageView
     {
         if (! $this->qualifies($activity)) {
             return null;
@@ -27,9 +26,9 @@ class WebsiteAnalyticsWriter
             ? $activity->started_at
             : CarbonImmutable::parse((string) $activity->started_at, 'UTC');
         $client = $this->clients->classify($activity->user_agent);
-        $location = $this->locations->resolve($activity->ip_address);
+        $language = array_merge(['language_code' => null, 'language_name' => null], $language);
 
-        return DB::transaction(function () use ($activity, $identity, $prefetch, $occurredAt, $client, $location): WebsitePageView {
+        return DB::transaction(function () use ($activity, $identity, $prefetch, $occurredAt, $client, $language): WebsitePageView {
             $existing = WebsitePageView::query()->find($activity->getKey());
             if ($existing instanceof WebsitePageView) {
                 return $existing;
@@ -37,7 +36,7 @@ class WebsiteAnalyticsWriter
 
             $session = $this->session($activity, $identity, $occurredAt);
 
-            return WebsitePageView::query()->create(array_merge($identity, $client, $location, [
+            return WebsitePageView::query()->create(array_merge($identity, $client, $language, [
                 'request_id' => (string) $activity->getKey(),
                 'session_id' => (string) $session->getKey(),
                 'user_id' => $activity->user_id,
