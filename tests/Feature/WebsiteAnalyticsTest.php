@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ActivityRequest;
 use App\Models\User;
-use App\Services\Analytics\GeoIpLocationResolver;
+use App\Services\Analytics\BrowserLanguageClassifier;
 use App\Services\Analytics\WebsiteStatisticsService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Schema\Blueprint;
@@ -34,10 +34,16 @@ class WebsiteAnalyticsTest extends TestCase
     public function test_html_page_views_are_recorded_with_stable_anonymous_identity_and_session(): void
     {
         $first = $this->withServerVariables(['REMOTE_ADDR' => '127.0.0.1'])
-            ->withHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/125.0 Safari/537.36')
+            ->withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/125.0 Safari/537.36',
+                'Accept-Language' => 'id-ID,id;q=0.9,en-US;q=0.8',
+            ])
             ->get('/_analytics-test/page');
         $second = $this->withServerVariables(['REMOTE_ADDR' => '127.0.0.1'])
-            ->withHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/125.0 Safari/537.36')
+            ->withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/125.0 Safari/537.36',
+                'Accept-Language' => 'id-ID,id;q=0.9,en-US;q=0.8',
+            ])
             ->get('/_analytics-test/page');
 
         $first->assertOk()->assertCookie(config('analytics.cookie.name'));
@@ -48,8 +54,23 @@ class WebsiteAnalyticsTest extends TestCase
         $this->assertDatabaseHas('website_page_views', [
             'segment' => 'publik',
             'is_bot' => false,
-            'country_code' => null,
+            'language_code' => 'id-ID',
+            'language_name' => 'Indonesia (id-ID)',
         ]);
+    }
+
+    public function test_accept_language_parser_honors_quality_and_rejects_invalid_values(): void
+    {
+        $classifier = app(BrowserLanguageClassifier::class);
+
+        $this->assertSame([
+            'language_code' => 'en-US',
+            'language_name' => 'Inggris (en-US)',
+        ], $classifier->classify('id-ID;q=0.8, en-US;q=0.9'));
+        $this->assertSame('id-ID', $classifier->classify('id_ID, en-US;q=0.7')['language_code']);
+        $this->assertSame('en-US', $classifier->classify('id-ID;q=0, en-US;q=0.8')['language_code']);
+        $this->assertNull($classifier->classify('id-ID;q=bogus, *')['language_code']);
+        $this->assertNull($classifier->classify('')['language_code']);
     }
 
     public function test_new_session_is_created_after_thirty_minutes(): void
@@ -93,13 +114,15 @@ class WebsiteAnalyticsTest extends TestCase
 
     public function test_developer_statistics_page_and_filters_are_available_only_to_developer(): void
     {
-        $this->get('/_analytics-test/page')->assertOk();
+        $this->withHeader('Accept-Language', 'id-ID')->get('/_analytics-test/page')->assertOk();
         $this->actingAs($this->developer())
-            ->get('/developer/statistics?range=today&segment=publik')
+            ->get('/developer/statistics?range=today&segment=publik&country=ID&city=Surabaya')
             ->assertOk()
             ->assertSee('Statistik Akses Website')
             ->assertSee('Page view harian')
-            ->assertSee('Negara pengunjung')
+            ->assertSee('Bahasa browser')
+            ->assertSee('Jam akses')
+            ->assertDontSee('Negara pengunjung')
             ->assertSee('Paling aktif');
 
         $branchUser = User::query()->create([
@@ -136,27 +159,24 @@ class WebsiteAnalyticsTest extends TestCase
         $this->assertSame(0, Artisan::call('analytics:backfill'));
         $this->assertSame(0, Artisan::call('analytics:backfill'));
         $this->assertSame(1, DB::table('website_page_views')->where('identity_source', 'legacy_session')->count());
+        $this->assertNull(DB::table('website_page_views')->value('language_code'));
     }
 
-    public function test_private_or_missing_geoip_database_returns_unknown_location(): void
+    public function test_access_hour_distribution_uses_asia_jakarta_timezone(): void
     {
-        config()->set('analytics.geoip.database', storage_path('framework/testing/missing.mmdb'));
-        $location = app(GeoIpLocationResolver::class)->resolve('127.0.0.1');
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-21 17:15:00', 'UTC'));
+        $this->withHeader('Accept-Language', 'id-ID')->get('/_analytics-test/page')->assertOk();
 
-        $this->assertNull($location['country_code']);
-        $this->assertNull($location['city_name']);
-    }
+        $dashboard = app(WebsiteStatisticsService::class)->dashboard(Request::create('/developer/statistics', 'GET', [
+            'range' => 'custom',
+            'from' => '2026-06-22',
+            'to' => '2026-06-22',
+            'language' => 'id-ID',
+        ]));
+        $midnight = collect($dashboard['accessHours'])->firstWhere('key', '00');
 
-    public function test_geoip_update_failure_does_not_replace_existing_database(): void
-    {
-        $target = storage_path('framework/testing/GeoLite2-City.mmdb');
-        file_put_contents($target, 'existing-database');
-        config()->set('analytics.geoip.database', $target);
-        config()->set('analytics.geoip.license_key', null);
-
-        $this->assertSame(1, Artisan::call('analytics:geoip-update'));
-        $this->assertSame('existing-database', file_get_contents($target));
-        @unlink($target);
+        $this->assertSame(1, $midnight['count']);
+        $this->assertSame(1, $midnight['visitors']);
     }
 
     public function test_dashboard_query_count_stays_bounded_with_one_hundred_thousand_page_views(): void
@@ -178,10 +198,8 @@ class WebsiteAnalyticsTest extends TestCase
                     'route_name' => 'performance.page.'.($index % 20),
                     'path' => '/performance/'.($index % 20),
                     'referer_host' => $index % 3 === 0 ? 'example.test' : null,
-                    'country_code' => $index % 4 === 0 ? 'ID' : 'SG',
-                    'country_name' => $index % 4 === 0 ? 'Indonesia' : 'Singapore',
-                    'region_name' => null,
-                    'city_name' => $index % 4 === 0 ? 'Surabaya' : 'Singapore',
+                    'language_code' => $index % 4 === 0 ? 'id-ID' : 'en-US',
+                    'language_name' => $index % 4 === 0 ? 'Indonesia (id-ID)' : 'Inggris (en-US)',
                     'device_type' => $index % 2 === 0 ? 'mobile' : 'desktop',
                     'browser_name' => 'Chrome',
                     'os_name' => 'Android',
@@ -305,10 +323,8 @@ class WebsiteAnalyticsTest extends TestCase
             $table->string('route_name')->nullable();
             $table->text('path');
             $table->string('referer_host')->nullable();
-            $table->char('country_code', 2)->nullable();
-            $table->string('country_name')->nullable();
-            $table->string('region_name')->nullable();
-            $table->string('city_name')->nullable();
+            $table->string('language_code', 20)->nullable();
+            $table->string('language_name', 100)->nullable();
             $table->string('device_type');
             $table->string('browser_name')->nullable();
             $table->string('os_name')->nullable();

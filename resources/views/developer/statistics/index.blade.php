@@ -44,8 +44,7 @@
       <label>Sampai<input type="date" name="to" value="{{ $filters['to'] }}"></label>
       <label>Segmen<select name="segment"><option value="">Semua</option>@foreach (['publik' => 'Publik', 'login' => 'Login', 'pemuridan' => 'Pemuridan', 'ibadah' => 'Ibadah', 'developer' => 'Developer'] as $value => $label)<option value="{{ $value }}" @selected($filters['segment'] === $value)>{{ $label }}</option>@endforeach</select></label>
       <label>Actor<select name="actor"><option value="">Semua</option><option value="anonymous" @selected($filters['actor'] === 'anonymous')>Anonim</option><option value="user" @selected($filters['actor'] === 'user')>User login</option></select></label>
-      <label>Negara<select name="country"><option value="">Semua</option>@foreach ($options['countries'] as $country)<option value="{{ $country->country_code }}" @selected($filters['country'] === $country->country_code)>{{ $country->country_name ?: $country->country_code }}</option>@endforeach</select></label>
-      <label>Kota<select name="city"><option value="">Semua</option>@foreach ($options['cities'] as $city)<option value="{{ $city }}" @selected($filters['city'] === $city)>{{ $city }}</option>@endforeach</select></label>
+      <label>Bahasa<select name="language"><option value="">Semua</option>@foreach ($options['languages'] as $language)<option value="{{ $language->language_code }}" @selected($filters['language'] === $language->language_code)>{{ $language->language_name ?: $language->language_code }}</option>@endforeach</select></label>
       <label>Perangkat<select name="device"><option value="">Semua</option>@foreach (['desktop' => 'Desktop', 'mobile' => 'Mobile', 'tablet' => 'Tablet', 'tv' => 'TV', 'console' => 'Console', 'other' => 'Lainnya', 'unknown' => 'Tidak diketahui'] as $value => $label)<option value="{{ $value }}" @selected($filters['device'] === $value)>{{ $label }}</option>@endforeach</select></label>
       <label>Route<select name="route"><option value="">Semua</option>@foreach ($options['routes'] as $route)<option value="{{ $route }}" @selected($filters['route'] === $route)>{{ $route }}</option>@endforeach</select></label>
       @if ($filters['visitor'] !== '')<input type="hidden" name="visitor" value="{{ $filters['visitor'] }}">@endif
@@ -95,8 +94,8 @@
 
   <div class="analytics-breakdown-grid">
     @include('developer.statistics._bars', ['title' => 'Halaman terpopuler', 'kicker' => 'Konten', 'rows' => $topPages, 'wide' => true])
-    @include('developer.statistics._bars', ['title' => 'Negara pengunjung', 'kicker' => 'Geografi', 'rows' => $countries, 'note' => 'Perkiraan berdasarkan IP'])
-    @include('developer.statistics._bars', ['title' => 'Kota pengunjung', 'kicker' => 'Geografi', 'rows' => $cities, 'note' => $filters['country'] ?: 'Semua negara'])
+    @include('developer.statistics._bars', ['title' => 'Bahasa browser', 'kicker' => 'Preferensi', 'rows' => $languages, 'note' => 'Dari header browser'])
+    @include('developer.statistics._bars', ['title' => 'Jam akses', 'kicker' => 'Waktu', 'rows' => $accessHours, 'note' => 'Timezone Asia/Jakarta'])
     @include('developer.statistics._bars', ['title' => 'Jenis perangkat', 'kicker' => 'Perangkat', 'rows' => $devices])
     @include('developer.statistics._bars', ['title' => 'Browser', 'kicker' => 'Perangkat', 'rows' => $browsers])
     @include('developer.statistics._bars', ['title' => 'Sistem operasi', 'kicker' => 'Perangkat', 'rows' => $operatingSystems])
@@ -105,9 +104,9 @@
 
   <section class="card table-card-plain analytics-visitors-card">
     <div class="analytics-section-head"><div><span>Pengunjung</span><h3>Paling aktif</h3></div><small>Maksimal 50 pengunjung</small></div>
-    <div class="table-wrap"><table class="table"><thead><tr><th>Pengunjung</th><th>Lokasi</th><th>Page view</th><th>Sesi</th><th>Terakhir</th><th></th></tr></thead><tbody>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Pengunjung</th><th>Bahasa / perangkat</th><th>Page view</th><th>Sesi</th><th>Terakhir</th><th></th></tr></thead><tbody>
       @forelse ($visitors as $visitor)
-        <tr><td><strong>{{ $visitor['label'] }}</strong><small>{{ substr($visitor['visitor_hash'], 0, 12) }}…</small></td><td>{{ $visitor['city'] }}<small>{{ $visitor['country'] }}</small></td><td>{{ number_format($visitor['page_views'], 0, ',', '.') }}</td><td>{{ number_format($visitor['sessions'], 0, ',', '.') }}</td><td>{{ $visitor['last_seen_at']->format('d-m-Y H:i') }}</td><td><a class="button secondary small" href="{{ route('developer.statistics', array_merge(request()->except('visitor'), ['visitor' => $visitor['visitor_hash']])) }}">Lihat</a></td></tr>
+        <tr><td><strong>{{ $visitor['label'] }}</strong><small>{{ substr($visitor['visitor_hash'], 0, 12) }}…</small></td><td>{{ $visitor['language'] }}<small>{{ $visitor['device'] }}</small></td><td>{{ number_format($visitor['page_views'], 0, ',', '.') }}</td><td>{{ number_format($visitor['sessions'], 0, ',', '.') }}</td><td>{{ $visitor['last_seen_at']->format('d-m-Y H:i') }}</td><td><a class="button secondary small" href="{{ route('developer.statistics', array_merge(request()->except('visitor'), ['visitor' => $visitor['visitor_hash']])) }}">Lihat</a></td></tr>
       @empty<tr><td colspan="6">Belum ada pengunjung pada periode ini.</td></tr>@endforelse
     </tbody></table></div>
   </section>

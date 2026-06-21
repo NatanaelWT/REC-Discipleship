@@ -16,7 +16,7 @@ class WebsiteStatisticsService
     public function dashboard(Request $request): array
     {
         $filters = $this->filters($request);
-        $cacheKey = 'analytics.dashboard.v1.'.sha1(json_encode($filters) ?: '[]');
+        $cacheKey = 'analytics.dashboard.v2.'.sha1(json_encode($filters) ?: '[]');
 
         if (app()->environment('testing')) {
             return $this->build($filters);
@@ -36,20 +36,36 @@ class WebsiteStatisticsService
         $summary = $this->summary(clone $human, $filters);
         $comparison = $this->comparison($filters, $summary);
         $timezone = $this->timezone();
-        $trendQuery = clone $human;
-        if ($filters['range'] === 'all' && $filters['from_utc']->diffInDays($filters['to_utc']) > 365) {
-            $trendQuery->where('occurred_at', '>=', $filters['to_utc']->subDays(365)->startOfDay());
-        }
-        $trendRows = $trendQuery->orderBy('occurred_at')->get(['occurred_at']);
+        $timeRows = (clone $human)->orderBy('occurred_at')->cursor(['occurred_at', 'visitor_hash']);
         $trend = [];
         foreach ($this->dateKeys($filters) as $date) {
             $trend[$date] = 0;
         }
-        foreach ($trendRows as $row) {
+        $accessHours = [];
+        $hourVisitors = [];
+        foreach (range(0, 23) as $hour) {
+            $key = str_pad((string) $hour, 2, '0', STR_PAD_LEFT);
+            $accessHours[$key] = [
+                'key' => $key,
+                'label' => $key.':00 - '.$key.':59',
+                'count' => 0,
+                'visitors' => 0,
+            ];
+            $hourVisitors[$key] = [];
+        }
+        foreach ($timeRows as $row) {
             $date = $row->occurred_at?->setTimezone($timezone)->format('Y-m-d');
-            if ($date !== null) {
-                $trend[$date] = ($trend[$date] ?? 0) + 1;
+            if ($date !== null && array_key_exists($date, $trend)) {
+                $trend[$date]++;
             }
+            $hour = $row->occurred_at?->setTimezone($timezone)->format('H');
+            if ($hour !== null && array_key_exists($hour, $accessHours)) {
+                $accessHours[$hour]['count']++;
+                $hourVisitors[$hour][(string) $row->visitor_hash] = true;
+            }
+        }
+        foreach ($accessHours as $hour => $values) {
+            $accessHours[$hour]['visitors'] = count($hourVisitors[$hour]);
         }
 
         $optionQuery = WebsitePageView::query()
@@ -67,17 +83,15 @@ class WebsiteStatisticsService
                 'count' => $count,
             ])->values()->all(),
             'topPages' => $this->grouped(clone $human, 'route_name', 'path', 10),
-            'countries' => $this->grouped(clone $human, 'country_code', 'country_name', 15),
-            'cities' => $this->grouped(clone $human, 'city_name', 'city_name', 15),
+            'languages' => $this->grouped(clone $human, 'language_code', 'language_name', 15),
+            'accessHours' => array_values($accessHours),
             'devices' => $this->grouped(clone $human, 'device_type', 'device_type', 10),
             'browsers' => $this->grouped(clone $human, 'browser_name', 'browser_name', 10),
             'operatingSystems' => $this->grouped(clone $human, 'os_name', 'os_name', 10),
             'referrers' => $this->grouped(clone $human, 'referer_host', 'referer_host', 10),
             'visitors' => $this->visitors(clone $human),
             'options' => [
-                'countries' => (clone $optionQuery)->whereNotNull('country_code')->select(['country_code', 'country_name'])->distinct()->orderBy('country_name')->get(),
-                'cities' => (clone $optionQuery)->when($filters['country'] !== '', fn (Builder $query) => $query->where('country_code', $filters['country']))
-                    ->whereNotNull('city_name')->distinct()->orderBy('city_name')->pluck('city_name'),
+                'languages' => (clone $optionQuery)->whereNotNull('language_code')->select(['language_code', 'language_name'])->distinct()->orderBy('language_name')->get(),
                 'routes' => (clone $optionQuery)->whereNotNull('route_name')->distinct()->orderBy('route_name')->pluck('route_name'),
             ],
         ];
@@ -154,7 +168,7 @@ class WebsiteStatisticsService
         $timezone = $this->timezone();
 
         return $query
-            ->selectRaw('visitor_hash, MAX(user_id) AS user_id, MAX(username) AS username, MAX(country_name) AS country_name, MAX(city_name) AS city_name, COUNT(*) AS page_views, COUNT(DISTINCT session_id) AS sessions, MAX(occurred_at) AS last_seen_at')
+            ->selectRaw('visitor_hash, MAX(user_id) AS user_id, MAX(username) AS username, MAX(language_name) AS language_name, MAX(device_type) AS device_type, COUNT(*) AS page_views, COUNT(DISTINCT session_id) AS sessions, MAX(occurred_at) AS last_seen_at')
             ->groupBy('visitor_hash')
             ->orderByDesc('page_views')
             ->limit(50)
@@ -162,8 +176,8 @@ class WebsiteStatisticsService
             ->map(static fn ($row): array => [
                 'visitor_hash' => (string) $row->visitor_hash,
                 'label' => trim((string) $row->username) ?: 'Anonim #'.substr((string) $row->visitor_hash, 0, 8),
-                'country' => trim((string) $row->country_name) ?: 'Tidak diketahui',
-                'city' => trim((string) $row->city_name) ?: 'Tidak diketahui',
+                'language' => trim((string) $row->language_name) ?: 'Tidak diketahui',
+                'device' => trim((string) $row->device_type) ?: 'Tidak diketahui',
                 'page_views' => (int) $row->page_views,
                 'sessions' => (int) $row->sessions,
                 'last_seen_at' => CarbonImmutable::parse((string) $row->last_seen_at, 'UTC')->setTimezone($timezone),
@@ -176,8 +190,7 @@ class WebsiteStatisticsService
         return WebsitePageView::query()
             ->whereBetween('occurred_at', [$filters['from_utc'], $filters['to_utc']])
             ->when($filters['segment'] !== '', fn (Builder $query) => $query->where('segment', $filters['segment']))
-            ->when($filters['country'] !== '', fn (Builder $query) => $query->where('country_code', $filters['country']))
-            ->when($filters['city'] !== '', fn (Builder $query) => $query->where('city_name', $filters['city']))
+            ->when($filters['language'] !== '', fn (Builder $query) => $query->where('language_code', $filters['language']))
             ->when($filters['device'] !== '', fn (Builder $query) => $query->where('device_type', $filters['device']))
             ->when($filters['route'] !== '', fn (Builder $query) => $query->where('route_name', $filters['route']))
             ->when($filters['actor'] === 'user', fn (Builder $query) => $query->whereNotNull('user_id'))
@@ -223,8 +236,7 @@ class WebsiteStatisticsService
             'from_utc' => $from->utc(),
             'to_utc' => $to->utc(),
             'segment' => $this->oneOf($request, 'segment', ['publik', 'login', 'pemuridan', 'ibadah', 'developer']),
-            'country' => strtoupper(substr(trim((string) $request->query('country', '')), 0, 2)),
-            'city' => substr(trim((string) $request->query('city', '')), 0, 160),
+            'language' => $this->languageFilter($request),
             'device' => $this->oneOf($request, 'device', ['desktop', 'mobile', 'tablet', 'tv', 'console', 'other', 'unknown']),
             'route' => substr(trim((string) $request->query('route', '')), 0, 180),
             'actor' => $this->oneOf($request, 'actor', ['user', 'anonymous']),
@@ -238,6 +250,13 @@ class WebsiteStatisticsService
         $value = strtolower(trim((string) $request->query($key, '')));
 
         return in_array($value, $allowed, true) ? $value : '';
+    }
+
+    private function languageFilter(Request $request): string
+    {
+        $value = substr(trim((string) $request->query('language', '')), 0, 20);
+
+        return preg_match('/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/', $value) === 1 ? $value : '';
     }
 
     /** @param array<string, mixed> $filters @return array<int, string> */
