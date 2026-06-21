@@ -124,6 +124,31 @@ class MskParticipantPageTest extends TestCase
             ->assertSee('Halaman 1 dari 3');
     }
 
+    public function test_batch_filter_lists_all_batches_not_only_the_active_batch(): void
+    {
+        $this->createMskTables();
+        DB::table('msk_participants')->insert([
+            $this->participantRow('Peserta Batch Terbaru', '2026-06'),
+            $this->participantRow('Peserta Batch Menengah', '2025-01'),
+            $this->participantRow('Peserta Batch Lama', '2024-11'),
+        ]);
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/msk')
+            ->assertOk()
+            ->assertSee('Semua Batch (3)')
+            ->assertSee('<option value="2026-06" selected>Juni 2026 (1)</option>', false)
+            ->assertSee('<option value="2025-01" >Januari 2025 (1)</option>', false)
+            ->assertSee('<option value="2024-11" >November 2024 (1)</option>', false);
+
+        $this->get('/pemuridan/msk?batch_month=2024-11')
+            ->assertOk()
+            ->assertSee('Peserta Batch Lama')
+            ->assertDontSee('Peserta Batch Terbaru')
+            ->assertSee('<option value="2026-06" >Juni 2026 (1)</option>', false)
+            ->assertSee('<option value="2024-11" selected>November 2024 (1)</option>', false);
+    }
+
     public function test_store_msk_participant_persists_to_laravel_tables(): void
     {
         $this->createMskTables();
@@ -210,5 +235,21 @@ class MskParticipantPageTest extends TestCase
             $table->json('photos')->nullable();
             $table->timestamps();
         });
+    }
+
+    /** @return array<string, mixed> */
+    private function participantRow(string $name, string $batchMonth): array
+    {
+        return [
+            'branch_id' => 1,
+            'full_name' => $name,
+            'batch_month' => $batchMonth,
+            'journey_bridge_status' => 'belum',
+            'status' => 'active',
+            'session_numbers' => json_encode([]),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
     }
 }

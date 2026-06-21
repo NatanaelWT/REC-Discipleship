@@ -64,43 +64,6 @@ if ($page === 'msk_classes') {
         return strcasecmp((string) ($a['full_name'] ?? ''), (string) ($b['full_name'] ?? ''));
     });
 
-    $batchMonthMap = [];
-    foreach ($participantsSorted as $participant) {
-        $participantBatchMonth = normalize_month_value((string) ($participant['msk_month'] ?? date('Y-m')));
-        if (! isset($batchMonthMap[$participantBatchMonth])) {
-            $batchMonthMap[$participantBatchMonth] = 0;
-        }
-        $batchMonthMap[$participantBatchMonth]++;
-    }
-    $batchMonthOptions = array_keys($batchMonthMap);
-    rsort($batchMonthOptions, SORT_STRING);
-    $latestBatchMonth = count($batchMonthOptions) > 0 ? $batchMonthOptions[0] : date('Y-m');
-    $batchMonthFilterInput = trim((string) ($_GET['batch_month'] ?? ''));
-    $batchMonthFilterIsAll = strtolower($batchMonthFilterInput) === 'all';
-    $batchMonthFilterNormalized = $batchMonthFilterInput !== '' ? normalize_month_value($batchMonthFilterInput) : '';
-    $batchMonthFilter = $latestBatchMonth;
-    if (! $batchMonthFilterIsAll && $batchMonthFilterNormalized !== '' && isset($batchMonthMap[$batchMonthFilterNormalized])) {
-        $batchMonthFilter = $batchMonthFilterNormalized;
-    }
-    $batchMonthFilterParam = $batchMonthFilterIsAll ? 'all' : $batchMonthFilter;
-    $batchMonthFilterLabel = $batchMonthFilterIsAll ? 'Semua Batch' : format_indo_month($batchMonthFilter);
-    $participantsFilteredByBatch = [];
-    foreach ($participantsSorted as $participant) {
-        $participantBatchMonth = normalize_month_value((string) ($participant['msk_month'] ?? date('Y-m')));
-        if (! $batchMonthFilterIsAll && $participantBatchMonth !== $batchMonthFilter) {
-            continue;
-        }
-        $participantsFilteredByBatch[] = $participant;
-    }
-    $totalParticipantsFiltered = count($participantsFilteredByBatch);
-    $completedParticipantsFiltered = 0;
-    foreach ($participantsFilteredByBatch as $participant) {
-        if (msk_is_complete($participant)) {
-            $completedParticipantsFiltered++;
-        }
-    }
-    $inProgressParticipantsFiltered = max(0, $totalParticipantsFiltered - $completedParticipantsFiltered);
-
     $renderMskParticipantForm = function (array $participant, string $batchMonth, string $closeActionAttr = '') use ($mskStoreAction): string {
         $participantId = trim((string) ($participant['id'] ?? ''));
         $fullName = trim((string) ($participant['full_name'] ?? ''));
