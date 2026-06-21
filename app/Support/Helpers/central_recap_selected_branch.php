@@ -43,3 +43,15 @@ function central_recap_selected_branch(): string
 
     return 'all';
 }
+
+function central_recap_selected_single_branch(): string
+{
+    $selectedBranch = central_recap_selected_branch();
+    if ($selectedBranch !== 'all') {
+        return $selectedBranch;
+    }
+
+    $firstBranch = public_dg_branch_options()[0] ?? null;
+
+    return normalize_public_branch_code((string) ($firstBranch['code'] ?? 'kutisari'));
+}

@@ -12030,6 +12030,11 @@ textarea:focus-visible {
   border-color: rgba(20, 184, 166, 0.24);
 }
 
+.settings-target-badge.is-readonly {
+  background: linear-gradient(135deg, rgba(241, 245, 249, 0.96), rgba(226, 232, 240, 0.9));
+  color: #475569;
+}
+
 .settings-target-form {
   display: grid;
   gap: 18px;
@@ -12132,6 +12137,20 @@ textarea:focus-visible {
   border-color: var(--field-accent);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--field-accent) 18%, white);
   background: #fff;
+}
+
+.settings-target-field-value {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  margin-top: auto;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--field-accent) 18%, #cbd5e1);
+  background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 800;
 }
 
 .settings-target-actions {

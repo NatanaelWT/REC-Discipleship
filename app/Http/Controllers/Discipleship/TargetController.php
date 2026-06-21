@@ -17,15 +17,18 @@ class TargetController extends Controller
         RuntimeBootstrap::boot($request);
 
         $centralReadOnly = is_effective_central_discipleship_readonly();
-        $currentBranch = current_user_branch();
+        $activeBranch = $centralReadOnly
+            ? central_recap_selected_single_branch()
+            : current_user_branch();
 
         return view('discipleship.targets.index', [
             'settings' => ['church_name' => app_church_name()],
             'saved' => $request->query->has('saved'),
             'centralReadOnly' => $centralReadOnly,
-            'targets' => $targetReader->formValuesForBranch($currentBranch),
-            'activeBranchLabel' => user_branch_label($currentBranch),
-            'branchTargetRows' => $this->branchTargetRows($targetReader),
+            'targets' => $targetReader->formValuesForBranch($activeBranch),
+            'activeBranchLabel' => $centralReadOnly
+                ? central_recap_branch_label($activeBranch)
+                : user_branch_label($activeBranch),
         ]);
     }
 
@@ -36,29 +39,5 @@ class TargetController extends Controller
         $targetReader->saveBranch(current_user_branch(), $request->targetValues());
 
         return redirect()->route('discipleship.targets', ['saved' => 1]);
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function branchTargetRows(DiscipleshipTargetReader $targetReader): array
-    {
-        $rows = [];
-        foreach (public_dg_branch_options() as $branchOption) {
-            $branchCode = normalize_public_branch_code((string) ($branchOption['code'] ?? 'kutisari'));
-            $branchLabel = trim((string) ($branchOption['label'] ?? strtoupper($branchCode)));
-            if ($branchLabel === '') {
-                $branchLabel = strtoupper($branchCode);
-            }
-
-            $targets = $targetReader->formValuesForBranch($branchCode);
-            $rows[] = [
-                'branch_code' => $branchCode,
-                'branch_label' => $branchLabel,
-                'targets' => $targets,
-            ];
-        }
-
-        return $rows;
     }
 }
