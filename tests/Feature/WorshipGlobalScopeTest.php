@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\WorshipServiceSchedules\WorshipServiceScheduleBuilder;
+use App\Support\HelperManifest;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -10,6 +11,11 @@ use Tests\TestCase;
 
 class WorshipGlobalScopeTest extends TestCase
 {
+    public function test_worship_routes_load_the_shared_month_normalizer(): void
+    {
+        $this->assertContains('normalize_month_value', HelperManifest::forPath('ibadah/penatalayan'));
+    }
+
     public function test_steward_and_developer_share_the_same_global_schedule(): void
     {
         $this->createWorshipScheduleTable();

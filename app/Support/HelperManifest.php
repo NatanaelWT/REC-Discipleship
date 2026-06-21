@@ -74,7 +74,7 @@ class HelperManifest
 
     private const WORSHIP = [
         'build_worship_penatalayan_schedule', 'default_worship_penatalayan_title', 'is_sunday_date',
-        'normalize_worship_penatalayan_rows', 'worship_penatalayan_default_roles', 'worship_penatalayan_font_path',
+        'normalize_month_value', 'normalize_worship_penatalayan_rows', 'worship_penatalayan_default_roles', 'worship_penatalayan_font_path',
         'worship_penatalayan_historical_service_names', 'worship_penatalayan_png_draw_text',
         'worship_penatalayan_png_text_box', 'worship_penatalayan_png_text_layout', 'worship_penatalayan_png_wrap_lines',
         'worship_penatalayan_service_counts', 'worship_penatalayan_service_names', 'worship_penatalayan_svg_wrap_lines',
