@@ -31,9 +31,10 @@
 
   <section class="card analytics-filter-card">
     <div class="analytics-section-head">
-      <div><span>Filter statistik</span><h2>Statistik Akses Website</h2></div>
+      <div><span>Filter statistik</span><h2>Statistik Kunjungan Publik</h2></div>
       <a class="button secondary" href="{{ route('developer.statistics') }}">Reset</a>
     </div>
+    <p class="developer-muted">Hanya kunjungan anonim pada halaman publik, materi publik, dan halaman login yang dihitung. Aktivitas setelah login tersedia di menu Aktivitas.</p>
     @if (($filters['visitor'] ?? '') !== '')
       <div class="analytics-active-filter">Menampilkan satu pengunjung: <code>{{ substr($filters['visitor'], 0, 12) }}…</code></div>
     @endif
@@ -45,8 +46,7 @@
       </label>
       <label>Dari<input type="date" name="from" value="{{ $filters['from'] }}"></label>
       <label>Sampai<input type="date" name="to" value="{{ $filters['to'] }}"></label>
-      <label>Segmen<select name="segment"><option value="">Semua</option>@foreach (['publik' => 'Publik', 'login' => 'Login', 'pemuridan' => 'Pemuridan', 'ibadah' => 'Ibadah', 'developer' => 'Developer'] as $value => $label)<option value="{{ $value }}" @selected($filters['segment'] === $value)>{{ $label }}</option>@endforeach</select></label>
-      <label>Actor<select name="actor"><option value="">Semua</option><option value="anonymous" @selected($filters['actor'] === 'anonymous')>Anonim</option><option value="user" @selected($filters['actor'] === 'user')>User login</option></select></label>
+      <label>Segmen<select name="segment"><option value="">Semua</option>@foreach (['publik' => 'Publik', 'login' => 'Login'] as $value => $label)<option value="{{ $value }}" @selected($filters['segment'] === $value)>{{ $label }}</option>@endforeach</select></label>
       <label>Bahasa<select name="language"><option value="">Semua</option>@foreach ($options['languages'] as $language)<option value="{{ $language->language_code }}" @selected($filters['language'] === $language->language_code)>{{ $language->language_name ?: $language->language_code }}</option>@endforeach</select></label>
       <label>Perangkat<select name="device"><option value="">Semua</option>@foreach (['desktop' => 'Desktop', 'mobile' => 'Mobile', 'tablet' => 'Tablet', 'tv' => 'TV', 'console' => 'Console', 'other' => 'Lainnya', 'unknown' => 'Tidak diketahui'] as $value => $label)<option value="{{ $value }}" @selected($filters['device'] === $value)>{{ $label }}</option>@endforeach</select></label>
       <label>Route<select name="route"><option value="">Semua</option>@foreach ($options['routes'] as $route)<option value="{{ $route }}" @selected($filters['route'] === $route)>{{ $route }}</option>@endforeach</select></label>
@@ -69,6 +69,27 @@
         <small>@if ($metric['has_compare'] && $filters['range'] !== 'all'){{ $comparisonLabel($metric['compare']) }} dari periode sebelumnya @else{{ $rangeLabels[$filters['range']] ?? 'Periode aktif' }}@endif</small>
       </article>
     @endforeach
+  </section>
+
+  <section class="card analytics-login-card" aria-label="Ringkasan percobaan login">
+    <div class="analytics-section-head">
+      <div><span>Audit autentikasi</span><h3>Percobaan login</h3></div>
+      <small>{{ $filters['from'] }} — {{ $filters['to'] }}</small>
+    </div>
+    <div class="analytics-login-grid">
+      @foreach ([
+        ['label' => 'Total percobaan', 'value' => $loginAttempts['total'], 'state' => 'total'],
+        ['label' => 'Berhasil', 'value' => $loginAttempts['succeeded'], 'state' => 'succeeded'],
+        ['label' => 'Gagal', 'value' => $loginAttempts['failed'], 'state' => 'failed'],
+        ['label' => 'Terkunci', 'value' => $loginAttempts['locked'], 'state' => 'locked'],
+      ] as $attempt)
+        <article class="analytics-login-metric is-{{ $attempt['state'] }}">
+          <span>{{ $attempt['label'] }}</span>
+          <strong>{{ number_format($attempt['value'], 0, ',', '.') }}</strong>
+        </article>
+      @endforeach
+    </div>
+    <p class="analytics-response-note">Dihitung langsung dari audit aktivitas. Ringkasan ini hanya mengikuti periode tanggal dan tidak menyimpan salinan kredensial.</p>
   </section>
 
   <section class="card analytics-trend-card">

@@ -57,11 +57,22 @@ class WebsiteAnalyticsWriter
     public function qualifies(ActivityRequest $activity): bool
     {
         $contentType = strtolower(trim((string) $activity->response_content_type));
+        $routeName = trim((string) $activity->route_name);
 
-        return strtoupper((string) $activity->method) === 'GET'
+        return $activity->user_id === null
+            && $this->isPublicAnalyticsRoute($routeName)
+            && strtoupper((string) $activity->method) === 'GET'
             && (int) $activity->http_status >= 200
             && (int) $activity->http_status < 300
             && str_starts_with($contentType, 'text/html');
+    }
+
+    private function isPublicAnalyticsRoute(string $routeName): bool
+    {
+        return $routeName === 'home'
+            || $routeName === 'auth.login'
+            || str_starts_with($routeName, 'public.')
+            || str_starts_with($routeName, 'materials.');
     }
 
     /** @param array{visitor_hash:string,identity_source:string} $identity */

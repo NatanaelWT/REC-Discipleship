@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ActivityRequest;
 use App\Models\User;
 use App\Services\Analytics\BrowserLanguageClassifier;
+use App\Services\Analytics\WebsiteAnalyticsWriter;
 use App\Services\Analytics\WebsiteStatisticsService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Schema\Blueprint;
@@ -59,6 +60,34 @@ class WebsiteAnalyticsTest extends TestCase
         ]);
     }
 
+    public function test_only_anonymous_public_material_home_and_login_routes_qualify(): void
+    {
+        $writer = app(WebsiteAnalyticsWriter::class);
+        foreach (['home', 'public.report', 'materials.index', 'auth.login'] as $routeName) {
+            $activity = new ActivityRequest([
+                'user_id' => null,
+                'method' => 'GET',
+                'route_name' => $routeName,
+                'http_status' => 200,
+                'response_content_type' => 'text/html; charset=UTF-8',
+            ]);
+            $this->assertTrue($writer->qualifies($activity), $routeName.' seharusnya masuk statistik.');
+        }
+
+        foreach ([
+            ['route_name' => 'developer.dashboard', 'user_id' => null],
+            ['route_name' => 'public.report', 'user_id' => 1],
+            ['route_name' => 'auth.login.store', 'user_id' => null],
+        ] as $attributes) {
+            $activity = new ActivityRequest(array_merge($attributes, [
+                'method' => 'GET',
+                'http_status' => 200,
+                'response_content_type' => 'text/html; charset=UTF-8',
+            ]));
+            $this->assertFalse($writer->qualifies($activity));
+        }
+    }
+
     public function test_accept_language_parser_honors_quality_and_rejects_invalid_values(): void
     {
         $classifier = app(BrowserLanguageClassifier::class);
@@ -100,16 +129,15 @@ class WebsiteAnalyticsTest extends TestCase
         $this->assertSame(1, DB::table('website_page_views')->where('is_prefetch', true)->count());
     }
 
-    public function test_authenticated_user_identity_is_stable_across_sessions(): void
+    public function test_authenticated_and_internal_page_views_are_not_recorded(): void
     {
         $user = $this->developer();
         $this->actingAs($user)->get('/_analytics-test/page')->assertOk();
-        $firstHash = (string) DB::table('website_page_views')->value('visitor_hash');
         $this->flushSession();
-        $this->actingAs($user)->get('/_analytics-test/page')->assertOk();
+        $this->get('/_analytics-test/internal')->assertOk();
 
-        $this->assertSame(1, DB::table('website_page_views')->distinct()->count('visitor_hash'));
-        $this->assertSame($firstHash, (string) DB::table('website_page_views')->orderByDesc('occurred_at')->value('visitor_hash'));
+        $this->assertSame(0, DB::table('website_page_views')->count());
+        $this->assertSame(2, DB::table('activity_requests')->count());
     }
 
     public function test_developer_statistics_page_and_filters_are_available_only_to_developer(): void
@@ -118,7 +146,8 @@ class WebsiteAnalyticsTest extends TestCase
         $this->actingAs($this->developer())
             ->get('/developer/statistics?range=today&segment=publik&country=ID&city=Surabaya')
             ->assertOk()
-            ->assertSee('Statistik Akses Website')
+            ->assertSee('Statistik Kunjungan Publik')
+            ->assertSee('Percobaan login')
             ->assertSee('Page view harian')
             ->assertSee('Bahasa browser')
             ->assertSee('Jam akses')
@@ -144,7 +173,7 @@ class WebsiteAnalyticsTest extends TestCase
             'visitor_hash' => str_repeat('a', 64),
             'ip_address' => '127.0.0.1',
             'method' => 'GET',
-            'route_name' => 'legacy.page',
+            'route_name' => 'public.legacy.page',
             'path' => '/legacy',
             'category' => 'request',
             'action' => 'request',
@@ -155,11 +184,91 @@ class WebsiteAnalyticsTest extends TestCase
             'started_at' => CarbonImmutable::now('UTC')->subDay(),
             'completed_at' => CarbonImmutable::now('UTC')->subDay(),
         ]);
+        ActivityRequest::query()->create([
+            'id' => '01KVMYYYYYYYYYYYYYYYYYYYYYY',
+            'actor_type' => 'user',
+            'user_id' => 1,
+            'username' => 'developer',
+            'role' => 'developer',
+            'visitor_hash' => str_repeat('b', 64),
+            'ip_address' => '127.0.0.1',
+            'method' => 'GET',
+            'route_name' => 'developer.dashboard',
+            'path' => '/developer',
+            'category' => 'request',
+            'action' => 'request',
+            'http_status' => 200,
+            'outcome' => 'succeeded',
+            'response_content_type' => 'text/html; charset=UTF-8',
+            'duration_ms' => 8.2,
+            'started_at' => CarbonImmutable::now('UTC')->subDay(),
+            'completed_at' => CarbonImmutable::now('UTC')->subDay(),
+        ]);
 
         $this->assertSame(0, Artisan::call('analytics:backfill'));
         $this->assertSame(0, Artisan::call('analytics:backfill'));
         $this->assertSame(1, DB::table('website_page_views')->where('identity_source', 'legacy_session')->count());
         $this->assertNull(DB::table('website_page_views')->value('language_code'));
+    }
+
+    public function test_login_attempt_summary_comes_from_audit_and_only_uses_date_range(): void
+    {
+        $occurredAt = CarbonImmutable::now('UTC')->format('Y-m-d H:i:s.u');
+        foreach (['auth.login.succeeded', 'auth.login.failed', 'auth.login.failed', 'auth.login.locked'] as $action) {
+            DB::table('activity_events')->insert([
+                'request_id' => '01'.str_pad((string) DB::table('activity_events')->count(), 24, '0', STR_PAD_LEFT),
+                'category' => 'authentication',
+                'action' => $action,
+                'occurred_at' => $occurredAt,
+            ]);
+        }
+
+        $dashboard = app(WebsiteStatisticsService::class)->dashboard(Request::create('/developer/statistics', 'GET', [
+            'range' => 'today',
+            'language' => 'id-ID',
+            'device' => 'mobile',
+            'route' => 'public.missing',
+        ]));
+
+        $this->assertSame([
+            'total' => 4,
+            'succeeded' => 1,
+            'failed' => 2,
+            'locked' => 1,
+        ], $dashboard['loginAttempts']);
+    }
+
+    public function test_dashboard_defensively_ignores_historical_internal_page_views_and_old_filters(): void
+    {
+        $occurredAt = CarbonImmutable::now('UTC')->format('Y-m-d H:i:s.u');
+        foreach ([
+            ['request_id' => '05'.str_repeat('0', 24), 'session_id' => '06'.str_repeat('0', 24), 'user_id' => null, 'segment' => 'publik'],
+            ['request_id' => '05'.str_repeat('1', 24), 'session_id' => '06'.str_repeat('1', 24), 'user_id' => 1, 'segment' => 'developer'],
+        ] as $row) {
+            DB::table('website_page_views')->insert(array_merge($row, [
+                'visitor_hash' => hash('sha256', $row['request_id']),
+                'identity_source' => 'legacy_session',
+                'username' => $row['user_id'] === null ? null : 'developer',
+                'actor_type' => $row['user_id'] === null ? 'anonymous' : 'user',
+                'route_name' => $row['segment'].'.page',
+                'path' => '/'.$row['segment'],
+                'device_type' => 'desktop',
+                'is_bot' => false,
+                'is_prefetch' => false,
+                'http_status' => 200,
+                'occurred_at' => $occurredAt,
+            ]));
+        }
+
+        $dashboard = app(WebsiteStatisticsService::class)->dashboard(Request::create('/developer/statistics', 'GET', [
+            'range' => 'today',
+            'segment' => 'developer',
+            'actor' => 'user',
+        ]));
+
+        $this->assertSame('', $dashboard['filters']['segment']);
+        $this->assertArrayNotHasKey('actor', $dashboard['filters']);
+        $this->assertSame(1, $dashboard['summary']['page_views']);
     }
 
     public function test_access_hour_distribution_uses_asia_jakarta_timezone(): void
@@ -252,7 +361,7 @@ class WebsiteAnalyticsTest extends TestCase
                     'user_id' => null,
                     'username' => null,
                     'actor_type' => 'anonymous',
-                    'segment' => $index % 2 === 0 ? 'publik' : 'pemuridan',
+                    'segment' => $index % 2 === 0 ? 'publik' : 'login',
                     'route_name' => 'performance.page.'.($index % 20),
                     'path' => '/performance/'.($index % 20),
                     'referer_host' => $index % 3 === 0 ? 'example.test' : null,
@@ -284,7 +393,8 @@ class WebsiteAnalyticsTest extends TestCase
     private function registerRoutes(): void
     {
         Route::middleware('web')->group(function (): void {
-            Route::get('/_analytics-test/page', static fn () => response('<html><body>ok</body></html>', 200)->header('Content-Type', 'text/html; charset=UTF-8'))->name('analytics-test.page');
+            Route::get('/_analytics-test/page', static fn () => response('<html><body>ok</body></html>', 200)->header('Content-Type', 'text/html; charset=UTF-8'))->name('public.analytics-test.page');
+            Route::get('/_analytics-test/internal', static fn () => response('<html><body>internal</body></html>', 200)->header('Content-Type', 'text/html; charset=UTF-8'))->name('developer.analytics-test.internal');
             Route::get('/_analytics-test/json', static fn () => response()->json(['ok' => true]))->name('analytics-test.json');
             Route::get('/_analytics-test/redirect', static fn () => redirect('/_analytics-test/page'))->name('analytics-test.redirect');
             Route::post('/_analytics-test/post', static fn () => response('ok'))->name('analytics-test.post');

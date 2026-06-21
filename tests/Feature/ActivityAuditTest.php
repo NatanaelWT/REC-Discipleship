@@ -213,7 +213,7 @@ class ActivityAuditTest extends TestCase
 
         $developer = $this->developer();
         $this->actingAs($developer);
-        $this->get('/developer/activities?actor=user&username=developer')
+        $this->get('/developer/activities?actor=user&username=developer&include_developer=1')
             ->assertOk()
             ->assertSee('Riwayat Aktivitas')
             ->assertSee('developer');
@@ -222,6 +222,50 @@ class ActivityAuditTest extends TestCase
         $this->get('/developer/activities/'.$activity->id)
             ->assertOk()
             ->assertSee('Request '.$activity->id);
+    }
+
+    public function test_activity_list_hides_developer_by_default_and_allows_toggle_or_explicit_role(): void
+    {
+        $developer = $this->developer();
+        ActivityRequest::query()->create([
+            'actor_type' => 'user',
+            'user_id' => $developer->id,
+            'username' => 'developer-only-user',
+            'role' => 'developer',
+            'method' => 'GET',
+            'path' => '/developer-only-activity',
+            'category' => 'request',
+            'action' => 'developer-only-action',
+            'outcome' => 'succeeded',
+            'started_at' => now('UTC')->subMinute(),
+            'completed_at' => now('UTC')->subMinute(),
+        ]);
+        ActivityRequest::query()->create([
+            'actor_type' => 'anonymous',
+            'method' => 'GET',
+            'path' => '/public-visible-activity',
+            'category' => 'request',
+            'action' => 'public-visible-action',
+            'outcome' => 'succeeded',
+            'started_at' => now('UTC')->subMinutes(2),
+            'completed_at' => now('UTC')->subMinutes(2),
+        ]);
+
+        $this->actingAs($developer)
+            ->get('/developer/activities')
+            ->assertOk()
+            ->assertSee('Tampilkan aktivitas developer')
+            ->assertSee('/public-visible-activity')
+            ->assertDontSee('/developer-only-activity');
+
+        $this->get('/developer/activities?include_developer=1')
+            ->assertOk()
+            ->assertSee('/developer-only-activity')
+            ->assertSee('name="include_developer" value="1" checked', false);
+
+        $this->get('/developer/activities?role=developer')
+            ->assertOk()
+            ->assertSee('/developer-only-activity');
     }
 
     public function test_activity_list_uses_twenty_rows_and_preserves_filters_in_cursor_pagination(): void
@@ -242,11 +286,12 @@ class ActivityAuditTest extends TestCase
         }
 
         $response = $this->actingAs($this->developer())
-            ->get('/developer/activities?actor=anonymous')
+            ->get('/developer/activities?actor=anonymous&include_developer=1')
             ->assertOk()
             ->assertSee('Maksimal 20 per halaman')
             ->assertSee('Berikutnya')
-            ->assertSee('actor=anonymous', false);
+            ->assertSee('actor=anonymous', false)
+            ->assertSee('include_developer=1', false);
 
         $this->assertSame(20, substr_count($response->getContent(), 'data-activity-row'));
     }

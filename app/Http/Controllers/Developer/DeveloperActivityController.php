@@ -77,7 +77,6 @@ class DeveloperActivityController extends Controller
         $exactFilters = [
             'actor_type' => 'actor',
             'username' => 'username',
-            'role' => 'role',
             'branch_id' => 'branch_id',
             'route_name' => 'route',
             'method' => 'method',
@@ -90,6 +89,17 @@ class DeveloperActivityController extends Controller
             if ($value !== '') {
                 $query->where($column, $value);
             }
+        }
+
+        $role = $this->queryString($request, 'role');
+        if ($role !== '') {
+            $query->where('role', $role);
+        }
+        if ($role !== UserAccessRole::Developer->value && $this->queryString($request, 'include_developer') !== '1') {
+            $query->where(static function (Builder $roles): void {
+                $roles->whereNull('role')
+                    ->orWhere('role', '!=', UserAccessRole::Developer->value);
+            });
         }
 
         $category = $this->queryString($request, 'category');
@@ -179,10 +189,11 @@ class DeveloperActivityController extends Controller
     private function filterValues(Request $request): array
     {
         $values = [];
-        foreach (['q', 'from', 'to', 'actor', 'username', 'role', 'branch_id', 'category', 'action', 'route', 'method', 'outcome', 'status', 'subject_type', 'subject_id', 'ip'] as $key) {
+        foreach (['q', 'from', 'to', 'actor', 'username', 'role', 'branch_id', 'category', 'action', 'route', 'method', 'outcome', 'status', 'subject_type', 'subject_id', 'ip', 'include_developer'] as $key) {
             $value = $request->query($key, '');
             $values[$key] = is_scalar($value) ? trim((string) $value) : '';
         }
+        $values['include_developer'] = $values['include_developer'] === '1' ? '1' : '';
 
         return $values;
     }

@@ -2,12 +2,14 @@
 
 namespace App\Services\Analytics;
 
+use App\Models\ActivityEvent;
 use App\Models\WebsitePageView;
 use Carbon\CarbonImmutable;
 use DateTimeZone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class WebsiteStatisticsService
@@ -16,7 +18,7 @@ class WebsiteStatisticsService
     public function dashboard(Request $request): array
     {
         $filters = $this->filters($request);
-        $cacheKey = 'analytics.dashboard.v2.'.sha1(json_encode($filters) ?: '[]');
+        $cacheKey = 'analytics.dashboard.v3.'.sha1(json_encode($filters) ?: '[]');
 
         if (app()->environment('testing')) {
             return $this->build($filters);
@@ -74,6 +76,8 @@ class WebsiteStatisticsService
             ->all();
 
         $optionQuery = WebsitePageView::query()
+            ->whereNull('user_id')
+            ->whereIn('segment', ['publik', 'login'])
             ->whereBetween('occurred_at', [$filters['from_utc'], $filters['to_utc']])
             ->where('is_bot', false)
             ->where('is_prefetch', false);
@@ -81,6 +85,7 @@ class WebsiteStatisticsService
         return [
             'filters' => $filters,
             'summary' => $summary,
+            'loginAttempts' => $this->loginAttempts($filters),
             'comparison' => $comparison,
             'trend' => collect($trend)->map(static fn (int $count, string $date): array => [
                 'date' => $date,
@@ -193,14 +198,46 @@ class WebsiteStatisticsService
     private function query(array $filters): Builder
     {
         return WebsitePageView::query()
+            ->whereNull('user_id')
+            ->whereIn('segment', ['publik', 'login'])
             ->whereBetween('occurred_at', [$filters['from_utc'], $filters['to_utc']])
             ->when($filters['segment'] !== '', fn (Builder $query) => $query->where('segment', $filters['segment']))
             ->when($filters['language'] !== '', fn (Builder $query) => $query->where('language_code', $filters['language']))
             ->when($filters['device'] !== '', fn (Builder $query) => $query->where('device_type', $filters['device']))
             ->when($filters['route'] !== '', fn (Builder $query) => $query->where('route_name', $filters['route']))
-            ->when($filters['actor'] === 'user', fn (Builder $query) => $query->whereNotNull('user_id'))
-            ->when($filters['actor'] === 'anonymous', fn (Builder $query) => $query->whereNull('user_id'))
             ->when($filters['visitor'] !== '', fn (Builder $query) => $query->where('visitor_hash', $filters['visitor']));
+    }
+
+    /** @param array<string, mixed> $filters @return array{total:int,succeeded:int,failed:int,locked:int} */
+    private function loginAttempts(array $filters): array
+    {
+        $actions = [
+            'auth.login.succeeded',
+            'auth.login.failed',
+            'auth.login.locked',
+        ];
+
+        if (! Schema::hasTable('activity_events')) {
+            return ['total' => 0, 'succeeded' => 0, 'failed' => 0, 'locked' => 0];
+        }
+
+        $counts = ActivityEvent::query()
+            ->whereBetween('occurred_at', [$filters['from_utc'], $filters['to_utc']])
+            ->whereIn('action', $actions)
+            ->selectRaw('action, COUNT(*) AS aggregate_count')
+            ->groupBy('action')
+            ->pluck('aggregate_count', 'action');
+
+        $succeeded = (int) ($counts['auth.login.succeeded'] ?? 0);
+        $failed = (int) ($counts['auth.login.failed'] ?? 0);
+        $locked = (int) ($counts['auth.login.locked'] ?? 0);
+
+        return [
+            'total' => $succeeded + $failed + $locked,
+            'succeeded' => $succeeded,
+            'failed' => $failed,
+            'locked' => $locked,
+        ];
     }
 
     /** @return array<string, mixed> */
@@ -240,11 +277,10 @@ class WebsiteStatisticsService
             'to' => $to->format('Y-m-d'),
             'from_utc' => $from->utc(),
             'to_utc' => $to->utc(),
-            'segment' => $this->oneOf($request, 'segment', ['publik', 'login', 'pemuridan', 'ibadah', 'developer']),
+            'segment' => $this->oneOf($request, 'segment', ['publik', 'login']),
             'language' => $this->languageFilter($request),
             'device' => $this->oneOf($request, 'device', ['desktop', 'mobile', 'tablet', 'tv', 'console', 'other', 'unknown']),
             'route' => substr(trim((string) $request->query('route', '')), 0, 180),
-            'actor' => $this->oneOf($request, 'actor', ['user', 'anonymous']),
             'visitor' => preg_match('/^[a-f0-9]{64}$/', (string) $request->query('visitor')) === 1 ? (string) $request->query('visitor') : '',
         ];
     }

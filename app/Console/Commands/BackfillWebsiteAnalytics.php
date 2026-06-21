@@ -34,8 +34,9 @@ class BackfillWebsiteAnalytics extends Command
         $query->orderBy('id')->chunkById($chunk, function ($activities) use ($writer, $identities, &$processed, &$failed): void {
             foreach ($activities as $activity) {
                 try {
-                    $writer->record($activity, $identities->legacy($activity));
-                    $processed++;
+                    if ($writer->record($activity, $identities->legacy($activity)) !== null) {
+                        $processed++;
+                    }
                 } catch (Throwable) {
                     $failed++;
                 }

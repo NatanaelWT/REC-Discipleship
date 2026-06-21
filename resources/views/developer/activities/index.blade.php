@@ -42,6 +42,11 @@
         <div class="activity-filter-submit"><button class="button" type="submit">Terapkan</button></div>
       </div>
 
+      <label class="activity-developer-toggle">
+        <input type="checkbox" name="include_developer" value="1" @checked(($filters['include_developer'] ?? '') === '1')>
+        <span><strong>Tampilkan aktivitas developer</strong><small>Secara default aktivitas dengan role developer disembunyikan dari daftar.</small></span>
+      </label>
+
       <details class="activity-filter-advanced" data-activity-advanced-filters data-advanced-open="{{ $activeAdvancedCount > 0 ? 'true' : 'false' }}" @if ($activeAdvancedCount > 0) open @endif>
         <summary><span>Filter lanjutan</span><small>{{ $activeAdvancedCount > 0 ? $activeAdvancedCount.' aktif' : 'Username, role, route, HTTP, dan lainnya' }}</small><span class="activity-disclosure-icon" aria-hidden="true"></span></summary>
         <div class="activity-filter-grid">

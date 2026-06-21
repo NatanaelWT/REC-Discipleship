@@ -12351,6 +12351,7 @@ textarea:focus-visible {
 }
 
 .analytics-filter-card,
+.analytics-login-card,
 .analytics-trend-card,
 .analytics-breakdown-card,
 .analytics-visitors-card {
@@ -12455,6 +12456,36 @@ textarea:focus-visible {
   font-size: 30px;
   line-height: 1;
 }
+
+.analytics-login-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.analytics-login-metric {
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, .28);
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.analytics-login-metric span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.analytics-login-metric strong {
+  color: #0f172a;
+  font-size: 24px;
+}
+
+.analytics-login-metric.is-succeeded { border-left: 4px solid #059669; }
+.analytics-login-metric.is-failed { border-left: 4px solid #dc2626; }
+.analytics-login-metric.is-locked { border-left: 4px solid #d97706; }
 
 .analytics-chart-scroll {
   overflow-x: auto;
@@ -12641,11 +12672,13 @@ details[open] > summary .activity-disclosure-icon::after {
 @media (max-width: 1180px) {
   .analytics-filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .analytics-metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .analytics-login-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px) {
   .analytics-filter-grid,
   .analytics-metric-grid,
+  .analytics-login-grid,
   .analytics-breakdown-grid { grid-template-columns: 1fr; }
   .analytics-breakdown-card.is-wide { grid-column: auto; }
   .analytics-section-head,
@@ -13074,6 +13107,33 @@ details[open] > summary .activity-disclosure-icon::after {
 
 .activity-filter-submit .button {
   min-height: 44px;
+}
+
+.activity-developer-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: fit-content;
+  color: #334155;
+  cursor: pointer;
+}
+
+.activity-developer-toggle input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.activity-developer-toggle span {
+  display: grid;
+  gap: 2px;
+}
+
+.activity-developer-toggle small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .activity-filter-advanced,
