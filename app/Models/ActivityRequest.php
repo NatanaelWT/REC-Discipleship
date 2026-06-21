@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\UtcDateTimeCast;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -21,8 +22,8 @@ class ActivityRequest extends Model
         return [
             'query_data' => 'array',
             'input_data' => 'array',
-            'started_at' => 'immutable_datetime',
-            'completed_at' => 'immutable_datetime',
+            'started_at' => UtcDateTimeCast::class,
+            'completed_at' => UtcDateTimeCast::class,
             'duration_ms' => 'decimal:3',
         ];
     }

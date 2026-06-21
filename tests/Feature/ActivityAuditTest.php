@@ -54,6 +54,15 @@ class ActivityAuditTest extends TestCase
         ]);
     }
 
+    public function test_audit_utc_columns_are_cast_as_utc_before_jakarta_display_conversion(): void
+    {
+        $response = $this->get('/_audit-test/view')->assertOk();
+        $activity = ActivityRequest::query()->findOrFail($response->headers->get('X-Activity-Request-Id'));
+
+        $this->assertSame('UTC', $activity->started_at->getTimezone()->getName());
+        $this->assertSame('+07:00', $activity->started_at->setTimezone('Asia/Jakarta')->format('P'));
+    }
+
     public function test_secret_request_values_are_redacted_and_file_bodies_are_not_stored(): void
     {
         $response = $this->post('/_audit-test/input', [

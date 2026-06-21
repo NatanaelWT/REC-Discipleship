@@ -22,6 +22,7 @@ use App\Models\WorshipServiceScheduleRole;
 use App\Models\WorshipServiceScheduleWeek;
 use App\Observers\AuditableModelObserver;
 use App\Services\Activity\ActivityContext;
+use App\Services\AppConfig\AppConfigService;
 use App\Services\Auth\CurrentUserContext;
 use App\Services\Branches\BranchCatalog;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
@@ -47,6 +48,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $timezone = AppConfigService::runtimeValues()['app_timezone'] ?? 'Asia/Jakarta';
+        if (! in_array($timezone, \DateTimeZone::listIdentifiers(), true)) {
+            $timezone = 'Asia/Jakarta';
+        }
+        config(['app.timezone' => $timezone]);
+        date_default_timezone_set($timezone);
+
         foreach ([
             AppConfig::class,
             Branch::class,

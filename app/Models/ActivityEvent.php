@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\UtcDateTimeCast;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -18,7 +19,7 @@ class ActivityEvent extends Model
             'after_values' => 'array',
             'changed_values' => 'array',
             'metadata' => 'array',
-            'occurred_at' => 'immutable_datetime',
+            'occurred_at' => UtcDateTimeCast::class,
         ];
     }
 
