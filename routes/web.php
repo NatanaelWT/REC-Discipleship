@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Developer\DeveloperActivityController;
 use App\Http\Controllers\Developer\DeveloperConfigController;
 use App\Http\Controllers\Developer\DeveloperController;
+use App\Http\Controllers\Developer\DeveloperStatisticsController;
 use App\Http\Controllers\Developer\DeveloperUserController;
 use App\Http\Controllers\Discipleship\DashboardController as DiscipleshipDashboardController;
 use App\Http\Controllers\Discipleship\DifficultQuestionController as DiscipleshipDifficultQuestionController;
@@ -50,6 +51,7 @@ Route::group([], function (): void {
         Route::post('/users/{user}/password', [DeveloperUserController::class, 'resetPassword'])->name('users.password');
         Route::get('/config', [DeveloperConfigController::class, 'index'])->name('config');
         Route::post('/config', [DeveloperConfigController::class, 'update'])->name('config.update');
+        Route::get('/statistics', [DeveloperStatisticsController::class, 'index'])->name('statistics');
         Route::get('/activities', [DeveloperActivityController::class, 'index'])->name('activities');
         Route::get('/activities/{activityRequest}', [DeveloperActivityController::class, 'show'])->name('activities.show');
     });

@@ -8,12 +8,17 @@ use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\Console\Command\Command;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Schedule::command('analytics:geoip-update')
+    ->weeklyOn(1, '03:30')
+    ->withoutOverlapping();
 
 Artisan::command('discipleship:cache-warm', function (BranchCatalog $branches, DiscipleshipDashboardSummaryQuery $summary): int {
     RuntimeBootstrap::load();

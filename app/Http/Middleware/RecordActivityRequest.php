@@ -8,6 +8,7 @@ use App\Services\Activity\ActivityRecorder;
 use App\Services\Activity\ActivityRequestClassifier;
 use App\Services\Activity\ActorSnapshotFactory;
 use App\Services\Activity\SensitiveDataSanitizer;
+use App\Services\Analytics\WebsiteAnalyticsRecorder;
 use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -118,6 +119,15 @@ class RecordActivityRequest
             $actorAfter = $this->actors->current($request);
             $actor = $this->actors->preferAuthenticated($actorBefore, $actorAfter);
             $this->finalize($id, $request, $response, $actor, $startedNs);
+
+            try {
+                app(WebsiteAnalyticsRecorder::class)->record($id, $request, $response);
+            } catch (Throwable $analyticsException) {
+                Log::warning('Website analytics could not be recorded', [
+                    'activity_request_id' => $id,
+                    'exception' => $analyticsException,
+                ]);
+            }
 
             if ($strict) {
                 DB::commit();

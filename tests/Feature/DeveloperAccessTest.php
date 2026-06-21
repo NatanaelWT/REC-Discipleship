@@ -38,6 +38,7 @@ class DeveloperAccessTest extends TestCase
         $this->get('/developer')->assertRedirect('/pemuridan/dashboard?error=access_denied');
         $this->get('/developer/users')->assertRedirect('/pemuridan/dashboard?error=access_denied');
         $this->get('/developer/config')->assertRedirect('/pemuridan/dashboard?error=access_denied');
+        $this->get('/developer/statistics')->assertRedirect('/pemuridan/dashboard?error=access_denied');
     }
 
     public function test_developer_bypasses_existing_access_gates(): void

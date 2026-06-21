@@ -12346,6 +12346,224 @@ textarea:focus-visible {
   font-weight: 800;
 }
 
+.page-analytics .container {
+  max-width: 1380px;
+}
+
+.analytics-filter-card,
+.analytics-trend-card,
+.analytics-breakdown-card,
+.analytics-visitors-card {
+  margin-bottom: 18px;
+}
+
+.analytics-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.analytics-section-head > div {
+  display: grid;
+  gap: 5px;
+}
+
+.analytics-section-head span {
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.analytics-section-head h2,
+.analytics-section-head h3 {
+  margin: 0;
+}
+
+.analytics-section-head small,
+.analytics-response-note {
+  color: #64748b;
+}
+
+.analytics-active-filter {
+  margin: -4px 0 16px;
+  padding: 10px 13px;
+  border-radius: 12px;
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.analytics-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.analytics-filter-grid label {
+  display: grid;
+  gap: 6px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.analytics-filter-grid input,
+.analytics-filter-grid select {
+  width: 100%;
+}
+
+.analytics-filter-submit .button {
+  width: 100%;
+  min-height: 44px;
+}
+
+.analytics-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.analytics-metric {
+  display: grid;
+  gap: 7px;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, .28);
+  border-radius: 19px;
+  background: linear-gradient(150deg, #fff, #f8fafc);
+  box-shadow: 0 12px 25px rgba(15, 23, 42, .06);
+}
+
+.analytics-metric span,
+.analytics-metric small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.analytics-metric strong {
+  color: #0f172a;
+  font-family: "Fraunces", serif;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.analytics-chart-scroll {
+  overflow-x: auto;
+}
+
+.analytics-trend-svg {
+  display: block;
+  min-width: 720px;
+  width: 100%;
+  height: 250px;
+}
+
+.analytics-chart-grid-line {
+  stroke: #e2e8f0;
+  stroke-width: 1;
+}
+
+.analytics-chart-line {
+  fill: none;
+  stroke: #0f766e;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.analytics-chart-dot {
+  fill: #fff;
+  stroke: #0f766e;
+  stroke-width: 3;
+}
+
+.analytics-response-note {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.analytics-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.analytics-breakdown-card.is-wide {
+  grid-column: 1 / -1;
+}
+
+.analytics-bars {
+  display: grid;
+  gap: 14px;
+}
+
+.analytics-bar-row {
+  display: grid;
+  gap: 7px;
+}
+
+.analytics-bar-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.analytics-bar-label strong {
+  color: #1e293b;
+  overflow-wrap: anywhere;
+}
+
+.analytics-bar-label span {
+  color: #64748b;
+  font-size: 12px;
+  text-align: right;
+}
+
+.analytics-bar-track {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.analytics-bar-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0f766e, #14b8a6);
+}
+
+.analytics-empty {
+  padding: 24px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  color: #64748b;
+  text-align: center;
+}
+
+.analytics-visitors-card .analytics-section-head {
+  padding: 20px 20px 0;
+}
+
+@media (max-width: 1180px) {
+  .analytics-filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .analytics-metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .analytics-filter-grid,
+  .analytics-metric-grid,
+  .analytics-breakdown-grid { grid-template-columns: 1fr; }
+  .analytics-breakdown-card.is-wide { grid-column: auto; }
+  .analytics-section-head,
+  .analytics-bar-label { flex-direction: column; }
+  .analytics-bar-label span { text-align: left; }
+}
+
 .developer-panel {
   display: grid;
   gap: 16px;
