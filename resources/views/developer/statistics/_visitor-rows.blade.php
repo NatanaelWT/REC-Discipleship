@@ -5,6 +5,6 @@
     <td>{{ number_format($visitor['page_views'], 0, ',', '.') }}</td>
     <td>{{ number_format($visitor['sessions'], 0, ',', '.') }}</td>
     <td>{{ $visitor['last_seen_at']->format('d-m-Y H:i') }}</td>
-    <td><a class="button secondary small" href="{{ route('developer.statistics', array_merge(request()->except('visitor'), ['visitor' => $visitor['visitor_hash']])) }}">Lihat</a></td>
+    <td><a class="button secondary small developer-detail-link" href="{{ route('developer.statistics', array_merge(request()->except('visitor'), ['visitor' => $visitor['visitor_hash']])) }}"><span>Lihat</span><span aria-hidden="true">→</span></a></td>
   </tr>
 @endforeach

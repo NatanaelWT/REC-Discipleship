@@ -3,6 +3,7 @@
     'settings' => $settings,
     'currentPage' => 'developer_activities',
     'bodyClass' => 'page-developer page-activities',
+    'showTitle' => false,
 ])
 
 @php
@@ -16,10 +17,17 @@
 @endphp
 
 @section('content')
-  <section class="card developer-panel">
+  @include('developer._header', [
+    'activePage' => 'developer_activities',
+    'title' => 'Detail Aktivitas',
+    'description' => 'Periksa konteks request, perubahan record, metadata teknis, dan detail kegagalan.',
+    'eyebrow' => 'Audit Detail',
+  ])
+
+  <section class="card developer-panel developer-section-card activity-request-summary">
     <div class="card-row">
       <div><h2>Request {{ $activity->id }}</h2><p class="developer-muted">{{ $activity->method }} {{ $activity->path }}</p></div>
-      <a class="button secondary" href="{{ $backUrl }}">Kembali</a>
+      <a class="button secondary developer-link-button" href="{{ $backUrl }}"><span aria-hidden="true">←</span><span>Kembali ke Aktivitas</span></a>
     </div>
     <div class="activity-facts">
       <div><span>Waktu</span><strong>{{ $started?->format('d-m-Y H:i:s.u') ?? '-' }}</strong></div>

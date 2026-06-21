@@ -3,9 +3,17 @@
     'settings' => $settings,
     'currentPage' => 'developer_users',
     'bodyClass' => 'page-developer page-developer-users',
+    'showTitle' => false,
 ])
 
 @section('content')
+    @include('developer._header', [
+      'activePage' => 'developer_users',
+      'title' => 'Manajemen User',
+      'description' => 'Buat akun, atur role dan cabang, serta kelola akses pengguna aplikasi.',
+      'eyebrow' => 'Access Management',
+    ])
+
     @if ($statusCode === 'created')
       <div class="alert success">User dibuat.</div>
     @elseif ($statusCode === 'updated')
@@ -16,11 +24,12 @@
       <div class="alert danger">{{ $errorMessages[$errorCode] ?? 'Perubahan ditolak.' }}</div>
     @endif
 
-    <section class="card developer-panel">
-      <div class="card-row">
-        <h2>Buat User</h2>
+    <section class="card developer-panel developer-section-card">
+      <div class="developer-section-head">
+        <span class="developer-section-icon">@include('developer._icon', ['name' => 'users'])</span>
+        <div><span class="developer-section-kicker">Akun baru</span><h2>Buat User</h2><p>Tambahkan akun dan tentukan cakupan akses awalnya.</p></div>
       </div>
-      <form method="post" action="{{ route('developer.users.store') }}" class="developer-form-grid" data-role-aware-user-form>
+      <form method="post" action="{{ route('developer.users.store') }}" class="developer-form-grid developer-create-user-form" data-role-aware-user-form>
         @csrf
         <label>
           <span>Username</span>
@@ -55,14 +64,16 @@
           </select>
         </label>
         <div class="developer-form-actions">
-          <button class="btn" type="submit">Buat User</button>
+          <button class="btn developer-primary-action" type="submit"><span>Buat User</span><span aria-hidden="true">→</span></button>
         </div>
       </form>
     </section>
 
-    <section class="card developer-panel">
-      <div class="card-row">
-        <h2>Daftar User</h2>
+    <section class="card developer-panel developer-section-card">
+      <div class="developer-section-head">
+        <span class="developer-section-icon is-blue">@include('developer._icon', ['name' => 'users'])</span>
+        <div><span class="developer-section-kicker">Akun terdaftar</span><h2>Daftar User</h2><p>Buka satu akun untuk mengubah role, cabang, status, atau password.</p></div>
+        <span class="developer-count-pill">{{ number_format($users->count(), 0, ',', '.') }} user</span>
       </div>
       <div class="developer-user-list">
         @foreach ($users as $user)
@@ -73,10 +84,20 @@
             $requiresBranch = $scope === 'pemuridan_cabang';
             $branchId = $user->branch_id !== null ? (int) $user->branch_id : null;
             $isExpanded = $expandedUserId === (int) $user->getKey();
+            $roleLabel = $roleOptions[$scope] ?? ucfirst(str_replace('_', ' ', $scope));
+            $branchOption = collect($branchOptions)->firstWhere('id', $branchId);
+            $branchLabel = is_array($branchOption) ? (string) ($branchOption['label'] ?? 'Tanpa cabang') : 'Tanpa cabang';
+            $userInitial = strtoupper(mb_substr((string) $user->username, 0, 1));
           @endphp
           <details class="developer-user-item" data-developer-user{{ $isExpanded ? ' open' : '' }}>
-            <summary class="developer-user-toggle">{{ $user->username }}</summary>
+            <summary class="developer-user-toggle">
+              <span class="developer-user-avatar">{{ $userInitial }}</span>
+              <span class="developer-user-identity"><strong>{{ $user->username }}</strong><small>{{ $roleLabel }} · {{ $requiresBranch ? $branchLabel : 'Tanpa cabang' }}</small></span>
+              <span class="developer-user-status {{ $active ? 'is-active' : 'is-inactive' }}">{{ $active ? 'Aktif' : 'Nonaktif' }}</span>
+              <span class="developer-user-chevron" aria-hidden="true">⌄</span>
+            </summary>
             <div class="developer-user-detail">
+              <div class="developer-user-detail-head"><strong>Pengaturan akses</strong><span>Perubahan langsung berlaku pada login berikutnya.</span></div>
               <form method="post" action="{{ route('developer.users.update', $user) }}" class="developer-user-edit-form" data-role-aware-user-form>
                 @csrf
                 <label data-user-branch-field>
@@ -106,11 +127,12 @@
                     <input type="hidden" name="is_active" value="1">
                   @endif
                 </label>
-                <button class="btn secondary" type="submit">Simpan</button>
+                <button class="btn secondary" type="submit">Simpan Perubahan</button>
               </form>
 
               <form method="post" action="{{ route('developer.users.password', $user) }}" class="developer-password-form">
                 @csrf
+                <div class="developer-password-copy"><strong>Reset password</strong><small>Gunakan minimal 6 karakter.</small></div>
                 <label>
                   <span>Password Baru</span>
                   <input type="password" name="password" minlength="6" @if (! $isSelf) required @endif @if ($isSelf) disabled aria-disabled="true" @endif autocomplete="new-password">

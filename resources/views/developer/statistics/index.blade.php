@@ -3,6 +3,7 @@
     'settings' => $settings,
     'currentPage' => 'developer_statistics',
     'bodyClass' => 'page-developer page-analytics',
+    'showTitle' => false,
 ])
 
 @section('content')
@@ -29,10 +30,17 @@
     $remainingVisitors = $visitorCollection->slice(10)->values();
   @endphp
 
-  <section class="card analytics-filter-card">
+  @include('developer._header', [
+    'activePage' => 'developer_statistics',
+    'title' => 'Statistik Website',
+    'description' => 'Analisis kunjungan anonim pada halaman publik, perangkat, bahasa, dan pola akses.',
+    'eyebrow' => 'Public Analytics',
+  ])
+
+  <section class="card analytics-filter-card developer-section-card">
     <div class="analytics-section-head">
       <div><span>Filter statistik</span><h2>Statistik Kunjungan Publik</h2></div>
-      <a class="button secondary" href="{{ route('developer.statistics') }}">Reset</a>
+      <a class="button secondary developer-link-button" href="{{ route('developer.statistics') }}"><span>Reset filter</span><span aria-hidden="true">↺</span></a>
     </div>
     <p class="developer-muted">Hanya kunjungan anonim pada halaman publik, materi publik, dan halaman login yang dihitung. Aktivitas setelah login tersedia di menu Aktivitas.</p>
     @if (($filters['visitor'] ?? '') !== '')

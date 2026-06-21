@@ -231,10 +231,18 @@ function render_app_script_tag(): void
     echo '<script src="/assets/app.js'.$jsVersion."\"></script>\n";
 }
 
-function render_sidebar_nav_link(string $label, string $href, bool $active, string $indent = '        '): void
+function render_sidebar_nav_link(string $label, string $href, bool $active, string $indent = '        ', string $icon = ''): void
 {
     $class = $active ? 'nav-item active' : 'nav-item';
     $href = render_sidebar_nav_href($href);
+    if ($icon !== '') {
+        $class .= ' nav-item-visual';
+        echo $indent.'<a class="'.h($class).'" href="'.h($href).'" data-nav-icon="'.h($icon).'">'
+            .'<span class="nav-item-visual-icon" aria-hidden="true"></span><span>'.h($label)."</span></a>\n";
+
+        return;
+    }
+
     echo $indent.'<a class="'.h($class).'" href="'.h($href).'">'.h($label)."</a>\n";
 }
 
@@ -273,7 +281,7 @@ function render_sidebar_nav_group(string $label, string $groupKey, array $items,
             $extraActivePages = [];
         }
         $isActive = $page !== '' && ($page === $currentPage || in_array($currentPage, $extraActivePages, true));
-        render_sidebar_nav_link((string) ($item['label'] ?? ''), $href, $isActive, '            ');
+        render_sidebar_nav_link((string) ($item['label'] ?? ''), $href, $isActive, '            ', (string) ($item['icon'] ?? ''));
     }
     echo "          </div>\n";
     echo "        </details>\n";
@@ -284,11 +292,11 @@ function render_sidebar_navigation(string $currentPage, string $currentBranch, b
     $developerAccess = function_exists('is_developer_session') && is_developer_session();
     if ($developerAccess) {
         render_sidebar_nav_group('Developer', 'developer', [
-            ['label' => 'Dashboard', 'page' => 'developer_dashboard', 'href' => route('developer.dashboard')],
-            ['label' => 'User', 'page' => 'developer_users', 'href' => route('developer.users')],
-            ['label' => 'Config', 'page' => 'developer_config', 'href' => route('developer.config')],
-            ['label' => 'Statistik', 'page' => 'developer_statistics', 'href' => route('developer.statistics')],
-            ['label' => 'Aktivitas', 'page' => 'developer_activities', 'href' => route('developer.activities')],
+            ['label' => 'Dashboard', 'page' => 'developer_dashboard', 'href' => route('developer.dashboard'), 'icon' => 'dashboard'],
+            ['label' => 'User', 'page' => 'developer_users', 'href' => route('developer.users'), 'icon' => 'users'],
+            ['label' => 'Config', 'page' => 'developer_config', 'href' => route('developer.config'), 'icon' => 'config'],
+            ['label' => 'Statistik', 'page' => 'developer_statistics', 'href' => route('developer.statistics'), 'icon' => 'statistics'],
+            ['label' => 'Aktivitas', 'page' => 'developer_activities', 'href' => route('developer.activities'), 'icon' => 'activities'],
         ], $currentPage, $activeGroup);
 
         render_sidebar_nav_group('Ibadah Umum', 'worship', [
