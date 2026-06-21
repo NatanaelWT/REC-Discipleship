@@ -166,6 +166,15 @@ class WebsiteAnalyticsTest extends TestCase
     {
         CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-21 17:15:00', 'UTC'));
         $this->withHeader('Accept-Language', 'id-ID')->get('/_analytics-test/page')->assertOk();
+        $this->get('/_analytics-test/page')->assertOk();
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-22 01:00:00', 'UTC'));
+        $this->get('/_analytics-test/page')->assertOk();
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-22 03:00:00', 'UTC'));
+        $this->get('/_analytics-test/page')->assertOk();
+        $this->get('/_analytics-test/page')->assertOk();
+        $this->get('/_analytics-test/page')->assertOk();
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-22 05:00:00', 'UTC'));
+        $this->get('/_analytics-test/page')->assertOk();
 
         $dashboard = app(WebsiteStatisticsService::class)->dashboard(Request::create('/developer/statistics', 'GET', [
             'range' => 'custom',
@@ -173,10 +182,59 @@ class WebsiteAnalyticsTest extends TestCase
             'to' => '2026-06-22',
             'language' => 'id-ID',
         ]));
-        $midnight = collect($dashboard['accessHours'])->firstWhere('key', '00');
 
-        $this->assertSame(1, $midnight['count']);
-        $this->assertSame(1, $midnight['visitors']);
+        $this->assertSame(['10', '00', '08', '12'], array_column($dashboard['accessHours'], 'key'));
+        $this->assertSame([3, 2, 1, 1], array_column($dashboard['accessHours'], 'count'));
+        $this->assertNotContains('01', array_column($dashboard['accessHours'], 'key'));
+    }
+
+    public function test_distribution_cards_show_five_rows_before_native_disclosure(): void
+    {
+        $rows = collect(range(1, 7))->map(static fn (int $index): array => [
+            'key' => (string) $index,
+            'label' => 'Item '.$index,
+            'count' => 10 - $index,
+            'visitors' => $index,
+        ])->all();
+
+        $html = view('developer.statistics._bars', [
+            'title' => 'Pengujian',
+            'rows' => $rows,
+        ])->render();
+
+        $this->assertStringContainsString('data-visible-rows="5"', $html);
+        $this->assertStringContainsString('Lihat 2 lainnya', $html);
+        $this->assertStringContainsString('<details class="analytics-more">', $html);
+        $this->assertSame(7, substr_count($html, 'class="analytics-bar-row"'));
+    }
+
+    public function test_visitor_table_shows_ten_rows_before_remaining_visitors(): void
+    {
+        $occurredAt = CarbonImmutable::now('UTC')->format('Y-m-d H:i:s.u');
+        foreach (range(1, 12) as $index) {
+            DB::table('website_page_views')->insert([
+                'request_id' => sprintf('03%024d', $index),
+                'session_id' => sprintf('04%024d', $index),
+                'visitor_hash' => hash('sha256', 'compact-visitor-'.$index),
+                'identity_source' => 'anonymous_cookie',
+                'actor_type' => 'anonymous',
+                'segment' => 'publik',
+                'route_name' => 'compact.page',
+                'path' => '/compact',
+                'language_code' => 'id-ID',
+                'language_name' => 'Indonesia (id-ID)',
+                'device_type' => 'desktop',
+                'is_bot' => false,
+                'is_prefetch' => false,
+                'http_status' => 200,
+                'occurred_at' => $occurredAt,
+            ]);
+        }
+
+        $response = $this->actingAs($this->developer())->get('/developer/statistics?range=today')->assertOk();
+
+        $this->assertSame(10, substr_count($response->getContent(), 'analytics-primary-visitor-row'));
+        $response->assertSee('Lihat 2 pengunjung lainnya');
     }
 
     public function test_dashboard_query_count_stays_bounded_with_one_hundred_thousand_page_views(): void

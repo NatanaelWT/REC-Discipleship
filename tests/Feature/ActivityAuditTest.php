@@ -224,6 +224,84 @@ class ActivityAuditTest extends TestCase
             ->assertSee('Request '.$activity->id);
     }
 
+    public function test_activity_list_uses_twenty_rows_and_preserves_filters_in_cursor_pagination(): void
+    {
+        $startedAt = now('UTC');
+        foreach (range(1, 25) as $index) {
+            ActivityRequest::query()->create([
+                'actor_type' => 'anonymous',
+                'method' => 'GET',
+                'path' => '/compact-activity/'.$index,
+                'category' => 'request',
+                'action' => 'request.page_view',
+                'http_status' => 200,
+                'outcome' => 'succeeded',
+                'started_at' => $startedAt->subSeconds($index),
+                'completed_at' => $startedAt->subSeconds($index),
+            ]);
+        }
+
+        $response = $this->actingAs($this->developer())
+            ->get('/developer/activities?actor=anonymous')
+            ->assertOk()
+            ->assertSee('Maksimal 20 per halaman')
+            ->assertSee('Berikutnya')
+            ->assertSee('actor=anonymous', false);
+
+        $this->assertSame(20, substr_count($response->getContent(), 'data-activity-row'));
+    }
+
+    public function test_advanced_activity_filters_open_only_when_an_advanced_filter_is_active(): void
+    {
+        $this->actingAs($this->developer())
+            ->get('/developer/activities?actor=user')
+            ->assertOk()
+            ->assertSee('data-advanced-open="false"', false);
+
+        $this->get('/developer/activities?username=developer')
+            ->assertOk()
+            ->assertSee('data-advanced-open="true"', false)
+            ->assertSee('1 aktif');
+    }
+
+    public function test_activity_technical_panels_are_folded_and_failed_error_opens_automatically(): void
+    {
+        $developer = $this->developer();
+        $activity = ActivityRequest::query()->create([
+            'actor_type' => 'user',
+            'user_id' => $developer->id,
+            'username' => $developer->username,
+            'role' => 'developer',
+            'method' => 'GET',
+            'path' => '/failed-request',
+            'category' => 'request',
+            'action' => 'request.exception',
+            'http_status' => 500,
+            'outcome' => 'failed',
+            'error_type' => RuntimeException::class,
+            'error_message' => 'Pengujian error',
+            'started_at' => now('UTC'),
+            'completed_at' => now('UTC'),
+        ]);
+        ActivityEvent::query()->create([
+            'request_id' => $activity->id,
+            'category' => 'request',
+            'action' => 'request.exception',
+            'changed_values' => ['outcome' => ['before' => 'pending', 'after' => 'failed']],
+            'metadata' => ['source' => 'test'],
+            'occurred_at' => now('UTC'),
+        ]);
+
+        $response = $this->actingAs($developer)
+            ->get('/developer/activities/'.$activity->id)
+            ->assertOk()
+            ->assertSee('data-activity-technical="query"', false)
+            ->assertSee('data-auto-open-error', false)
+            ->assertSee('Sebelum, sesudah, dan metadata');
+
+        $this->assertStringNotContainsString('data-activity-technical="query" open', $response->getContent());
+    }
+
     private function registerAuditTestRoutes(): void
     {
         Route::middleware('web')->group(function (): void {
