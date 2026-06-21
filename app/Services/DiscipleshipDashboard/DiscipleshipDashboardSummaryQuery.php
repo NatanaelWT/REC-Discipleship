@@ -241,10 +241,10 @@ class DiscipleshipDashboardSummaryQuery
     /** @param array<int, int> $branchIds */
     private function targetRows(array $branchIds): Collection
     {
-        return $this->query(static fn () => DB::table('discipleship_targets')
-            ->whereIn('branch_id', $branchIds)
+        return $this->query(static fn () => DB::table('branches')
+            ->whereIn('id', $branchIds)
             ->get([
-                'branch_id',
+                'id as branch_id',
                 'camp_gap_participant_target',
                 'msk_completion_target',
                 'dg1_completion_target',

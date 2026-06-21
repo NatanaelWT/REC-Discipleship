@@ -12,9 +12,10 @@ class DiscipleshipTargetCacheTest extends TestCase
 {
     public function test_target_cache_is_reused_and_invalidated_after_save(): void
     {
-        Schema::create('discipleship_targets', function (Blueprint $table): void {
+        Schema::create('branches', function (Blueprint $table): void {
             $table->id();
-            $table->unsignedBigInteger('branch_id')->unique();
+            $table->string('label')->unique();
+            $table->boolean('is_active')->default(true);
             $table->unsignedInteger('camp_gap_participant_target')->default(50);
             $table->unsignedInteger('msk_completion_target')->default(50);
             $table->unsignedInteger('dg1_completion_target')->default(50);
@@ -22,8 +23,10 @@ class DiscipleshipTargetCacheTest extends TestCase
             $table->unsignedInteger('dg3_completion_target')->default(50);
             $table->timestamps();
         });
-        DB::table('discipleship_targets')->insert([
-            'branch_id' => 1,
+        DB::table('branches')->insert([
+            'id' => 1,
+            'label' => 'Kutisari',
+            'is_active' => true,
             'camp_gap_participant_target' => 10,
             'msk_completion_target' => 10,
             'dg1_completion_target' => 10,
@@ -38,7 +41,7 @@ class DiscipleshipTargetCacheTest extends TestCase
 
         $targetQueries = 0;
         DB::listen(static function ($query) use (&$targetQueries): void {
-            if (str_contains($query->sql, 'discipleship_targets')) {
+            if (str_contains($query->sql, 'branches')) {
                 $targetQueries++;
             }
         });

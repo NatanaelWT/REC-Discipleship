@@ -11,7 +11,6 @@ use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipMeetingReport;
 use App\Models\DiscipleshipPerson;
 use App\Models\DiscipleshipRelationship;
-use App\Models\DiscipleshipTarget;
 use App\Models\MskParticipant;
 use App\Models\PublicMaterialFile;
 use App\Models\User;
@@ -65,7 +64,6 @@ class AppServiceProvider extends ServiceProvider
             DiscipleshipMeetingReport::class,
             DiscipleshipPerson::class,
             DiscipleshipRelationship::class,
-            DiscipleshipTarget::class,
             MskParticipant::class,
             PublicMaterialFile::class,
             User::class,

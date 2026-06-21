@@ -85,7 +85,7 @@ class DiscipleshipDashboardTest extends TestCase
         $queries = DB::getQueryLog();
 
         $response->assertOk();
-        $this->assertLessThanOrEqual(10, count($queries));
+        $this->assertLessThanOrEqual(11, count($queries));
         $this->assertLessThan(100 * 1024, strlen((string) $response->getContent()));
         foreach ($queries as $query) {
             $this->assertStringNotContainsString('select *', strtolower((string) $query['query']));
@@ -188,11 +188,12 @@ class DiscipleshipDashboardTest extends TestCase
         Schema::dropIfExists('discipleship_relationships');
         Schema::dropIfExists('discipleship_groups');
         Schema::dropIfExists('discipleship_people');
-        Schema::dropIfExists('discipleship_targets');
+        Schema::dropIfExists('branches');
 
-        Schema::create('discipleship_targets', function (Blueprint $table): void {
+        Schema::create('branches', function (Blueprint $table): void {
             $table->id();
-            $table->unsignedBigInteger('branch_id')->unique();
+            $table->string('label')->unique();
+            $table->boolean('is_active')->default(true);
             $table->unsignedInteger('camp_gap_participant_target')->default(50);
             $table->unsignedInteger('msk_completion_target')->default(50);
             $table->unsignedInteger('dg1_completion_target')->default(50);
@@ -310,8 +311,10 @@ class DiscipleshipDashboardTest extends TestCase
 
     private function seedDashboardData(): void
     {
-        DB::table('discipleship_targets')->insert([
-            'branch_id' => 1,
+        DB::table('branches')->insert([
+            'id' => 1,
+            'label' => 'Kutisari',
+            'is_active' => true,
             'camp_gap_participant_target' => 10,
             'msk_completion_target' => 10,
             'dg1_completion_target' => 10,

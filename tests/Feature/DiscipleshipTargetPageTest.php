@@ -11,7 +11,7 @@ class DiscipleshipTargetPageTest extends TestCase
 {
     public function test_branch_user_keeps_editable_target_card_layout(): void
     {
-        $this->createTargetTable();
+        $this->createBranchTable();
         $this->seedTargets();
         $this->actingAsRecUser();
 
@@ -25,7 +25,7 @@ class DiscipleshipTargetPageTest extends TestCase
 
     public function test_central_user_filters_one_branch_in_readonly_card_layout(): void
     {
-        $this->createTargetTable();
+        $this->createBranchTable();
         $this->seedTargets();
         $this->actingAsRecUser('recpusat', null, 'pemuridan_pusat');
 
@@ -44,7 +44,7 @@ class DiscipleshipTargetPageTest extends TestCase
 
     public function test_central_all_filter_groups_every_branch_by_target_type(): void
     {
-        $this->createTargetTable();
+        $this->createBranchTable();
         $this->seedTargets();
         $this->actingAsRecUser('recpusat', null, 'pemuridan_pusat');
 
@@ -59,13 +59,13 @@ class DiscipleshipTargetPageTest extends TestCase
             ->assertSeeInOrder([
                 'data-target-section="msk_completed"',
                 'Target Total Selesai MSK',
-                'data-branch-code="kutisari"',
-                '<strong>112</strong>',
                 'data-branch-code="gm"',
                 '<strong>222</strong>',
+                'data-branch-code="kutisari"',
+                '<strong>112</strong>',
                 'data-target-section="dg1_people"',
-                '<strong>113</strong>',
                 '<strong>223</strong>',
+                '<strong>113</strong>',
             ], false)
             ->assertDontSee('name="target_msk_completed"', false)
             ->assertDontSee('Simpan Target');
@@ -73,7 +73,7 @@ class DiscipleshipTargetPageTest extends TestCase
 
     public function test_developer_can_view_readonly_targets_for_all_branches(): void
     {
-        $this->createTargetTable();
+        $this->createBranchTable();
         $this->seedTargets();
         $this->actingAsRecUser('developer', null, 'developer');
 
@@ -89,7 +89,7 @@ class DiscipleshipTargetPageTest extends TestCase
 
     public function test_central_and_developer_cannot_update_branch_targets(): void
     {
-        $this->createTargetTable();
+        $this->createBranchTable();
         $this->seedTargets();
 
         foreach (['pemuridan_pusat', 'developer'] as $scope) {
@@ -105,16 +105,17 @@ class DiscipleshipTargetPageTest extends TestCase
             ])->assertRedirect();
         }
 
-        $this->assertSame(111, (int) DB::table('discipleship_targets')
-            ->where('branch_id', 1)
+        $this->assertSame(111, (int) DB::table('branches')
+            ->where('id', 1)
             ->value('camp_gap_participant_target'));
     }
 
-    private function createTargetTable(): void
+    private function createBranchTable(): void
     {
-        Schema::create('discipleship_targets', function (Blueprint $table): void {
+        Schema::create('branches', function (Blueprint $table): void {
             $table->id();
-            $table->unsignedBigInteger('branch_id')->unique();
+            $table->string('label')->unique();
+            $table->boolean('is_active')->default(true);
             $table->unsignedInteger('camp_gap_participant_target')->default(50);
             $table->unsignedInteger('msk_completion_target')->default(50);
             $table->unsignedInteger('dg1_completion_target')->default(50);
@@ -126,9 +127,11 @@ class DiscipleshipTargetPageTest extends TestCase
 
     private function seedTargets(): void
     {
-        DB::table('discipleship_targets')->insert([
+        DB::table('branches')->insert([
             [
-                'branch_id' => 1,
+                'id' => 1,
+                'label' => 'Kutisari',
+                'is_active' => true,
                 'camp_gap_participant_target' => 111,
                 'msk_completion_target' => 112,
                 'dg1_completion_target' => 113,
@@ -138,7 +141,9 @@ class DiscipleshipTargetPageTest extends TestCase
                 'updated_at' => now(),
             ],
             [
-                'branch_id' => 2,
+                'id' => 2,
+                'label' => 'GM',
+                'is_active' => true,
                 'camp_gap_participant_target' => 221,
                 'msk_completion_target' => 222,
                 'dg1_completion_target' => 223,
