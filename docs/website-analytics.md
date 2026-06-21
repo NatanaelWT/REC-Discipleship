@@ -14,7 +14,6 @@ Statistik website bekerja sepenuhnya dari data request aplikasi. Sistem tidak me
 - Detail page view dan sesi disimpan permanen.
 - Cookie `rec_analytics_visitor` berlaku 12 bulan. Database hanya menyimpan HMAC, bukan nilai cookie mentah.
 - IP tetap hanya berada dalam audit aktivitas dan tidak disalin ke statistik website.
-- Ringkasan percobaan login (berhasil, gagal, dan terkunci) dihitung langsung dari `activity_events` berdasarkan periode aktif. Tidak ada salinan data login di tabel statistik.
 
 ## Pemisahan dari audit Aktivitas
 

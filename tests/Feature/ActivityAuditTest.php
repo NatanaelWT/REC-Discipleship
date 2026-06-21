@@ -268,10 +268,10 @@ class ActivityAuditTest extends TestCase
             ->assertSee('/developer-only-activity');
     }
 
-    public function test_activity_list_uses_twenty_rows_and_preserves_filters_in_cursor_pagination(): void
+    public function test_activity_list_uses_one_hundred_rows_with_pagination_above_table(): void
     {
         $startedAt = now('UTC');
-        foreach (range(1, 25) as $index) {
+        foreach (range(1, 125) as $index) {
             ActivityRequest::query()->create([
                 'actor_type' => 'anonymous',
                 'method' => 'GET',
@@ -288,12 +288,15 @@ class ActivityAuditTest extends TestCase
         $response = $this->actingAs($this->developer())
             ->get('/developer/activities?actor=anonymous&include_developer=1')
             ->assertOk()
-            ->assertSee('Maksimal 20 per halaman')
+            ->assertSee('Maksimal 100 per halaman')
             ->assertSee('Berikutnya')
             ->assertSee('actor=anonymous', false)
             ->assertSee('include_developer=1', false);
 
-        $this->assertSame(20, substr_count($response->getContent(), 'data-activity-row'));
+        $content = $response->getContent();
+        $this->assertSame(100, substr_count($content, 'data-activity-row'));
+        $this->assertSame(1, substr_count($content, 'class="activity-pagination"'));
+        $this->assertTrue(strpos($content, 'class="activity-pagination"') < strpos($content, 'class="table-wrap activity-table-wrap"'));
     }
 
     public function test_advanced_activity_filters_open_only_when_an_advanced_filter_is_active(): void

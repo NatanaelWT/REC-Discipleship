@@ -2,14 +2,12 @@
 
 namespace App\Services\Analytics;
 
-use App\Models\ActivityEvent;
 use App\Models\WebsitePageView;
 use Carbon\CarbonImmutable;
 use DateTimeZone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class WebsiteStatisticsService
@@ -18,7 +16,7 @@ class WebsiteStatisticsService
     public function dashboard(Request $request): array
     {
         $filters = $this->filters($request);
-        $cacheKey = 'analytics.dashboard.v3.'.sha1(json_encode($filters) ?: '[]');
+        $cacheKey = 'analytics.dashboard.v4.'.sha1(json_encode($filters) ?: '[]');
 
         if (app()->environment('testing')) {
             return $this->build($filters);
@@ -85,7 +83,6 @@ class WebsiteStatisticsService
         return [
             'filters' => $filters,
             'summary' => $summary,
-            'loginAttempts' => $this->loginAttempts($filters),
             'comparison' => $comparison,
             'trend' => collect($trend)->map(static fn (int $count, string $date): array => [
                 'date' => $date,
@@ -206,38 +203,6 @@ class WebsiteStatisticsService
             ->when($filters['device'] !== '', fn (Builder $query) => $query->where('device_type', $filters['device']))
             ->when($filters['route'] !== '', fn (Builder $query) => $query->where('route_name', $filters['route']))
             ->when($filters['visitor'] !== '', fn (Builder $query) => $query->where('visitor_hash', $filters['visitor']));
-    }
-
-    /** @param array<string, mixed> $filters @return array{total:int,succeeded:int,failed:int,locked:int} */
-    private function loginAttempts(array $filters): array
-    {
-        $actions = [
-            'auth.login.succeeded',
-            'auth.login.failed',
-            'auth.login.locked',
-        ];
-
-        if (! Schema::hasTable('activity_events')) {
-            return ['total' => 0, 'succeeded' => 0, 'failed' => 0, 'locked' => 0];
-        }
-
-        $counts = ActivityEvent::query()
-            ->whereBetween('occurred_at', [$filters['from_utc'], $filters['to_utc']])
-            ->whereIn('action', $actions)
-            ->selectRaw('action, COUNT(*) AS aggregate_count')
-            ->groupBy('action')
-            ->pluck('aggregate_count', 'action');
-
-        $succeeded = (int) ($counts['auth.login.succeeded'] ?? 0);
-        $failed = (int) ($counts['auth.login.failed'] ?? 0);
-        $locked = (int) ($counts['auth.login.locked'] ?? 0);
-
-        return [
-            'total' => $succeeded + $failed + $locked,
-            'succeeded' => $succeeded,
-            'failed' => $failed,
-            'locked' => $locked,
-        ];
     }
 
     /** @return array<string, mixed> */

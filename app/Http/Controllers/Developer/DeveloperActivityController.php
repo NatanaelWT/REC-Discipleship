@@ -30,7 +30,7 @@ class DeveloperActivityController extends Controller
         return view('developer.activities.index', [
             'settings' => ['church_name' => app_church_name()],
             'currentPage' => 'developer_activities',
-            'activities' => $query->orderByDesc('started_at')->orderByDesc('id')->cursorPaginate(20)->withQueryString(),
+            'activities' => $query->orderByDesc('started_at')->orderByDesc('id')->cursorPaginate(100)->withQueryString(),
             'filters' => $this->filterValues($request),
             'roleOptions' => collect(UserAccessRole::cases())->mapWithKeys(
                 static fn (UserAccessRole $role): array => [$role->value => $role->label()],

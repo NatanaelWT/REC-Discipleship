@@ -147,7 +147,7 @@ class WebsiteAnalyticsTest extends TestCase
             ->get('/developer/statistics?range=today&segment=publik&country=ID&city=Surabaya')
             ->assertOk()
             ->assertSee('Statistik Kunjungan Publik')
-            ->assertSee('Percobaan login')
+            ->assertDontSee('Percobaan login')
             ->assertSee('Page view harian')
             ->assertSee('Bahasa browser')
             ->assertSee('Jam akses')
@@ -209,33 +209,6 @@ class WebsiteAnalyticsTest extends TestCase
         $this->assertSame(0, Artisan::call('analytics:backfill'));
         $this->assertSame(1, DB::table('website_page_views')->where('identity_source', 'legacy_session')->count());
         $this->assertNull(DB::table('website_page_views')->value('language_code'));
-    }
-
-    public function test_login_attempt_summary_comes_from_audit_and_only_uses_date_range(): void
-    {
-        $occurredAt = CarbonImmutable::now('UTC')->format('Y-m-d H:i:s.u');
-        foreach (['auth.login.succeeded', 'auth.login.failed', 'auth.login.failed', 'auth.login.locked'] as $action) {
-            DB::table('activity_events')->insert([
-                'request_id' => '01'.str_pad((string) DB::table('activity_events')->count(), 24, '0', STR_PAD_LEFT),
-                'category' => 'authentication',
-                'action' => $action,
-                'occurred_at' => $occurredAt,
-            ]);
-        }
-
-        $dashboard = app(WebsiteStatisticsService::class)->dashboard(Request::create('/developer/statistics', 'GET', [
-            'range' => 'today',
-            'language' => 'id-ID',
-            'device' => 'mobile',
-            'route' => 'public.missing',
-        ]));
-
-        $this->assertSame([
-            'total' => 4,
-            'succeeded' => 1,
-            'failed' => 2,
-            'locked' => 1,
-        ], $dashboard['loginAttempts']);
     }
 
     public function test_dashboard_defensively_ignores_historical_internal_page_views_and_old_filters(): void

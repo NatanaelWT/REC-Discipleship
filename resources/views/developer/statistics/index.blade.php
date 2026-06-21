@@ -71,27 +71,6 @@
     @endforeach
   </section>
 
-  <section class="card analytics-login-card" aria-label="Ringkasan percobaan login">
-    <div class="analytics-section-head">
-      <div><span>Audit autentikasi</span><h3>Percobaan login</h3></div>
-      <small>{{ $filters['from'] }} — {{ $filters['to'] }}</small>
-    </div>
-    <div class="analytics-login-grid">
-      @foreach ([
-        ['label' => 'Total percobaan', 'value' => $loginAttempts['total'], 'state' => 'total'],
-        ['label' => 'Berhasil', 'value' => $loginAttempts['succeeded'], 'state' => 'succeeded'],
-        ['label' => 'Gagal', 'value' => $loginAttempts['failed'], 'state' => 'failed'],
-        ['label' => 'Terkunci', 'value' => $loginAttempts['locked'], 'state' => 'locked'],
-      ] as $attempt)
-        <article class="analytics-login-metric is-{{ $attempt['state'] }}">
-          <span>{{ $attempt['label'] }}</span>
-          <strong>{{ number_format($attempt['value'], 0, ',', '.') }}</strong>
-        </article>
-      @endforeach
-    </div>
-    <p class="analytics-response-note">Dihitung langsung dari audit aktivitas. Ringkasan ini hanya mengikuti periode tanggal dan tidak menyimpan salinan kredensial.</p>
-  </section>
-
   <section class="card analytics-trend-card">
     <div class="analytics-section-head"><div><span>Tren</span><h3>Page view harian</h3></div><small>{{ $filters['from'] }} — {{ $filters['to'] }}</small></div>
     @if (collect($trend)->sum('count') > 0)

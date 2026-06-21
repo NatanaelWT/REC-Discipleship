@@ -91,8 +91,14 @@
   </section>
 
   <section class="card table-card-plain developer-panel">
-    <div class="activity-list-head"><div><span>Request terbaru</span><strong>Aktivitas</strong></div><small>Maksimal 20 per halaman</small></div>
-    <div class="table-wrap">
+    <div class="activity-list-head"><div><span>Request terbaru</span><strong>Aktivitas</strong></div><small>Maksimal 100 per halaman</small></div>
+    @if ($activities->previousPageUrl() || $activities->nextPageUrl())
+      <nav class="activity-pagination" aria-label="Pagination aktivitas">
+        @if ($activities->previousPageUrl())<a class="button secondary" href="{{ $activities->previousPageUrl() }}">Sebelumnya</a>@endif
+        @if ($activities->nextPageUrl())<a class="button secondary" href="{{ $activities->nextPageUrl() }}">Berikutnya</a>@endif
+      </nav>
+    @endif
+    <div class="table-wrap activity-table-wrap">
       <table class="table activity-table">
         <thead><tr><th>Waktu</th><th>Actor</th><th>Aktivitas</th><th>Hasil</th><th>Detail</th></tr></thead>
         <tbody>
@@ -113,10 +119,6 @@
           @endforelse
         </tbody>
       </table>
-    </div>
-    <div class="activity-pagination">
-      @if ($activities->previousPageUrl())<a class="button secondary" href="{{ $activities->previousPageUrl() }}">Sebelumnya</a>@endif
-      @if ($activities->nextPageUrl())<a class="button secondary" href="{{ $activities->nextPageUrl() }}">Berikutnya</a>@endif
     </div>
   </section>
 @endsection
