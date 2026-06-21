@@ -116,8 +116,8 @@ class StoreDgMeetingReportRequest extends FormRequest
                 $this->addFirstError($validator, 'Pilih kelompok DG terlebih dahulu.');
             } else {
                 $this->groupRow = $groupMap[$groupId];
-                $groupLeaderId = trim((string) ($this->groupRow['leader_id'] ?? ''));
-                if ($groupLeaderId !== $leaderId) {
+                $groupLeaderId = (int) ($this->groupRow['leader_id'] ?? 0);
+                if ($groupLeaderId < 1 || $groupLeaderId !== $leaderId) {
                     $this->addFirstError($validator, 'Kelompok yang dipilih tidak sesuai dengan pemimpin DG.');
                 }
             }
@@ -188,7 +188,9 @@ class StoreDgMeetingReportRequest extends FormRequest
             throw new HttpResponseException(redirect()->route('public.dg.branch'));
         }
 
-        throw new HttpResponseException(redirect()->route('public.dg.report', ['branch' => $branch]));
+        throw new HttpResponseException(
+            redirect()->route('public.dg.report', ['branch' => $branch])->withErrors($validator),
+        );
     }
 
     public function publicBranch(): string
