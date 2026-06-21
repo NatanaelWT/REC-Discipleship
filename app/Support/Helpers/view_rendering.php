@@ -177,18 +177,8 @@ function render_central_rekap_toolbar(string $currentPage): void
         || page_header_active_group($currentPage) !== 'pemuridan') {
         return;
     }
-    $singleBranchOnly = $currentPage === 'discipleship_targets';
-    $selectedBranch = $singleBranchOnly
-        ? central_recap_selected_single_branch()
-        : central_recap_selected_branch();
+    $selectedBranch = central_recap_selected_branch();
     $selectedBranchLabel = central_recap_branch_label($selectedBranch);
-    $branchOptions = central_recap_branch_options();
-    if ($singleBranchOnly) {
-        $branchOptions = array_values(array_filter(
-            $branchOptions,
-            static fn (array $option): bool => ($option['code'] ?? 'all') !== 'all',
-        ));
-    }
     $preservedQueryParams = [];
     foreach ($_GET as $paramKey => $paramValue) {
         if (! is_string($paramKey)) {
@@ -220,7 +210,7 @@ function render_central_rekap_toolbar(string $currentPage): void
     echo "        </div>\n";
     echo "      </div>\n";
     echo "      <div class=\"central-rekap-quick\" aria-label=\"Pilih cabang rekap Pusat Pemuridan\">\n";
-    foreach ($branchOptions as $branchOption) {
+    foreach (central_recap_branch_options() as $branchOption) {
         $branchCode = normalize_central_recap_branch((string) ($branchOption['code'] ?? 'all'));
         $branchId = $branchOption['id'] ?? null;
         $branchLabel = trim((string) ($branchOption['label'] ?? $branchCode));

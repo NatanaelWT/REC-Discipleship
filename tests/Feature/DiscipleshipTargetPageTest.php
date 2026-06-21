@@ -37,12 +37,12 @@ class DiscipleshipTargetPageTest extends TestCase
             ->assertSee('class="card settings-target-card"', false)
             ->assertSee('class="settings-target-field-value">222</span>', false)
             ->assertSee('Hanya Lihat')
-            ->assertDontSee('Semua Cabang')
+            ->assertSee('Semua Cabang')
             ->assertDontSee('name="target_msk_completed"', false)
             ->assertDontSee('Simpan Target');
     }
 
-    public function test_central_all_filter_defaults_to_first_branch_and_hides_all_option(): void
+    public function test_central_all_filter_groups_every_branch_by_target_type(): void
     {
         $this->createTargetTable();
         $this->seedTargets();
@@ -50,22 +50,39 @@ class DiscipleshipTargetPageTest extends TestCase
 
         $this->get('/pemuridan/target?branch_id=all')
             ->assertOk()
-            ->assertSee('Rekap aktif: <strong>Kutisari</strong>', false)
-            ->assertSee('Cabang Kutisari')
-            ->assertSee('class="settings-target-field-value">111</span>', false)
-            ->assertDontSee('Semua Cabang');
+            ->assertSee('Rekap aktif: <strong>Semua Cabang</strong>', false)
+            ->assertSee('data-target-section="msk_completed"', false)
+            ->assertSee('data-target-section="dg1_people"', false)
+            ->assertSee('data-target-section="dg_total_people"', false)
+            ->assertSee('data-target-section="dg2_people"', false)
+            ->assertSee('data-target-section="dg3_people"', false)
+            ->assertSeeInOrder([
+                'data-target-section="msk_completed"',
+                'Target Total Selesai MSK',
+                'data-branch-code="kutisari"',
+                '<strong>112</strong>',
+                'data-branch-code="gm"',
+                '<strong>222</strong>',
+                'data-target-section="dg1_people"',
+                '<strong>113</strong>',
+                '<strong>223</strong>',
+            ], false)
+            ->assertDontSee('name="target_msk_completed"', false)
+            ->assertDontSee('Simpan Target');
     }
 
-    public function test_developer_uses_same_readonly_branch_target_layout(): void
+    public function test_developer_can_view_readonly_targets_for_all_branches(): void
     {
         $this->createTargetTable();
         $this->seedTargets();
         $this->actingAsRecUser('developer', null, 'developer');
 
-        $this->get('/pemuridan/target?branch_id=2')
+        $this->get('/pemuridan/target?branch_id=all')
             ->assertOk()
-            ->assertSee('Cabang GM')
-            ->assertSee('class="settings-target-field-value">222</span>', false)
+            ->assertSee('Rekap aktif: <strong>Semua Cabang</strong>', false)
+            ->assertSee('data-target-section="msk_completed"', false)
+            ->assertSee('data-branch-code="gm"', false)
+            ->assertSee('<strong>222</strong>', false)
             ->assertDontSee('name="target_msk_completed"', false)
             ->assertDontSee('Simpan Target');
     }
@@ -113,20 +130,20 @@ class DiscipleshipTargetPageTest extends TestCase
             [
                 'branch_id' => 1,
                 'camp_gap_participant_target' => 111,
-                'msk_completion_target' => 111,
-                'dg1_completion_target' => 111,
-                'dg2_completion_target' => 111,
-                'dg3_completion_target' => 111,
+                'msk_completion_target' => 112,
+                'dg1_completion_target' => 113,
+                'dg2_completion_target' => 114,
+                'dg3_completion_target' => 115,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'branch_id' => 2,
-                'camp_gap_participant_target' => 222,
+                'camp_gap_participant_target' => 221,
                 'msk_completion_target' => 222,
-                'dg1_completion_target' => 222,
-                'dg2_completion_target' => 222,
-                'dg3_completion_target' => 222,
+                'dg1_completion_target' => 223,
+                'dg2_completion_target' => 224,
+                'dg3_completion_target' => 225,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],

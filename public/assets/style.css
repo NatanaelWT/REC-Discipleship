@@ -12153,6 +12153,105 @@ textarea:focus-visible {
   font-weight: 800;
 }
 
+.settings-target-overview {
+  display: grid;
+  gap: 4px;
+}
+
+.settings-target-metric-list {
+  display: grid;
+  gap: 18px;
+}
+
+.settings-target-metric-section {
+  --field-accent: #0f766e;
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid rgba(203, 213, 225, 0.78);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
+}
+
+.settings-target-metric-section.is-total {
+  --field-accent: var(--discipleship-kgap);
+}
+
+.settings-target-metric-section.is-msk {
+  --field-accent: var(--discipleship-msk);
+}
+
+.settings-target-metric-section.is-dg1 {
+  --field-accent: var(--discipleship-dg1);
+}
+
+.settings-target-metric-section.is-dg2 {
+  --field-accent: var(--discipleship-dg2);
+}
+
+.settings-target-metric-section.is-dg3 {
+  --field-accent: var(--discipleship-dg3);
+}
+
+.settings-target-metric-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.settings-target-metric-head > div {
+  display: grid;
+  gap: 5px;
+}
+
+.settings-target-metric-head h3,
+.settings-target-metric-head p {
+  margin: 0;
+}
+
+.settings-target-metric-head h3 {
+  color: #0f172a;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.settings-target-metric-head p {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.settings-target-branch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-target-branch-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 76px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--field-accent) 16%, #cbd5e1);
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--field-accent) 5%, white);
+}
+
+.settings-target-branch-card span {
+  color: #475569;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.settings-target-branch-card strong {
+  color: var(--field-accent);
+  font-size: 25px;
+  line-height: 1;
+}
+
 .settings-target-actions {
   justify-content: flex-start;
 }
@@ -12185,6 +12284,10 @@ textarea:focus-visible {
   .settings-target-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .settings-target-branch-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -12199,6 +12302,19 @@ textarea:focus-visible {
 
   .settings-target-grid {
     grid-template-columns: 1fr;
+  }
+
+  .settings-target-branch-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-target-metric-section {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .settings-target-metric-head {
+    flex-direction: column;
   }
 
   .settings-target-field {

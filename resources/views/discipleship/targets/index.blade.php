@@ -59,8 +59,91 @@
                 'hint' => 'Jumlah peserta yang ditargetkan menuntaskan DG 3.',
             ],
         ];
+
+        $allBranchTargetSections = [
+            [
+                'key' => 'msk_completed',
+                'class' => 'is-msk',
+                'eyebrow' => 'MSK',
+                'label' => 'Target Total Selesai MSK',
+                'hint' => 'Target peserta yang menuntaskan proses MSK pada setiap cabang.',
+            ],
+            [
+                'key' => 'dg1_people',
+                'class' => 'is-dg1',
+                'eyebrow' => 'DG 1',
+                'label' => 'Target Selesai DG 1',
+                'hint' => 'Target peserta yang menuntaskan DG 1 pada setiap cabang.',
+            ],
+            [
+                'key' => 'dg_total_people',
+                'class' => 'is-total',
+                'eyebrow' => 'Kamp GAP',
+                'label' => 'Target Peserta Kamp GAP',
+                'hint' => 'Target peserta Kamp GAP pada setiap cabang.',
+            ],
+            [
+                'key' => 'dg2_people',
+                'class' => 'is-dg2',
+                'eyebrow' => 'DG 2',
+                'label' => 'Target Selesai DG 2',
+                'hint' => 'Target peserta yang menuntaskan DG 2 pada setiap cabang.',
+            ],
+            [
+                'key' => 'dg3_people',
+                'class' => 'is-dg3',
+                'eyebrow' => 'DG 3',
+                'label' => 'Target Selesai DG 3',
+                'hint' => 'Target peserta yang menuntaskan DG 3 pada setiap cabang.',
+            ],
+        ];
     @endphp
 
+    @if ($showAllBranches)
+      <section class="card settings-target-card settings-target-overview">
+        <div class="settings-target-hero">
+          <div class="settings-target-copy">
+            <span class="settings-target-kicker">Target DG & MSK</span>
+            <h2>Semua Cabang</h2>
+            <p>Bandingkan target setiap cabang berdasarkan tahap pemuridan dalam mode lihat saja.</p>
+          </div>
+          <div class="settings-target-meta">
+            <span class="settings-target-badge is-branch">Semua Cabang</span>
+            <span class="settings-target-badge is-readonly">Hanya Lihat</span>
+          </div>
+        </div>
+
+        <div class="settings-target-metric-list">
+          @foreach ($allBranchTargetSections as $targetSection)
+            @php
+                $sectionKey = trim((string) ($targetSection['key'] ?? ''));
+                $sectionClass = trim((string) ($targetSection['class'] ?? ''));
+            @endphp
+            <section class="settings-target-metric-section {{ $sectionClass }}" data-target-section="{{ $sectionKey }}">
+              <div class="settings-target-metric-head">
+                <span class="settings-target-field-eyebrow">{{ (string) ($targetSection['eyebrow'] ?? '') }}</span>
+                <div>
+                  <h3>{{ (string) ($targetSection['label'] ?? 'Target') }}</h3>
+                  <p>{{ (string) ($targetSection['hint'] ?? '') }}</p>
+                </div>
+              </div>
+              <div class="settings-target-branch-grid">
+                @foreach ($branchTargetRows as $branchRow)
+                  @php
+                      $branchTargets = is_array($branchRow['targets'] ?? null) ? $branchRow['targets'] : [];
+                      $branchValue = max(0, (int) ($branchTargets[$sectionKey] ?? 50));
+                  @endphp
+                  <article class="settings-target-branch-card" data-branch-code="{{ (string) ($branchRow['branch_code'] ?? '') }}">
+                    <span>{{ (string) ($branchRow['branch_label'] ?? '') }}</span>
+                    <strong>{{ number_format($branchValue, 0, ',', '.') }}</strong>
+                  </article>
+                @endforeach
+              </div>
+            </section>
+          @endforeach
+        </div>
+      </section>
+    @else
     <section class="card settings-target-card">
       <div class="settings-target-hero">
         <div class="settings-target-copy">
@@ -137,4 +220,5 @@
         </form>
       @endif
     </section>
+    @endif
 @endsection
