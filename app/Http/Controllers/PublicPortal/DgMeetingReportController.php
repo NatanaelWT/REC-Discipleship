@@ -5,6 +5,7 @@ namespace App\Http\Controllers\PublicPortal;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DgMeetingReports\StoreDgMeetingReportRequest;
 use App\Models\DiscipleshipMeetingReport;
+use App\Services\Activity\ActivityRecorder;
 use App\Services\DgMeetingReports\DgMeetingReportFormData;
 use App\Services\DgMeetingReports\DgMeetingReportPhotoUploader;
 use App\Support\RuntimeBootstrap;
@@ -79,6 +80,7 @@ class DgMeetingReportController extends Controller
     public function store(
         StoreDgMeetingReportRequest $request,
         DgMeetingReportPhotoUploader $photoUploader,
+        ActivityRecorder $activity,
         string $branch = '',
     ): RedirectResponse {
         $publicBranch = $request->publicBranch();
@@ -90,6 +92,9 @@ class DgMeetingReportController extends Controller
         }
 
         $meetingPhotos = $uploadResult['photos'];
+        if ($meetingPhotos !== []) {
+            $activity->onRollback(static fn () => $photoUploader->cleanup($meetingPhotos));
+        }
 
         try {
             DB::transaction(function () use ($request, $meetingPhotos): void {

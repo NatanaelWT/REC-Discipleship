@@ -3,11 +3,13 @@
 namespace App\Services\MskParticipants;
 
 use App\Http\Requests\MskParticipants\ImportMskParticipantsRequest;
+use App\Services\Activity\ActivityRecorder;
 
 class MskParticipantImportService
 {
     public function __construct(
         private readonly MskParticipantTableData $tableData,
+        private readonly ActivityRecorder $activity,
     ) {}
 
     /**
@@ -17,18 +19,19 @@ class MskParticipantImportService
     {
         $branchCode = normalize_public_branch_code(current_user_branch());
         $participants = $this->tableData->participantsForBranches([$branchCode]);
+        $beforeParticipants = $participants;
 
         $file = $request->file('import_pemuridan_excel');
         if ($file === null) {
-            return ['error' => 'import_missing_file'];
+            return $this->failure('import_missing_file');
         }
         if (! $file->isValid()) {
-            return ['error' => 'import_upload_failed'];
+            return $this->failure('import_upload_failed');
         }
 
         $tmpPath = trim((string) $file->getRealPath());
         if ($tmpPath === '') {
-            return ['error' => 'import_upload_failed'];
+            return $this->failure('import_upload_failed');
         }
 
         $extension = strtolower((string) $file->getClientOriginalExtension());
@@ -36,18 +39,18 @@ class MskParticipantImportService
             $extension = strtolower(pathinfo((string) $file->getClientOriginalName(), PATHINFO_EXTENSION));
         }
         if ($extension !== 'xlsx') {
-            return ['error' => 'import_invalid_file_type'];
+            return $this->failure('import_invalid_file_type');
         }
 
         $size = (int) ($file->getSize() ?? 0);
         if ($size <= 0 || $size > (10 * 1024 * 1024)) {
-            return ['error' => 'import_file_too_large'];
+            return $this->failure('import_file_too_large', ['size_bytes' => $size]);
         }
 
         $xlsxError = '';
         $sheets = import_read_xlsx_sheets($tmpPath, $xlsxError);
         if ($xlsxError !== '') {
-            return ['error' => $xlsxError === 'zip_unavailable' ? 'import_zip_unavailable' : 'import_invalid_excel'];
+            return $this->failure($xlsxError === 'zip_unavailable' ? 'import_zip_unavailable' : 'import_invalid_excel');
         }
 
         $sheetMap = [];
@@ -57,10 +60,10 @@ class MskParticipantImportService
 
         $mskRows = $sheetMap['kelas msk'] ?? null;
         if (! is_array($mskRows)) {
-            return ['error' => 'import_missing_sheet'];
+            return $this->failure('import_missing_sheet');
         }
         if (count($mskRows) === 0) {
-            return ['error' => 'import_empty_sheet'];
+            return $this->failure('import_empty_sheet');
         }
 
         $importErrors = [];
@@ -84,7 +87,11 @@ class MskParticipantImportService
 
         if ($importErrors === []) {
             if ($mskInserted > 0 || $mskUpdated > 0) {
-                $this->tableData->replaceBranchRows($branchCode, $participants, true);
+                $this->activity->withoutModelEvents(
+                    fn () => $this->tableData->replaceBranchRows($branchCode, $participants, true),
+                );
+                $storedParticipants = $this->tableData->participantsForBranches([$branchCode]);
+                $this->recordParticipantChanges($branchCode, $beforeParticipants, $storedParticipants);
             }
         } else {
             $mskInserted = 0;
@@ -101,7 +108,84 @@ class MskParticipantImportService
             $redirectParams['import_error_preview'] = substr((string) $importErrors[0], 0, 220);
         }
 
+        $this->activity->record(
+            'import',
+            $importErrors === [] ? 'msk.import.completed' : 'msk.import.failed',
+            'msk_import',
+            $branchCode,
+            public_branch_label($branchCode),
+            $importErrors === [] ? 'Import peserta MSK selesai.' : 'Import peserta MSK gagal divalidasi.',
+            metadata: [
+                'branch' => $branchCode,
+                'inserted' => $mskInserted,
+                'updated' => $mskUpdated,
+                'errors' => $importErrors,
+                'source_rows' => max(0, count($mskRows) - 1),
+            ],
+        );
+
         return $redirectParams;
+    }
+
+    /** @param array<string, mixed> $metadata @return array<string, mixed> */
+    private function failure(string $error, array $metadata = []): array
+    {
+        $this->activity->record(
+            'import',
+            'msk.import.failed',
+            'msk_import',
+            null,
+            null,
+            'Import peserta MSK gagal.',
+            metadata: ['error' => $error] + $metadata,
+        );
+
+        return ['error' => $error];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $before
+     * @param  array<int, array<string, mixed>>  $after
+     */
+    private function recordParticipantChanges(string $branchCode, array $before, array $after): void
+    {
+        $beforeRows = $this->participantIndex($before);
+        $afterRows = $this->participantIndex($after);
+        foreach (array_unique(array_merge(array_keys($beforeRows), array_keys($afterRows))) as $key) {
+            $old = $beforeRows[$key] ?? null;
+            $new = $afterRows[$key] ?? null;
+            if ($old === $new) {
+                continue;
+            }
+            $operation = $old === null ? 'created' : ($new === null ? 'deleted' : 'updated');
+            $row = $new ?? $old ?? [];
+            $this->activity->record(
+                'import',
+                'msk.import.row_'.$operation,
+                'msk_participants',
+                $row['id'] ?? $key,
+                trim((string) ($row['full_name'] ?? '')) ?: null,
+                'Baris import MSK '.$operation.'.',
+                is_array($old) ? $old : null,
+                is_array($new) ? $new : null,
+                ['branch' => $branchCode],
+            );
+        }
+    }
+
+    /** @param array<int, array<string, mixed>> $rows @return array<string, array<string, mixed>> */
+    private function participantIndex(array $rows): array
+    {
+        $indexed = [];
+        foreach ($rows as $index => $row) {
+            $id = (int) ($row['id'] ?? 0);
+            $key = $id > 0
+                ? 'id:'.$id
+                : 'identity:'.discipleship_unified_identity_key((string) ($row['full_name'] ?? ''), (string) ($row['whatsapp'] ?? '')).':'.$index;
+            $indexed[$key] = $row;
+        }
+
+        return $indexed;
     }
 
     /**

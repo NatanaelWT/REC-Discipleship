@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Services\Activity\ActivityRecorder;
 use App\Services\Auth\AuthCredentialService;
 use App\Services\Auth\CurrentUserContext;
 use App\Services\Auth\LoginAttemptLimiter;
@@ -40,6 +41,7 @@ class LoginController extends Controller
         AuthCredentialService $credentials,
         LoginAttemptLimiter $limiter,
         SessionAuthenticator $sessions,
+        ActivityRecorder $activity,
     ): RedirectResponse {
         RuntimeBootstrap::boot($request);
 
@@ -47,6 +49,16 @@ class LoginController extends Controller
         $now = CarbonImmutable::now(config('app.timezone', 'Asia/Jakarta'));
         $waitSeconds = $limiter->waitSeconds($ip, $now);
         if ($waitSeconds > 0) {
+            $activity->record(
+                'auth',
+                'auth.login.locked',
+                'user_login',
+                null,
+                trim((string) $request->input('username', '')) ?: null,
+                'Percobaan login ditolak karena pembatasan keamanan.',
+                metadata: ['wait_seconds' => $waitSeconds, 'attempted_username' => (string) $request->input('username', '')],
+            );
+
             return redirect()->route('auth.login', ['error' => 'locked', 'wait' => $waitSeconds]);
         }
 
@@ -59,14 +71,43 @@ class LoginController extends Controller
             $limiter->clear($ip);
             $credentials->updateLastLogin($user, $now);
             $sessions->login($request, $user);
+            $activity->record(
+                'auth',
+                'auth.login.succeeded',
+                'users',
+                $user->getKey(),
+                (string) $user->username,
+                'User berhasil login.',
+                metadata: ['username' => (string) $user->username],
+            );
 
             return redirect(AppPageRouteMap::pageUrl(app(CurrentUserContext::class)->homePage()));
         }
 
         $waitSeconds = $limiter->registerFailure($ip, $now);
         if ($waitSeconds > 0) {
+            $activity->record(
+                'auth',
+                'auth.login.locked',
+                'user_login',
+                null,
+                trim((string) $request->input('username', '')) ?: null,
+                'Login gagal dan alamat klien dikunci sementara.',
+                metadata: ['wait_seconds' => $waitSeconds, 'attempted_username' => (string) $request->input('username', '')],
+            );
+
             return redirect()->route('auth.login', ['error' => 'locked', 'wait' => $waitSeconds]);
         }
+
+        $activity->record(
+            'auth',
+            'auth.login.failed',
+            'user_login',
+            null,
+            trim((string) $request->input('username', '')) ?: null,
+            'Login gagal karena kredensial tidak cocok.',
+            metadata: ['attempted_username' => (string) $request->input('username', '')],
+        );
 
         return redirect()->route('auth.login', ['error' => 1]);
     }

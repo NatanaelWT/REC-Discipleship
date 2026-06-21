@@ -73,7 +73,7 @@ function icon_svg(string $name): string
 function page_header_active_group(string $currentPage): string
 {
     $groupPages = [
-        'developer' => ['developer_dashboard', 'developer_users', 'developer_config'],
+        'developer' => ['developer_dashboard', 'developer_users', 'developer_config', 'developer_activities'],
         'pemuridan' => array_merge(array_keys(discipleship_page_map()), ['discipleship_targets', 'difficult_questions_admin']),
         'worship' => ['worship_penatalayan'],
     ];
@@ -287,6 +287,7 @@ function render_sidebar_navigation(string $currentPage, string $currentBranch, b
             ['label' => 'Dashboard', 'page' => 'developer_dashboard', 'href' => route('developer.dashboard')],
             ['label' => 'User', 'page' => 'developer_users', 'href' => route('developer.users')],
             ['label' => 'Config', 'page' => 'developer_config', 'href' => route('developer.config')],
+            ['label' => 'Aktivitas', 'page' => 'developer_activities', 'href' => route('developer.activities')],
         ], $currentPage, $activeGroup);
 
         render_sidebar_nav_group('Ibadah Umum', 'worship', [

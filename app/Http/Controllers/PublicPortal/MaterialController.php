@@ -6,11 +6,11 @@ use App\Enums\PublicMaterialMenuKey;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicMaterials\ShowPublicMaterialRequest;
 use App\Models\PublicMaterialFile;
+use App\Services\Activity\ActivityRecorder;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -53,7 +53,7 @@ class MaterialController extends Controller
         ]);
     }
 
-    public function upload(Request $request, string $menu): RedirectResponse
+    public function upload(Request $request, string $menu, ActivityRecorder $activity): RedirectResponse
     {
         RuntimeBootstrap::boot($request);
 
@@ -101,6 +101,11 @@ class MaterialController extends Controller
         if ($relativePath === '' || ! is_file($fullPath)) {
             return $this->redirectToMaterialMenu($menu, ['material_error' => 'upload_failed']);
         }
+        $activity->onRollback(static function () use ($fullPath): void {
+            if (is_file($fullPath)) {
+                @unlink($fullPath);
+            }
+        });
 
         $title = $this->normalizeMaterialTitle(
             (string) $request->input('title', ''),
@@ -109,7 +114,7 @@ class MaterialController extends Controller
         );
         $downloadName = $this->downloadNameForTitle($title, $extension);
 
-        DB::table('public_material_files')->insert([
+        PublicMaterialFile::query()->create([
             'menu' => $menu->value,
             'title' => $title,
             'category_name' => null,
@@ -118,8 +123,6 @@ class MaterialController extends Controller
             'original_file_name' => $downloadName,
             'size_bytes' => max(0, (int) @filesize($fullPath)),
             'mime_type' => detect_file_mime_type($fullPath),
-            'created_at' => now(),
-            'updated_at' => now(),
         ]);
 
         return $this->redirectToMaterialMenu($menu, ['material_status' => 'uploaded']);

@@ -4,10 +4,13 @@ namespace App\Services\MskParticipants;
 
 use App\Http\Requests\MskParticipants\MskParticipantWriteRequest;
 use App\Models\MskParticipant;
+use App\Services\Activity\ActivityRecorder;
 use Illuminate\Support\Facades\DB;
 
 class MskParticipantWriter
 {
+    public function __construct(private readonly ActivityRecorder $activity) {}
+
     /**
      * @return array{
      *     participant?: MskParticipant,
@@ -33,6 +36,9 @@ class MskParticipantWriter
                 'error' => $uploadResult['error'],
             ];
         }
+        if ($uploadResult['photos'] !== []) {
+            $this->activity->onRollback(fn () => $this->deleteUploadedPhotos($uploadResult['photos']));
+        }
 
         $finalPhotos = $this->mergePhotos($existingViewRow, $payload['remove_photo_paths'] ?? [], $uploadResult['photos']);
         $participantData = $this->participantData($participantId, $payload, $existingViewRow, $finalPhotos);
@@ -55,9 +61,14 @@ class MskParticipantWriter
             && $finalLinkedPersonId > 0
             && msk_is_complete($participantData);
 
-        $participants = $this->participantsForBranch($branchCode);
-        foreach ($payload['remove_photo_paths'] ?? [] as $pathToDelete) {
-            delete_photo_file_if_unused([], $participants, (string) $pathToDelete);
+        $removePhotoPaths = $payload['remove_photo_paths'] ?? [];
+        if ($removePhotoPaths !== []) {
+            $this->activity->onCommit(function () use ($branchCode, $removePhotoPaths): void {
+                $participants = $this->participantsForBranch($branchCode);
+                foreach ($removePhotoPaths as $pathToDelete) {
+                    delete_photo_file_if_unused([], $participants, (string) $pathToDelete);
+                }
+            });
         }
 
         return [

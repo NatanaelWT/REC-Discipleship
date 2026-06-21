@@ -6,6 +6,7 @@ use App\Enums\PublicMaterialMenuKey;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicMaterials\StreamPublicMaterialRequest;
 use App\Models\PublicMaterialFile;
+use App\Services\Activity\ActivityRecorder;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
 use App\Services\PublicMaterials\PublicMaterialFileStreamer;
 use App\Services\PublicMaterials\PublicMaterialRouteResolver;
@@ -37,6 +38,7 @@ class MaterialDownloadController extends Controller
         PublicMaterialFile $churchFile,
         PublicMaterialCatalog $catalog,
         PublicMaterialFileStreamer $streamer,
+        ActivityRecorder $activity,
     ): Response|StreamedResponse {
         $menu = PublicMaterialMenuKey::fromKey($menu);
         if (! $menu instanceof PublicMaterialMenuKey) {
@@ -47,6 +49,31 @@ class MaterialDownloadController extends Controller
             return response('File tidak ditemukan.', 404);
         }
 
+        $activity->record(
+            'file',
+            'material.downloaded',
+            'public_material_files',
+            $churchFile->getKey(),
+            (string) $churchFile->title,
+            'Materi diunduh.',
+            metadata: $this->fileMetadata($churchFile),
+        );
+
         return $streamer->stream($churchFile, 'attachment');
+    }
+
+    /** @return array<string, mixed> */
+    private function fileMetadata(PublicMaterialFile $file): array
+    {
+        $path = function_exists('public_material_resolve_path')
+            ? public_material_resolve_path((string) $file->relative_path)
+            : null;
+
+        return [
+            'name' => (string) $file->original_file_name,
+            'size_bytes' => (int) $file->size_bytes,
+            'mime_type' => (string) $file->mime_type,
+            'sha256' => is_string($path) && is_file($path) ? hash_file('sha256', $path) : null,
+        ];
     }
 }

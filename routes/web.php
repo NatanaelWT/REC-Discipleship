@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\Developer\DeveloperActivityController;
 use App\Http\Controllers\Developer\DeveloperConfigController;
 use App\Http\Controllers\Developer\DeveloperController;
 use App\Http\Controllers\Developer\DeveloperUserController;
@@ -49,6 +50,8 @@ Route::group([], function (): void {
         Route::post('/users/{user}/password', [DeveloperUserController::class, 'resetPassword'])->name('users.password');
         Route::get('/config', [DeveloperConfigController::class, 'index'])->name('config');
         Route::post('/config', [DeveloperConfigController::class, 'update'])->name('config.update');
+        Route::get('/activities', [DeveloperActivityController::class, 'index'])->name('activities');
+        Route::get('/activities/{activityRequest}', [DeveloperActivityController::class, 'show'])->name('activities.show');
     });
 
     Route::prefix('publik')->name('public.')->group(function (): void {
@@ -132,4 +135,8 @@ Route::group([], function (): void {
     });
 
     Route::get('/file-aman', [SecureFileController::class, 'show'])->name('secure-file.show');
+
+    Route::match(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], '/{fallbackPath}', static function (): never {
+        abort(404);
+    })->where('fallbackPath', '.*')->fallback();
 });

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Worship;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\WorshipServiceSchedules\DeleteWorshipServiceScheduleRequest;
 use App\Http\Requests\WorshipServiceSchedules\StoreWorshipServiceScheduleRequest;
+use App\Services\Activity\ActivityRecorder;
 use App\Services\WorshipServiceSchedules\WorshipServiceScheduleBuilder;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
@@ -60,14 +61,29 @@ class ServiceScheduleController extends Controller
     public function store(
         StoreWorshipServiceScheduleRequest $request,
         WorshipServiceScheduleBuilder $scheduleBuilder,
+        ActivityRecorder $activity,
     ): RedirectResponse {
         if (trim((string) $request->input('action', '')) === 'delete_worship_penatalayan') {
             $month = normalize_month_value((string) $request->input('month', date('Y-m')));
 
-            return $this->deleteByMonth($month, $scheduleBuilder);
+            return $this->deleteByMonth($month, $scheduleBuilder, $activity);
         }
 
-        $schedule = $scheduleBuilder->saveRecord($request->scheduleRecord());
+        $record = $request->scheduleRecord();
+        $month = normalize_month_value((string) ($record['month'] ?? date('Y-m')));
+        $before = $scheduleBuilder->recordForMonth($month);
+        $schedule = $activity->withoutModelEvents(fn () => $scheduleBuilder->saveRecord($record));
+        $after = $scheduleBuilder->recordForMonth($month);
+        $activity->record(
+            'data',
+            $before === null ? 'worship.schedule.created' : 'worship.schedule.updated',
+            'worship_schedules',
+            $month,
+            (string) ($after['title'] ?? $month),
+            'Jadwal penatalayan disimpan.',
+            $before,
+            $after,
+        );
 
         return redirect()->route('worship.penatalayan', [
             'month' => $schedule->month,
@@ -78,8 +94,9 @@ class ServiceScheduleController extends Controller
     public function destroy(
         DeleteWorshipServiceScheduleRequest $request,
         WorshipServiceScheduleBuilder $scheduleBuilder,
+        ActivityRecorder $activity,
     ): RedirectResponse {
-        return $this->deleteByMonth($request->scheduleMonth(), $scheduleBuilder);
+        return $this->deleteByMonth($request->scheduleMonth(), $scheduleBuilder, $activity);
     }
 
     /**
@@ -128,14 +145,27 @@ class ServiceScheduleController extends Controller
     private function deleteByMonth(
         string $month,
         WorshipServiceScheduleBuilder $scheduleBuilder,
+        ActivityRecorder $activity,
     ): RedirectResponse {
         $month = normalize_month_value($month);
-        if (! $scheduleBuilder->deleteMonth($month)) {
+        $before = $scheduleBuilder->recordForMonth($month);
+        if (! $activity->withoutModelEvents(fn () => $scheduleBuilder->deleteMonth($month))) {
             return redirect()->route('worship.penatalayan', [
                 'error' => 'invalid_schedule',
                 'month' => $month,
             ]);
         }
+
+        $activity->record(
+            'data',
+            'worship.schedule.deleted',
+            'worship_schedules',
+            $month,
+            (string) ($before['title'] ?? $month),
+            'Jadwal penatalayan dihapus.',
+            $before,
+            null,
+        );
 
         return redirect()->route('worship.penatalayan', ['deleted' => 1]);
     }
