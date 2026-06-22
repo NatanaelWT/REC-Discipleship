@@ -31,20 +31,23 @@
   @endphp
 
   @include('developer._header', [
-    'activePage' => 'developer_statistics',
     'title' => 'Statistik Website',
     'description' => 'Analisis kunjungan anonim pada halaman publik, perangkat, bahasa, dan pola akses.',
     'eyebrow' => 'Public Analytics',
+    'icon' => 'statistics',
+    'metaLabel' => 'Periode aktif',
+    'metaValue' => $rangeLabels[$filters['range']] ?? 'Khusus',
+    'metaHint' => $filters['from'].' - '.$filters['to'],
   ])
 
   <section class="card analytics-filter-card developer-section-card">
     <div class="analytics-section-head">
       <div><span>Filter statistik</span><h2>Statistik Kunjungan Publik</h2></div>
-      <a class="button secondary developer-link-button" href="{{ route('developer.statistics') }}"><span>Reset filter</span><span aria-hidden="true">↺</span></a>
+      <a class="btn tiny ghost developer-link-button" href="{{ route('developer.statistics') }}">@include('developer._icon', ['name' => 'reset'])<span>Reset filter</span></a>
     </div>
     <p class="developer-muted">Hanya kunjungan anonim pada halaman publik, materi publik, dan halaman login yang dihitung. Aktivitas setelah login tersedia di menu Aktivitas.</p>
     @if (($filters['visitor'] ?? '') !== '')
-      <div class="analytics-active-filter">Menampilkan satu pengunjung: <code>{{ substr($filters['visitor'], 0, 12) }}…</code></div>
+      <div class="analytics-active-filter">Menampilkan satu pengunjung: <code>{{ substr($filters['visitor'], 0, 12) }}&hellip;</code></div>
     @endif
     <form method="get" action="{{ route('developer.statistics') }}" class="analytics-filter-grid">
       <label>Periode
@@ -59,7 +62,7 @@
       <label>Perangkat<select name="device"><option value="">Semua</option>@foreach (['desktop' => 'Desktop', 'mobile' => 'Mobile', 'tablet' => 'Tablet', 'tv' => 'TV', 'console' => 'Console', 'other' => 'Lainnya', 'unknown' => 'Tidak diketahui'] as $value => $label)<option value="{{ $value }}" @selected($filters['device'] === $value)>{{ $label }}</option>@endforeach</select></label>
       <label>Route<select name="route"><option value="">Semua</option>@foreach ($options['routes'] as $route)<option value="{{ $route }}" @selected($filters['route'] === $route)>{{ $route }}</option>@endforeach</select></label>
       @if ($filters['visitor'] !== '')<input type="hidden" name="visitor" value="{{ $filters['visitor'] }}">@endif
-      <div class="analytics-filter-submit"><button class="button" type="submit">Terapkan</button></div>
+      <div class="analytics-filter-submit"><button class="btn" type="submit">@include('developer._icon', ['name' => 'filter'])<span>Terapkan</span></button></div>
     </form>
   </section>
 
@@ -80,7 +83,7 @@
   </section>
 
   <section class="card analytics-trend-card">
-    <div class="analytics-section-head"><div><span>Tren</span><h3>Page view harian</h3></div><small>{{ $filters['from'] }} — {{ $filters['to'] }}</small></div>
+    <div class="analytics-section-head"><div><span>Tren</span><h3>Page view harian</h3></div><small>{{ $filters['from'] }} &ndash; {{ $filters['to'] }}</small></div>
     @if (collect($trend)->sum('count') > 0)
       <div class="analytics-chart-scroll">
         <svg class="analytics-trend-svg" viewBox="0 0 {{ $chartWidth }} {{ $chartHeight }}" role="img" aria-label="Grafik page view harian">
@@ -115,17 +118,17 @@
 
   <section class="card table-card-plain analytics-visitors-card">
     <div class="analytics-section-head"><div><span>Pengunjung</span><h3>Paling aktif</h3></div><small>10 teratas dari maksimal 50</small></div>
-    <div class="table-wrap"><table class="table"><thead><tr><th>Pengunjung</th><th>Bahasa / perangkat</th><th>Page view</th><th>Sesi</th><th>Terakhir</th><th></th></tr></thead><tbody>
+    <div class="table-wrap analytics-visitors-table-wrap"><table class="table analytics-visitors-table"><thead><tr><th>Pengunjung</th><th>Bahasa / perangkat</th><th>Page view</th><th>Sesi</th><th>Terakhir</th><th>Aksi</th></tr></thead><tbody>
       @if ($visibleVisitors->isNotEmpty())
         @include('developer.statistics._visitor-rows', ['rows' => $visibleVisitors, 'rowClass' => 'analytics-primary-visitor-row'])
       @else
-        <tr><td colspan="6">Belum ada pengunjung pada periode ini.</td></tr>
+        <tr class="analytics-visitors-empty"><td colspan="6">Belum ada pengunjung pada periode ini.</td></tr>
       @endif
     </tbody></table></div>
     @if ($remainingVisitors->isNotEmpty())
       <details class="analytics-table-more">
         <summary><span>Lihat {{ $remainingVisitors->count() }} pengunjung lainnya</span><span class="analytics-disclosure-icon" aria-hidden="true"></span></summary>
-        <div class="table-wrap"><table class="table"><thead><tr><th>Pengunjung</th><th>Bahasa / perangkat</th><th>Page view</th><th>Sesi</th><th>Terakhir</th><th></th></tr></thead><tbody>
+        <div class="table-wrap analytics-visitors-table-wrap"><table class="table analytics-visitors-table"><thead><tr><th>Pengunjung</th><th>Bahasa / perangkat</th><th>Page view</th><th>Sesi</th><th>Terakhir</th><th>Aksi</th></tr></thead><tbody>
           @include('developer.statistics._visitor-rows', ['rows' => $remainingVisitors])
         </tbody></table></div>
       </details>

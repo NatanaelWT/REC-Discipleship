@@ -168,7 +168,10 @@ class DeveloperAccessTest extends TestCase
 
         $this->get('/developer/config')
             ->assertOk()
-            ->assertSee('REC Internal');
+            ->assertSee('REC Internal')
+            ->assertSee('data-developer-header', false)
+            ->assertDontSee('developer-hub-nav', false)
+            ->assertSee('class="btn developer-primary-action"', false);
         $this->get('/developer')
             ->assertOk()
             ->assertSee('Developer debug aktif');
@@ -183,6 +186,8 @@ class DeveloperAccessTest extends TestCase
 
         $this->get('/developer/users')
             ->assertOk()
+            ->assertSee('data-developer-header', false)
+            ->assertDontSee('developer-hub-nav', false)
             ->assertSee('Role')
             ->assertSee('value="pemuridan_cabang"', false)
             ->assertSee('value="pemuridan_pusat"', false)
@@ -239,6 +244,8 @@ class DeveloperAccessTest extends TestCase
 
         $this->get('/developer')
             ->assertOk()
+            ->assertSee('data-developer-header', false)
+            ->assertDontSee('developer-hub-nav', false)
             ->assertSee('Diagnostics')
             ->assertSee('Runtime')
             ->assertDontSee('Material Audit')

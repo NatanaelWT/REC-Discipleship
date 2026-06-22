@@ -8,10 +8,13 @@
 
 @section('content')
     @include('developer._header', [
-      'activePage' => 'developer_users',
       'title' => 'Manajemen User',
       'description' => 'Buat akun, atur role dan cabang, serta kelola akses pengguna aplikasi.',
       'eyebrow' => 'Access Management',
+      'icon' => 'users',
+      'metaLabel' => 'Akun dikelola',
+      'metaValue' => number_format($users->count(), 0, ',', '.'),
+      'metaHint' => 'User non-developer',
     ])
 
     @if ($statusCode === 'created')
@@ -64,7 +67,7 @@
           </select>
         </label>
         <div class="developer-form-actions">
-          <button class="btn developer-primary-action" type="submit"><span>Buat User</span><span aria-hidden="true">→</span></button>
+          <button class="btn developer-primary-action" type="submit">@include('developer._icon', ['name' => 'users'])<span>Buat User</span></button>
         </div>
       </form>
     </section>

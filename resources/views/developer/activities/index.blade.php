@@ -13,10 +13,13 @@
   @endphp
 
   @include('developer._header', [
-    'activePage' => 'developer_activities',
     'title' => 'Riwayat Aktivitas',
     'description' => 'Telusuri request, perubahan data, error, dan akses user dengan audit yang terpusat.',
     'eyebrow' => 'System Audit',
+    'icon' => 'activities',
+    'metaLabel' => 'Kapasitas halaman',
+    'metaValue' => '100 request',
+    'metaHint' => 'Urutan terbaru lebih dahulu',
   ])
 
   <section class="card developer-panel activity-filter-card developer-section-card">
@@ -25,7 +28,7 @@
         <h2>Riwayat Aktivitas</h2>
         <p class="developer-muted">Seluruh waktu ditampilkan dalam {{ app_timezone()->getName() }}. Data terbaru berada di atas.</p>
       </div>
-      <a class="button secondary developer-link-button" href="{{ route('developer.activities') }}"><span>Reset filter</span><span aria-hidden="true">↺</span></a>
+      <a class="btn tiny ghost developer-link-button" href="{{ route('developer.activities') }}">@include('developer._icon', ['name' => 'reset'])<span>Reset filter</span></a>
     </div>
 
     <form method="get" action="{{ route('developer.activities') }}" class="activity-filter-form">
@@ -47,7 +50,7 @@
             @endforeach
           </select>
         </label>
-        <div class="activity-filter-submit"><button class="button" type="submit">Terapkan</button></div>
+        <div class="activity-filter-submit"><button class="btn" type="submit">@include('developer._icon', ['name' => 'filter'])<span>Terapkan</span></button></div>
       </div>
 
       <label class="activity-developer-toggle">
@@ -100,12 +103,7 @@
 
   <section class="card table-card-plain developer-panel">
     <div class="activity-list-head"><div><span>Request terbaru</span><strong>Aktivitas</strong></div><small>Maksimal 100 per halaman</small></div>
-    @if ($activities->previousPageUrl() || $activities->nextPageUrl())
-      <nav class="activity-pagination" aria-label="Pagination aktivitas">
-        @if ($activities->previousPageUrl())<a class="button secondary developer-link-button" href="{{ $activities->previousPageUrl() }}"><span aria-hidden="true">←</span><span>Sebelumnya</span></a>@endif
-        @if ($activities->nextPageUrl())<a class="button secondary developer-link-button" href="{{ $activities->nextPageUrl() }}"><span>Berikutnya</span><span aria-hidden="true">→</span></a>@endif
-      </nav>
-    @endif
+    @include('developer._cursor-pagination', ['paginator' => $activities, 'itemLabel' => 'aktivitas'])
     <div class="table-wrap activity-table-wrap">
       <table class="table activity-table">
         <thead><tr><th>Waktu</th><th>Actor</th><th>Aktivitas</th><th>Hasil</th><th>Detail</th></tr></thead>
@@ -117,10 +115,10 @@
             @endphp
             <tr data-activity-row>
               <td data-label="Waktu"><strong>{{ $time?->format('d-m-Y H:i:s') ?? '-' }}</strong><small>{{ $item->duration_ms !== null ? $item->duration_ms.' ms' : '-' }}</small></td>
-              <td data-label="Actor"><strong>{{ $item->username ?: 'Anonim' }}</strong><small>{{ $item->role ?: $item->actor_type }}{{ $item->branch_label ? ' · '.$item->branch_label : '' }}</small></td>
+              <td data-label="Actor"><strong>{{ $item->username ?: 'Anonim' }}</strong><small>{{ $item->role ?: $item->actor_type }}@if ($item->branch_label) &middot; {{ $item->branch_label }}@endif</small></td>
               <td data-label="Aktivitas"><span class="badge">{{ $item->category }}</span><strong>{{ $item->action }}</strong><small class="activity-path" title="{{ $item->method }} {{ $item->path }}">{{ $item->method }} {{ $item->path }}</small></td>
-              <td data-label="Hasil"><span class="activity-outcome is-{{ $item->outcome }}">{{ $item->outcome }}</span><small>HTTP {{ $item->http_status ?? '-' }} · {{ $item->events_count }} event</small></td>
-              <td data-label="Detail"><a class="button secondary small developer-detail-link" href="{{ route('developer.activities.show', ['activityRequest' => $item->id, 'back' => $back]) }}"><span>Buka</span><span aria-hidden="true">→</span></a></td>
+              <td data-label="Hasil"><span class="activity-outcome is-{{ $item->outcome }}">{{ $item->outcome }}</span><small>HTTP {{ $item->http_status ?? '-' }} &middot; {{ $item->events_count }} event</small></td>
+              <td data-label="Detail"><a class="btn tiny ghost developer-detail-link" href="{{ route('developer.activities.show', ['activityRequest' => $item->id, 'back' => $back]) }}">@include('developer._icon', ['name' => 'eye'])<span>Buka</span></a></td>
             </tr>
           @empty
             <tr class="activity-empty-row"><td colspan="5">Belum ada aktivitas yang sesuai dengan filter.</td></tr>

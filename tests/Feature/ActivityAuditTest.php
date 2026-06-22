@@ -288,8 +288,14 @@ class ActivityAuditTest extends TestCase
         $response = $this->actingAs($this->developer())
             ->get('/developer/activities?actor=anonymous&include_developer=1')
             ->assertOk()
+            ->assertSee('data-developer-header', false)
+            ->assertDontSee('developer-hub-nav', false)
             ->assertSee('Maksimal 100 per halaman')
+            ->assertSee('100 aktivitas pada halaman ini')
             ->assertSee('Berikutnya')
+            ->assertSee('data-developer-cursor-pagination', false)
+            ->assertSee('aria-disabled="true"', false)
+            ->assertSee('class="btn tiny ghost developer-cursor-button"', false)
             ->assertSee('actor=anonymous', false)
             ->assertSee('include_developer=1', false);
 
@@ -343,6 +349,9 @@ class ActivityAuditTest extends TestCase
         $response = $this->actingAs($developer)
             ->get('/developer/activities/'.$activity->id)
             ->assertOk()
+            ->assertSee('data-developer-header', false)
+            ->assertDontSee('developer-hub-nav', false)
+            ->assertSee('class="btn ghost developer-link-button"', false)
             ->assertSee('data-activity-technical="query"', false)
             ->assertSee('data-auto-open-error', false)
             ->assertSee('Sebelum, sesudah, dan metadata');

@@ -8,10 +8,13 @@
 
 @section('content')
     @include('developer._header', [
-      'activePage' => 'developer_dashboard',
       'title' => 'Pusat Kendali Developer',
       'description' => 'Pantau kondisi aplikasi dan buka alat administrasi utama melalui panel yang terpusat.',
       'eyebrow' => 'System Overview',
+      'icon' => 'dashboard',
+      'metaLabel' => 'Status sistem',
+      'metaValue' => 'Aktif',
+      'metaHint' => 'Developer / '.app_timezone()->getName(),
     ])
 
     <section class="card developer-panel developer-section-card">

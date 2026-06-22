@@ -8,10 +8,13 @@
 
 @section('content')
     @include('developer._header', [
-      'activePage' => 'developer_config',
       'title' => 'Konfigurasi Aplikasi',
       'description' => 'Atur identitas aplikasi, zona waktu, dan alat bantu khusus developer.',
       'eyebrow' => 'Application Settings',
+      'icon' => 'config',
+      'metaLabel' => 'Timezone aktif',
+      'metaValue' => $configValues['app_timezone'] ?? 'Asia/Jakarta',
+      'metaHint' => 'Konfigurasi global',
     ])
 
     @if ($statusCode === 'saved')
@@ -52,7 +55,7 @@
             <small>Menampilkan penanda debug khusus pada akun developer.</small>
           </label>
           <div class="developer-form-actions">
-            <button class="btn developer-primary-action" type="submit"><span>Simpan Config</span><span aria-hidden="true">→</span></button>
+            <button class="btn developer-primary-action" type="submit">@include('developer._icon', ['name' => 'check'])<span>Simpan Config</span></button>
           </div>
         </form>
 

@@ -18,16 +18,19 @@
 
 @section('content')
   @include('developer._header', [
-    'activePage' => 'developer_activities',
     'title' => 'Detail Aktivitas',
     'description' => 'Periksa konteks request, perubahan record, metadata teknis, dan detail kegagalan.',
     'eyebrow' => 'Audit Detail',
+    'icon' => 'activities',
+    'metaLabel' => 'Hasil request',
+    'metaValue' => ucfirst((string) $activity->outcome),
+    'metaHint' => 'HTTP '.($activity->http_status ?? '-'),
   ])
 
   <section class="card developer-panel developer-section-card activity-request-summary">
     <div class="card-row">
       <div><h2>Request {{ $activity->id }}</h2><p class="developer-muted">{{ $activity->method }} {{ $activity->path }}</p></div>
-      <a class="button secondary developer-link-button" href="{{ $backUrl }}"><span aria-hidden="true">←</span><span>Kembali ke Aktivitas</span></a>
+      <a class="btn ghost developer-link-button" href="{{ $backUrl }}">@include('developer._icon', ['name' => 'arrow-left'])<span>Kembali ke Aktivitas</span></a>
     </div>
     <div class="activity-facts">
       <div><span>Waktu</span><strong>{{ $started?->format('d-m-Y H:i:s.u') ?? '-' }}</strong></div>
@@ -35,7 +38,7 @@
       <div><span>Role / Cabang</span><strong>{{ $activity->role ?: '-' }} / {{ $activity->branch_label ?: '-' }}</strong></div>
       <div><span>Route</span><strong>{{ $activity->route_name ?: '-' }}</strong></div>
       <div><span>Kategori / Action</span><strong>{{ $activity->category }} / {{ $activity->action }}</strong></div>
-      <div><span>Hasil</span><strong>{{ $activity->outcome }} · HTTP {{ $activity->http_status ?? '-' }}</strong></div>
+      <div><span>Hasil</span><strong>{{ $activity->outcome }} &middot; HTTP {{ $activity->http_status ?? '-' }}</strong></div>
       <div><span>Durasi</span><strong>{{ $activity->duration_ms ?? '-' }} ms</strong></div>
       <div><span>IP</span><strong>{{ $activity->ip_address ?: '-' }}</strong></div>
       <div><span>Subject</span><strong>{{ $activity->subject_type ?: '-' }} #{{ $activity->subject_id ?: '-' }}</strong></div>
