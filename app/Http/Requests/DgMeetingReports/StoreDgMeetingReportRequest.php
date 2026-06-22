@@ -62,7 +62,9 @@ class StoreDgMeetingReportRequest extends FormRequest
             $this->merge(['public_cabang' => $routeBranch]);
         }
 
-        session()->put('public_dg_report_old', $this->all());
+        $oldInput = $this->input();
+        unset($oldInput['meeting_photos']);
+        session()->put('public_dg_report_old', $oldInput);
     }
 
     /**

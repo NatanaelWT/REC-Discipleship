@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ActivityRequest;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -112,6 +113,128 @@ class DgMeetingReportRecapTest extends TestCase
             'person_id' => 510,
             'person_name_snapshot' => 'Carlini Fan Hardi',
         ]], json_decode((string) $report->meditation_sharers, true));
+    }
+
+    public function test_public_dg_report_uploads_a_real_meeting_photo_without_server_error(): void
+    {
+        $this->createTables();
+        $ids = $this->seedGmReportFormData();
+
+        $response = $this->post('/publik/jurnal-dg/gm/laporan', [
+            'public_cabang' => 'gm',
+            'leader_id' => (string) $ids['leader_id'],
+            'group_id' => (string) $ids['group_id'],
+            'meeting_date' => '2026-06-18',
+            'material_topic' => 'Sesi 9',
+            'sharing_openness' => '10',
+            'meeting_photos' => [
+                UploadedFile::fake()->createWithContent('foto-pertemuan.png', $this->tinyPng()),
+            ],
+        ]);
+
+        $response->assertRedirect(route('public.dg.report', ['branch' => 'gm', 'submitted' => 1]));
+        $response->assertSessionMissing('public_dg_report_error');
+
+        $report = DB::table('discipleship_meeting_reports')->orderByDesc('id')->first();
+        $this->assertNotNull($report);
+        $photos = json_decode((string) $report->photos, true);
+        $this->assertIsArray($photos);
+        $this->assertCount(1, $photos);
+        $this->assertSame('foto-pertemuan.png', $photos[0]['name']);
+        $this->assertStringStartsWith('uploads/dg_reports/dg_', $photos[0]['path']);
+        $this->assertFileExists(rec_runtime_path($photos[0]['path']));
+
+        delete_relative_upload_file($photos[0]['path']);
+    }
+
+    public function test_public_dg_report_rejects_non_image_upload_without_creating_report(): void
+    {
+        $this->createTables();
+        $ids = $this->seedGmReportFormData();
+        $this->createActivityTables();
+
+        $response = $this->post('/publik/jurnal-dg/gm/laporan', [
+            'public_cabang' => 'gm',
+            'leader_id' => (string) $ids['leader_id'],
+            'group_id' => (string) $ids['group_id'],
+            'meeting_date' => '2026-06-18',
+            'material_topic' => 'Sesi 9',
+            'sharing_openness' => '10',
+            'meeting_photos' => [
+                UploadedFile::fake()->createWithContent('bukan-foto.png', 'plain text'),
+            ],
+        ]);
+
+        $response->assertRedirect(route('public.dg.report', ['branch' => 'gm']));
+        $response->assertSessionHas(
+            'public_dg_report_error',
+            'Format foto pertemuan tidak didukung. Gunakan JPG/PNG/WEBP.',
+        );
+        $response->assertSessionHasErrors('public_dg_report_error');
+        $response->assertSessionMissing('public_dg_report_old.meeting_photos');
+        $this->assertSame(0, DB::table('discipleship_meeting_reports')->count());
+
+        $activity = ActivityRequest::query()->findOrFail($response->headers->get('X-Activity-Request-Id'));
+        $this->assertSame('failed', $activity->outcome);
+        $this->assertTrue($activity->events()->where('action', 'request.validation_failed')->exists());
+    }
+
+    public function test_public_dg_report_rejects_oversized_photo_without_server_error(): void
+    {
+        $this->createTables();
+        $ids = $this->seedGmReportFormData();
+
+        $response = $this->post('/publik/jurnal-dg/gm/laporan', [
+            'public_cabang' => 'gm',
+            'leader_id' => (string) $ids['leader_id'],
+            'group_id' => (string) $ids['group_id'],
+            'meeting_date' => '2026-06-18',
+            'material_topic' => 'Sesi 9',
+            'sharing_openness' => '10',
+            'meeting_photos' => [
+                UploadedFile::fake()->create('terlalu-besar.jpg', 5121, 'image/jpeg'),
+            ],
+        ]);
+
+        $response->assertRedirect(route('public.dg.report', ['branch' => 'gm']));
+        $response->assertSessionHas(
+            'public_dg_report_error',
+            'Ukuran foto pertemuan terlalu besar. Maksimal 5 MB per file.',
+        );
+        $this->assertSame(0, DB::table('discipleship_meeting_reports')->count());
+    }
+
+    public function test_public_dg_report_cleans_up_previous_files_when_one_of_multiple_uploads_is_invalid(): void
+    {
+        $this->createTables();
+        $ids = $this->seedGmReportFormData();
+        $uploadDirectory = rec_runtime_path('uploads/dg_reports');
+        $filesBefore = glob($uploadDirectory.'/dg_*') ?: [];
+        sort($filesBefore);
+
+        $response = $this->post('/publik/jurnal-dg/gm/laporan', [
+            'public_cabang' => 'gm',
+            'leader_id' => (string) $ids['leader_id'],
+            'group_id' => (string) $ids['group_id'],
+            'meeting_date' => '2026-06-18',
+            'material_topic' => 'Sesi 9',
+            'sharing_openness' => '10',
+            'meeting_photos' => [
+                UploadedFile::fake()->createWithContent('valid.png', $this->tinyPng()),
+                UploadedFile::fake()->createWithContent('invalid.png', 'plain text'),
+            ],
+        ]);
+
+        $response->assertRedirect(route('public.dg.report', ['branch' => 'gm']));
+        $response->assertSessionHas(
+            'public_dg_report_error',
+            'Format foto pertemuan tidak didukung. Gunakan JPG/PNG/WEBP.',
+        );
+        $this->assertSame(0, DB::table('discipleship_meeting_reports')->count());
+
+        $filesAfter = glob($uploadDirectory.'/dg_*') ?: [];
+        sort($filesAfter);
+        $this->assertSame($filesBefore, $filesAfter);
     }
 
     public function test_public_dg_report_rejects_real_leader_group_mismatch_and_audits_failure(): void
@@ -373,5 +496,16 @@ class DgMeetingReportRecapTest extends TestCase
         ]);
 
         return ['leader_id' => 605, 'member_id' => 510, 'group_id' => 322];
+    }
+
+    private function tinyPng(): string
+    {
+        $png = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+            true,
+        );
+        $this->assertIsString($png);
+
+        return $png;
     }
 }

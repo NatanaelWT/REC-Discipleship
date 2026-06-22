@@ -31,7 +31,7 @@ class HelperManifest
         'format_file_size', 'is_upload_path', 'normalize_uploaded_file_items', 'rec_public_path', 'rec_runtime_path',
         'resolve_relative_upload_path', 'sanitize_file_name_component', 'sanitize_relative_upload_path',
         'secure_file_allowed_extensions', 'secure_file_extension', 'secure_file_inline_extensions',
-        'secure_file_mime_by_extension', 'upload_managed_files',
+        'secure_file_mime_by_extension', 'upload_managed_file', 'upload_managed_files',
     ];
 
     private const DISCIPLESHIP = [
@@ -60,7 +60,8 @@ class HelperManifest
         'normalize_msk_session_numbers', 'normalize_sheet_cell_value', 'person_label', 'pohon_dot_attrs',
         'pohon_dot_group_label', 'pohon_dot_group_node_id', 'pohon_dot_group_stage', 'pohon_dot_id',
         'pohon_dot_person_label', 'pohon_dot_person_name', 'pohon_dot_primary_group_leader_name', 'pohon_dot_quote',
-        'read_branch_discipleship_targets', 'temporary_model_id', 'upload_dg_meeting_photos', 'upload_member_photos',
+        'read_branch_discipleship_targets', 'temporary_model_id', 'upload_dg_meeting_photo',
+        'upload_dg_meeting_photos', 'upload_member_photo', 'upload_member_photos',
     ];
 
     private const PUBLIC_PORTAL = [

@@ -12,6 +12,7 @@ use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use Throwable;
@@ -84,11 +85,13 @@ class DgMeetingReportController extends Controller
         string $branch = '',
     ): RedirectResponse {
         $publicBranch = $request->publicBranch();
-        $uploadResult = $photoUploader->uploadFromPhpFiles();
+        $uploadResult = $photoUploader->uploadFromRequest($request);
         if ($uploadResult['error_message'] !== '') {
             session()->put('public_dg_report_error', $uploadResult['error_message']);
 
-            return redirect()->route('public.dg.report', ['branch' => $publicBranch]);
+            return redirect()
+                ->route('public.dg.report', ['branch' => $publicBranch])
+                ->withErrors(['public_dg_report_error' => $uploadResult['error_message']]);
         }
 
         $meetingPhotos = $uploadResult['photos'];
@@ -145,11 +148,17 @@ class DgMeetingReportController extends Controller
 
                 $report->fresh();
             });
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
             $photoUploader->cleanup($meetingPhotos);
+            Log::error('DG meeting report could not be saved.', [
+                'branch' => $publicBranch,
+                'exception' => $exception,
+            ]);
             session()->put('public_dg_report_error', 'Laporan pertemuan DG gagal disimpan. Coba ulangi lagi.');
 
-            return redirect()->route('public.dg.report', ['branch' => $publicBranch]);
+            return redirect()
+                ->route('public.dg.report', ['branch' => $publicBranch])
+                ->withErrors(['public_dg_report_error' => 'Laporan pertemuan DG gagal disimpan. Coba ulangi lagi.']);
         }
 
         session()->forget(['public_dg_report_old', 'public_dg_report_error']);
