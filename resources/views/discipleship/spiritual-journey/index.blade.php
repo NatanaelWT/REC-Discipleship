@@ -717,7 +717,7 @@ if ($page === 'spiritual_journey') {
     $journeyFilter = trim((string) ($spiritualJourneyFilter ?? 'all'));
     $journeyFilterOptions = [
         'all' => 'Semua Peserta',
-        'msk_without_dg' => 'Sudah/Sedang MSK, Belum DG',
+        'dg_without_kgap' => 'Sudah/Sedang DG, Belum Kamp GAP',
     ];
 
     echo "  <div class=\"actions journey-hero-tools\">\n";
@@ -803,8 +803,8 @@ if ($page === 'spiritual_journey') {
         echo "</tr>\n";
     }
     if (count($rows) === 0) {
-        $emptyMessage = $journeyFilter === 'msk_without_dg'
-            ? 'Belum ada peserta MSK yang belum mengikuti DG.'
+        $emptyMessage = $journeyFilter === 'dg_without_kgap'
+            ? 'Belum ada peserta DG yang belum mengikuti Kamp GAP.'
             : 'Belum ada data peserta MSK.';
         echo '<tr><td colspan="3">'.h($emptyMessage)."</td></tr>\n";
     }

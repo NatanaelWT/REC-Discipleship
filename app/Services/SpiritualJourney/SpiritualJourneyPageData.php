@@ -84,21 +84,29 @@ class SpiritualJourneyPageData
 
     private function applyJourneyFilter(Builder $query, string &$journeyFilter): void
     {
-        if ($journeyFilter !== 'msk_without_dg') {
+        if ($journeyFilter !== 'dg_without_kgap') {
             $journeyFilter = 'all';
 
             return;
         }
 
         if (! Schema::hasTable('discipleship_group_people')) {
+            $query->whereRaw('1 = 0');
+
             return;
         }
 
-        $query->whereNotExists(static function ($subquery): void {
+        $query->where(static function (Builder $condition): void {
+            $condition->whereNull('msk_participants.journey_bridge_status')
+                ->orWhereNotIn('msk_participants.journey_bridge_status', ['sudah_kgap', 'ikut_keduanya']);
+        });
+        $query->whereExists(static function ($subquery): void {
             $subquery->selectRaw('1')
                 ->from('discipleship_group_people as filter_gp')
                 ->whereColumn('filter_gp.person_id', 'msk_participants.discipleship_person_id')
-                ->whereColumn('filter_gp.branch_id', 'msk_participants.branch_id');
+                ->whereColumn('filter_gp.branch_id', 'msk_participants.branch_id')
+                ->where('filter_gp.role', 'member')
+                ->whereIn('filter_gp.stage', ['DG 1', 'DG 2', 'DG 3']);
         });
     }
 

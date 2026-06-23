@@ -30,21 +30,28 @@ class SpiritualJourneyPageTest extends TestCase
         $response->assertSee('Peserta Journey');
     }
 
-    public function test_spiritual_journey_filters_msk_participants_without_dg_history(): void
+    public function test_spiritual_journey_filters_dg_participants_without_kgap(): void
     {
         $this->createMskTables();
         $this->createDiscipleshipTables();
 
-        $withoutDgPersonId = DB::table('discipleship_people')->insertGetId([
+        $dgWithoutKgapPersonId = DB::table('discipleship_people')->insertGetId([
             'branch_id' => 1,
-            'full_name' => 'Peserta Belum DG',
+            'full_name' => 'Peserta DG Belum KGAP',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $withDgPersonId = DB::table('discipleship_people')->insertGetId([
+        $dgWithKgapPersonId = DB::table('discipleship_people')->insertGetId([
             'branch_id' => 1,
-            'full_name' => 'Peserta Sudah DG',
+            'full_name' => 'Peserta DG Sudah KGAP',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $withoutDgPersonId = DB::table('discipleship_people')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Peserta Belum DG',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
@@ -59,49 +66,65 @@ class SpiritualJourneyPageTest extends TestCase
             'updated_at' => now(),
         ]);
         DB::table('discipleship_group_people')->insert([
-            'branch_id' => 1,
-            'discipleship_group_id' => $groupId,
-            'person_id' => $withDgPersonId,
-            'role' => 'member',
-            'stage' => 'DG 1',
-            'status' => 'active',
-            'started_on' => now()->toDateString(),
-            'ended_on' => null,
-            'created_at' => now(),
-            'updated_at' => now(),
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $dgWithoutKgapPersonId,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'active',
+                'started_on' => now()->toDateString(),
+                'ended_on' => null,
+                'end_reason' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $dgWithKgapPersonId,
+                'role' => 'member',
+                'stage' => 'DG 2',
+                'status' => 'completed',
+                'started_on' => now()->subMonths(3)->toDateString(),
+                'ended_on' => now()->subMonth()->toDateString(),
+                'end_reason' => 'group_completed',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
 
         DB::table('msk_participants')->insert([
             [
                 'branch_id' => 1,
+                'discipleship_person_id' => $dgWithoutKgapPersonId,
+                'full_name' => 'Peserta DG Belum KGAP',
+                'batch_month' => '2026-06',
+                'completed_at' => null,
+                'journey_bridge_status' => 'sudah_rg',
+                'status' => 'active',
+                'session_numbers' => json_encode([1, 2]),
+                'photos' => json_encode([]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_person_id' => $dgWithKgapPersonId,
+                'full_name' => 'Peserta DG Sudah KGAP',
+                'batch_month' => '2026-06',
+                'completed_at' => null,
+                'journey_bridge_status' => 'sudah_kgap',
+                'status' => 'active',
+                'session_numbers' => json_encode([1, 2]),
+                'photos' => json_encode([]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
                 'discipleship_person_id' => $withoutDgPersonId,
                 'full_name' => 'Peserta Belum DG',
-                'batch_month' => '2026-06',
-                'completed_at' => null,
-                'journey_bridge_status' => 'belum',
-                'status' => 'active',
-                'session_numbers' => json_encode([1, 2]),
-                'photos' => json_encode([]),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'branch_id' => 1,
-                'discipleship_person_id' => $withDgPersonId,
-                'full_name' => 'Peserta Sudah DG',
-                'batch_month' => '2026-06',
-                'completed_at' => null,
-                'journey_bridge_status' => 'belum',
-                'status' => 'active',
-                'session_numbers' => json_encode([1, 2]),
-                'photos' => json_encode([]),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'branch_id' => 1,
-                'discipleship_person_id' => null,
-                'full_name' => 'Peserta Belum Terhubung',
                 'batch_month' => '2026-06',
                 'completed_at' => null,
                 'journey_bridge_status' => 'belum',
@@ -115,13 +138,13 @@ class SpiritualJourneyPageTest extends TestCase
 
         $this->actingAsRecUser();
 
-        $response = $this->get('/pemuridan/spiritual-journey?journey_filter=msk_without_dg');
+        $response = $this->get('/pemuridan/spiritual-journey?journey_filter=dg_without_kgap');
 
         $response->assertOk();
-        $response->assertSee('Sudah/Sedang MSK, Belum DG');
-        $response->assertSee('Peserta Belum DG');
-        $response->assertSee('Peserta Belum Terhubung');
-        $response->assertDontSee('Peserta Sudah DG');
+        $response->assertSee('Sudah/Sedang DG, Belum Kamp GAP');
+        $response->assertSee('Peserta DG Belum KGAP');
+        $response->assertDontSee('Peserta DG Sudah KGAP');
+        $response->assertDontSee('Peserta Belum DG');
     }
 
     public function test_bridge_status_update_persists_to_laravel_table(): void
