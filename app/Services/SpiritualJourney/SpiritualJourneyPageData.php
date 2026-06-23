@@ -9,7 +9,9 @@ use App\Models\DiscipleshipRelationship;
 use App\Models\MskParticipant;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DiscipleshipTargets\DiscipleshipTargetReader;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class SpiritualJourneyPageData
 {
@@ -22,7 +24,8 @@ class SpiritualJourneyPageData
     public function forCurrentContext(Request $request): array
     {
         $search = strtolower(trim((string) $request->query('q', '')));
-        $pagination = MskParticipant::query()
+        $journeyFilter = trim((string) $request->query('journey_filter', 'all'));
+        $query = MskParticipant::query()
             ->select([
                 'id', 'branch_id', 'discipleship_person_id', 'full_name', 'gender', 'birth_date', 'birth_day_month',
                 'birth_place', 'address', 'email', 'whatsapp', 'batch_month', 'notes', 'completed_at',
@@ -34,7 +37,10 @@ class SpiritualJourneyPageData
                     $searchQuery->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%'])
                         ->orWhereRaw('LOWER(whatsapp) LIKE ?', ['%'.$search.'%']);
                 });
-            })
+            });
+        $this->applyJourneyFilter($query, $journeyFilter);
+
+        $pagination = $query
             ->orderBy('full_name')->orderBy('id')
             ->paginate(min(100, max(1, $request->integer('per_page', 50))))
             ->withQueryString();
@@ -63,6 +69,7 @@ class SpiritualJourneyPageData
             'mskClasses' => $participantRows,
             'spiritualJourneyPagination' => $pagination,
             'spiritualJourneySearch' => $search,
+            'spiritualJourneyFilter' => $journeyFilter,
             'spiritualJourneyTotalParticipants' => $pagination->total(),
             'discipleshipTargets' => $this->targets(),
             'discipleshipV2Model' => [
@@ -73,6 +80,26 @@ class SpiritualJourneyPageData
                 'discipleship_relations' => $relationships,
             ],
         ];
+    }
+
+    private function applyJourneyFilter(Builder $query, string &$journeyFilter): void
+    {
+        if ($journeyFilter !== 'msk_without_dg') {
+            $journeyFilter = 'all';
+
+            return;
+        }
+
+        if (! Schema::hasTable('discipleship_group_people')) {
+            return;
+        }
+
+        $query->whereNotExists(static function ($subquery): void {
+            $subquery->selectRaw('1')
+                ->from('discipleship_group_people as filter_gp')
+                ->whereColumn('filter_gp.person_id', 'msk_participants.discipleship_person_id')
+                ->whereColumn('filter_gp.branch_id', 'msk_participants.branch_id');
+        });
     }
 
     private function people(array $personIds): array

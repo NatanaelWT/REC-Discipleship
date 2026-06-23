@@ -10782,9 +10782,18 @@ textarea:focus-visible {
 }
 
 .journey-hero-search-wrap {
-  width: min(100%, 440px);
+  width: min(100%, 720px);
 }
 
+.journey-hero-search-wrap .form-row {
+  align-items: center;
+}
+
+.journey-hero-filter-wrap {
+  width: min(100%, 260px);
+}
+
+.journey-status-filter,
 .journey-hero-tools .journey-table-search {
   width: 100%;
 }
@@ -11777,6 +11786,15 @@ textarea:focus-visible {
   }
 
   .journey-hero-search-wrap {
+    width: 100%;
+  }
+
+  .journey-hero-search-wrap .form-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .journey-hero-filter-wrap {
     width: 100%;
   }
 

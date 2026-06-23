@@ -714,12 +714,26 @@ if ($page === 'spiritual_journey') {
     }
     echo "    </div>\n";
     echo "  </div>\n";
+    $journeyFilter = trim((string) ($spiritualJourneyFilter ?? 'all'));
+    $journeyFilterOptions = [
+        'all' => 'Semua Peserta',
+        'msk_without_dg' => 'Sudah/Sedang MSK, Belum DG',
+    ];
+
     echo "  <div class=\"actions journey-hero-tools\">\n";
     echo "    <div class=\"journey-hero-search-wrap\">\n";
     echo '      <form method="get" action="'.h(route('discipleship.spiritual-journey'))."\" class=\"form-row\">\n";
     if (request()->filled('branch_id')) {
         echo '        <input type="hidden" name="branch_id" value="'.h((string) request()->query('branch_id'))."\">\n";
     }
+    echo "        <div class=\"journey-hero-filter-wrap\">\n";
+    echo "          <select name=\"journey_filter\" class=\"search journey-status-filter\" aria-label=\"Filter spiritual journey\" onchange=\"this.form.submit()\">\n";
+    foreach ($journeyFilterOptions as $filterValue => $filterLabel) {
+        $selected = $journeyFilter === $filterValue ? ' selected' : '';
+        echo '            <option value="'.h($filterValue).'"'.$selected.'>'.h($filterLabel)."</option>\n";
+    }
+    echo "          </select>\n";
+    echo "        </div>\n";
     echo '        <input type="search" name="q" value="'.h($spiritualJourneySearch)."\" class=\"search journey-table-search\" placeholder=\"Cari peserta spiritual journey...\" aria-label=\"Cari peserta spiritual journey\">\n";
     echo "        <button class=\"btn tiny secondary\" type=\"submit\">Cari</button>\n";
     echo "      </form>\n";
@@ -789,7 +803,10 @@ if ($page === 'spiritual_journey') {
         echo "</tr>\n";
     }
     if (count($rows) === 0) {
-        echo "<tr><td colspan=\"3\">Belum ada data peserta MSK.</td></tr>\n";
+        $emptyMessage = $journeyFilter === 'msk_without_dg'
+            ? 'Belum ada peserta MSK yang belum mengikuti DG.'
+            : 'Belum ada data peserta MSK.';
+        echo '<tr><td colspan="3">'.h($emptyMessage)."</td></tr>\n";
     }
     echo "      </tbody>\n";
     echo "    </table>\n";
