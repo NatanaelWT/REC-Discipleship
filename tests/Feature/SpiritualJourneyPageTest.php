@@ -134,6 +134,19 @@ class SpiritualJourneyPageTest extends TestCase
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'branch_id' => 1,
+                'discipleship_person_id' => null,
+                'full_name' => 'Peserta Belum Terhubung',
+                'batch_month' => '2026-06',
+                'completed_at' => null,
+                'journey_bridge_status' => 'belum',
+                'status' => 'active',
+                'session_numbers' => json_encode([1]),
+                'photos' => json_encode([]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
 
         $this->actingAsRecUser();
@@ -141,10 +154,11 @@ class SpiritualJourneyPageTest extends TestCase
         $response = $this->get('/pemuridan/spiritual-journey?journey_filter=dg_without_kgap');
 
         $response->assertOk();
-        $response->assertSee('Sudah/Sedang DG, Belum Kamp GAP');
+        $response->assertSee('Minimal DG 1, Belum Kamp GAP');
         $response->assertSee('Peserta DG Belum KGAP');
         $response->assertDontSee('Peserta DG Sudah KGAP');
         $response->assertDontSee('Peserta Belum DG');
+        $response->assertDontSee('Peserta Belum Terhubung');
     }
 
     public function test_bridge_status_update_persists_to_laravel_table(): void

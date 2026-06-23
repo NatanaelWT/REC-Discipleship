@@ -100,6 +100,7 @@ class SpiritualJourneyPageData
             $condition->whereNull('msk_participants.journey_bridge_status')
                 ->orWhereNotIn('msk_participants.journey_bridge_status', ['sudah_kgap', 'ikut_keduanya']);
         });
+        $query->whereNotNull('msk_participants.discipleship_person_id');
         $query->whereExists(static function ($subquery): void {
             $subquery->selectRaw('1')
                 ->from('discipleship_group_people as filter_gp')
