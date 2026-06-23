@@ -113,6 +113,13 @@ class DiscipleshipDashboardTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        $formerMemberId = DB::table('discipleship_people')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Mantan Peserta Dashboard',
+            'status' => 'inactive',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         DB::table('msk_participants')->insert([
             'branch_id' => 1,
@@ -150,6 +157,19 @@ class DiscipleshipDashboardTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        DB::table('discipleship_group_people')->insert([
+            'branch_id' => 1,
+            'discipleship_group_id' => $groupId,
+            'person_id' => $formerMemberId,
+            'role' => 'member',
+            'stage' => 'DG 1',
+            'status' => 'completed',
+            'started_on' => '2025-01-01',
+            'ended_on' => '2025-12-31',
+            'end_reason' => 'group_completed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         DB::table('discipleship_relationships')->insert([
             'branch_id' => 1,
             'mentor_person_id' => $mentorId,
@@ -170,6 +190,7 @@ class DiscipleshipDashboardTest extends TestCase
         $this->assertSame(1, $journey['Selesai MSK']['value']);
         $this->assertSame(1, $journey['Selesai DG 1']['value']);
         $this->assertSame(1, $journey['Selesai Kamp GAP']['value']);
+        $this->assertSame(2, $stats['Peserta Selama Ini']['value']);
         $this->assertSame(3, $stats['Pernah Memimpin']['value']);
         $this->assertSame(1, $stats['Belum Selesai MSK']['value']);
     }

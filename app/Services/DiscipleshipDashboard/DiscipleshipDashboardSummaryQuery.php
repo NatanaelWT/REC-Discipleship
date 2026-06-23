@@ -131,11 +131,7 @@ class DiscipleshipDashboardSummaryQuery
     private function groupPeopleRows(array $branchIds): Collection
     {
         return $this->query(static fn () => DB::table('discipleship_group_people as gp')
-            ->join('discipleship_groups as g', 'g.id', '=', 'gp.discipleship_group_id')
             ->whereIn('gp.branch_id', $branchIds)
-            ->where('g.status', 'active')
-            ->where('gp.status', 'active')
-            ->whereNull('gp.ended_on')
             ->selectRaw("gp.branch_id,
                 COUNT(DISTINCT CASE WHEN gp.role = 'member' THEN gp.person_id END) AS active_people_count")
             ->groupBy('gp.branch_id')->get());
@@ -329,7 +325,7 @@ class DiscipleshipDashboardSummaryQuery
     private function summaryStats(array $row): array
     {
         return [
-            ['label' => 'Peserta Aktif', 'value' => $row['active_people_count'], 'sub' => 'Anggota dalam kelompok aktif', 'tone' => 'is-primary'],
+            ['label' => 'Peserta Selama Ini', 'value' => $row['active_people_count'], 'sub' => 'Anggota yang pernah ikut DG', 'tone' => 'is-primary'],
             ['label' => 'Pernah Memimpin', 'value' => $row['leader_count'], 'sub' => 'Orang yang pernah memimpin', 'tone' => 'is-emerald'],
             ['label' => 'Kelompok Aktif', 'value' => $row['group_count'], 'sub' => 'Kelompok yang sedang berjalan', 'tone' => 'is-dg2'],
             ['label' => 'Pertemuan Bulan Ini', 'value' => $row['meeting_count'], 'sub' => 'Laporan DG bulan berjalan', 'tone' => 'is-amber'],
