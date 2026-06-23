@@ -17,9 +17,13 @@ class PublicMaterialFile extends Model
         'original_file_name',
         'size_bytes',
         'mime_type',
+        'text_content',
+        'text_extracted_at',
+        'text_extraction_error',
     ];
 
     protected $casts = [
         'size_bytes' => 'integer',
+        'text_extracted_at' => 'datetime',
     ];
 }

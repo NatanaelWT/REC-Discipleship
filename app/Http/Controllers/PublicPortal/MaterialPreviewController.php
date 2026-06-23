@@ -91,25 +91,42 @@ class MaterialPreviewController extends Controller
         $ext = secure_file_extension($path);
         $showDgJournalButton = is_public_material_dg_session_menu($menu->value);
         $showFeedbackButton = is_public_material_feedback_session($menu->value, $row);
+        $previewTitle = trim((string) ($row['title'] ?? ''));
+        $downloadName = trim((string) ($row['file_name'] ?? basename($path)));
+        if ($previewTitle === '') {
+            $previewTitle = $downloadName;
+        }
+        if ($previewTitle === '') {
+            $previewTitle = 'Materi DG';
+        }
+        $rawUrl = route('materials.preview', [
+            'menu' => $menu->value,
+            'churchFile' => $churchFile->getKey(),
+            'raw' => '1',
+        ]);
+
+        if ($ext === 'pdf' && ! $request->rawPreview() && $menu === PublicMaterialMenuKey::MateriDg1) {
+            $textContent = trim((string) ($churchFile->text_content ?? ''));
+            if ($textContent !== '') {
+                return view('public.materials.text-preview', [
+                    'settings' => ['church_name' => app_church_name()],
+                    'previewTitle' => $previewTitle,
+                    'textContent' => $textContent,
+                    'downloadUrl' => route('materials.download', [
+                        'menu' => $menu->value,
+                        'churchFile' => $churchFile->getKey(),
+                    ]),
+                    'showFeedbackButton' => $showFeedbackButton,
+                    'feedbackSessionNumber' => public_material_session_number($row),
+                ]);
+            }
+        }
 
         if ($ext === 'pdf' && ! $request->rawPreview() && $showDgJournalButton) {
-            $previewTitle = trim((string) ($row['title'] ?? ''));
-            $downloadName = trim((string) ($row['file_name'] ?? basename($path)));
-            if ($previewTitle === '') {
-                $previewTitle = $downloadName;
-            }
-            if ($previewTitle === '') {
-                $previewTitle = 'Materi DG';
-            }
-
             return view('public.materials.preview', [
                 'settings' => ['church_name' => app_church_name()],
                 'previewTitle' => $previewTitle,
-                'rawUrl' => route('materials.preview', [
-                    'menu' => $menu->value,
-                    'churchFile' => $churchFile->getKey(),
-                    'raw' => '1',
-                ]),
+                'rawUrl' => $rawUrl,
                 'showFeedbackButton' => $showFeedbackButton,
                 'feedbackSessionNumber' => public_material_session_number($row),
             ]);

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\PublicMaterialMenuKey;
+use App\Services\PublicMaterials\PublicMaterialTextExtractor;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
@@ -92,6 +93,103 @@ class PublicMaterialManagementTest extends TestCase
         $this->assertStringStartsWith('application/pdf', (string) $response->headers->get('Content-Type'));
     }
 
+    public function test_dg1_pdf_preview_renders_stored_text_when_available(): void
+    {
+        $fileName = 'file_text_preview_20260617000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Public material');
+
+        $fileId = $this->insertMaterialFile(
+            'church_file_text_preview',
+            'File Text Preview',
+            $fileName,
+            PublicMaterialMenuKey::MateriDg1,
+            "Baris pertama materi.\nBaris kedua materi.",
+        );
+
+        $response = $this->get("/materi/materi_dg_1/{$fileId}/preview");
+
+        $response->assertOk();
+        $response->assertSee('Baris pertama materi.');
+        $response->assertSee('Baris kedua materi.');
+        $response->assertSee('Unduh PDF');
+        $response->assertDontSee('data-public-material-pdf-viewer', false);
+        $response->assertDontSee('public-material-preview-embed', false);
+    }
+
+    public function test_dg1_pdf_raw_preview_still_streams_pdf_when_text_exists(): void
+    {
+        $fileName = 'file_text_raw_20260617000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Public material');
+
+        $fileId = $this->insertMaterialFile(
+            'church_file_text_raw',
+            'File Text Raw',
+            $fileName,
+            PublicMaterialMenuKey::MateriDg1,
+            'Stored text should not replace raw PDF.',
+        );
+
+        $response = $this->get("/materi/materi_dg_1/{$fileId}/preview?raw=1");
+
+        $response->assertOk();
+        $this->assertStringStartsWith('application/pdf', (string) $response->headers->get('Content-Type'));
+        $this->assertStringStartsWith('inline;', (string) $response->headers->get('Content-Disposition'));
+    }
+
+    public function test_public_material_download_still_streams_pdf_attachment(): void
+    {
+        $fileName = 'file_download_20260617000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Public material');
+
+        $fileId = $this->insertMaterialFile(
+            'church_file_download',
+            'File Download',
+            $fileName,
+            PublicMaterialMenuKey::MateriDg1,
+            'Stored text for preview.',
+        );
+
+        $response = $this->get("/materi/materi_dg_1/{$fileId}/download");
+
+        $response->assertOk();
+        $this->assertStringStartsWith('application/pdf', (string) $response->headers->get('Content-Type'));
+        $this->assertStringStartsWith('attachment;', (string) $response->headers->get('Content-Disposition'));
+    }
+
+    public function test_dg1_pdf_preview_falls_back_to_pdf_viewer_without_text(): void
+    {
+        $fileName = 'file_text_missing_20260617000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Public material');
+
+        $fileId = $this->insertMaterialFile('church_file_text_missing', 'File Text Missing', $fileName);
+
+        $response = $this->get("/materi/materi_dg_1/{$fileId}/preview");
+
+        $response->assertOk();
+        $response->assertSee('data-public-material-pdf-viewer', false);
+        $response->assertSee('public-material-preview-embed', false);
+    }
+
+    public function test_dg2_pdf_preview_keeps_existing_pdf_viewer_even_when_text_exists(): void
+    {
+        $fileName = 'file_dg2_text_20260617000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg2, $fileName, 'DG2 material');
+
+        $fileId = $this->insertMaterialFile(
+            'church_file_dg2_text',
+            'DG2 Text File',
+            $fileName,
+            PublicMaterialMenuKey::MateriDg2,
+            'DG2 text should not render here.',
+        );
+
+        $response = $this->get("/materi/materi_dg_2/{$fileId}/preview");
+
+        $response->assertOk();
+        $response->assertSee('data-public-material-pdf-viewer', false);
+        $response->assertDontSee('DG2 text should not render here.');
+    }
+
     public function test_public_material_preview_rejects_file_from_wrong_menu(): void
     {
         $fileName = 'file_wrong_menu_20260617000000.pdf';
@@ -155,6 +253,32 @@ class PublicMaterialManagementTest extends TestCase
         ]);
     }
 
+    public function test_materials_extract_text_command_backfills_dg1_pdf_text(): void
+    {
+        $this->app->instance(
+            PublicMaterialTextExtractor::class,
+            new FakePublicMaterialTextExtractor('Teks hasil ekstraksi.'),
+        );
+
+        $fileName = 'file_backfill_20260617000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Backfill material');
+
+        $fileId = $this->insertMaterialFile('church_file_backfill', 'Backfill File', $fileName);
+
+        $exitCode = Artisan::call('materials:extract-text', [
+            '--menu' => 'materi_dg_1',
+            '--force' => true,
+        ]);
+
+        $this->assertSame(0, $exitCode);
+        $this->assertDatabaseHas('public_material_files', [
+            'id' => $fileId,
+            'text_content' => 'Teks hasil ekstraksi.',
+            'text_extraction_error' => null,
+        ]);
+        $this->assertNotNull(DB::table('public_material_files')->where('id', $fileId)->value('text_extracted_at'));
+    }
+
     public function test_developer_can_rename_public_material_file(): void
     {
         $this->loginAsMaterialManager();
@@ -216,6 +340,9 @@ class PublicMaterialManagementTest extends TestCase
             $table->string('original_file_name')->nullable();
             $table->unsignedBigInteger('size_bytes')->default(0);
             $table->string('mime_type', 180)->nullable();
+            $table->longText('text_content')->nullable();
+            $table->timestamp('text_extracted_at')->nullable();
+            $table->text('text_extraction_error')->nullable();
             $table->timestamps();
         });
     }
@@ -239,6 +366,7 @@ class PublicMaterialManagementTest extends TestCase
         string $title,
         string $fileName,
         PublicMaterialMenuKey $menu = PublicMaterialMenuKey::MateriDg1,
+        ?string $textContent = null,
     ): int {
         return $this->insertMaterialFileWithPath(
             $publicId,
@@ -246,6 +374,7 @@ class PublicMaterialManagementTest extends TestCase
             $this->test_relative_folder($menu).'/'.$fileName,
             $title.'.pdf',
             $menu,
+            $textContent,
         );
     }
 
@@ -255,8 +384,9 @@ class PublicMaterialManagementTest extends TestCase
         string $relativePath,
         string $originalFileName,
         PublicMaterialMenuKey $menu,
+        ?string $textContent = null,
     ): int {
-        return DB::table('public_material_files')->insertGetId([
+        $values = [
             'menu' => $menu->value,
             'title' => $title,
             'relative_path' => $relativePath,
@@ -265,7 +395,15 @@ class PublicMaterialManagementTest extends TestCase
             'mime_type' => 'application/pdf',
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ];
+
+        if ($textContent !== null) {
+            $values['text_content'] = $textContent;
+            $values['text_extracted_at'] = now();
+            $values['text_extraction_error'] = null;
+        }
+
+        return DB::table('public_material_files')->insertGetId($values);
     }
 
     private function putPublicMaterialFile(PublicMaterialMenuKey $menu, string $fileName, string $contents): void
@@ -288,5 +426,19 @@ class PublicMaterialManagementTest extends TestCase
     private function deleteTestUploadFolders(): void
     {
         File::deleteDirectory(storage_path('app/public/'.$this->testBasePath));
+    }
+}
+
+class FakePublicMaterialTextExtractor extends PublicMaterialTextExtractor
+{
+    public function __construct(private readonly string $textContent) {}
+
+    public function extractForStorage(PublicMaterialMenuKey $menu, string $fullPath): array
+    {
+        return [
+            'text_content' => $this->textContent,
+            'text_extracted_at' => now(),
+            'text_extraction_error' => null,
+        ];
     }
 }

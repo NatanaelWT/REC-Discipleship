@@ -1211,13 +1211,97 @@ button.nav-item {
   font-weight: 700;
 }
 
+.page-public-material-text-preview {
+  background: #f8fafc;
+}
+
+.page-public-material-text-preview .container {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+.public-material-text-shell {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, rgba(240, 253, 250, 0.72), rgba(248, 250, 252, 0.98) 220px),
+    #f8fafc;
+}
+
+.public-material-text-main {
+  flex: 1 1 auto;
+  width: min(900px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 34px;
+}
+
+.public-material-text-header {
+  padding: 0 0 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.32);
+}
+
+.public-material-text-kicker {
+  margin-bottom: 8px;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.public-material-text-header h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 28px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.public-material-text-document {
+  margin-top: 18px;
+  color: #1f2937;
+  font-size: 17px;
+  line-height: 1.72;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.public-material-download-btn {
+  min-height: 44px;
+  min-width: min(100%, 160px);
+  justify-content: center;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
 @media (max-width: 720px) {
   .public-material-preview-actions {
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
   }
 
+  .public-material-text-main {
+    width: min(100% - 24px, 900px);
+    padding-top: 18px;
+  }
+
+  .public-material-text-header h1 {
+    font-size: 22px;
+  }
+
+  .public-material-text-document {
+    font-size: 16px;
+    line-height: 1.68;
+  }
+
   .public-material-journal-btn,
-  .public-material-feedback-btn {
+  .public-material-feedback-btn,
+  .public-material-download-btn {
     width: 100%;
   }
 }
