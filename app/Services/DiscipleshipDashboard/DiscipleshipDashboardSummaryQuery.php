@@ -148,18 +148,13 @@ class DiscipleshipDashboardSummaryQuery
             ->leftJoin('discipleship_group_people as gp', function ($join): void {
                 $join->on('gp.person_id', '=', 'p.id')
                     ->on('gp.branch_id', '=', 'p.branch_id')
-                    ->where('gp.role', '<>', 'member')
-                    ->whereNotIn('gp.status', ['inactive', 'archived', 'closed', 'completed'])
-                    ->whereNull('gp.ended_on');
+                    ->where('gp.role', '<>', 'member');
             })
             ->leftJoin('discipleship_relationships as relationship', function ($join): void {
                 $join->on('relationship.mentor_person_id', '=', 'p.id')
-                    ->on('relationship.branch_id', '=', 'p.branch_id')
-                    ->whereNotIn('relationship.status', ['inactive', 'archived', 'closed', 'completed'])
-                    ->whereNull('relationship.end_date');
+                    ->on('relationship.branch_id', '=', 'p.branch_id');
             })
             ->whereIn('p.branch_id', $branchIds)
-            ->where('p.status', 'active')
             ->where(function ($query): void {
                 $query->whereNotNull('gp.id')
                     ->orWhereNotNull('relationship.id');
@@ -335,7 +330,7 @@ class DiscipleshipDashboardSummaryQuery
     {
         return [
             ['label' => 'Peserta Aktif', 'value' => $row['active_people_count'], 'sub' => 'Anggota dalam kelompok aktif', 'tone' => 'is-primary'],
-            ['label' => 'Pemimpin Aktif', 'value' => $row['leader_count'], 'sub' => 'Pemimpin kelompok aktif', 'tone' => 'is-emerald'],
+            ['label' => 'Pernah Memimpin', 'value' => $row['leader_count'], 'sub' => 'Orang yang pernah memimpin', 'tone' => 'is-emerald'],
             ['label' => 'Kelompok Aktif', 'value' => $row['group_count'], 'sub' => 'Kelompok yang sedang berjalan', 'tone' => 'is-dg2'],
             ['label' => 'Pertemuan Bulan Ini', 'value' => $row['meeting_count'], 'sub' => 'Laporan DG bulan berjalan', 'tone' => 'is-amber'],
             ['label' => 'Selesai RG', 'value' => $row['following_rg_count'], 'sub' => 'Peserta berstatus RG', 'tone' => 'is-sky'],
