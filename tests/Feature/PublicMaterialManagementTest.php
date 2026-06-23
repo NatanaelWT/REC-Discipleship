@@ -103,15 +103,18 @@ class PublicMaterialManagementTest extends TestCase
             'File Text Preview',
             $fileName,
             PublicMaterialMenuKey::MateriDg1,
-            "Baris pertama materi.\nBaris kedua materi.",
+            "PEMAPARAN MATERI\nBaris pertama materi.\nBaris kedua materi.\n\nPertama, Sub bagian. Isi lanjut.",
         );
 
         $response = $this->get("/materi/materi_dg_1/{$fileId}/preview");
 
         $response->assertOk();
+        $response->assertSee('File Text Preview');
         $response->assertSee('Baris pertama materi.');
         $response->assertSee('Baris kedua materi.');
         $response->assertSee('Unduh PDF');
+        $response->assertSee('<h2 class="public-material-text-heading">PEMAPARAN MATERI</h2>', false);
+        $response->assertSee('<strong>Pertama, Sub bagian.</strong>', false);
         $response->assertDontSee('data-public-material-pdf-viewer', false);
         $response->assertDontSee('public-material-preview-embed', false);
     }
@@ -170,7 +173,7 @@ class PublicMaterialManagementTest extends TestCase
         $response->assertSee('public-material-preview-embed', false);
     }
 
-    public function test_dg2_pdf_preview_keeps_existing_pdf_viewer_even_when_text_exists(): void
+    public function test_dg2_pdf_preview_renders_stored_text_when_available(): void
     {
         $fileName = 'file_dg2_text_20260617000000.pdf';
         $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg2, $fileName, 'DG2 material');
@@ -180,14 +183,36 @@ class PublicMaterialManagementTest extends TestCase
             'DG2 Text File',
             $fileName,
             PublicMaterialMenuKey::MateriDg2,
-            'DG2 text should not render here.',
+            'DG2 text should render here.',
         );
 
         $response = $this->get("/materi/materi_dg_2/{$fileId}/preview");
 
         $response->assertOk();
-        $response->assertSee('data-public-material-pdf-viewer', false);
-        $response->assertDontSee('DG2 text should not render here.');
+        $response->assertSee('DG2 text should render here.');
+        $response->assertSee('Materi DG-2 (BOI)');
+        $response->assertDontSee('data-public-material-pdf-viewer', false);
+    }
+
+    public function test_dg3_pdf_preview_renders_stored_text_when_available(): void
+    {
+        $fileName = 'file_dg3_text_20260617000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg3, $fileName, 'DG3 material');
+
+        $fileId = $this->insertMaterialFile(
+            'church_file_dg3_text',
+            'DG3 Text File',
+            $fileName,
+            PublicMaterialMenuKey::MateriDg3,
+            'DG3 text should render here.',
+        );
+
+        $response = $this->get("/materi/materi_dg_3/{$fileId}/preview");
+
+        $response->assertOk();
+        $response->assertSee('DG3 text should render here.');
+        $response->assertSee('Materi DG-3');
+        $response->assertDontSee('data-public-material-pdf-viewer', false);
     }
 
     public function test_public_material_preview_rejects_file_from_wrong_menu(): void
@@ -253,7 +278,7 @@ class PublicMaterialManagementTest extends TestCase
         ]);
     }
 
-    public function test_materials_extract_text_command_backfills_dg1_pdf_text(): void
+    public function test_materials_extract_text_command_backfills_dg_pdf_text(): void
     {
         $this->app->instance(
             PublicMaterialTextExtractor::class,
@@ -262,17 +287,29 @@ class PublicMaterialManagementTest extends TestCase
 
         $fileName = 'file_backfill_20260617000000.pdf';
         $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Backfill material');
+        $dg2FileName = 'file_backfill_dg2_20260617000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg2, $dg2FileName, 'Backfill DG2 material');
 
         $fileId = $this->insertMaterialFile('church_file_backfill', 'Backfill File', $fileName);
+        $dg2FileId = $this->insertMaterialFile(
+            'church_file_backfill_dg2',
+            'Backfill DG2 File',
+            $dg2FileName,
+            PublicMaterialMenuKey::MateriDg2,
+        );
 
         $exitCode = Artisan::call('materials:extract-text', [
-            '--menu' => 'materi_dg_1',
             '--force' => true,
         ]);
 
         $this->assertSame(0, $exitCode);
         $this->assertDatabaseHas('public_material_files', [
             'id' => $fileId,
+            'text_content' => 'Teks hasil ekstraksi.',
+            'text_extraction_error' => null,
+        ]);
+        $this->assertDatabaseHas('public_material_files', [
+            'id' => $dg2FileId,
             'text_content' => 'Teks hasil ekstraksi.',
             'text_extraction_error' => null,
         ]);

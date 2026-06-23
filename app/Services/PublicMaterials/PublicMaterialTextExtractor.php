@@ -42,7 +42,7 @@ class PublicMaterialTextExtractor
 
     public function shouldExtract(PublicMaterialMenuKey $menu, string $path): bool
     {
-        return $menu === PublicMaterialMenuKey::MateriDg1
+        return $menu->isDgSessionMenu()
             && strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'pdf';
     }
 

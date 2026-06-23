@@ -1244,6 +1244,7 @@ button.nav-item {
 .public-material-text-header {
   padding: 0 0 16px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.32);
+  text-align: center;
 }
 
 .public-material-text-kicker {
@@ -1255,7 +1256,8 @@ button.nav-item {
 }
 
 .public-material-text-header h1 {
-  margin: 0;
+  max-width: 760px;
+  margin: 0 auto;
   color: #111827;
   font-size: 28px;
   line-height: 1.2;
@@ -1264,11 +1266,55 @@ button.nav-item {
 
 .public-material-text-document {
   margin-top: 18px;
+  padding: 24px 28px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
   color: #1f2937;
   font-size: 17px;
   line-height: 1.72;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.07);
+}
+
+.public-material-text-heading {
+  margin: 22px 0 8px;
+  color: #0f172a;
+  font-size: 18px;
+  line-height: 1.32;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.public-material-text-heading:first-child {
+  margin-top: 0;
+}
+
+.public-material-text-heading.is-session {
+  margin-bottom: -2px;
+  color: #0f766e;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.public-material-text-paragraph {
+  margin: 0 0 14px;
+}
+
+.public-material-text-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.public-material-text-paragraph strong {
+  font-weight: 800;
+  color: #111827;
+}
+
+.public-material-text-paragraph.is-list-item {
+  padding-left: 1.4em;
+  text-indent: -1.4em;
 }
 
 .public-material-download-btn {
@@ -1295,8 +1341,13 @@ button.nav-item {
   }
 
   .public-material-text-document {
+    padding: 18px 16px;
     font-size: 16px;
     line-height: 1.68;
+  }
+
+  .public-material-text-heading {
+    font-size: 16px;
   }
 
   .public-material-journal-btn,

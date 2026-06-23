@@ -10,6 +10,7 @@ use App\Services\Activity\ActivityRecorder;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
 use App\Services\PublicMaterials\PublicMaterialFileStreamer;
 use App\Services\PublicMaterials\PublicMaterialRouteResolver;
+use App\Services\PublicMaterials\PublicMaterialTextFormatter;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
@@ -42,6 +43,7 @@ class MaterialPreviewController extends Controller
         PublicMaterialFile $churchFile,
         PublicMaterialCatalog $catalog,
         PublicMaterialFileStreamer $streamer,
+        PublicMaterialTextFormatter $textFormatter,
         ActivityRecorder $activity,
     ): RedirectResponse|Response|StreamedResponse|View {
         RuntimeBootstrap::load();
@@ -99,19 +101,21 @@ class MaterialPreviewController extends Controller
         if ($previewTitle === '') {
             $previewTitle = 'Materi DG';
         }
+        $previewTitle = $this->displayTitle($previewTitle);
         $rawUrl = route('materials.preview', [
             'menu' => $menu->value,
             'churchFile' => $churchFile->getKey(),
             'raw' => '1',
         ]);
 
-        if ($ext === 'pdf' && ! $request->rawPreview() && $menu === PublicMaterialMenuKey::MateriDg1) {
+        if ($ext === 'pdf' && ! $request->rawPreview() && $showDgJournalButton) {
             $textContent = trim((string) ($churchFile->text_content ?? ''));
             if ($textContent !== '') {
                 return view('public.materials.text-preview', [
                     'settings' => ['church_name' => app_church_name()],
                     'previewTitle' => $previewTitle,
-                    'textContent' => $textContent,
+                    'textKicker' => $menu->label(),
+                    'textBlocks' => $textFormatter->blocks($textContent),
                     'downloadUrl' => route('materials.download', [
                         'menu' => $menu->value,
                         'churchFile' => $churchFile->getKey(),
@@ -133,5 +137,14 @@ class MaterialPreviewController extends Controller
         }
 
         return $streamer->stream($churchFile, 'inline');
+    }
+
+    private function displayTitle(string $title): string
+    {
+        $title = preg_replace('/\.pdf$/i', '', $title) ?? $title;
+        $title = preg_replace('/[_]+/', ' ', $title) ?? $title;
+        $title = trim((string) preg_replace('/\s+/', ' ', $title));
+
+        return $title !== '' ? $title : 'Materi DG';
     }
 }

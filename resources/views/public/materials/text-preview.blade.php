@@ -5,13 +5,27 @@
 ])
 
 @section('content')
-    <section class="public-material-text-shell" aria-label="Teks materi DG-1">
+    <section class="public-material-text-shell" aria-label="Teks materi DG">
       <div class="public-material-text-main">
         <header class="public-material-text-header">
-          <div class="public-material-text-kicker">Materi DG-1</div>
+          <div class="public-material-text-kicker">{{ $textKicker }}</div>
           <h1>{{ $previewTitle }}</h1>
         </header>
-        <article class="public-material-text-document">{{ $textContent }}</article>
+        <article class="public-material-text-document">
+          @foreach ($textBlocks as $block)
+            @if (($block['type'] ?? '') === 'heading')
+              <h2 @class(['public-material-text-heading', $block['class'] ?? '' => ($block['class'] ?? '') !== ''])>{{ $block['text'] ?? '' }}</h2>
+            @else
+              <p @class(['public-material-text-paragraph', $block['class'] ?? '' => ($block['class'] ?? '') !== ''])>
+                @if (($block['lead'] ?? '') !== '')
+                  <strong>{{ $block['lead'] }}</strong>@if (($block['rest'] ?? '') !== '') {{ $block['rest'] }}@endif
+                @else
+                  {{ $block['text'] ?? '' }}
+                @endif
+              </p>
+            @endif
+          @endforeach
+        </article>
       </div>
 
       <div class="public-material-preview-actions public-material-text-actions">
