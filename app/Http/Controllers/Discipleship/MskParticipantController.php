@@ -122,10 +122,17 @@ class MskParticipantController extends Controller
     private function saveParticipantFromRequest(MskParticipantWriteRequest $request, MskParticipantWriter $writer): RedirectResponse
     {
         $payload = $request->payload();
-        $redirectParams = $this->baseRedirectParams((int) ($payload['id'] ?? 0), $payload['batch_month'] ?? '');
+        $redirectParams = $this->baseRedirectParams(
+            (int) ($payload['id'] ?? 0),
+            (string) ($payload['return_batch_month'] ?? $payload['batch_month'] ?? ''),
+        );
 
         if ($payload['full_name'] === '') {
             return redirect()->route('discipleship.msk-classes', $redirectParams + ['error' => 'missing_msk_name']);
+        }
+
+        if (($payload['batch_month_input'] ?? '') === '' || ($payload['batch_month'] ?? '') === '') {
+            return redirect()->route('discipleship.msk-classes', $redirectParams + ['error' => 'invalid_msk_batch_month']);
         }
 
         if (($payload['birth_date_input'] ?? '') !== '' && ($payload['birth_date'] ?? '') === '') {
@@ -141,11 +148,11 @@ class MskParticipantController extends Controller
             return redirect()->route('discipleship.msk-classes', $redirectParams + ['error' => $result['error']]);
         }
 
+        $redirectParams['batch_month'] = $result['batch_month'] !== '' ? $result['batch_month'] : (string) ($payload['batch_month'] ?? '');
         $redirectParams['saved'] = 1;
         if ($result['auto_converted']) {
             $redirectParams['converted'] = 1;
         }
-        $redirectParams['batch_month'] = $result['batch_month'] !== '' ? $result['batch_month'] : (string) ($payload['batch_month'] ?? '');
 
         return redirect()->route('discipleship.msk-classes', $redirectParams);
     }
@@ -160,8 +167,13 @@ class MskParticipantController extends Controller
         if ($id > 0) {
             $params['edit'] = $id;
         }
-        if ($batchMonth !== '') {
-            $params['batch_month'] = $batchMonth;
+        if (strtolower($batchMonth) === 'all') {
+            $params['batch_month'] = 'all';
+        } else {
+            $batchMonth = import_normalize_month_strict($batchMonth);
+            if ($batchMonth !== '') {
+                $params['batch_month'] = $batchMonth;
+            }
         }
 
         return $params;
@@ -181,7 +193,7 @@ class MskParticipantController extends Controller
             return ['batch_month' => 'all'];
         }
 
-        $batchMonth = normalize_month_value($batchMonthInput);
+        $batchMonth = import_normalize_month_strict($batchMonthInput);
 
         return $batchMonth !== '' ? ['batch_month' => $batchMonth] : [];
     }

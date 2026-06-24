@@ -138,6 +138,7 @@ class MskParticipantTableData
         $createdAt = $this->timestampFrom([$row['created_at'] ?? null]) ?? now();
         $updatedAt = $this->timestampFrom([$row['updated_at'] ?? null, $row['created_at'] ?? null]) ?? $createdAt;
         $birthDate = normalize_ymd_date((string) ($row['birth_date'] ?? ''));
+        $batchMonth = import_normalize_month_strict((string) ($row['msk_month'] ?? ''));
 
         return [
             'branch_id' => $branchId,
@@ -150,7 +151,7 @@ class MskParticipantTableData
             'address' => $this->nullableString($row['address'] ?? null),
             'email' => $this->nullableString(strtolower(trim((string) ($row['email'] ?? '')))),
             'whatsapp' => $this->nullableString($row['whatsapp'] ?? null),
-            'batch_month' => $this->nullableString(normalize_month_value((string) ($row['msk_month'] ?? date('Y-m')))),
+            'batch_month' => $this->nullableString($batchMonth),
             'notes' => $this->nullableString($row['notes'] ?? null),
             'completed_at' => $this->nullableString($row['completed_at'] ?? null),
             'journey_bridge_status' => normalize_journey_bridge_status((string) ($row['journey_bridge_status'] ?? 'belum')),

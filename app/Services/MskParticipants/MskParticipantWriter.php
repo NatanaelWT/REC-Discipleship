@@ -144,9 +144,9 @@ class MskParticipantWriter
     private function participantData(int $participantId, array $payload, array $existing, array $photos): array
     {
         $birthDate = (string) ($payload['birth_date'] ?? '');
-        $batchMonth = normalize_month_value((string) ($payload['batch_month'] ?? ''));
+        $batchMonth = import_normalize_month_strict((string) ($payload['batch_month'] ?? ''));
         if ($batchMonth === '') {
-            $batchMonth = normalize_month_value((string) ($existing['msk_month'] ?? date('Y-m')));
+            $batchMonth = import_normalize_month_strict((string) ($existing['msk_month'] ?? ''));
         }
 
         return [
@@ -185,6 +185,7 @@ class MskParticipantWriter
             ]);
 
             $birthDate = normalize_ymd_date((string) ($participantData['birth_date'] ?? ''));
+            $batchMonth = import_normalize_month_strict((string) ($participantData['msk_month'] ?? ''));
             $fill = [
                 'branch_id' => branch_id_from_slug($branchCode),
                 'discipleship_person_id' => (int) ($participantData['member_id'] ?? 0) ?: null,
@@ -196,7 +197,7 @@ class MskParticipantWriter
                 'address' => $this->nullableString($participantData['address'] ?? null),
                 'email' => $this->nullableString(strtolower(trim((string) ($participantData['email'] ?? '')))),
                 'whatsapp' => $this->nullableString($participantData['whatsapp'] ?? null),
-                'batch_month' => $this->nullableString(normalize_month_value((string) ($participantData['msk_month'] ?? date('Y-m')))),
+                'batch_month' => $this->nullableString($batchMonth),
                 'notes' => $this->nullableString($participantData['notes'] ?? null),
                 'completed_at' => $this->nullableString($participantData['completed_at'] ?? null),
                 'journey_bridge_status' => normalize_journey_bridge_status((string) ($participantData['journey_bridge_status'] ?? 'belum')),

@@ -184,6 +184,90 @@ class MskParticipantPageTest extends TestCase
         $this->assertSame([1, 2], $sessions);
     }
 
+    public function test_update_msk_participant_persists_selected_batch_month_and_other_fields(): void
+    {
+        $this->createMskTables();
+        $participantId = DB::table('msk_participants')->insertGetId($this->participantRow('Peserta Lama', '2026-06'));
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/msk?batch_month=all')
+            ->assertOk()
+            ->assertSee('name="batch_month" value="2026-06" required', false)
+            ->assertSee('name="return_batch_month" value="all"', false)
+            ->assertDontSee('name="msk_month"', false);
+
+        $response = $this->post('/pemuridan/msk/peserta', [
+            'action' => 'save_msk_participant',
+            'id' => $participantId,
+            'return_batch_month' => 'all',
+            'full_name' => 'Peserta Lama Diedit',
+            'gender' => 'Perempuan',
+            'birth_date' => '1998-04-25',
+            'birth_place' => 'Malang',
+            'address' => 'Jl. Baru',
+            'email' => 'PESERTA.EDIT@example.test',
+            'whatsapp' => '089999111222',
+            'batch_month' => '2024-11',
+            'session_numbers' => ['3', '1', '12', '3'],
+            'notes' => 'Catatan edit',
+        ]);
+
+        $response->assertRedirect('/pemuridan/msk?edit='.$participantId.'&batch_month=2024-11&saved=1');
+        $this->assertDatabaseHas('msk_participants', [
+            'id' => $participantId,
+            'full_name' => 'Peserta Lama Diedit',
+            'gender' => 'Perempuan',
+            'birth_date' => '1998-04-25',
+            'birth_day_month' => '25-04',
+            'birth_place' => 'Malang',
+            'address' => 'Jl. Baru',
+            'email' => 'peserta.edit@example.test',
+            'whatsapp' => '089999111222',
+            'batch_month' => '2024-11',
+            'notes' => 'Catatan edit',
+        ]);
+
+        $sessions = json_decode((string) DB::table('msk_participants')->where('id', $participantId)->value('session_numbers'), true);
+        $this->assertSame([1, 3, 12], $sessions);
+    }
+
+    public function test_update_msk_participant_rejects_invalid_batch_or_birth_date_without_current_month_fallback(): void
+    {
+        $this->createMskTables();
+        $participantId = DB::table('msk_participants')->insertGetId($this->participantRow('Peserta Aman', '2025-01'));
+        $this->actingAsRecUser();
+
+        $this->post('/pemuridan/msk/peserta', [
+            'action' => 'save_msk_participant',
+            'id' => $participantId,
+            'return_batch_month' => 'all',
+            'full_name' => 'Peserta Aman',
+            'batch_month' => 'all',
+            'session_numbers' => ['1'],
+        ])->assertRedirect('/pemuridan/msk?edit='.$participantId.'&batch_month=all&error=invalid_msk_batch_month');
+
+        $this->assertDatabaseHas('msk_participants', [
+            'id' => $participantId,
+            'batch_month' => '2025-01',
+        ]);
+
+        $this->post('/pemuridan/msk/peserta', [
+            'action' => 'save_msk_participant',
+            'id' => $participantId,
+            'return_batch_month' => 'all',
+            'full_name' => 'Peserta Aman',
+            'birth_date' => '2026-02-31',
+            'batch_month' => '2024-11',
+            'session_numbers' => ['1'],
+        ])->assertRedirect('/pemuridan/msk?edit='.$participantId.'&batch_month=all&error=invalid_msk_birth_date');
+
+        $this->assertDatabaseHas('msk_participants', [
+            'id' => $participantId,
+            'batch_month' => '2025-01',
+            'birth_date' => null,
+        ]);
+    }
+
     public function test_branch_user_cannot_update_participant_from_another_branch(): void
     {
         $this->createMskTables();

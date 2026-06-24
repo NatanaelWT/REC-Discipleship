@@ -33,6 +33,8 @@ abstract class MskParticipantWriteRequest extends FormRequest
      */
     public function payload(): array
     {
+        $batchMonthInput = trim((string) $this->input('batch_month', ''));
+
         return [
             'id' => (int) $this->input('id', 0),
             'discipleship_person_id' => (int) $this->input('member_id', 0),
@@ -45,8 +47,9 @@ abstract class MskParticipantWriteRequest extends FormRequest
             'email' => strtolower(trim((string) $this->input('email', ''))),
             'whatsapp' => trim((string) $this->input('whatsapp', '')),
             'notes' => trim((string) $this->input('notes', '')),
-            'batch_month_input' => trim((string) $this->input('batch_month', '')),
-            'batch_month' => normalize_month_value((string) $this->input('batch_month', date('Y-m'))),
+            'batch_month_input' => $batchMonthInput,
+            'batch_month' => import_normalize_month_strict($batchMonthInput),
+            'return_batch_month' => $this->returnBatchMonth(),
             'session_numbers' => normalize_msk_session_numbers($this->input('session_numbers', [])),
             'remove_photo_paths' => $this->normalizedPhotoPaths($this->input('remove_photo_paths', [])),
         ];
@@ -70,6 +73,20 @@ abstract class MskParticipantWriteRequest extends FormRequest
         }
 
         return array_values(array_unique($paths));
+    }
+
+    private function returnBatchMonth(): string
+    {
+        $input = trim((string) $this->input('return_batch_month', ''));
+        if ($input === '') {
+            return '';
+        }
+
+        if (strtolower($input) === 'all') {
+            return 'all';
+        }
+
+        return import_normalize_month_strict($input);
     }
 
     protected function failedAuthorization(): void

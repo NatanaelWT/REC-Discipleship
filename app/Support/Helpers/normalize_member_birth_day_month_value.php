@@ -7,11 +7,12 @@ function normalize_member_birth_day_month_value(string $value): string {
     }
 
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1) {
-        $timestamp = strtotime($value);
-        if ($timestamp === false) {
+        $dateValue = normalize_ymd_date($value);
+        if ($dateValue === '') {
             return '';
         }
-        return date('d-m', $timestamp);
+
+        return substr($dateValue, 8, 2).'-'.substr($dateValue, 5, 2);
     }
 
     $value = str_replace(['/', '.', ' '], '-', $value);

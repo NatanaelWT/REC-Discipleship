@@ -35,7 +35,7 @@ class MskParticipantExportService
 
         if ($batchMonth !== '' && $batchMonth !== 'all') {
             $participantsToExport = array_values(array_filter($participantsToExport, static function ($participant) use ($batchMonth): bool {
-                return normalize_month_value((string) ($participant['msk_month'] ?? date('Y-m'))) === $batchMonth;
+                return import_normalize_month_strict((string) ($participant['msk_month'] ?? '')) === $batchMonth;
             }));
         }
 

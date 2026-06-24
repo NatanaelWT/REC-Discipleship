@@ -22,20 +22,28 @@ class MskParticipantPageData
         $editId = trim((string) $request->query('edit', ''));
         $requestedViewId = trim((string) $request->query('view', ''));
 
-        $batchMonthMap = MskParticipant::query()
+        $rawBatchMonthMap = MskParticipant::query()
             ->whereIn('branch_id', $branchIds)
             ->selectRaw('batch_month, COUNT(*) AS aggregate')
             ->groupBy('batch_month')
             ->pluck('aggregate', 'batch_month')
             ->map(static fn (mixed $count): int => (int) $count)
             ->all();
+        $batchMonthMap = [];
+        foreach ($rawBatchMonthMap as $batchMonth => $count) {
+            $normalizedBatchMonth = import_normalize_month_strict((string) $batchMonth);
+            if ($normalizedBatchMonth === '') {
+                continue;
+            }
+            $batchMonthMap[$normalizedBatchMonth] = (int) ($batchMonthMap[$normalizedBatchMonth] ?? 0) + (int) $count;
+        }
         $batchMonthOptions = array_keys($batchMonthMap);
         rsort($batchMonthOptions, SORT_STRING);
         $latestBatchMonth = count($batchMonthOptions) > 0 ? $batchMonthOptions[0] : date('Y-m');
 
         $batchMonthFilterInput = trim((string) $request->query('batch_month', ''));
         $batchMonthFilterIsAll = strtolower($batchMonthFilterInput) === 'all';
-        $batchMonthFilterNormalized = $batchMonthFilterInput !== '' ? normalize_month_value($batchMonthFilterInput) : '';
+        $batchMonthFilterNormalized = $batchMonthFilterInput !== '' ? import_normalize_month_strict($batchMonthFilterInput) : '';
         $batchMonthFilter = $latestBatchMonth;
         if (! $batchMonthFilterIsAll && $batchMonthFilterNormalized !== '' && isset($batchMonthMap[$batchMonthFilterNormalized])) {
             $batchMonthFilter = $batchMonthFilterNormalized;

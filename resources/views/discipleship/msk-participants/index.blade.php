@@ -20,6 +20,7 @@ if ($page === 'msk_classes') {
         'missing_msk_member' => 'Pilih peserta jika jenis peserta adalah dari daftar peserta terdaftar.',
         'duplicate_msk_member' => 'Peserta tersebut sudah terdaftar di kelas MSK dan tidak bisa dipilih lagi.',
         'missing_msk_name' => 'Nama peserta luar wajib diisi.',
+        'invalid_msk_batch_month' => 'Bulan batch MSK tidak valid. Pilih bulan dan tahun yang benar.',
         'invalid_msk_birth_date' => 'Tanggal lahir tidak valid. Gunakan tanggal lengkap atau format dd-mm untuk tanggal-bulan saja.',
         'invalid_msk_email' => 'Email peserta tidak valid.',
         'invalid_msk_photo_type' => 'Format foto peserta tidak didukung. Gunakan JPG/PNG/WEBP.',
@@ -77,13 +78,14 @@ if ($page === 'msk_classes') {
             $email = '';
         }
         $notes = trim((string) ($participant['notes'] ?? ''));
-        $mskMonth = normalize_month_value((string) ($participant['msk_month'] ?? ''));
-        if ($mskMonth === '') {
-            $mskMonth = normalize_month_value($batchMonth);
+        $mskMonth = import_normalize_month_strict((string) ($participant['msk_month'] ?? ''));
+        if ($participantId === '' && $mskMonth === '') {
+            $mskMonth = import_normalize_month_strict($batchMonth);
         }
-        if ($mskMonth === '') {
+        if ($participantId === '' && $mskMonth === '') {
             $mskMonth = date('Y-m');
         }
+        $mskMonthBadgeLabel = $mskMonth !== '' ? format_indo_month($mskMonth) : 'Belum dipilih';
 
         $sessionNumbers = normalize_msk_session_numbers($participant['session_numbers'] ?? []);
         $sessionMap = [];
@@ -191,7 +193,7 @@ if ($page === 'msk_classes') {
         $progressFields = [];
         $progressFields[] = $mskField(
             'Bulan-Tahun MSK Diikuti',
-            '<input type="month" name="msk_month" value="'.h($mskMonth).'" required>'
+            '<input type="month" name="batch_month" value="'.h($mskMonth).'" required>'
         );
         $progressFields[] = $mskField(
             'Keterangan',
@@ -204,7 +206,7 @@ if ($page === 'msk_classes') {
         echo csrf_field()."\n";
         echo "  <input type=\"hidden\" name=\"action\" value=\"save_msk_participant\">\n";
         echo '  <input type="hidden" name="id" value="'.h($participantId)."\">\n";
-        echo '  <input type="hidden" name="batch_month" value="'.h($batchMonth)."\">\n";
+        echo '  <input type="hidden" name="return_batch_month" value="'.h($batchMonth)."\">\n";
         echo "  <section class=\"msk-form-banner msk-form-full\">\n";
         echo "    <div class=\"msk-form-banner-copy\">\n";
         echo "      <span class=\"msk-form-banner-kicker\">Peserta MSK</span>\n";
@@ -212,7 +214,7 @@ if ($page === 'msk_classes') {
         echo "      <p>Gunakan form ini untuk menyimpan identitas, kontak, batch MSK, dan progres sesi dalam satu alur yang ringkas.</p>\n";
         echo "    </div>\n";
         echo "    <div class=\"msk-form-banner-meta\">\n";
-        echo '      <span class="msk-form-badge">Batch: '.h(format_indo_month($mskMonth))."</span>\n";
+        echo '      <span class="msk-form-badge">Batch: '.h($mskMonthBadgeLabel)."</span>\n";
         echo '      <span class="msk-form-badge is-status '.h($statusClass).'">'.h($statusLabel).' - '.h((string) $sessionCount).'/12 sesi - '.h((string) $progressPercent)."%</span>\n";
         echo "    </div>\n";
         echo "  </section>\n";
@@ -348,7 +350,8 @@ if ($page === 'msk_classes') {
             $viewWaHtml = '<a class="note-link" href="'.h('https://wa.me/'.$viewWaDigits).'" target="_blank" rel="noopener">'.h($viewWaDisplay).'</a>';
         }
 
-        $viewMskMonthLabel = format_indo_month((string) ($participant['msk_month'] ?? date('Y-m')));
+        $viewMskMonth = import_normalize_month_strict((string) ($participant['msk_month'] ?? ''));
+        $viewMskMonthLabel = $viewMskMonth !== '' ? format_indo_month($viewMskMonth) : '-';
         $viewSessionNumbers = normalize_msk_session_numbers($participant['session_numbers'] ?? []);
         $viewSessionCount = count($viewSessionNumbers);
         $viewProgressPercent = max(0, min(100, (int) round(($viewSessionCount / 12) * 100)));
@@ -534,7 +537,8 @@ if ($page === 'msk_classes') {
                 'content' => $renderMskParticipantForm($participant, $batchMonthFilterParam, 'data-msk-edit-close'),
             ];
         }
-        $mskMonthLabel = format_indo_month((string) ($participant['msk_month'] ?? date('Y-m')));
+        $tableMskMonth = import_normalize_month_strict((string) ($participant['msk_month'] ?? ''));
+        $mskMonthLabel = $tableMskMonth !== '' ? format_indo_month($tableMskMonth) : '-';
 
         $sessionNumbers = normalize_msk_session_numbers($participant['session_numbers'] ?? []);
         $sessionCount = count($sessionNumbers);

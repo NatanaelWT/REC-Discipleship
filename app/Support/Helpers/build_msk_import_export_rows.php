@@ -41,7 +41,7 @@ function build_msk_import_export_rows(array $participants): array {
             trim((string) ($participant['birth_place'] ?? '')),
             trim((string) ($participant['address'] ?? '')),
             $email,
-            normalize_month_value((string) ($participant['msk_month'] ?? date('Y-m'))),
+            import_normalize_month_strict((string) ($participant['msk_month'] ?? '')),
             implode(',', array_map('strval', normalize_msk_session_numbers($participant['session_numbers'] ?? []))),
             trim((string) ($participant['notes'] ?? '')),
         ];
