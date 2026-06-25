@@ -18,7 +18,13 @@ class DiscipleshipGroupIndexData
     {
         $search = strtolower(trim((string) $request->query('q', '')));
         $status = trim((string) $request->query('status', 'all'));
-        $base = DiscipleshipGroup::query()->whereIn('branch_id', $this->scope->branchIds());
+        $base = DiscipleshipGroup::query()
+            ->whereIn('branch_id', $this->scope->branchIds())
+            ->whereExists(static function ($subquery): void {
+                $subquery->selectRaw('1')
+                    ->from('discipleship_group_people as existing_gp')
+                    ->whereColumn('existing_gp.discipleship_group_id', 'discipleship_groups.id');
+            });
         $stats = (clone $base)
             ->selectRaw("COUNT(*) AS total,
                 SUM(CASE WHEN current_stage = 'DG 1' THEN 1 ELSE 0 END) AS dg1,
@@ -29,8 +35,10 @@ class DiscipleshipGroupIndexData
         $query = (clone $base)->select([
             'id', 'branch_id', 'name', 'status', 'start_stage', 'current_stage', 'created_at',
         ]);
-        if (in_array($status, ['active', 'inactive'], true)) {
+        if ($status === 'active') {
             $query->where('status', $status);
+        } elseif ($status === 'inactive') {
+            $query->where('status', '!=', 'active');
         } else {
             $status = 'all';
         }
@@ -59,15 +67,25 @@ class DiscipleshipGroupIndexData
 
         $rows = $groups->map(function (DiscipleshipGroup $group) use ($links, $people, $branchOptions): array {
             $groupLinks = $links->where('discipleship_group_id', $group->id);
-            $leaders = $groupLinks->where('role', '!=', 'member')->sortByDesc('id');
+            $isActiveGroup = strtolower((string) $group->status) === 'active';
+            $activeLinks = $groupLinks
+                ->filter(static fn (DiscipleshipGroupPerson $link): bool => strtolower((string) $link->status) === 'active' && $link->ended_on === null);
+            $displayLinks = $isActiveGroup ? $activeLinks : $groupLinks;
+            $leaders = $displayLinks->where('role', '!=', 'member')->sortByDesc('id');
+            if ($isActiveGroup && $leaders->isEmpty()) {
+                $leaders = $groupLinks->where('role', '!=', 'member')->sortByDesc('id');
+            }
             $primary = $leaders->first(static fn (DiscipleshipGroupPerson $link): bool => ! in_array($link->role, ['co_leader', 'assistant', 'pendamping'], true));
             $primary ??= $leaders->first();
-            $leaderName = $primary !== null ? ($people[(int) $primary->person_id] ?? '-') : '-';
+            $leaderName = $primary !== null ? ($people[(int) $primary->person_id] ?? '') : '';
+            if ($leaderName === '') {
+                $leaderName = $isActiveGroup ? 'Tanpa pemimpin' : 'Tanpa riwayat pemimpin';
+            }
             $assistants = $leaders
                 ->reject(static fn (DiscipleshipGroupPerson $link): bool => $primary !== null && $link->id === $primary->id)
                 ->map(static fn (DiscipleshipGroupPerson $link): string => $people[(int) $link->person_id] ?? '')
                 ->filter()->unique()->values()->all();
-            $members = $groupLinks->where('role', 'member')
+            $members = $displayLinks->where('role', 'member')
                 ->map(static fn (DiscipleshipGroupPerson $link): string => $people[(int) $link->person_id] ?? '')
                 ->filter()->unique()->values()->all();
             $progress = normalize_dg_progress_value((string) ($group->current_stage ?: $group->start_stage)) ?: '-';
@@ -82,15 +100,17 @@ class DiscipleshipGroupIndexData
                 'row_progress' => strtolower(str_replace(' ', '', $progress)),
                 'row_class' => strtolower((string) $group->status) === 'active' ? '' : 'is-inactive',
                 'leader_name' => $leaderName,
-                'leader_summary' => $assistants !== [] ? 'Pendamping: '.implode(', ', $assistants) : 'Tanpa pendamping',
+                'leader_summary' => $assistants !== []
+                    ? ($isActiveGroup ? 'Pendamping: ' : 'Riwayat pendamping: ').implode(', ', $assistants)
+                    : ($isActiveGroup ? 'Tanpa pendamping' : 'Tanpa riwayat pendamping'),
                 'group_status_class' => strtolower((string) $group->status) === 'active' ? 'is-active' : 'is-inactive',
                 'progress_tone_class' => match ($progress) {
                     'DG 1' => 'is-dg1', 'DG 2' => 'is-dg2', 'DG 3' => 'is-dg3', default => 'is-neutral',
                 },
                 'progress_label' => $progress,
                 'progress_helper_text' => trim((string) $group->name).($this->scope->includesAllBranches() ? ' - '.$branchLabel : ''),
-                'member_summary' => $members !== [] ? implode(', ', array_slice($members, 0, 8)) : 'Belum ada peserta',
-                'member_helper_text' => count($members).' peserta aktif',
+                'member_summary' => $members !== [] ? implode(', ', array_slice($members, 0, 8)) : ($isActiveGroup ? 'Belum ada peserta' : 'Tanpa riwayat peserta'),
+                'member_helper_text' => count($members).($isActiveGroup ? ' peserta aktif' : ' peserta tercatat'),
                 'member_count' => count($members),
             ];
         })->values();
@@ -118,9 +138,7 @@ class DiscipleshipGroupIndexData
 
         return DiscipleshipGroupPerson::query()
             ->whereIn('discipleship_group_id', $groupIds)
-            ->where('status', 'active')
-            ->whereNull('ended_on')
-            ->get(['id', 'discipleship_group_id', 'person_id', 'role']);
+            ->get(['id', 'discipleship_group_id', 'person_id', 'role', 'status', 'ended_on']);
     }
 
     private function people(array $personIds): array

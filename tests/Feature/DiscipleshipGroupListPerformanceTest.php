@@ -45,6 +45,56 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
         $this->assertLessThan(250 * 1024, strlen((string) $response->getContent()));
     }
 
+    public function test_inactive_group_shows_its_last_leader_and_members(): void
+    {
+        $this->createTables();
+        DB::table('discipleship_people')->insert([
+            ['id' => 1, 'branch_id' => 1, 'full_name' => 'Pemimpin Historis', 'status' => 'active'],
+            ['id' => 2, 'branch_id' => 1, 'full_name' => 'Pendamping Historis', 'status' => 'active'],
+            ['id' => 3, 'branch_id' => 1, 'full_name' => 'Anggota Historis', 'status' => 'active'],
+        ]);
+        DB::table('discipleship_groups')->insert([
+            'id' => 1,
+            'branch_id' => 1,
+            'name' => 'Kelompok Selesai',
+            'status' => 'completed',
+            'current_stage' => 'DG 2',
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            ['branch_id' => 1, 'discipleship_group_id' => 1, 'person_id' => 1, 'role' => 'leader', 'stage' => null, 'status' => 'closed', 'ended_on' => '2026-05-01'],
+            ['branch_id' => 1, 'discipleship_group_id' => 1, 'person_id' => 2, 'role' => 'co_leader', 'stage' => null, 'status' => 'closed', 'ended_on' => '2026-05-01'],
+            ['branch_id' => 1, 'discipleship_group_id' => 1, 'person_id' => 3, 'role' => 'member', 'stage' => 'DG 2', 'status' => 'closed', 'ended_on' => '2026-05-01'],
+        ]);
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/kelompok?status=inactive')
+            ->assertOk()
+            ->assertSee('Pemimpin Historis')
+            ->assertSee('Riwayat pendamping: Pendamping Historis')
+            ->assertSee('Anggota Historis')
+            ->assertSee('1 peserta tercatat')
+            ->assertDontSee('Belum ada peserta')
+            ->assertDontSee('Tanpa pendamping');
+    }
+
+    public function test_group_without_any_people_history_is_not_listed_or_counted(): void
+    {
+        $this->createTables();
+        DB::table('discipleship_groups')->insert([
+            'branch_id' => 1,
+            'name' => 'Kelompok Yatim',
+            'status' => 'completed',
+            'current_stage' => 'DG 1',
+        ]);
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/kelompok')
+            ->assertOk()
+            ->assertDontSee('Kelompok Yatim')
+            ->assertSee('data-groups-stat="total">0', false)
+            ->assertSee('Belum ada kelompok.');
+    }
+
     private function createTables(): void
     {
         Schema::dropIfExists('discipleship_group_people');
