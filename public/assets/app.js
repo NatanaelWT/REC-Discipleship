@@ -397,6 +397,12 @@
       rowSelector: '[data-msk-search-row]',
       emptySelector: '[data-msk-search-empty]',
     });
+    initLiveTableSearch({
+      formSelector: '[data-discipleship-people-search-form]',
+      inputSelector: '[data-discipleship-people-search-input]',
+      rowSelector: '[data-discipleship-people-search-row]',
+      emptySelector: '[data-discipleship-people-search-empty]',
+    });
 
     const mskViewModal = document.querySelector('[data-msk-view-modal]');
     if (mskViewModal) {

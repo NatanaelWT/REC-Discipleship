@@ -21,11 +21,6 @@ class DiscipleshipPeopleListData
         $base = DiscipleshipPerson::query()->whereIn('branch_id', $this->scope->branchIds());
         $query = (clone $base)->select(['id', 'branch_id', 'full_name', 'status']);
 
-        if ($search !== '') {
-            $query->where(function (Builder $builder) use ($search): void {
-                $builder->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%']);
-            });
-        }
         $this->applyProgressFilter($query, $progress);
 
         $people = $query->orderBy('full_name')->get();

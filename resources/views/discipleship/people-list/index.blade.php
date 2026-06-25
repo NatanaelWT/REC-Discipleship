@@ -21,7 +21,7 @@
           <div class="people-hero-stat"><span class="people-hero-stat-label">DG3</span><strong class="people-hero-stat-value" data-people-stat="dg3">{{ (string) $peopleInDg3Count }}</strong></div>
         </div>
       </div>
-      <form method="get" action="{{ route('discipleship.people-list') }}" class="actions people-hero-tools">
+      <form method="get" action="{{ route('discipleship.people-list') }}" class="actions people-hero-tools" data-discipleship-people-search-form>
         @if (request()->filled('branch_id'))
           <input type="hidden" name="branch_id" value="{{ request()->query('branch_id') }}">
         @endif
@@ -37,9 +37,8 @@
           </select>
         </div>
         <div class="people-hero-search-wrap">
-          <input type="search" name="q" value="{{ $peopleSearch }}" class="search people-table-search" placeholder="Cari nama peserta DG..." aria-label="Cari daftar peserta DG">
+          <input type="search" name="q" value="{{ $peopleSearch }}" class="search people-table-search" placeholder="Cari nama peserta DG..." aria-label="Cari daftar peserta DG" autocomplete="off" data-discipleship-people-search-input>
         </div>
-        <button class="btn tiny secondary" type="submit">Cari</button>
       </form>
     </section>
 
@@ -72,7 +71,7 @@
                   $progressSteps = is_array($row['progress_steps'] ?? null) ? $row['progress_steps'] : [];
                   $progressSummary = trim((string) ($row['progress_summary'] ?? 'Belum memulai DG'));
               @endphp
-              <tr data-people-filter="{{ $rowFilterState }}" data-people-progress="{{ $rowProgressKey }}">
+              <tr data-people-filter="{{ $rowFilterState }}" data-people-progress="{{ $rowProgressKey }}" data-discipleship-people-search-row data-search-text="{{ $name }}">
                 <td>
                   <div class="people-name-cell">
                     <div class="people-name-main">{{ $name }}</div>
@@ -110,6 +109,8 @@
             @endforeach
             @if ($filteredPeopleRows === 0)
               <tr><td colspan="3">Belum ada data orang.</td></tr>
+            @else
+              <tr data-discipleship-people-search-empty hidden><td colspan="3" aria-live="polite">Peserta tidak ditemukan.</td></tr>
             @endif
           </tbody>
         </table>
