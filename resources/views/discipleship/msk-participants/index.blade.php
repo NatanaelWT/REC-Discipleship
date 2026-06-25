@@ -299,7 +299,7 @@ if ($page === 'msk_classes') {
 
     $mskModalTemplates = [];
     $mskEditModalTemplates = [];
-    $appendMskViewTemplate = function (array $participant) use (&$mskModalTemplates, $batchMonthFilterParam, $centralReadOnly): void {
+    $appendMskViewTemplate = function (array $participant) use (&$mskModalTemplates, $batchMonthFilterParam, $centralReadOnly, $participantHistories): void {
         $viewParticipantId = trim((string) ($participant['id'] ?? ''));
         if ($viewParticipantId === '') {
             return;
@@ -393,13 +393,86 @@ if ($page === 'msk_classes') {
         }
         $viewPhotoHtml = count($viewPhotoLinks) > 0 ? '<div class="member-photo-links">'.implode(' ', $viewPhotoLinks).'</div>' : '-';
 
+        $viewHistory = is_array($participantHistories[$viewParticipantId] ?? null)
+            ? $participantHistories[$viewParticipantId]
+            : [
+                'linked' => false,
+                'person_id' => '',
+                'current_mentors' => [],
+                'current_groups' => [],
+                'current_stage' => '',
+                'member_items' => [],
+                'leader_items' => [],
+            ];
+        $viewCurrentMentors = is_array($viewHistory['current_mentors'] ?? null) ? $viewHistory['current_mentors'] : [];
+        $viewCurrentGroups = is_array($viewHistory['current_groups'] ?? null) ? $viewHistory['current_groups'] : [];
+        $viewCurrentStage = normalize_dg_progress_value((string) ($viewHistory['current_stage'] ?? ''));
+        $viewMemberItems = is_array($viewHistory['member_items'] ?? null) ? $viewHistory['member_items'] : [];
+        $viewLeaderItems = is_array($viewHistory['leader_items'] ?? null) ? $viewHistory['leader_items'] : [];
+        $viewLinked = ! empty($viewHistory['linked']);
+        $viewPersonId = trim((string) ($viewHistory['person_id'] ?? ''));
+        $viewInitials = '';
+        foreach (array_slice(preg_split('/\s+/', $viewFullName) ?: [], 0, 2) as $namePart) {
+            $viewInitials .= strtoupper(substr(trim((string) $namePart), 0, 1));
+        }
+        if ($viewInitials === '') {
+            $viewInitials = 'MS';
+        }
+        $viewStageBadge = $viewCurrentStage !== ''
+            ? '<span class="journey-track-badge is-'.strtolower(str_replace(' ', '', $viewCurrentStage)).'">'.h($viewCurrentStage).'</span>'
+            : '<span class="journey-track-badge is-muted">Belum DG</span>';
+        $renderHistoryItems = static function (array $items): string {
+            if ($items === []) {
+                return '';
+            }
+            ob_start();
+            echo '<div class="journey-history-timeline">';
+            foreach ($items as $item) {
+                $stage = normalize_dg_progress_value((string) ($item['stage'] ?? ''));
+                $stageBadge = $stage !== ''
+                    ? '<span class="journey-track-badge is-'.h(strtolower(str_replace(' ', '', $stage))).'">'.h($stage).'</span>'
+                    : '';
+                echo '<article class="journey-history-item">';
+                echo '<div class="journey-history-item-head"><div class="journey-history-item-title">'.h((string) ($item['title'] ?? 'Kelompok')).'</div><div class="journey-history-item-date">'.h((string) ($item['date'] ?? '-')).'</div></div>';
+                echo '<div class="journey-history-item-meta">';
+                echo $stageBadge;
+                echo '<span class="journey-history-chip">'.h((string) ($item['role'] ?? '-')).'</span>';
+                $mentor = trim((string) ($item['mentor'] ?? ''));
+                if ($mentor !== '') {
+                    echo '<span class="journey-history-chip">Pembina: '.h($mentor).'</span>';
+                }
+                if (! empty($item['active'])) {
+                    echo '<span class="journey-history-chip is-active">Aktif</span>';
+                }
+                echo '</div>';
+                $members = is_array($item['members'] ?? null) ? array_filter($item['members']) : [];
+                if ($members !== []) {
+                    echo '<div class="journey-history-item-members">Anggota: '.h(implode(', ', $members)).'</div>';
+                }
+                $note = trim((string) ($item['note'] ?? ''));
+                if ($note !== '') {
+                    echo '<div class="journey-history-item-note">Catatan: '.h($note).'</div>';
+                }
+                echo '</article>';
+            }
+            echo '</div>';
+
+            return (string) ob_get_clean();
+        };
+
         ob_start();
         echo '<div class="msk-view-sheet">';
+        echo '  <section class="msk-view-person-hero">';
+        echo '    <div class="msk-view-person-avatar">'.h($viewInitials).'</div>';
+        echo '    <div class="msk-view-person-copy"><div class="msk-view-person-name">'.h($viewFullName).'</div><div class="msk-view-person-sub">Peserta Kelas MSK'.($viewPersonId !== '' ? ' · ID Pemuridan '.h($viewPersonId) : '').'</div></div>';
+        echo '    <div class="msk-view-person-badges">'.$viewStatusBadge.'<span class="journey-track-badge is-msk">Batch '.h($viewMskMonthLabel).'</span>'.$viewStageBadge.'</div>';
+        echo '  </section>';
         echo '  <section class="msk-view-summary-card">';
         echo '    <div class="msk-view-summary-grid">';
-        echo '      <div class="msk-view-summary-item"><span>Batch MSK</span><strong>'.h($viewMskMonthLabel).'</strong></div>';
-        echo '      <div class="msk-view-summary-item is-status '.h($viewStatusClass).'"><span>Status</span><strong>'.$viewStatusBadge.'</strong></div>';
-        echo '      <div class="msk-view-summary-item"><span>Progress</span><strong>'.h($viewProgressLabel).'</strong></div>';
+        echo '      <div class="msk-view-summary-item"><span>Sesi MSK</span><strong>'.h($viewProgressLabel).'</strong></div>';
+        echo '      <div class="msk-view-summary-item"><span>Mentor Aktif</span><strong>'.h($viewCurrentMentors !== [] ? implode(', ', $viewCurrentMentors) : '-').'</strong></div>';
+        echo '      <div class="msk-view-summary-item"><span>Kelompok Aktif</span><strong>'.h($viewCurrentGroups !== [] ? implode(', ', $viewCurrentGroups) : '-').'</strong></div>';
+        echo '      <div class="msk-view-summary-item"><span>Tahap DG</span><strong>'.h($viewCurrentStage !== '' ? $viewCurrentStage : 'Belum DG').'</strong></div>';
         echo '    </div>';
         echo '    <div class="msk-view-progress">';
         echo '      <div class="msk-progress-top"><span class="msk-progress-value">'.h($viewProgressLabel).'</span><span class="msk-progress-percent">'.h((string) $viewProgressPercent).'%</span></div>';
@@ -431,6 +504,21 @@ if ($page === 'msk_classes') {
         echo '        <div class="msk-view-rich-card"><span>Foto</span><div>'.$viewPhotoHtml.'</div></div>';
         echo '        <div class="msk-view-rich-card"><span>Keterangan</span><div>'.h($viewNotes).'</div></div>';
         echo '      </div>';
+        echo '    </section>';
+        echo '    <section class="msk-view-section is-wide msk-view-history-section">';
+        echo '      <div class="msk-view-section-head"><span class="msk-view-section-kicker">Pemuridan</span><h4>Riwayat pemuridan</h4></div>';
+        if (! $viewLinked) {
+            echo '      <div class="journey-history-empty">Peserta ini belum terhubung ke data pemuridan. Setelah peserta dihubungkan ke Anggota DG, riwayat kelompok, mentor, dan kepemimpinan akan muncul di sini.</div>';
+        } elseif ($viewMemberItems === [] && $viewLeaderItems === []) {
+            echo '      <div class="journey-history-empty">Peserta sudah terhubung ke data pemuridan, tetapi belum memiliki riwayat kelompok atau kepemimpinan.</div>';
+        } else {
+            echo '      <div class="journey-history-split-section"><div class="journey-history-split-header">Riwayat Sebagai Anggota</div>';
+            echo $viewMemberItems !== [] ? $renderHistoryItems($viewMemberItems) : '<div class="journey-history-empty">Belum ada riwayat sebagai anggota.</div>';
+            echo '      </div><div class="journey-history-split-divider"></div>';
+            echo '      <div class="journey-history-split-section"><div class="journey-history-split-header">Riwayat Memimpin</div>';
+            echo $viewLeaderItems !== [] ? $renderHistoryItems($viewLeaderItems) : '<div class="journey-history-empty">Belum ada riwayat memimpin kelompok.</div>';
+            echo '      </div>';
+        }
         echo '    </section>';
         echo '  </div>';
         echo '</div>';
@@ -634,6 +722,12 @@ if ($page === 'msk_classes') {
         echo "    </div>\n";
         echo "    <div class=\"modal-body\" data-msk-view-body>\n";
         echo "      <div class=\"panel-note msk-modal-empty-state\">Pilih tombol Lihat pada baris peserta untuk membuka detail peserta MSK.</div>\n";
+        echo "    </div>\n";
+        echo "    <div class=\"modal-actions\">\n";
+        if (! $centralReadOnly) {
+            echo "      <a class=\"btn tiny secondary is-hidden\" href=\"#\" data-msk-view-edit-link>Edit</a>\n";
+        }
+        echo "      <button class=\"btn tiny ghost\" type=\"button\" data-msk-view-close>Tutup</button>\n";
         echo "    </div>\n";
         echo "  </div>\n";
         echo "</div>\n";

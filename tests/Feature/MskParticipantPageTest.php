@@ -68,6 +68,68 @@ class MskParticipantPageTest extends TestCase
             ->assertDontSee('data-msk-create-open', false);
     }
 
+    public function test_msk_view_modal_shows_profile_and_discipleship_history(): void
+    {
+        $this->createMskTables();
+        $this->createDiscipleshipHistoryTables();
+
+        DB::table('discipleship_people')->insert([
+            ['id' => 10, 'branch_id' => 1, 'full_name' => 'Pembina Modal', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 11, 'branch_id' => 1, 'full_name' => 'Peserta Modal', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 12, 'branch_id' => 1, 'full_name' => 'Binaan Modal', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        DB::table('discipleship_groups')->insert([
+            ['id' => 20, 'branch_id' => 1, 'name' => 'Kelompok Peserta Modal', 'status' => 'active', 'start_stage' => 'DG 2', 'current_stage' => 'DG 2', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 21, 'branch_id' => 1, 'name' => 'Kelompok Dipimpin Modal', 'status' => 'active', 'start_stage' => 'DG 1', 'current_stage' => 'DG 1', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            ['branch_id' => 1, 'discipleship_group_id' => 20, 'person_id' => 10, 'role' => 'leader', 'stage' => null, 'status' => 'active', 'started_on' => '2026-01-01', 'created_at' => now(), 'updated_at' => now()],
+            ['branch_id' => 1, 'discipleship_group_id' => 20, 'person_id' => 11, 'role' => 'member', 'stage' => 'DG 2', 'status' => 'active', 'started_on' => '2026-01-01', 'created_at' => now(), 'updated_at' => now()],
+            ['branch_id' => 1, 'discipleship_group_id' => 21, 'person_id' => 11, 'role' => 'leader', 'stage' => null, 'status' => 'active', 'started_on' => '2026-02-01', 'created_at' => now(), 'updated_at' => now()],
+            ['branch_id' => 1, 'discipleship_group_id' => 21, 'person_id' => 12, 'role' => 'member', 'stage' => 'DG 1', 'status' => 'active', 'started_on' => '2026-02-01', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        DB::table('discipleship_relationships')->insert([
+            'branch_id' => 1,
+            'mentor_person_id' => 10,
+            'disciple_person_id' => 11,
+            'context_group_id' => 20,
+            'relation_type' => 'discipleship',
+            'stage_at_start' => 'DG 2',
+            'status' => 'active',
+            'start_date' => '2026-01-01',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('msk_participants')->insert([
+            'branch_id' => 1,
+            'discipleship_person_id' => 11,
+            'full_name' => 'Peserta Modal',
+            'gender' => 'Perempuan',
+            'whatsapp' => '08123456789',
+            'batch_month' => '2026-06',
+            'journey_bridge_status' => 'belum',
+            'status' => 'active',
+            'session_numbers' => json_encode(range(1, 12)),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAsRecUser();
+        $this->get('/pemuridan/msk?batch_month=2026-06')
+            ->assertOk()
+            ->assertSee('msk-view-person-hero', false)
+            ->assertSee('Riwayat pemuridan')
+            ->assertSee('Mentor Aktif')
+            ->assertSee('Pembina Modal')
+            ->assertSee('Kelompok Peserta Modal')
+            ->assertSee('Riwayat Sebagai Anggota')
+            ->assertSee('Riwayat Memimpin')
+            ->assertSee('Kelompok Dipimpin Modal')
+            ->assertSee('Binaan Modal')
+            ->assertSee('data-msk-view-edit-link', false);
+    }
+
     public function test_central_can_export_but_cannot_import_msk_data(): void
     {
         $this->createMskTables();
@@ -334,6 +396,59 @@ class MskParticipantPageTest extends TestCase
             $table->string('status')->default('active');
             $table->json('session_numbers')->nullable();
             $table->json('photos')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    private function createDiscipleshipHistoryTables(): void
+    {
+        Schema::dropIfExists('discipleship_relationships');
+        Schema::dropIfExists('discipleship_group_people');
+        Schema::dropIfExists('discipleship_groups');
+        Schema::dropIfExists('discipleship_people');
+
+        Schema::create('discipleship_people', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->string('full_name')->nullable();
+            $table->string('status')->default('active');
+            $table->timestamps();
+        });
+        Schema::create('discipleship_groups', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->string('name');
+            $table->string('status')->default('active');
+            $table->string('start_stage')->nullable();
+            $table->string('current_stage')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('discipleship_group_people', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->unsignedBigInteger('discipleship_group_id');
+            $table->unsignedBigInteger('person_id');
+            $table->string('role');
+            $table->string('stage')->nullable();
+            $table->string('status')->default('active');
+            $table->date('started_on')->nullable();
+            $table->date('ended_on')->nullable();
+            $table->string('end_reason')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('discipleship_relationships', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->unsignedBigInteger('mentor_person_id')->nullable();
+            $table->unsignedBigInteger('disciple_person_id');
+            $table->unsignedBigInteger('context_group_id')->nullable();
+            $table->string('relation_type')->nullable();
+            $table->string('stage_at_start')->nullable();
+            $table->string('status')->default('active');
+            $table->date('start_date')->nullable();
+            $table->date('end_date')->nullable();
+            $table->string('reason_end')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }

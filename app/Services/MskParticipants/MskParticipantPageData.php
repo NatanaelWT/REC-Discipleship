@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 
 class MskParticipantPageData
 {
+    public function __construct(private readonly MskParticipantHistoryData $historyData) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -122,6 +124,7 @@ class MskParticipantPageData
             'completedParticipantsFiltered' => $completedParticipantsFiltered,
             'inProgressParticipantsFiltered' => max(0, $totalParticipantsFiltered - $completedParticipantsFiltered),
             'totalParticipantsAll' => array_sum($batchMonthMap),
+            'participantHistories' => $this->historyData->forParticipants($pageParticipants, $branchIds),
         ];
     }
 

@@ -5934,6 +5934,190 @@ textarea {
   }
 }
 
+.msk-view-modal-card {
+  width: min(980px, 94vw);
+  height: min(var(--modal-max-height), 840px);
+  max-height: var(--modal-max-height);
+}
+
+.msk-view-modal-card .modal-head {
+  padding: 16px 18px 13px;
+}
+
+.msk-view-modal-card .modal-title {
+  font-size: clamp(19px, 2vw, 24px);
+}
+
+.msk-view-modal-card .modal-body {
+  min-height: 0;
+  padding: 16px 18px 18px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.msk-view-modal-card .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px 14px;
+}
+
+.msk-view-sheet {
+  gap: 14px;
+}
+
+.msk-view-person-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(203, 213, 225, 0.86);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.1), transparent 38%),
+    radial-gradient(circle at top right, rgba(2, 132, 199, 0.08), transparent 34%),
+    linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.msk-view-person-avatar {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--discipleship-msk) 14%, white);
+  border: 1px solid color-mix(in srgb, var(--discipleship-msk) 24%, white);
+  color: var(--discipleship-msk);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.msk-view-person-copy {
+  min-width: 0;
+}
+
+.msk-view-person-name {
+  overflow: hidden;
+  color: #0f172a;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.msk-view-person-sub {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.msk-view-person-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.msk-view-summary-card {
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+}
+
+.msk-view-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.msk-view-summary-item {
+  align-content: center;
+  gap: 5px;
+  min-height: 72px;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.msk-view-summary-item span,
+.msk-view-detail dt,
+.msk-view-rich-card > span {
+  font-size: 9px;
+}
+
+.msk-view-summary-item strong,
+.msk-view-detail dd {
+  font-size: 13px;
+}
+
+.msk-view-progress {
+  gap: 7px;
+  padding: 11px 12px;
+  border-radius: 10px;
+}
+
+.msk-view-sections {
+  gap: 10px;
+}
+
+.msk-view-section {
+  align-content: start;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+}
+
+.msk-view-section-head {
+  gap: 6px;
+}
+
+.msk-view-section-head h4 {
+  font-size: clamp(16px, 1.6vw, 19px);
+}
+
+.msk-view-details,
+.msk-view-rich-grid {
+  gap: 8px;
+}
+
+.msk-view-detail,
+.msk-view-rich-card {
+  gap: 5px;
+  padding: 10px 11px;
+  border-radius: 10px;
+}
+
+.msk-view-history-section {
+  background:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.05), transparent 38%),
+    linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.msk-view-history-section .journey-history-split-divider {
+  margin: 2px 0;
+}
+
+@media (max-width: 900px) {
+  .msk-view-person-hero {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .msk-view-person-badges {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 900px) {
+  .msk-view-summary-grid,
+  .msk-view-details,
+  .msk-view-rich-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .file-text-editor {
   min-height: 240px;
   resize: vertical;

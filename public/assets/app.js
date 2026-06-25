@@ -444,8 +444,13 @@
           bodyEl.innerHTML = templateHtml;
         }
         if (editLinkEl) {
-          editLinkEl.setAttribute('href', editHref);
-          editLinkEl.classList.remove('is-hidden');
+          if (editHref && editHref !== '?page=msk_classes') {
+            editLinkEl.setAttribute('href', editHref);
+            editLinkEl.classList.remove('is-hidden');
+          } else {
+            editLinkEl.removeAttribute('href');
+            editLinkEl.classList.add('is-hidden');
+          }
         }
 
         mskViewModal.classList.add('is-open');
