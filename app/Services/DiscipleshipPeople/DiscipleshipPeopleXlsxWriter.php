@@ -106,10 +106,9 @@ class DiscipleshipPeopleXlsxWriter
         }
 
         $xml .= '</sheetData>';
-        $xml .= '<mergeCells count="2"><mergeCell ref="A1:'.$lastColumn.'1"/><mergeCell ref="A2:'.$lastColumn.'2"/></mergeCells>';
         $xml .= '<autoFilter ref="A4:'.$lastColumn.$lastRow.'"/>';
+        $xml .= '<mergeCells count="2"><mergeCell ref="A1:'.$lastColumn.'1"/><mergeCell ref="A2:'.$lastColumn.'2"/></mergeCells>';
         $xml .= '<pageMargins left="0.35" right="0.35" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>';
-        $xml .= '<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/>';
         $xml .= '</worksheet>';
 
         return $xml;

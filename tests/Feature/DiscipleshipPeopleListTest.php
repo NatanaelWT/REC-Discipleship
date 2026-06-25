@@ -225,6 +225,10 @@ class DiscipleshipPeopleListTest extends TestCase
             $zip->close();
             $this->assertStringContainsString('<pane ySplit="4"', $sheetXml);
             $this->assertStringContainsString('<autoFilter ref="A4:I5"/>', $sheetXml);
+            $this->assertLessThan(
+                strpos($sheetXml, '<mergeCells'),
+                strpos($sheetXml, '<autoFilter'),
+            );
         } finally {
             @unlink($path);
         }
