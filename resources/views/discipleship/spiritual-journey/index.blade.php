@@ -721,24 +721,22 @@ if ($page === 'spiritual_journey') {
         'dg_without_kgap' => 'Minimal DG 1, Belum Kamp GAP',
     ];
 
-    echo "  <div class=\"actions journey-hero-tools\">\n";
-    echo "    <div class=\"journey-hero-search-wrap\">\n";
-    echo '      <form method="get" action="'.h(route('discipleship.spiritual-journey'))."\" class=\"form-row\" data-spiritual-journey-search-form>\n";
+    echo '  <form method="get" action="'.h(route('discipleship.spiritual-journey'))."\" class=\"actions journey-hero-tools\" data-spiritual-journey-search-form>\n";
     if (request()->filled('branch_id')) {
-        echo '        <input type="hidden" name="branch_id" value="'.h((string) request()->query('branch_id'))."\">\n";
+        echo '    <input type="hidden" name="branch_id" value="'.h((string) request()->query('branch_id'))."\">\n";
     }
-    echo "        <div class=\"journey-hero-filter-wrap\">\n";
-    echo "          <select name=\"journey_filter\" class=\"search journey-status-filter\" aria-label=\"Filter spiritual journey\" onchange=\"this.form.submit()\">\n";
+    echo "    <div class=\"journey-hero-filter-wrap\">\n";
+    echo "      <select name=\"journey_filter\" class=\"search journey-status-filter\" aria-label=\"Filter spiritual journey\" onchange=\"this.form.submit()\">\n";
     foreach ($journeyFilterOptions as $filterValue => $filterLabel) {
         $selected = $journeyFilter === $filterValue ? ' selected' : '';
-        echo '            <option value="'.h($filterValue).'"'.$selected.'>'.h($filterLabel)."</option>\n";
+        echo '        <option value="'.h($filterValue).'"'.$selected.'>'.h($filterLabel)."</option>\n";
     }
-    echo "          </select>\n";
-    echo "        </div>\n";
-    echo '        <input type="search" name="q" value="'.h($spiritualJourneySearch)."\" class=\"search journey-table-search\" placeholder=\"Cari peserta spiritual journey...\" aria-label=\"Cari peserta spiritual journey\" autocomplete=\"off\" data-spiritual-journey-search-input>\n";
-    echo "      </form>\n";
+    echo "      </select>\n";
     echo "    </div>\n";
-    echo "  </div>\n";
+    echo "    <div class=\"journey-hero-search-wrap\">\n";
+    echo '      <input type="search" name="q" value="'.h($spiritualJourneySearch)."\" class=\"search journey-table-search\" placeholder=\"Cari peserta spiritual journey...\" aria-label=\"Cari peserta spiritual journey\" autocomplete=\"off\" data-spiritual-journey-search-input>\n";
+    echo "    </div>\n";
+    echo "  </form>\n";
     echo "</section>\n";
 
     echo "<section class=\"card table-card-plain\">\n";

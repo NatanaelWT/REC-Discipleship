@@ -10804,22 +10804,24 @@ textarea:focus-visible {
   position: relative;
   z-index: 1;
   display: flex;
-  justify-content: flex-end;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
   margin-top: 18px;
   padding-top: 18px;
   border-top: 1px solid rgba(203, 213, 225, 0.7);
 }
 
 .journey-hero-search-wrap {
-  width: min(100%, 720px);
-}
-
-.journey-hero-search-wrap .form-row {
-  align-items: center;
+  flex: 0 1 440px;
+  width: 440px;
+  margin-left: auto;
 }
 
 .journey-hero-filter-wrap {
-  width: min(100%, 260px);
+  flex: 0 1 220px;
+  width: 220px;
 }
 
 .journey-status-filter,
@@ -11843,21 +11845,17 @@ textarea:focus-visible {
   }
 
   .journey-hero-tools {
+    flex-direction: column;
+    align-items: stretch;
     margin-top: 16px;
     padding-top: 16px;
   }
 
+  .journey-hero-filter-wrap,
   .journey-hero-search-wrap {
+    flex-basis: auto;
     width: 100%;
-  }
-
-  .journey-hero-search-wrap .form-row {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .journey-hero-filter-wrap {
-    width: 100%;
+    margin-left: 0;
   }
 
   .journey-track-cell {
