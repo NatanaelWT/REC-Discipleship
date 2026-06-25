@@ -20,7 +20,16 @@
         </div>
         <div class="discipleship-overdue-meta"><span>Cabang</span><strong>{{ $participant['branch_label'] }}</strong></div>
         <div class="discipleship-overdue-meta"><span>Batch Mulai MSK</span><strong>{{ $monthLabel }}</strong></div>
-        <div class="discipleship-overdue-meta"><span>WhatsApp</span><strong>{{ $participant['phone'] }}</strong></div>
+        <div class="discipleship-overdue-meta">
+          <span>WhatsApp</span>
+          <strong>
+            @if ($participant['whatsapp_url'] !== '')
+              <a class="note-link" href="{{ $participant['whatsapp_url'] }}" target="_blank" rel="noopener">{{ $participant['phone'] }}</a>
+            @else
+              {{ $participant['phone'] }}
+            @endif
+          </strong>
+        </div>
       </div>
       @if (! $centralReadOnly)
         <template data-msk-edit-template="{{ $participant['id'] }}" data-msk-edit-template-title="Edit Sesi MSK: {{ $participant['name'] }}">

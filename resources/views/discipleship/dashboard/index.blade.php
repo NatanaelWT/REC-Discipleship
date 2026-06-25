@@ -114,6 +114,22 @@ $formatPercent = static function (float $value): string {
     section.innerHTML = '<div class="dashboard-section-error"><strong>Data belum dapat dimuat.</strong><button class="btn tiny secondary" type="button" data-dashboard-section-retry>Coba lagi</button></div>';
   }
 
+  function openMskEditor(template) {
+    if (!modal || !template) return;
+    modal.querySelector('[data-msk-edit-title]').textContent = template.getAttribute('data-msk-edit-template-title') || 'Edit Sesi MSK';
+    modal.querySelector('[data-msk-edit-body]').innerHTML = template.innerHTML;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+  }
+
+  function closeMskEditor() {
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+  }
+
   function openRequestedEditor(section) {
     var id = section.getAttribute('data-auto-edit-id') || '';
     if (id === '') return;
@@ -162,23 +178,19 @@ $formatPercent = static function (float $value): string {
     if (edit && modal) {
       var template = document.querySelector('template[data-msk-edit-template="' + CSS.escape(edit.getAttribute('data-msk-edit-open')) + '"]');
       if (!template) return;
-      modal.querySelector('[data-msk-edit-title]').textContent = template.getAttribute('data-msk-edit-template-title') || 'Edit Sesi MSK';
-      modal.querySelector('[data-msk-edit-body]').innerHTML = template.innerHTML;
-      modal.classList.add('open');
-      modal.setAttribute('aria-hidden', 'false');
+      event.preventDefault();
+      openMskEditor(template);
       return;
     }
 
     if (event.target.closest('[data-msk-edit-close]') && modal) {
-      modal.classList.remove('open');
-      modal.setAttribute('aria-hidden', 'true');
+      closeMskEditor();
     }
   });
 
   document.addEventListener('keydown', function (event) {
     if (event.key === 'Escape' && modal) {
-      modal.classList.remove('open');
-      modal.setAttribute('aria-hidden', 'true');
+      closeMskEditor();
     }
   });
 })();

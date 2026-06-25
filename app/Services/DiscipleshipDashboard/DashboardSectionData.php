@@ -38,11 +38,19 @@ class DashboardSectionData
         $branches = $this->scope->optionsById();
         $paginator->through(static function (MskParticipant $participant) use ($branches): array {
             $sessions = normalize_msk_session_numbers($participant->session_numbers ?? []);
+            $phone = trim((string) $participant->whatsapp);
+            $phoneDigits = preg_replace('/\D+/', '', $phone) ?? '';
+            if (str_starts_with($phoneDigits, '0')) {
+                $phoneDigits = '62'.substr($phoneDigits, 1);
+            } elseif (str_starts_with($phoneDigits, '8')) {
+                $phoneDigits = '62'.$phoneDigits;
+            }
 
             return [
                 'id' => (int) $participant->id,
                 'name' => trim((string) $participant->full_name) ?: '-',
-                'phone' => trim((string) $participant->whatsapp) ?: '-',
+                'phone' => $phone !== '' ? $phone : '-',
+                'whatsapp_url' => $phoneDigits !== '' ? 'https://wa.me/'.$phoneDigits : '',
                 'batch_month' => trim((string) $participant->batch_month),
                 'session_numbers' => $sessions,
                 'session_count' => count($sessions),

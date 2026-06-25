@@ -29,6 +29,10 @@ class DiscipleshipDashboardTest extends TestCase
         $section->assertOk();
         $section->assertSee('Peserta MSK Dashboard');
         $section->assertSee('name="_token"', false);
+        $section->assertSee('href="https://wa.me/62833333333"', false);
+        $section->assertSee('data-msk-edit-open', false);
+        $response->assertSee("modal.classList.add('is-open');", false);
+        $response->assertDontSee("modal.classList.add('open');", false);
     }
 
     public function test_dashboard_updates_msk_sessions_to_laravel_tables(): void
