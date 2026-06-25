@@ -55,11 +55,9 @@ class DiscipleshipGroupIndexData
             });
         }
 
-        $paginator = $query->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
+        $groups = $query->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
             ->orderBy('name')
-            ->paginate(min(100, max(1, $request->integer('per_page', 50))))
-            ->withQueryString();
-        $groups = collect($paginator->items());
+            ->get();
         $groupIds = $groups->pluck('id')->map(static fn ($id): int => (int) $id)->all();
         $links = $this->groupPeople($groupIds);
         $people = $this->people($links->pluck('person_id')->filter()->unique()->all());
@@ -114,13 +112,10 @@ class DiscipleshipGroupIndexData
                 'member_count' => count($members),
             ];
         })->values();
-        $paginator->setCollection($rows);
-
         return [
             'settings' => ['church_name' => app_church_name()],
             'groups' => $rows->all(),
-            'groupsPagination' => $paginator,
-            'filteredGroupRows' => $paginator->total(),
+            'filteredGroupRows' => $rows->count(),
             'totalGroupRows' => (int) ($stats->total ?? 0),
             'groupsInDg1Count' => (int) ($stats->dg1 ?? 0),
             'groupsInDg2Count' => (int) ($stats->dg2 ?? 0),

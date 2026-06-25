@@ -9,7 +9,7 @@ use Tests\TestCase;
 
 class DiscipleshipGroupListPerformanceTest extends TestCase
 {
-    public function test_group_list_only_loads_the_current_page(): void
+    public function test_group_list_renders_all_rows_without_pagination(): void
     {
         $this->createTables();
         $people = [];
@@ -38,14 +38,20 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Kelompok 0001')
-            ->assertSee('Kelompok 0050')
-            ->assertDontSee('Kelompok 0051')
-            ->assertSee('Halaman 1 dari 6')
+            ->assertSee('Kelompok 0150')
+            ->assertSee('Kelompok 0300')
+            ->assertDontSee('rec-pagination', false)
+            ->assertDontSee('Halaman 1 dari')
             ->assertSee('data-auto-submit-search-form', false)
             ->assertSee('data-auto-submit-search-input', false)
             ->assertDontSee('>Cari</button>', false);
         $this->assertLessThanOrEqual(8, $queries);
-        $this->assertLessThan(250 * 1024, strlen((string) $response->getContent()));
+
+        $this->get('/pemuridan/kelompok?per_page=1')
+            ->assertOk()
+            ->assertSee('Kelompok 0001')
+            ->assertSee('Kelompok 0300')
+            ->assertDontSee('rec-pagination', false);
     }
 
     public function test_inactive_group_shows_its_last_leader_and_members(): void

@@ -102,6 +102,5 @@
           </tbody>
         </table>
       </div>
-      @include('partials.compact-pagination', ['paginator' => $groupsPagination])
     </section>
 @endsection
