@@ -33,6 +33,12 @@ class DiscipleshipDashboardTest extends TestCase
         $section->assertSee('data-msk-edit-open', false);
         $response->assertSee("modal.classList.add('is-open');", false);
         $response->assertDontSee("modal.classList.add('open');", false);
+
+        $overdueSection = $this->get('/pemuridan/dashboard/sections/overdue-groups');
+        $overdueSection->assertOk();
+        $overdueSection->assertSee('<span>Peserta</span>', false);
+        $overdueSection->assertDontSee('<span>Kelompok</span>', false);
+        $overdueSection->assertDontSee('<strong>Kelompok Dashboard</strong>', false);
     }
 
     public function test_dashboard_updates_msk_sessions_to_laravel_tables(): void

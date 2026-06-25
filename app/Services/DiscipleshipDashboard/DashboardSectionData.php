@@ -101,7 +101,6 @@ class DashboardSectionData
 
             return [
                 'id' => (int) $group->id,
-                'name' => trim((string) $group->name) ?: 'Kelompok',
                 'leader_name' => $people['leaders'][0] ?? '-',
                 'members_first_names' => implode(', ', array_slice($people['members'], 0, 8)) ?: '-',
                 'progress' => normalize_dg_progress_value((string) $group->current_stage) ?: 'DG 1',

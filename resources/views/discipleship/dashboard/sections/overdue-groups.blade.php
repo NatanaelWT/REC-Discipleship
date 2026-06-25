@@ -9,7 +9,6 @@
     @foreach ($groups as $group)
       <div class="discipleship-overdue-item">
         <div class="discipleship-overdue-top"><span class="name">{{ $group['leader_name'] }}</span><span class="badge muted">{{ $group['progress'] }}</span></div>
-        <div class="discipleship-overdue-meta"><span>Kelompok</span><strong>{{ $group['name'] }}</strong></div>
         <div class="discipleship-overdue-meta"><span>Peserta</span><strong>{{ $group['members_first_names'] }}</strong></div>
         <div class="discipleship-overdue-meta"><span>Cabang</span><strong>{{ $group['branch_label'] }}</strong></div>
         <div class="discipleship-overdue-meta"><span>Terakhir Lapor</span><strong>{{ $group['last_report_date'] !== '' ? format_indo_date($group['last_report_date']) : 'Belum Pernah Lapor' }}</strong></div>
