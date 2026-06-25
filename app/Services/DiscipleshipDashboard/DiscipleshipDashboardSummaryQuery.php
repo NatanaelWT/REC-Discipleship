@@ -78,7 +78,7 @@ class DiscipleshipDashboardSummaryQuery
         foreach ($branchIds as $branchId) {
             $rows[$branchId] = [
                 'people_count' => 0,
-                'active_people_count' => 0,
+                'historical_people_count' => 0,
                 'leader_count' => 0,
                 'group_count' => 0,
                 'active_group_count' => 0,
@@ -196,9 +196,14 @@ class DiscipleshipDashboardSummaryQuery
     private function groupPeopleRows(array $branchIds): Collection
     {
         return $this->query(static fn () => DB::table('discipleship_group_people as gp')
+            ->join('discipleship_people as p', function ($join): void {
+                $join->on('p.id', '=', 'gp.person_id')
+                    ->on('p.branch_id', '=', 'gp.branch_id');
+            })
             ->whereIn('gp.branch_id', $branchIds)
+            ->where('p.status', 'active')
             ->selectRaw("gp.branch_id,
-                COUNT(DISTINCT CASE WHEN gp.role = 'member' THEN gp.person_id END) AS active_people_count")
+                COUNT(DISTINCT CASE WHEN gp.role = 'member' THEN gp.person_id END) AS historical_people_count")
             ->groupBy('gp.branch_id')->get());
     }
 
@@ -390,7 +395,7 @@ class DiscipleshipDashboardSummaryQuery
     private function summaryStats(array $row): array
     {
         return [
-            ['label' => 'Peserta Selama Ini', 'value' => $row['active_people_count'], 'sub' => 'Anggota yang pernah ikut DG', 'tone' => 'is-primary'],
+            ['label' => 'Peserta Selama Ini', 'value' => $row['historical_people_count'], 'sub' => 'Anggota yang pernah ikut DG', 'tone' => 'is-primary'],
             ['label' => 'Pernah Memimpin', 'value' => $row['leader_count'], 'sub' => 'Orang yang pernah memimpin', 'tone' => 'is-emerald'],
             ['label' => 'Kelompok Selama Ini', 'value' => $row['group_count'], 'sub' => 'Kelompok yang pernah berjalan', 'tone' => 'is-dg2'],
             ['label' => 'Pertemuan Bulan Ini', 'value' => $row['meeting_count'], 'sub' => 'Laporan DG bulan berjalan', 'tone' => 'is-amber'],

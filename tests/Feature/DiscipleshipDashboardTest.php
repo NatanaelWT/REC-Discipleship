@@ -111,7 +111,7 @@ class DiscipleshipDashboardTest extends TestCase
         }
     }
 
-    public function test_dashboard_summary_preserves_historical_achievements_and_mentor_leaders(): void
+    public function test_dashboard_summary_preserves_historical_achievements_and_excludes_archived_participant_identities(): void
     {
         $this->createDashboardTables();
         $this->seedDashboardData();
@@ -135,6 +135,13 @@ class DiscipleshipDashboardTest extends TestCase
         $formerMemberId = DB::table('discipleship_people')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Mantan Peserta Dashboard',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $archivedMemberId = DB::table('discipleship_people')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Identitas Peserta Diarsipkan',
             'status' => 'inactive',
             'created_at' => now(),
             'updated_at' => now(),
@@ -186,6 +193,19 @@ class DiscipleshipDashboardTest extends TestCase
             'started_on' => '2025-01-01',
             'ended_on' => '2025-12-31',
             'end_reason' => 'group_completed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            'branch_id' => 1,
+            'discipleship_group_id' => $groupId,
+            'person_id' => $archivedMemberId,
+            'role' => 'member',
+            'stage' => 'DG 1',
+            'status' => 'closed',
+            'started_on' => '2025-01-01',
+            'ended_on' => '2025-12-31',
+            'end_reason' => 'person_archived',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
