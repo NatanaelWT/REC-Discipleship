@@ -20,7 +20,14 @@ class DiscipleshipPeopleListData
         $progress = trim((string) $request->query('progress', 'all'));
         $base = DiscipleshipPerson::query()
             ->whereIn('branch_id', $this->scope->branchIds())
-            ->where('status', 'active');
+            ->where('status', 'active')
+            ->whereExists(static function ($subquery): void {
+                $subquery->selectRaw('1')
+                    ->from('discipleship_group_people as participant_history')
+                    ->whereColumn('participant_history.person_id', 'discipleship_people.id')
+                    ->whereColumn('participant_history.branch_id', 'discipleship_people.branch_id')
+                    ->where('participant_history.role', 'member');
+            });
         $query = (clone $base)->select(['id', 'branch_id', 'full_name', 'status']);
 
         $this->applyProgressFilter($query, $progress);
@@ -238,13 +245,30 @@ class DiscipleshipPeopleListData
     /** @return array{total:int,dg1:int,dg2:int,dg3:int} */
     private function progressStats(): array
     {
+        $participantStages = DiscipleshipGroupPerson::query()
+            ->from('discipleship_group_people as gp')
+            ->join('discipleship_people as p', function ($join): void {
+                $join->on('p.id', '=', 'gp.person_id')
+                    ->on('p.branch_id', '=', 'gp.branch_id');
+            })
+            ->whereIn('gp.branch_id', $this->scope->branchIds())
+            ->where('p.status', 'active')
+            ->where('gp.role', 'member')
+            ->selectRaw("gp.person_id,
+                MAX(CASE gp.stage
+                    WHEN 'DG 3' THEN 3
+                    WHEN 'DG 2' THEN 2
+                    WHEN 'DG 1' THEN 1
+                    ELSE 0
+                END) AS last_stage_rank")
+            ->groupBy('gp.person_id');
+
         $row = DiscipleshipGroupPerson::query()
-            ->whereIn('branch_id', $this->scope->branchIds())
-            ->where('role', 'member')->where('status', 'active')->whereNull('ended_on')
-            ->selectRaw("COUNT(DISTINCT person_id) AS total,
-                COUNT(DISTINCT CASE WHEN stage = 'DG 1' THEN person_id END) AS dg1,
-                COUNT(DISTINCT CASE WHEN stage = 'DG 2' THEN person_id END) AS dg2,
-                COUNT(DISTINCT CASE WHEN stage = 'DG 3' THEN person_id END) AS dg3")
+            ->fromSub($participantStages, 'participant_stages')
+            ->selectRaw("COUNT(*) AS total,
+                SUM(CASE WHEN last_stage_rank = 1 THEN 1 ELSE 0 END) AS dg1,
+                SUM(CASE WHEN last_stage_rank = 2 THEN 1 ELSE 0 END) AS dg2,
+                SUM(CASE WHEN last_stage_rank = 3 THEN 1 ELSE 0 END) AS dg3")
             ->first();
 
         return ['total' => (int) ($row->total ?? 0), 'dg1' => (int) ($row->dg1 ?? 0), 'dg2' => (int) ($row->dg2 ?? 0), 'dg3' => (int) ($row->dg3 ?? 0)];

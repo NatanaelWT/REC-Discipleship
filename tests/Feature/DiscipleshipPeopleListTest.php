@@ -25,6 +25,7 @@ class DiscipleshipPeopleListTest extends TestCase
         $this->createDiscipleshipTables();
         DB::table('discipleship_people')->insert([
             [
+                'id' => 1,
                 'branch_id' => 1,
                 'full_name' => 'Anggota Kutisari',
                 'status' => 'active',
@@ -32,9 +33,38 @@ class DiscipleshipPeopleListTest extends TestCase
                 'updated_at' => now(),
             ],
             [
+                'id' => 2,
                 'branch_id' => 2,
                 'full_name' => 'Anggota GM Rahasia',
                 'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 1,
+                'person_id' => 1,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'active',
+                'started_on' => '2026-01-01',
+                'ended_on' => null,
+                'end_reason' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 2,
+                'discipleship_group_id' => 2,
+                'person_id' => 2,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'active',
+                'started_on' => '2026-01-01',
+                'ended_on' => null,
+                'end_reason' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -67,6 +97,7 @@ class DiscipleshipPeopleListTest extends TestCase
         $this->createDiscipleshipTables();
         DB::table('discipleship_people')->insert([
             [
+                'id' => 1,
                 'branch_id' => 1,
                 'full_name' => 'Identitas DG Sama',
                 'phone' => '081234567890',
@@ -75,10 +106,39 @@ class DiscipleshipPeopleListTest extends TestCase
                 'updated_at' => now()->subDay(),
             ],
             [
+                'id' => 2,
                 'branch_id' => 1,
                 'full_name' => 'Identitas DG Sama',
                 'phone' => '081234567890',
                 'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 1,
+                'person_id' => 1,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'closed',
+                'started_on' => '2025-01-01',
+                'ended_on' => '2025-12-31',
+                'end_reason' => 'person_archived',
+                'created_at' => now()->subDay(),
+                'updated_at' => now()->subDay(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 2,
+                'person_id' => 2,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'active',
+                'started_on' => '2026-01-01',
+                'ended_on' => null,
+                'end_reason' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -142,6 +202,136 @@ class DiscipleshipPeopleListTest extends TestCase
             ->assertDontSee('Selesai RG');
     }
 
+    public function test_people_list_counts_active_and_historical_participants_by_their_last_stage(): void
+    {
+        $this->createDiscipleshipTables();
+        DB::table('discipleship_people')->insert([
+            [
+                'id' => 1,
+                'branch_id' => 1,
+                'full_name' => 'Peserta Aktif DG 1',
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 2,
+                'branch_id' => 1,
+                'full_name' => 'Alumni DG 1',
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 3,
+                'branch_id' => 1,
+                'full_name' => 'Peserta Terakhir DG 2',
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 4,
+                'branch_id' => 1,
+                'full_name' => 'Identitas Arsip DG',
+                'status' => 'inactive',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 5,
+                'branch_id' => 1,
+                'full_name' => 'Belum Pernah DG',
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 1,
+                'person_id' => 1,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'active',
+                'started_on' => '2026-01-01',
+                'ended_on' => null,
+                'end_reason' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 2,
+                'person_id' => 2,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'closed',
+                'started_on' => '2025-01-01',
+                'ended_on' => '2025-12-31',
+                'end_reason' => 'group_completed',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 3,
+                'person_id' => 3,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'closed',
+                'started_on' => '2025-01-01',
+                'ended_on' => '2025-06-30',
+                'end_reason' => 'continued_to_child_group',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 4,
+                'person_id' => 3,
+                'role' => 'member',
+                'stage' => 'DG 2',
+                'status' => 'closed',
+                'started_on' => '2025-07-01',
+                'ended_on' => '2026-01-31',
+                'end_reason' => 'group_completed',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 5,
+                'person_id' => 4,
+                'role' => 'member',
+                'stage' => 'DG 3',
+                'status' => 'closed',
+                'started_on' => '2025-01-01',
+                'ended_on' => '2025-12-31',
+                'end_reason' => 'person_archived',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+        $this->actingAsRecUser();
+
+        $response = $this->get('/pemuridan/anggota');
+
+        $response->assertOk()
+            ->assertSee('Peserta Aktif DG 1')
+            ->assertSee('Alumni DG 1')
+            ->assertSee('Peserta Terakhir DG 2')
+            ->assertDontSee('Identitas Arsip DG')
+            ->assertDontSee('Belum Pernah DG')
+            ->assertSee('data-people-stat="total">3</strong>', false)
+            ->assertSee('data-people-stat="dg1">2</strong>', false)
+            ->assertSee('data-people-stat="dg2">1</strong>', false)
+            ->assertSee('data-people-stat="dg3">0</strong>', false)
+            ->assertSee('Terakhir menyelesaikan DG 1')
+            ->assertSee('Terakhir menyelesaikan DG 2');
+    }
+
     public function test_people_list_renders_all_rows_without_pagination_and_uses_live_search(): void
     {
         $this->createDiscipleshipTables();
@@ -157,6 +347,25 @@ class DiscipleshipPeopleListTest extends TestCase
         }
         foreach (array_chunk($rows, 200) as $chunk) {
             DB::table('discipleship_people')->insert($chunk);
+        }
+        $participantRows = DB::table('discipleship_people')
+            ->where('branch_id', 1)
+            ->orderBy('id')
+            ->get(['id'])
+            ->map(static fn ($person): array => [
+                'branch_id' => 1,
+                'discipleship_group_id' => 1,
+                'person_id' => (int) $person->id,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'active',
+                'started_on' => '2026-01-01',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ])
+            ->all();
+        foreach (array_chunk($participantRows, 200) as $chunk) {
+            DB::table('discipleship_group_people')->insert($chunk);
         }
         $this->actingAsRecUser();
         $queries = 0;

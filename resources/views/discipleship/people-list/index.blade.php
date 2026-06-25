@@ -18,13 +18,13 @@
         <div class="people-hero-copy">
           <div class="people-hero-kicker">ANGGOTA DG</div>
           <h1>Daftar Anggota DG</h1>
-          <p>Pantau relasi pembinaan, progres DG, dan kontak anggota yang sedang berjalan di alur DG.</p>
+          <p>Pantau relasi pembinaan dan progres seluruh peserta yang pernah mengikuti DG, baik yang masih aktif maupun sudah selesai.</p>
         </div>
         <div class="people-hero-stats discipleship-hero-stats">
-          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">Peserta DG</span><strong class="people-hero-stat-value" data-people-stat="total">{{ (string) $totalPeopleRows }}</strong></div>
-          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">DG1</span><strong class="people-hero-stat-value" data-people-stat="dg1">{{ (string) $peopleInDg1Count }}</strong></div>
-          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">DG2</span><strong class="people-hero-stat-value" data-people-stat="dg2">{{ (string) $peopleInDg2Count }}</strong></div>
-          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">DG3</span><strong class="people-hero-stat-value" data-people-stat="dg3">{{ (string) $peopleInDg3Count }}</strong></div>
+          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">Semua Peserta</span><strong class="people-hero-stat-value" data-people-stat="total">{{ (string) $totalPeopleRows }}</strong></div>
+          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">Terakhir DG 1</span><strong class="people-hero-stat-value" data-people-stat="dg1">{{ (string) $peopleInDg1Count }}</strong></div>
+          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">Terakhir DG 2</span><strong class="people-hero-stat-value" data-people-stat="dg2">{{ (string) $peopleInDg2Count }}</strong></div>
+          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">Terakhir DG 3</span><strong class="people-hero-stat-value" data-people-stat="dg3">{{ (string) $peopleInDg3Count }}</strong></div>
         </div>
       </div>
       <form method="get" action="{{ route('discipleship.people-list') }}" class="actions people-hero-tools" data-discipleship-people-search-form>
