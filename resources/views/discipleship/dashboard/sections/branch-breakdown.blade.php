@@ -3,7 +3,7 @@
   @foreach ($branches as $branch)
     <article class="discipleship-branch-card">
       <div class="discipleship-branch-card-head">
-        <div class="discipleship-branch-card-title"><span class="badge warning">Cabang</span><h3>{{ $branch['branch_label'] }}</h3><p>{{ number_format($branch['active_people_count'], 0, ',', '.') }} peserta selama ini dalam {{ number_format($branch['group_count'], 0, ',', '.') }} kelompok aktif.</p></div>
+        <div class="discipleship-branch-card-title"><span class="badge warning">Cabang</span><h3>{{ $branch['branch_label'] }}</h3><p>{{ number_format($branch['active_people_count'], 0, ',', '.') }} peserta selama ini dalam {{ number_format($branch['group_count'], 0, ',', '.') }} kelompok.</p></div>
         <div class="discipleship-branch-progress-ring" style="--pct:{{ $branch['overall_progress'] }};"><strong>{{ number_format($branch['overall_progress'], 0, ',', '.') }}%</strong></div>
       </div>
       <div class="discipleship-branch-targets">

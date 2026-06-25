@@ -81,6 +81,7 @@ class DiscipleshipDashboardSummaryQuery
                 'active_people_count' => 0,
                 'leader_count' => 0,
                 'group_count' => 0,
+                'active_group_count' => 0,
                 'dg1_group_count' => 0,
                 'dg2_group_count' => 0,
                 'dg3_group_count' => 0,
@@ -117,14 +118,78 @@ class DiscipleshipDashboardSummaryQuery
     /** @param array<int, int> $branchIds */
     private function groupRows(array $branchIds): Collection
     {
-        return $this->query(static fn () => DB::table('discipleship_groups')
+        $groups = $this->query(static fn () => DB::table('discipleship_groups as g')
             ->whereIn('branch_id', $branchIds)
-            ->selectRaw("branch_id,
-                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS group_count,
-                SUM(CASE WHEN status = 'active' AND current_stage = 'DG 1' THEN 1 ELSE 0 END) AS dg1_group_count,
-                SUM(CASE WHEN status = 'active' AND current_stage = 'DG 2' THEN 1 ELSE 0 END) AS dg2_group_count,
-                SUM(CASE WHEN status = 'active' AND current_stage = 'DG 3' THEN 1 ELSE 0 END) AS dg3_group_count")
-            ->groupBy('branch_id')->get());
+            ->whereExists(static function ($subquery): void {
+                $subquery->selectRaw('1')
+                    ->from('discipleship_group_people as group_history')
+                    ->whereColumn('group_history.discipleship_group_id', 'g.id');
+            })
+            ->get(['g.id', 'g.branch_id', 'g.parent_group_id', 'g.status', 'g.start_stage', 'g.current_stage']));
+
+        $metrics = [];
+        foreach ($branchIds as $branchId) {
+            $metrics[$branchId] = (object) [
+                'branch_id' => $branchId,
+                'group_count' => 0,
+                'active_group_count' => 0,
+                'dg1_group_count' => 0,
+                'dg2_group_count' => 0,
+                'dg3_group_count' => 0,
+            ];
+        }
+
+        foreach ($groups->groupBy('branch_id') as $branchId => $branchGroups) {
+            $branchId = (int) $branchId;
+            if (! isset($metrics[$branchId])) {
+                continue;
+            }
+            $parents = $branchGroups->mapWithKeys(static fn ($group): array => [
+                (int) $group->id => $group->parent_group_id !== null ? (int) $group->parent_group_id : null,
+            ])->all();
+            $roots = [];
+            foreach (array_keys($parents) as $groupId) {
+                $roots[$this->groupLineageRoot($groupId, $parents)] = true;
+            }
+            $metrics[$branchId]->group_count = count($roots);
+
+            foreach ($branchGroups as $group) {
+                if (strtolower((string) $group->status) !== 'active') {
+                    continue;
+                }
+                $metrics[$branchId]->active_group_count++;
+                $stage = normalize_dg_progress_value((string) ($group->current_stage ?: $group->start_stage));
+                if ($stage === 'DG 1') {
+                    $metrics[$branchId]->dg1_group_count++;
+                } elseif ($stage === 'DG 2') {
+                    $metrics[$branchId]->dg2_group_count++;
+                } elseif ($stage === 'DG 3') {
+                    $metrics[$branchId]->dg3_group_count++;
+                }
+            }
+        }
+
+        return collect(array_values($metrics));
+    }
+
+    /** @param array<int, int|null> $parents */
+    private function groupLineageRoot(int $groupId, array $parents): int
+    {
+        $current = $groupId;
+        $visited = [];
+        while (
+            array_key_exists($current, $parents)
+            && $parents[$current] !== null
+            && array_key_exists($parents[$current], $parents)
+        ) {
+            if (isset($visited[$current])) {
+                return min(array_keys($visited));
+            }
+            $visited[$current] = true;
+            $current = $parents[$current];
+        }
+
+        return $current;
     }
 
     /** @param array<int, int> $branchIds */
@@ -313,7 +378,7 @@ class DiscipleshipDashboardSummaryQuery
 
     private function groupProgressRows(array $row): array
     {
-        $target = $row['group_count'];
+        $target = $row['active_group_count'];
 
         return [
             ['label' => 'DG 1 Berjalan', 'value' => $row['dg1_group_count'], 'target' => $target, 'color' => '#65a30d'],
@@ -327,7 +392,7 @@ class DiscipleshipDashboardSummaryQuery
         return [
             ['label' => 'Peserta Selama Ini', 'value' => $row['active_people_count'], 'sub' => 'Anggota yang pernah ikut DG', 'tone' => 'is-primary'],
             ['label' => 'Pernah Memimpin', 'value' => $row['leader_count'], 'sub' => 'Orang yang pernah memimpin', 'tone' => 'is-emerald'],
-            ['label' => 'Kelompok Aktif', 'value' => $row['group_count'], 'sub' => 'Kelompok yang sedang berjalan', 'tone' => 'is-dg2'],
+            ['label' => 'Kelompok Selama Ini', 'value' => $row['group_count'], 'sub' => 'Kelompok yang pernah berjalan', 'tone' => 'is-dg2'],
             ['label' => 'Pertemuan Bulan Ini', 'value' => $row['meeting_count'], 'sub' => 'Laporan DG bulan berjalan', 'tone' => 'is-amber'],
             ['label' => 'Selesai RG', 'value' => $row['following_rg_count'], 'sub' => 'Peserta berstatus RG', 'tone' => 'is-sky'],
             ['label' => 'Belum Lapor DG 30 Hari', 'value' => $row['overdue_group_count'], 'sub' => 'Kelompok perlu ditindaklanjuti', 'tone' => 'is-rose'],

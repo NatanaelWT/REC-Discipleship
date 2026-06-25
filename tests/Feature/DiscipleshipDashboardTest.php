@@ -195,6 +195,72 @@ class DiscipleshipDashboardTest extends TestCase
         $this->assertSame(1, $stats['Belum Selesai MSK']['value']);
     }
 
+    public function test_dashboard_counts_continued_groups_as_one_historical_group(): void
+    {
+        $this->createDashboardTables();
+        $this->seedDashboardData();
+        $firstGroupId = (int) DB::table('discipleship_groups')->where('name', 'Kelompok Dashboard')->value('id');
+        DB::table('discipleship_groups')->where('id', $firstGroupId)->update(['status' => 'completed']);
+
+        $secondGroupId = DB::table('discipleship_groups')->insertGetId([
+            'branch_id' => 1,
+            'name' => 'Kelompok Dashboard DG 2',
+            'status' => 'completed',
+            'start_stage' => 'DG 2',
+            'current_stage' => 'DG 2',
+            'parent_group_id' => $firstGroupId,
+            'source_group_id' => $firstGroupId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $thirdGroupId = DB::table('discipleship_groups')->insertGetId([
+            'branch_id' => 1,
+            'name' => 'Kelompok Dashboard DG 3',
+            'status' => 'active',
+            'start_stage' => 'DG 3',
+            'current_stage' => 'DG 3',
+            'parent_group_id' => $secondGroupId,
+            'source_group_id' => $secondGroupId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $independentGroupId = DB::table('discipleship_groups')->insertGetId([
+            'branch_id' => 1,
+            'name' => 'Kelompok Independen',
+            'status' => 'active',
+            'start_stage' => 'DG 1',
+            'current_stage' => 'DG 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $leaderId = (int) DB::table('discipleship_people')->where('full_name', 'Leader Dashboard')->value('id');
+        $memberId = (int) DB::table('discipleship_people')->where('full_name', 'Anggota Dashboard')->value('id');
+        foreach ([$secondGroupId, $thirdGroupId, $independentGroupId] as $groupId) {
+            DB::table('discipleship_group_people')->insert([
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $groupId === $independentGroupId ? $leaderId : $memberId,
+                'role' => $groupId === $independentGroupId ? 'leader' : 'member',
+                'stage' => $groupId === $thirdGroupId ? 'DG 3' : 'DG 2',
+                'status' => $groupId === $secondGroupId ? 'closed' : 'active',
+                'ended_on' => $groupId === $secondGroupId ? '2026-05-01' : null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $this->actingAsRecUser();
+        $summary = app(DiscipleshipDashboardSummaryQuery::class)->get();
+        $stats = collect($summary['summaryStats'])->keyBy('label');
+        $progress = collect($summary['groupProgressRows'])->keyBy('label');
+
+        $this->assertSame(2, $stats['Kelompok Selama Ini']['value']);
+        $this->assertSame('Kelompok yang pernah berjalan', $stats['Kelompok Selama Ini']['sub']);
+        $this->assertSame(2, $progress['DG 1 Berjalan']['target']);
+        $this->assertSame(1, $progress['DG 1 Berjalan']['value']);
+        $this->assertSame(1, $progress['DG 3 Berjalan']['value']);
+    }
+
     public function test_incomplete_msk_section_caps_page_size_at_fifty(): void
     {
         $this->createDashboardTables();
