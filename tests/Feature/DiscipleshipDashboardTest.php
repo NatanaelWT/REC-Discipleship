@@ -38,6 +38,7 @@ class DiscipleshipDashboardTest extends TestCase
         $section->assertSee('name="_token"', false);
         $section->assertSee('href="https://wa.me/62833333333"', false);
         $section->assertSee('data-msk-edit-open', false);
+        $section->assertDontSee('dashboard-section-pagination', false);
         $response->assertSee("modal.classList.add('is-open');", false);
         $response->assertDontSee("modal.classList.add('open');", false);
 
@@ -46,6 +47,7 @@ class DiscipleshipDashboardTest extends TestCase
         $overdueSection->assertSee('<span>Peserta</span>', false);
         $overdueSection->assertDontSee('<span>Kelompok</span>', false);
         $overdueSection->assertDontSee('<strong>Kelompok Dashboard</strong>', false);
+        $overdueSection->assertDontSee('dashboard-section-pagination', false);
     }
 
     public function test_dashboard_updates_msk_sessions_to_laravel_tables(): void
@@ -278,7 +280,7 @@ class DiscipleshipDashboardTest extends TestCase
         $this->assertSame(1, $progress['DG 3 Berjalan']['value']);
     }
 
-    public function test_incomplete_msk_section_caps_page_size_at_fifty(): void
+    public function test_incomplete_msk_section_renders_all_rows_without_pagination(): void
     {
         $this->createDashboardTables();
         $this->seedDashboardData();
@@ -299,8 +301,37 @@ class DiscipleshipDashboardTest extends TestCase
 
         $response = $this->get('/pemuridan/dashboard/sections/incomplete-msk?per_page=500');
 
-        $response->assertOk()->assertSee('Halaman 1 dari 2');
-        $this->assertSame(50, substr_count((string) $response->getContent(), 'data-msk-edit-open='));
+        $response->assertOk()
+            ->assertDontSee('Halaman 1 dari')
+            ->assertDontSee('dashboard-section-pagination', false);
+        $this->assertSame(61, substr_count((string) $response->getContent(), 'data-msk-edit-open='));
+    }
+
+    public function test_overdue_groups_section_renders_all_rows_without_pagination(): void
+    {
+        $this->createDashboardTables();
+        $this->seedDashboardData();
+        $groups = [];
+        for ($index = 1; $index <= 25; $index++) {
+            $groups[] = [
+                'branch_id' => 1,
+                'name' => sprintf('Kelompok Belum Lapor %03d', $index),
+                'status' => 'active',
+                'current_stage' => 'DG 1',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+        DB::table('discipleship_groups')->insert($groups);
+        $this->actingAsRecUser();
+
+        $response = $this->get('/pemuridan/dashboard/sections/overdue-groups?per_page=1');
+
+        $response->assertOk()
+            ->assertSee('<span class="discipleship-overdue-count">26</span>', false)
+            ->assertDontSee('Halaman 1 dari')
+            ->assertDontSee('dashboard-section-pagination', false);
+        $this->assertSame(26, substr_count((string) $response->getContent(), 'class="discipleship-overdue-item"'));
     }
 
     private function createDashboardTables(): void

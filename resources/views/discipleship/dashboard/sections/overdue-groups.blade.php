@@ -1,6 +1,6 @@
 <div class="discipleship-overdue-head">
   <div><span class="discipleship-overdue-kicker">Tindak Lanjut Jurnal Temu DG</span><h2>Belum Lapor DG 30 Hari Terakhir</h2><p>Kelompok yang belum mengirim laporan dalam 30 hari terakhir.</p></div>
-  <span class="discipleship-overdue-count">{{ number_format($groups->total(), 0, ',', '.') }}</span>
+  <span class="discipleship-overdue-count">{{ number_format($groups->count(), 0, ',', '.') }}</span>
 </div>
 @if ($groups->isEmpty())
   <div class="chart-empty-inline">Semua kelompok sudah melaporkan pertemuan dalam 30 hari terakhir.</div>
@@ -15,5 +15,4 @@
       </div>
     @endforeach
   </div></div>
-  @include('discipleship.dashboard.sections.pagination', ['paginator' => $groups])
 @endif

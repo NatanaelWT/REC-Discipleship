@@ -24,7 +24,7 @@ class DashboardSectionData
             ? "json_array_length(COALESCE(session_numbers, '[]'))"
             : "JSON_LENGTH(COALESCE(session_numbers, '[]'))";
 
-        $paginator = MskParticipant::query()
+        $participants = MskParticipant::query()
             ->select(['id', 'branch_id', 'full_name', 'whatsapp', 'batch_month', 'session_numbers'])
             ->whereIn('branch_id', $this->scope->branchIds())
             ->where('status', 'active')
@@ -32,11 +32,10 @@ class DashboardSectionData
             ->orderBy('branch_id')
             ->orderBy('batch_month')
             ->orderBy('full_name')
-            ->paginate($this->perPage($request))
-            ->withQueryString();
+            ->get();
 
         $branches = $this->scope->optionsById();
-        $paginator->through(static function (MskParticipant $participant) use ($branches): array {
+        $participants = $participants->map(static function (MskParticipant $participant) use ($branches): array {
             $sessions = normalize_msk_session_numbers($participant->session_numbers ?? []);
             $phone = trim((string) $participant->whatsapp);
             $phoneDigits = preg_replace('/\D+/', '', $phone) ?? '';
@@ -59,7 +58,7 @@ class DashboardSectionData
         });
 
         return [
-            'participants' => $paginator,
+            'participants' => $participants,
             'centralReadOnly' => $this->scope->isReadOnly(),
         ];
     }
@@ -72,7 +71,7 @@ class DashboardSectionData
             ->whereNotNull('discipleship_group_id')
             ->groupBy('branch_id', 'discipleship_group_id');
 
-        $paginator = DiscipleshipGroup::query()
+        $groups = DiscipleshipGroup::query()
             ->from('discipleship_groups as g')
             ->leftJoinSub($latest, 'latest_report', function ($join): void {
                 $join->on('latest_report.branch_id', '=', 'g.branch_id')
@@ -88,15 +87,13 @@ class DashboardSectionData
             ->orderByRaw('CASE WHEN latest_report.last_report_date IS NULL THEN 0 ELSE 1 END')
             ->orderBy('latest_report.last_report_date')
             ->orderBy('g.name')
-            ->paginate($this->perPage($request))
-            ->withQueryString();
+            ->get();
 
-        $rows = collect($paginator->items());
-        $groupIds = $rows->pluck('id')->map(static fn ($id): int => (int) $id)->all();
+        $groupIds = $groups->pluck('id')->map(static fn ($id): int => (int) $id)->all();
         $peopleByGroup = $this->peopleByGroup($groupIds);
         $branches = $this->scope->optionsById();
 
-        $paginator->through(static function (DiscipleshipGroup $group) use ($peopleByGroup, $branches): array {
+        $groups = $groups->map(static function (DiscipleshipGroup $group) use ($peopleByGroup, $branches): array {
             $people = $peopleByGroup[(int) $group->id] ?? ['leaders' => [], 'members' => []];
 
             return [
@@ -109,7 +106,7 @@ class DashboardSectionData
             ];
         });
 
-        return ['groups' => $paginator];
+        return ['groups' => $groups];
     }
 
     /** @return array<string, mixed> */
@@ -151,10 +148,5 @@ class DashboardSectionData
         }
 
         return $result;
-    }
-
-    private function perPage(Request $request): int
-    {
-        return min(50, max(1, $request->integer('per_page', 20)));
     }
 }

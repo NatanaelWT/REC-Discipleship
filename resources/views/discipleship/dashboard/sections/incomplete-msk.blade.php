@@ -1,6 +1,6 @@
 <div class="discipleship-overdue-head">
   <div><span class="discipleship-overdue-kicker">Tindak Lanjut MSK</span><h2>Belum Selesai MSK</h2><p>Peserta yang masih perlu pemantauan lanjutan.</p></div>
-  <span class="discipleship-overdue-count">{{ number_format($participants->total(), 0, ',', '.') }}</span>
+  <span class="discipleship-overdue-count">{{ number_format($participants->count(), 0, ',', '.') }}</span>
 </div>
 @if ($participants->isEmpty())
   <div class="chart-empty-inline">Semua peserta sudah menyelesaikan 12 sesi MSK.</div>
@@ -48,5 +48,4 @@
       @endif
     @endforeach
   </div></div>
-  @include('discipleship.dashboard.sections.pagination', ['paginator' => $participants])
 @endif

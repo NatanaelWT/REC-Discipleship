@@ -158,14 +158,6 @@ $formatPercent = static function (float $value): string {
   });
 
   document.addEventListener('click', function (event) {
-    var pagination = event.target.closest('[data-dashboard-section-link]');
-    if (pagination) {
-      event.preventDefault();
-      var section = pagination.closest('[data-dashboard-section]');
-      if (section) loadSection(section, pagination.href);
-      return;
-    }
-
     var retry = event.target.closest('[data-dashboard-section-retry]');
     if (retry) {
       var retrySection = retry.closest('[data-dashboard-section]');

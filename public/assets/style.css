@@ -6544,7 +6544,13 @@ body.sidebar-open {
 
 .discipleship-progress-overdue-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
+  align-items: stretch;
+}
+
+.discipleship-progress-overdue-grid .discipleship-overdue-card {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
 }
 
 .discipleship-target-card {
@@ -6693,6 +6699,8 @@ body.sidebar-open {
 }
 
 .discipleship-overdue-list-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
   margin-top: 4px;
 }
 
@@ -13093,15 +13101,6 @@ details[open] > summary .activity-disclosure-icon::after {
 @keyframes dashboard-loading {
   from { transform: translateX(0); }
   to { transform: translateX(125%); }
-}
-
-.dashboard-section-pagination {
-  margin-top: 16px;
-}
-
-.dashboard-section-pagination .is-disabled {
-  opacity: 0.45;
-  pointer-events: none;
 }
 
 .discipleship-branch-breakdown {
