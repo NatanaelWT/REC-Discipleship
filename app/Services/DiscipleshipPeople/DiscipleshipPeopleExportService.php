@@ -30,7 +30,7 @@ class DiscipleshipPeopleExportService
             ))->values();
         }
 
-        $headers = ['No.', 'Nama', 'Cabang', 'Relasi Pembina', 'Peran', 'DG 1', 'DG 2', 'DG 3', 'Ringkasan Progress'];
+        $headers = ['No.', 'Nama', 'Cabang', 'Peran', 'DG 1', 'DG 2', 'DG 3', 'Ringkasan Progress'];
         $rows = $people->values()->map(function (array $row, int $index): array {
             $steps = collect($row['progress_steps'] ?? [])->keyBy('label');
 
@@ -38,7 +38,6 @@ class DiscipleshipPeopleExportService
                 $index + 1,
                 (string) ($row['export_name'] ?? $row['name'] ?? '-'),
                 (string) ($row['branch_label'] ?? 'Tanpa cabang'),
-                (string) ($row['parent_summary'] ?? 'Belum terhubung ke pembina'),
                 (string) ($row['role_label'] ?? 'Anggota'),
                 (string) ($steps->get('DG 1')['state_label'] ?? 'Belum'),
                 (string) ($steps->get('DG 2')['state_label'] ?? 'Belum'),

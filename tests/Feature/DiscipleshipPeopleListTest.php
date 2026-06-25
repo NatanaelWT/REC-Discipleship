@@ -244,9 +244,11 @@ class DiscipleshipPeopleListTest extends TestCase
             $this->assertSame('Daftar Anggota DG', $sheets['Anggota DG'][0][0] ?? null);
             $this->assertSame('No.', $sheets['Anggota DG'][2][0] ?? null);
             $this->assertSame('Nama', $sheets['Anggota DG'][2][1] ?? null);
+            $this->assertSame('Peran', $sheets['Anggota DG'][2][3] ?? null);
+            $this->assertNotContains('Relasi Pembina', $sheets['Anggota DG'][2] ?? []);
             $this->assertSame('Anggota Export Utama', $sheets['Anggota DG'][3][1] ?? null);
             $this->assertSame('Kutisari', $sheets['Anggota DG'][3][2] ?? null);
-            $this->assertSame('Sedang', $sheets['Anggota DG'][3][5] ?? null);
+            $this->assertSame('Sedang', $sheets['Anggota DG'][3][4] ?? null);
             $this->assertStringNotContainsString('Anggota Tidak Dipilih', json_encode($sheets, JSON_UNESCAPED_UNICODE));
 
             $zip = new ZipArchive;
@@ -254,7 +256,8 @@ class DiscipleshipPeopleListTest extends TestCase
             $sheetXml = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
             $zip->close();
             $this->assertStringContainsString('<pane ySplit="4"', $sheetXml);
-            $this->assertStringContainsString('<autoFilter ref="A4:I5"/>', $sheetXml);
+            $this->assertStringContainsString('<autoFilter ref="A4:H5"/>', $sheetXml);
+            $this->assertStringNotContainsString('Relasi Pembina', $sheetXml);
             $this->assertLessThan(
                 strpos($sheetXml, '<mergeCells'),
                 strpos($sheetXml, '<autoFilter'),

@@ -82,10 +82,9 @@ class DiscipleshipPeopleXlsxWriter
             .'<col min="1" max="1" width="7" customWidth="1"/>'
             .'<col min="2" max="2" width="30" customWidth="1"/>'
             .'<col min="3" max="3" width="18" customWidth="1"/>'
-            .'<col min="4" max="4" width="38" customWidth="1"/>'
-            .'<col min="5" max="5" width="16" customWidth="1"/>'
-            .'<col min="6" max="8" width="14" customWidth="1"/>'
-            .'<col min="9" max="9" width="32" customWidth="1"/>'
+            .'<col min="4" max="4" width="16" customWidth="1"/>'
+            .'<col min="5" max="7" width="14" customWidth="1"/>'
+            .'<col min="8" max="8" width="32" customWidth="1"/>'
             .'</cols>';
         $xml .= '<sheetData>';
         $xml .= '<row r="1" ht="28" customHeight="1">'.$this->inlineCell('A1', 'Daftar Anggota DG', 1).'</row>';
