@@ -7,7 +7,10 @@ use Illuminate\Http\Request;
 
 class MskParticipantPageData
 {
-    public function __construct(private readonly MskParticipantHistoryData $historyData) {}
+    public function __construct(
+        private readonly MskParticipantHistoryData $historyData,
+        private readonly MskParticipantProfileData $profileData,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -96,6 +99,8 @@ class MskParticipantPageData
             }
         }
 
+        $participantHistories = $this->historyData->forParticipants($pageParticipants, $branchIds);
+
         return [
             'settings' => ['church_name' => app_church_name()],
             'page' => 'msk_classes',
@@ -124,7 +129,8 @@ class MskParticipantPageData
             'completedParticipantsFiltered' => $completedParticipantsFiltered,
             'inProgressParticipantsFiltered' => max(0, $totalParticipantsFiltered - $completedParticipantsFiltered),
             'totalParticipantsAll' => array_sum($batchMonthMap),
-            'participantHistories' => $this->historyData->forParticipants($pageParticipants, $branchIds),
+            'participantHistories' => $participantHistories,
+            'participantProfiles' => $this->profileData->forParticipants($pageParticipants, $participantHistories),
         ];
     }
 

@@ -9,6 +9,8 @@ use App\Models\DiscipleshipRelationship;
 use App\Models\MskParticipant;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DiscipleshipTargets\DiscipleshipTargetReader;
+use App\Services\MskParticipants\MskParticipantHistoryData;
+use App\Services\MskParticipants\MskParticipantProfileData;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -18,6 +20,8 @@ class SpiritualJourneyPageData
     public function __construct(
         private readonly DiscipleshipTargetReader $targetReader,
         private readonly CurrentDiscipleshipScope $scope,
+        private readonly MskParticipantHistoryData $historyData,
+        private readonly MskParticipantProfileData $profileData,
     ) {}
 
     /** @return array<string, mixed> */
@@ -52,6 +56,8 @@ class SpiritualJourneyPageData
             return $row;
         })->values()->all();
 
+        $participantHistories = $this->historyData->forParticipants($participantRows, $this->scope->branchIds());
+
         return [
             'settings' => ['church_name' => app_church_name()],
             'page' => 'spiritual_journey',
@@ -62,6 +68,8 @@ class SpiritualJourneyPageData
             'spiritualJourneyFilter' => $journeyFilter,
             'spiritualJourneyTotalParticipants' => $participants->count(),
             'discipleshipTargets' => $this->targets(),
+            'participantHistories' => $participantHistories,
+            'participantProfiles' => $this->profileData->forParticipants($participantRows, $participantHistories),
             'discipleshipV2Model' => [
                 'discipleship_persons' => array_values($people),
                 'discipleship_groups' => array_values($groups),

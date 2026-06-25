@@ -615,26 +615,13 @@ if ($page === 'spiritual_journey') {
         if ($journeyViewKey === '') {
             $journeyViewKey = 'spiritual-journey-'.(string) (count($rows) + 1);
         }
-        $journeyViewTemplates[$journeyViewKey] = [
-            'title' => 'Riwayat Pemuridan '.$fullName,
-            'content' => $renderJourneyHistoryHtml(
-                $participant,
-                $resolvedPersonId,
-                $activeDgProgress,
-                $peopleById,
-                $discipleshipPersonsById,
-                $allGroupsById,
-                $membershipsByPersonId,
-                $membershipsByGroupId,
-                $leadershipsByGroupId,
-                $leadershipsByPersonId,
-                $relationsByDiscipleId,
-                $historyTextLabel,
-                $historyUpgradeNoteLabel,
-                $historyDateLabel,
-                $journeyStageBadgeHtml
-            ),
-        ];
+        $journeyProfile = is_array($participantProfiles[$journeyViewKey] ?? null) ? $participantProfiles[$journeyViewKey] : null;
+        if ($journeyProfile !== null) {
+            $journeyViewTemplates[$journeyViewKey] = [
+                'title' => $fullName,
+                'content' => view('discipleship.msk-participants.profile', ['profile' => $journeyProfile])->render(),
+            ];
+        }
         $rows[] = [
             'id' => (string) ($participant['id'] ?? ''),
             'name' => $fullName,
@@ -792,7 +779,7 @@ if ($page === 'spiritual_journey') {
         }
         $bridgeSelect .= '</select></form></span>';
         echo '<tr data-spiritual-journey-search-row data-search-text="'.h((string) ($row['search_text'] ?? $journeyName)).'">';
-        echo '<td><div class="journey-name-cell"><div class="journey-name-main">'.h($journeyName).'</div><div class="journey-name-sub">Peserta kelas MSK</div><button class="note-link member-inline-trigger journey-history-trigger" type="button" data-spiritual-journey-view-open="'.h($journeyViewKey).'" aria-label="'.h('Lihat riwayat pemuridan '.$journeyName).'">Lihat riwayat pemuridan</button></div></td>';
+        echo '<td><div class="journey-name-cell"><div class="journey-name-main">'.h($journeyName).'</div><div class="journey-name-sub">Peserta kelas MSK</div><button class="note-link member-inline-trigger journey-history-trigger" type="button" data-spiritual-journey-view-open="'.h($journeyViewKey).'" aria-label="'.h('Lihat profil '.$journeyName).'">Lihat profil</button></div></td>';
         $mskDone = $mskPercent >= 100;
         $mskBadgeClass = $mskDone ? 'journey-track-badge is-msk is-msk-done' : 'journey-track-badge is-msk is-msk-progress';
         $mskBadge = '<span class="'.h($mskBadgeClass).'">MSK '.h($mskProgressLabel).'</span>';
@@ -815,9 +802,9 @@ if ($page === 'spiritual_journey') {
     if (count($journeyViewTemplates) > 0) {
         echo "<div class=\"is-hidden\" data-spiritual-journey-view-templates>\n";
         foreach ($journeyViewTemplates as $templateId => $templateData) {
-            $templateTitle = trim((string) ($templateData['title'] ?? 'Riwayat Pemuridan'));
+            $templateTitle = trim((string) ($templateData['title'] ?? 'Profil Peserta'));
             if ($templateTitle === '') {
-                $templateTitle = 'Riwayat Pemuridan';
+                $templateTitle = 'Profil Peserta';
             }
             $templateContent = (string) ($templateData['content'] ?? '');
             echo '<template data-spiritual-journey-view-template="'.h($templateId).'" data-spiritual-journey-view-template-title="'.h($templateTitle).'">'.$templateContent."</template>\n";
@@ -827,11 +814,11 @@ if ($page === 'spiritual_journey') {
         echo "<div class=\"modal\" id=\"spiritual-journey-view-modal\" data-spiritual-journey-view-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
         echo "  <div class=\"modal-card member-view-modal-card msk-view-modal-card\">\n";
         echo "    <div class=\"modal-head\">\n";
-        echo "      <div class=\"modal-title\" data-spiritual-journey-view-title>Riwayat Pemuridan</div>\n";
+        echo "      <div class=\"modal-title\" data-spiritual-journey-view-title>Profil Peserta</div>\n";
         echo "      <button class=\"btn tiny ghost\" type=\"button\" data-spiritual-journey-view-close>&times;</button>\n";
         echo "    </div>\n";
         echo "    <div class=\"modal-body\" data-spiritual-journey-view-body>\n";
-        echo "      <div class=\"panel-note\">Klik riwayat pemuridan pada tabel untuk membuka detail perjalanan peserta.</div>\n";
+        echo "      <div class=\"panel-note\">Klik Lihat profil pada tabel untuk membuka profil peserta.</div>\n";
         echo "    </div>\n";
         echo "    <div class=\"modal-actions\">\n";
         echo "      <button class=\"btn ghost\" type=\"button\" data-spiritual-journey-view-close>Tutup</button>\n";

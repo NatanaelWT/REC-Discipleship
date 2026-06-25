@@ -30,6 +30,14 @@ class SpiritualJourneyPageTest extends TestCase
         $response->assertSee('Peserta Journey');
         $response->assertSee('journey-hero-stats discipleship-hero-stats', false);
         $response->assertSee('journey-hero-stat discipleship-hero-stat', false);
+        $response->assertSee('Lihat profil');
+        $response->assertDontSee('Lihat riwayat pemuridan');
+        $response->assertSee('Profil peserta');
+        $response->assertSee('Kontak dan akses');
+        $response->assertSee('Foto dan keterangan');
+        $response->assertSee('MSK dan pemuridan aktif');
+        $response->assertSee('Riwayat pemuridan');
+        $response->assertSee('data-spiritual-journey-view-title>Profil Peserta', false);
     }
 
     public function test_spiritual_journey_renders_all_participants_without_pagination_and_uses_live_search(): void

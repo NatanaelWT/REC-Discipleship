@@ -299,7 +299,7 @@ if ($page === 'msk_classes') {
 
     $mskModalTemplates = [];
     $mskEditModalTemplates = [];
-    $appendMskViewTemplate = function (array $participant) use (&$mskModalTemplates, $batchMonthFilterParam, $centralReadOnly, $participantHistories): void {
+    $appendMskViewTemplate = function (array $participant) use (&$mskModalTemplates, $batchMonthFilterParam, $centralReadOnly, $participantHistories, $participantProfiles): void {
         $viewParticipantId = trim((string) ($participant['id'] ?? ''));
         if ($viewParticipantId === '') {
             return;
@@ -308,6 +308,20 @@ if ($page === 'msk_classes') {
         $viewFullName = trim((string) ($participant['full_name'] ?? ''));
         if ($viewFullName === '') {
             $viewFullName = '-';
+        }
+        if (is_array($participantProfiles[$viewParticipantId] ?? null)) {
+            $templateData = [
+                'title' => $viewFullName,
+                'content' => view('discipleship.msk-participants.profile', [
+                    'profile' => $participantProfiles[$viewParticipantId],
+                ])->render(),
+            ];
+            if (! $centralReadOnly) {
+                $templateData['edit_href'] = route('discipleship.msk-classes', ['edit' => $viewParticipantId, 'batch_month' => $batchMonthFilterParam]);
+            }
+            $mskModalTemplates[$viewParticipantId] = $templateData;
+
+            return;
         }
 
         $viewGender = normalize_member_gender_value((string) ($participant['gender'] ?? ''));
