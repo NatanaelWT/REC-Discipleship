@@ -9,7 +9,6 @@ class WorshipServiceSchedule extends Model
 {
     protected $fillable = [
         'month',
-        'title',
         'update_note',
     ];
 

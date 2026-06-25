@@ -37,15 +37,15 @@ class ServiceScheduleImageController extends Controller
             ]);
         }
 
-        $downloadName = 'penatalayan-ibadah-umum-'.$selectedMonth.'.png';
-        $downloadName = preg_replace('/[\x00-\x1F\x7F"\\\\]+/', '_', $downloadName) ?? 'penatalayan-ibadah.png';
+        $downloadName = default_worship_penatalayan_title($selectedMonth).'.png';
+        $downloadName = preg_replace('/[\x00-\x1F\x7F"\\\\]+/', '_', $downloadName) ?? 'Jadwal Pelayanan Ibadah Umum.png';
         if ($downloadName === '') {
-            $downloadName = 'penatalayan-ibadah.png';
+            $downloadName = 'Jadwal Pelayanan Ibadah Umum.png';
         }
 
-        $asciiDownloadName = preg_replace('/[^A-Za-z0-9._-]+/', '_', $downloadName) ?? 'penatalayan-ibadah.png';
+        $asciiDownloadName = preg_replace('/[^A-Za-z0-9._-]+/', '_', $downloadName) ?? 'Jadwal_Pelayanan_Ibadah_Umum.png';
         if ($asciiDownloadName === '') {
-            $asciiDownloadName = 'penatalayan-ibadah.png';
+            $asciiDownloadName = 'Jadwal_Pelayanan_Ibadah_Umum.png';
         }
 
         $activity->record(

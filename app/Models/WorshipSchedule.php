@@ -8,7 +8,6 @@ class WorshipSchedule extends Model
 {
     protected $fillable = [
         'month',
-        'title',
         'update_note',
         'rows',
     ];
@@ -21,5 +20,4 @@ class WorshipSchedule extends Model
     {
         return 'month';
     }
-
 }

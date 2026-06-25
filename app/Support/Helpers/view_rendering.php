@@ -778,10 +778,7 @@ function render_worship_penatalayan_schedule_png(array $schedule): ?string
     $weekColumnWidth = $weekCount >= 5 ? 132 : 148;
     $tableWidth = $roleColumnWidth + ($weekCount * $weekColumnWidth);
 
-    $titleText = trim((string) ($schedule['title'] ?? default_worship_penatalayan_title((string) ($schedule['month'] ?? date('Y-m')))));
-    if ($titleText === '') {
-        $titleText = default_worship_penatalayan_title((string) ($schedule['month'] ?? date('Y-m')));
-    }
+    $titleText = default_worship_penatalayan_title((string) ($schedule['month'] ?? date('Y-m')));
     $updateText = trim((string) ($schedule['update_note'] ?? ''));
     $titleLines = worship_penatalayan_svg_wrap_lines($titleText, 54);
     $updateLines = $updateText !== '' ? worship_penatalayan_svg_wrap_lines($updateText, 48) : [];

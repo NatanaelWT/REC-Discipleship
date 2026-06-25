@@ -4551,7 +4551,6 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
             0 => [
                 'id' => 5,
                 'month' => '2026-06',
-                'title' => 'Jadwal Pelayanan Ibadah Umum Juni 2026',
                 'update_note' => '',
                 'rows' => '[{"role":"Stage Manager","assignments":["","","",""]},{"role":"LW","assignments":["Cia","Kendhy","Tania","Tania"]},{"role":"Singer","assignments":["Kendhy","Kendy","Ryan\\nZerren","Bonan"]},{"role":"Keyboard","assignments":["Cleming","Gaby","Kevin S","Gaby"]},{"role":"Bass","assignments":["Harris","","","Ivan"]},{"role":"Gitar","assignments":["","","Moses",""]},{"role":"Drum","assignments":["","","",""]},{"role":"Soundman","assignments":["Yefta","Harris","Alvin","Alvin"]},{"role":"Video Mixer, Streaming, & Camera","assignments":["Sebastian","Sebastian","Kevin W","Kevin W"]},{"role":"Lighting","assignments":["","","",""]},{"role":"Operator","assignments":["Soni","Soni","Angie","Natan"]},{"role":"Jadwal Latihan","assignments":["2026-06-05","2026-06-12","2026-06-19","2026-06-25"]}]',
                 'created_at' => '2026-06-02 09:10:27',
@@ -4560,7 +4559,6 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
             1 => [
                 'id' => 6,
                 'month' => '2026-05',
-                'title' => 'Jadwal Pelayanan Ibadah Umum Mei 2026',
                 'update_note' => '',
                 'rows' => '[{"role":"Stage Manager","assignments":["","","","",""]},{"role":"LW","assignments":["Tania","Cia","Harris","Kendhy","Tania"]},{"role":"Singer","assignments":["Roy","Ryan","Kendi\\nCia","Zerren\\nBonan","Roy"]},{"role":"Keyboard","assignments":["Gaby","Cleming","Cleming","Kevsus","Gaby"]},{"role":"Bass","assignments":["","","","",""]},{"role":"Gitar","assignments":["","Ivan","Moses","","Ivan"]},{"role":"Drum","assignments":["","","","",""]},{"role":"Soundman","assignments":["Alvin","Alvin","Yefta","Yefta","Harris"]},{"role":"Video Mixer, Streaming, & Camera","assignments":["Kevin W.","Kevin W.","Sebastian","Sebastian","Ryan"]},{"role":"Lighting","assignments":["","","","",""]},{"role":"Operator","assignments":["Natan","Angie","Soni","Soni","Angie"]},{"role":"Jadwal Latihan","assignments":["2026-05-01","2026-05-08","2026-05-15","2026-05-21","2026-05-28"]}]',
                 'created_at' => '2026-04-23 13:10:41',
@@ -4569,7 +4567,6 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
             2 => [
                 'id' => 7,
                 'month' => '2026-04',
-                'title' => 'Jadwal Pelayanan Ibadah Umum April 2026',
                 'update_note' => '',
                 'rows' => '[{"role":"Stage Manager","assignments":["","","",""]},{"role":"LW","assignments":["Kendhy","Tania","Cia","Kendhy"]},{"role":"Singer","assignments":["Cia\\nHarris","Roy","Zerren\\nKendy","Tania\\nRoy"]},{"role":"Keyboard","assignments":["Yefta","Kevin S","Cleming","Gaby"]},{"role":"Bass","assignments":["","Ivan","","Ivan"]},{"role":"Gitar","assignments":["Moses","","",""]},{"role":"Drum","assignments":["Calvin","","",""]},{"role":"Soundman","assignments":["Alvin","Alvin","Harris","Yefta"]},{"role":"Video Mixer, Streaming, & Camera","assignments":["Kevin W","Sebastian","Kevin W","Ryan"]},{"role":"Lighting","assignments":["Ryan","","",""]},{"role":"Operator","assignments":["Angie","Soni","Soni","Angie"]},{"role":"Jadwal Latihan","assignments":["2026-04-03","2026-04-10","2026-04-17","2026-04-23"]}]',
                 'created_at' => '2026-03-28 13:38:53',
@@ -4578,7 +4575,6 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
             3 => [
                 'id' => 8,
                 'month' => '2026-03',
-                'title' => 'Jadwal Pelayanan Ibadah Umum Maret 2026',
                 'update_note' => '',
                 'rows' => '[{"role":"Stage Manager","assignments":["","","","",""]},{"role":"LW","assignments":["Tania","Harris","Kendhy","Kendhy","Cia"]},{"role":"Singer","assignments":["Angie","Cia","Roy","Bonan\\nZerren","Ryan\\nTania"]},{"role":"Keyboard","assignments":["Eka","Cleming","Kevin S.\\nGaby","Gaby","Cleming"]},{"role":"Bass","assignments":["Moses","","Ivan","Ivan","Moses"]},{"role":"Gitar","assignments":["","","","",""]},{"role":"Drum","assignments":["","","","",""]},{"role":"Soundman","assignments":["Yefta","Alvin","Harris","Yefta","Alvin"]},{"role":"Video Mixer, Streaming, & Camera","assignments":["Ryan","Sebastian","Kevin W","Kevin W","Sebastian"]},{"role":"Lighting","assignments":["","","","",""]},{"role":"Operator","assignments":["Soni","Natan","Soni","Soni","Angie"]},{"role":"Jadwal Latihan","assignments":["2026-02-27","2026-03-06","2026-03-12","2026-03-21","2026-03-27"]}]',
                 'created_at' => '2026-03-18 12:28:00',

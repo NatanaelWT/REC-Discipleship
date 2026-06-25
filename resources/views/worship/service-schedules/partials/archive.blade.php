@@ -4,22 +4,17 @@
   </div>
   <div class="table-wrap">
     <table class="table">
-      <thead><tr><th>Bulan</th><th>Judul</th><th>Catatan Update</th><th>Jumlah Minggu</th><th>Terakhir Disimpan</th><th class="actions-head">Aksi</th></tr></thead>
+      <thead><tr><th>Bulan</th><th>Catatan Update</th><th>Jumlah Minggu</th><th>Terakhir Disimpan</th><th class="actions-head">Aksi</th></tr></thead>
       <tbody>
         @foreach ($worshipPenatalayanSchedules as $savedSchedule)
           @php
               $scheduleMonth = normalize_month_value((string) ($savedSchedule['month'] ?? date('Y-m')));
-              $scheduleTitle = trim((string) ($savedSchedule['title'] ?? default_worship_penatalayan_title($scheduleMonth)));
-              if ($scheduleTitle === '') {
-                  $scheduleTitle = default_worship_penatalayan_title($scheduleMonth);
-              }
               $scheduleNote = trim((string) ($savedSchedule['update_note'] ?? ''));
               $updatedAtLabel = format_datetime_id((string) ($savedSchedule['updated_at'] ?? ''));
               $rowClass = $scheduleMonth === $selectedMonth ? 'row-highlight' : '';
           @endphp
           <tr @class([$rowClass => $rowClass !== ''])>
             <td>{{ format_indo_month($scheduleMonth) }}</td>
-            <td><div class="worship-steward-saved-title"><strong>{{ $scheduleTitle }}</strong><span>{{ default_worship_penatalayan_title($scheduleMonth) }}</span></div></td>
             <td>{{ $scheduleNote !== '' ? $scheduleNote : '-' }}</td>
             <td>{{ (string) count(worship_penatalayan_week_dates($scheduleMonth)) }}</td>
             <td>{{ $updatedAtLabel }}</td>
@@ -37,7 +32,7 @@
           </tr>
         @endforeach
         @if (count($worshipPenatalayanSchedules) === 0)
-          <tr><td colspan="6">Belum ada jadwal penatalayan yang disimpan. Pilih bulan, isi tabel pelayanan, lalu simpan jadwal pertama.</td></tr>
+          <tr><td colspan="5">Belum ada jadwal penatalayan yang disimpan. Pilih bulan, isi tabel pelayanan, lalu simpan jadwal pertama.</td></tr>
         @endif
       </tbody>
     </table>

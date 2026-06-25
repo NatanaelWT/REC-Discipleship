@@ -8,13 +8,12 @@ use stdClass;
 class WorshipServiceScheduleNormalizer
 {
     /**
-     * @param array<int|string, mixed> $rowLabelsInput
-     * @param array<int|string, mixed> $assignmentsInput
+     * @param  array<int|string, mixed>  $rowLabelsInput
+     * @param  array<int|string, mixed>  $assignmentsInput
      * @return array<string, mixed>
      */
     public function fromRequestInput(
         string $month,
-        string $title,
         string $updateNote,
         array $rowLabelsInput,
         array $assignmentsInput,
@@ -48,6 +47,7 @@ class WorshipServiceScheduleNormalizer
                     }
 
                     $normalizedRowAssignments[(int) $weekIndex] = implode("\n", $weekParts);
+
                     continue;
                 }
 
@@ -68,11 +68,9 @@ class WorshipServiceScheduleNormalizer
 
         $weekCount = count(worship_penatalayan_week_dates($month));
         $rows = normalize_worship_penatalayan_rows($submittedRows, $weekCount);
-        $title = trim($title);
 
         return [
             'month' => $month,
-            'title' => $title !== '' ? $title : default_worship_penatalayan_title($month),
             'update_note' => trim($updateNote),
             'rows' => $rows,
         ];
@@ -93,9 +91,6 @@ class WorshipServiceScheduleNormalizer
 
         return [
             'month' => $month,
-            'title' => trim((string) ($row->title ?? '')) !== ''
-                ? trim((string) $row->title)
-                : default_worship_penatalayan_title($month),
             'update_note' => trim((string) ($row->update_note ?? '')),
             'rows' => normalize_worship_penatalayan_rows($rows, count(worship_penatalayan_week_dates($month))),
             'branch_code' => $this->nullableString($row->branch ?? null),
@@ -127,7 +122,7 @@ class WorshipServiceScheduleNormalizer
     }
 
     /**
-     * @param array<int, mixed> $values
+     * @param  array<int, mixed>  $values
      */
     private function firstNonEmpty(array $values): string
     {

@@ -9277,10 +9277,10 @@ textarea:focus-visible {
 
 .worship-steward-hero-fields {
   display: grid;
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  grid-template-columns: minmax(220px, 1fr);
   gap: 12px;
-  flex: 1 1 560px;
-  width: min(100%, 720px);
+  flex: 1 1 320px;
+  width: min(100%, 560px);
 }
 
 .worship-steward-hero-field {
@@ -9527,20 +9527,6 @@ textarea:focus-visible {
   border: 1px solid rgba(239, 68, 68, 0.26);
   color: #b91c1c;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(254, 242, 242, 0.98));
-}
-
-.worship-steward-saved-title {
-  display: grid;
-  gap: 4px;
-}
-
-.worship-steward-saved-title strong {
-  color: #0f172a;
-}
-
-.worship-steward-saved-title span {
-  color: #64748b;
-  font-size: 12px;
 }
 
 .page-worship_penatalayan .table-card-plain .table-wrap {

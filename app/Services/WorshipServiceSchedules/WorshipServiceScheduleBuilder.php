@@ -2,10 +2,10 @@
 
 namespace App\Services\WorshipServiceSchedules;
 
+use App\Models\WorshipSchedule;
 use App\Models\WorshipServiceSchedule;
 use App\Models\WorshipServiceScheduleRole;
 use App\Models\WorshipServiceScheduleWeek;
-use App\Models\WorshipSchedule;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
@@ -14,9 +14,7 @@ use Illuminate\Support\Facades\Schema;
 
 class WorshipServiceScheduleBuilder
 {
-    public function __construct(private readonly WorshipServiceScheduleNormalizer $normalizer)
-    {
-    }
+    public function __construct(private readonly WorshipServiceScheduleNormalizer $normalizer) {}
 
     /**
      * @return array<int, array<string, mixed>>
@@ -68,7 +66,7 @@ class WorshipServiceScheduleBuilder
     }
 
     /**
-     * @param array<string, mixed>|null $existing
+     * @param  array<string, mixed>|null  $existing
      * @return array<string, mixed>
      */
     public function buildSchedule(string $month, ?array $existing = null): array
@@ -79,25 +77,20 @@ class WorshipServiceScheduleBuilder
     }
 
     /**
-     * @param array<string, mixed> $record
+     * @param  array<string, mixed>  $record
      */
     public function saveRecord(array $record, bool $preserveTimestamps = false): WorshipServiceSchedule
     {
         RuntimeBootstrap::load();
 
         $month = normalize_month_value((string) ($record['month'] ?? date('Y-m')));
-        $title = trim((string) ($record['title'] ?? ''));
-        if ($title === '') {
-            $title = default_worship_penatalayan_title($month);
-        }
         if ($this->usesNewTable()) {
             /** @var WorshipSchedule $schedule */
-            $schedule = DB::transaction(function () use ($record, $month, $title, $preserveTimestamps): WorshipSchedule {
+            $schedule = DB::transaction(function () use ($record, $month, $preserveTimestamps): WorshipSchedule {
                 $schedule = WorshipSchedule::query()->firstOrNew([
                     'month' => $month,
                 ]);
                 $schedule->fill([
-                    'title' => $title,
                     'update_note' => trim((string) ($record['update_note'] ?? '')),
                     'rows' => is_array($record['rows'] ?? null) ? normalize_worship_penatalayan_rows($record['rows'], count(worship_penatalayan_week_dates($month))) : [],
                 ]);
@@ -122,10 +115,9 @@ class WorshipServiceScheduleBuilder
         }
 
         /** @var WorshipServiceSchedule $schedule */
-        $schedule = DB::transaction(function () use ($record, $month, $title, $preserveTimestamps): WorshipServiceSchedule {
+        $schedule = DB::transaction(function () use ($record, $month, $preserveTimestamps): WorshipServiceSchedule {
             $schedule = WorshipServiceSchedule::query()->firstOrNew(['month' => $month]);
             $schedule->fill([
-                'title' => $title,
                 'update_note' => trim((string) ($record['update_note'] ?? '')),
             ]);
 
@@ -236,9 +228,6 @@ class WorshipServiceScheduleBuilder
 
         return [
             'month' => $month,
-            'title' => trim((string) $schedule->title) !== ''
-                ? trim((string) $schedule->title)
-                : default_worship_penatalayan_title($month),
             'update_note' => trim((string) ($schedule->update_note ?? '')),
             'rows' => normalize_worship_penatalayan_rows($rows, count($weekDates)),
             'created_at' => $this->timestampString($schedule->created_at),
@@ -258,9 +247,6 @@ class WorshipServiceScheduleBuilder
 
         return [
             'month' => $month,
-            'title' => trim((string) $schedule->title) !== ''
-                ? trim((string) $schedule->title)
-                : default_worship_penatalayan_title($month),
             'update_note' => trim((string) ($schedule->update_note ?? '')),
             'rows' => normalize_worship_penatalayan_rows($rows, count(worship_penatalayan_week_dates($month))),
             'created_at' => $this->timestampString($schedule->created_at),
@@ -269,7 +255,7 @@ class WorshipServiceScheduleBuilder
     }
 
     /**
-     * @param array<int, mixed> $rows
+     * @param  array<int, mixed>  $rows
      */
     private function replaceChildren(WorshipServiceSchedule $schedule, array $rows): void
     {
@@ -339,17 +325,12 @@ class WorshipServiceScheduleBuilder
         return Schema::hasTable('worship_schedules');
     }
 
-    /**
-     * @param WorshipSchedule $schedule
-     * @return WorshipServiceSchedule
-     */
     private function legacyScheduleProxy(WorshipSchedule $schedule): WorshipServiceSchedule
     {
-        $proxy = new WorshipServiceSchedule();
+        $proxy = new WorshipServiceSchedule;
         $proxy->forceFill([
             'id' => $schedule->id,
             'month' => $schedule->month,
-            'title' => $schedule->title,
             'update_note' => $schedule->update_note,
             'created_at' => $schedule->created_at,
             'updated_at' => $schedule->updated_at,
@@ -359,7 +340,7 @@ class WorshipServiceScheduleBuilder
     }
 
     /**
-     * @param EloquentCollection<int, WorshipServiceScheduleWeek> $weeks
+     * @param  EloquentCollection<int, WorshipServiceScheduleWeek>  $weeks
      * @return array<int, WorshipServiceScheduleWeek>
      */
     private function weeksByIndex(EloquentCollection $weeks): array
@@ -374,7 +355,7 @@ class WorshipServiceScheduleBuilder
     }
 
     /**
-     * @param EloquentCollection<int, WorshipServiceScheduleWeek> $weeks
+     * @param  EloquentCollection<int, WorshipServiceScheduleWeek>  $weeks
      * @return array<int, WorshipServiceScheduleWeek>
      */
     private function weeksById(EloquentCollection $weeks): array
@@ -385,13 +366,6 @@ class WorshipServiceScheduleBuilder
         }
 
         return $byId;
-    }
-
-    private function nullableString(mixed $value): ?string
-    {
-        $stringValue = trim((string) $value);
-
-        return $stringValue !== '' ? $stringValue : null;
     }
 
     private function parseTimestamp(string $value): ?Carbon

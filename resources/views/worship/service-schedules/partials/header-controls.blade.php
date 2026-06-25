@@ -5,10 +5,6 @@
 
   <div class="worship-steward-hero-fields">
     <label class="worship-steward-hero-field">
-      Judul Jadwal
-      <input form="worship-steward-form" type="text" name="title" value="{{ (string) ($selectedSchedule['title'] ?? '') }}" placeholder="{{ default_worship_penatalayan_title($selectedMonth) }}">
-    </label>
-    <label class="worship-steward-hero-field">
       Catatan Update
       <input form="worship-steward-form" type="text" name="update_note" value="{{ (string) ($selectedSchedule['update_note'] ?? '') }}" placeholder="Contoh: update 23 Feb">
     </label>
