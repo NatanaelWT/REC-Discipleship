@@ -28,10 +28,7 @@ class DiscipleshipPeopleListData
         }
         $this->applyProgressFilter($query, $progress);
 
-        $paginator = $query->orderBy('full_name')
-            ->paginate(min(100, max(1, $request->integer('per_page', 50))))
-            ->withQueryString();
-        $people = collect($paginator->items());
+        $people = $query->orderBy('full_name')->get();
         $personIds = $people->pluck('id')->map(static fn ($id): int => (int) $id)->all();
         $relationships = $this->relationships($personIds);
         $groupPeople = $this->groupPeople($personIds);
@@ -73,14 +70,12 @@ class DiscipleshipPeopleListData
                 'progress_summary' => $progress['summary'],
             ];
         })->values();
-        $paginator->setCollection($rows);
         $stats = $this->progressStats();
 
         return [
             'settings' => ['church_name' => app_church_name()],
             'people' => $rows->all(),
-            'peoplePagination' => $paginator,
-            'filteredPeopleRows' => $paginator->total(),
+            'filteredPeopleRows' => $rows->count(),
             'totalPeopleRows' => $stats['total'],
             'peopleInDg1Count' => $stats['dg1'],
             'peopleInDg2Count' => $stats['dg2'],

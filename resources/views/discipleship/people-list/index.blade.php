@@ -114,6 +114,5 @@
           </tbody>
         </table>
       </div>
-      @include('partials.compact-pagination', ['paginator' => $peoplePagination])
     </section>
 @endsection

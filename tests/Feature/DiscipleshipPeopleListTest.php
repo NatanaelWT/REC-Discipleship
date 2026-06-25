@@ -103,7 +103,7 @@ class DiscipleshipPeopleListTest extends TestCase
             ->assertDontSee('Selesai RG');
     }
 
-    public function test_people_list_limits_large_datasets_and_keeps_query_count_constant(): void
+    public function test_people_list_renders_all_rows_without_pagination_and_keeps_query_count_constant(): void
     {
         $this->createDiscipleshipTables();
         $rows = [];
@@ -129,17 +129,16 @@ class DiscipleshipPeopleListTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Peserta 0001')
-            ->assertSee('Peserta 0050')
-            ->assertDontSee('Peserta 0051')
-            ->assertSee('Halaman 1 dari 20');
+            ->assertSee('Peserta 0500')
+            ->assertSee('Peserta 1000')
+            ->assertDontSee('rec-pagination', false)
+            ->assertDontSee('Halaman 1 dari');
         $this->assertLessThanOrEqual(10, $queries);
-        $this->assertLessThan(250 * 1024, strlen((string) $response->getContent()));
 
         $this->get('/pemuridan/anggota?per_page=500')
             ->assertOk()
-            ->assertSee('Peserta 0100')
-            ->assertDontSee('Peserta 0101')
-            ->assertSee('Halaman 1 dari 10');
+            ->assertSee('Peserta 1000')
+            ->assertDontSee('rec-pagination', false);
     }
 
     private function createDiscipleshipTables(): void
