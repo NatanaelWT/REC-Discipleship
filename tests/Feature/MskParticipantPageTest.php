@@ -96,7 +96,7 @@ class MskParticipantPageTest extends TestCase
         ])->assertRedirect('/developer?error=access_denied');
     }
 
-    public function test_msk_page_paginates_large_participant_lists(): void
+    public function test_msk_page_renders_all_participants_without_pagination_and_uses_live_search(): void
     {
         $this->createMskTables();
         $rows = [];
@@ -116,12 +116,16 @@ class MskParticipantPageTest extends TestCase
         DB::table('msk_participants')->insert($rows);
         $this->actingAsRecUser();
 
-        $this->get('/pemuridan/msk?batch_month=all')
+        $this->get('/pemuridan/msk?batch_month=all&q=MSK+120')
             ->assertOk()
             ->assertSee('Peserta MSK 001')
-            ->assertSee('Peserta MSK 050')
-            ->assertDontSee('Peserta MSK 051')
-            ->assertSee('Halaman 1 dari 3');
+            ->assertSee('Peserta MSK 120')
+            ->assertSee('data-msk-search-form', false)
+            ->assertSee('data-msk-search-input', false)
+            ->assertSee('data-msk-search-row', false)
+            ->assertSee('value="msk 120"', false)
+            ->assertDontSee('class="rec-pagination"', false)
+            ->assertDontSee('type="submit">Cari</button>', false);
     }
 
     public function test_batch_filter_lists_all_batches_not_only_the_active_batch(): void

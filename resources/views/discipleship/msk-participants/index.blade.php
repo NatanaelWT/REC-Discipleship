@@ -507,17 +507,15 @@ if ($page === 'msk_classes') {
     }
     echo "    </div>\n";
     echo "    <div class=\"msk-hero-search-wrap\">\n";
-    echo '      <form method="get" action="'.h($mskIndexAction)."\" class=\"form-row\">\n";
+    echo '      <form method="get" action="'.h($mskIndexAction)."\" class=\"form-row\" data-msk-search-form>\n";
     if (request()->filled('branch_id')) {
         echo '        <input type="hidden" name="branch_id" value="'.h((string) request()->query('branch_id'))."\">\n";
     }
     echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
-    echo '        <input type="search" name="q" value="'.h($participantsSearch)."\" class=\"search msk-table-search\" placeholder=\"Cari peserta MSK...\" aria-label=\"Cari peserta MSK\">\n";
-    echo "        <button class=\"btn tiny secondary\" type=\"submit\">Cari</button>\n";
+    echo '        <input type="search" name="q" value="'.h($participantsSearch)."\" class=\"search msk-table-search\" placeholder=\"Cari peserta MSK...\" aria-label=\"Cari peserta MSK\" autocomplete=\"off\" data-msk-search-input>\n";
     echo "      </form>\n";
     echo "    </div>\n";
     echo "  </div>\n";
-    echo view('partials.compact-pagination', ['paginator' => $participantsPagination])->render();
     echo "</section>\n";
 
     echo "<section class=\"card table-card-plain\">\n";
@@ -569,7 +567,8 @@ if ($page === 'msk_classes') {
             $waHtml = '<span class="msk-wa-empty">Tidak ada nomor</span>';
         }
 
-        echo '<tr>';
+        $searchText = trim($fullName.' '.$whatsapp.' '.(string) ($participant['email'] ?? ''));
+        echo '<tr data-msk-search-row data-search-text="'.h($searchText).'">';
         $nameSubLabel = $participantStatus === 'inactive' ? 'Peserta kelas MSK · Nonaktif' : 'Peserta kelas MSK';
         echo '<td><div class="msk-name-cell"><span class="msk-name-main">'.h($fullName).'</span><span class="msk-name-sub">'.h($nameSubLabel).'</span></div></td>';
         echo '<td><div class="msk-month-cell"><span class="msk-month-main">'.h($mskMonthLabel).'</span><span class="msk-month-sub">Batch pembinaan</span></div></td>';
@@ -602,6 +601,8 @@ if ($page === 'msk_classes') {
     }
     if ($totalParticipantsFiltered === 0) {
         echo "<tr><td colspan=\"6\">Belum ada data peserta kelas MSK.</td></tr>\n";
+    } else {
+        echo "<tr data-msk-search-empty hidden><td colspan=\"6\" aria-live=\"polite\">Peserta tidak ditemukan.</td></tr>\n";
     }
     echo "      </tbody>\n";
     echo "    </table>\n";

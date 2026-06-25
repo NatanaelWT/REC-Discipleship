@@ -55,25 +55,16 @@ class MskParticipantPageData
         $filteredQuery = MskParticipant::query()
             ->select(MskParticipant::VIEW_COLUMNS)
             ->whereIn('branch_id', $branchIds)
-            ->when(! $batchMonthFilterIsAll, static fn ($query) => $query->where('batch_month', $batchMonthFilter))
-            ->when($search !== '', static function ($query) use ($search): void {
-                $query->where(static function ($searchQuery) use ($search): void {
-                    $like = '%'.$search.'%';
-                    $searchQuery->whereRaw('LOWER(full_name) LIKE ?', [$like])
-                        ->orWhereRaw('LOWER(whatsapp) LIKE ?', [$like])
-                        ->orWhereRaw('LOWER(email) LIKE ?', [$like]);
-                });
-            });
-        $completedParticipantsFiltered = (clone $filteredQuery)
-            ->whereJsonLength('session_numbers', '=', 12)
-            ->count();
-        $perPage = max(1, min(100, (int) $request->query('per_page', 50)));
-        $pagination = (clone $filteredQuery)
+            ->when(! $batchMonthFilterIsAll, static fn ($query) => $query->where('batch_month', $batchMonthFilter));
+        $participants = $filteredQuery
             ->orderBy('full_name')
             ->orderBy('id')
-            ->paginate($perPage)
-            ->withQueryString();
-        $pageParticipants = $pagination->getCollection()
+            ->get();
+        $totalParticipantsFiltered = $participants->count();
+        $completedParticipantsFiltered = $participants
+            ->filter(static fn (MskParticipant $participant): bool => count(normalize_msk_session_numbers($participant->session_numbers ?? [])) === 12)
+            ->count();
+        $pageParticipants = $participants
             ->map($this->participantViewRow(...))
             ->values()
             ->all();
@@ -113,7 +104,6 @@ class MskParticipantPageData
             'participantsById' => $participantsById,
             'participantsSorted' => $pageParticipants,
             'participantsFilteredByBatch' => $pageParticipants,
-            'participantsPagination' => $pagination,
             'participantsSearch' => $search,
             'editId' => $editId,
             'editParticipant' => $editParticipant,
@@ -128,9 +118,9 @@ class MskParticipantPageData
             'batchMonthFilter' => $batchMonthFilter,
             'batchMonthFilterParam' => $batchMonthFilterParam,
             'batchMonthFilterLabel' => $batchMonthFilterLabel,
-            'totalParticipantsFiltered' => $pagination->total(),
+            'totalParticipantsFiltered' => $totalParticipantsFiltered,
             'completedParticipantsFiltered' => $completedParticipantsFiltered,
-            'inProgressParticipantsFiltered' => max(0, $pagination->total() - $completedParticipantsFiltered),
+            'inProgressParticipantsFiltered' => max(0, $totalParticipantsFiltered - $completedParticipantsFiltered),
             'totalParticipantsAll' => array_sum($batchMonthMap),
         ];
     }
