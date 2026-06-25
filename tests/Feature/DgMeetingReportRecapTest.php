@@ -46,6 +46,25 @@ class DgMeetingReportRecapTest extends TestCase
         );
     }
 
+    public function test_calendar_cells_keep_dates_and_report_counts_visible(): void
+    {
+        $css = file_get_contents(public_path('assets/style.css'));
+
+        $this->assertIsString($css);
+        $this->assertMatchesRegularExpression(
+            '/\.dg-recap-calendar-grid-body\s*\{[^}]*grid-template-rows:\s*repeat\(6,\s*minmax\(62px,\s*auto\)\);/s',
+            $css,
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.dg-recap-calendar-day-count\s*\{[^}]*position:\s*absolute;[^}]*top:\s*7px;[^}]*right:\s*7px;/s',
+            $css,
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.dg-recap-calendar-panels\s*\{[^}]*overflow-y:\s*auto;/s',
+            $css,
+        );
+    }
+
     public function test_central_discipleship_user_can_view_and_filter_all_branches(): void
     {
         $this->createTables();
