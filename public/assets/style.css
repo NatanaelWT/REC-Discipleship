@@ -10827,6 +10827,35 @@ textarea:focus-visible {
   text-transform: uppercase;
 }
 
+.discipleship-hero-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 72px;
+  width: min(100%, 420px);
+  max-width: 420px;
+}
+
+.discipleship-hero-stat {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  height: 72px;
+  min-height: 72px;
+  max-height: 72px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.discipleship-hero-stat > span,
+.discipleship-hero-stat > strong {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .journey-hero-tools {
   position: relative;
   z-index: 1;
@@ -11398,6 +11427,11 @@ textarea:focus-visible {
 
   .dg-recap-hero-search-wrap {
     margin-left: auto;
+  }
+
+  .discipleship-hero-stats {
+    width: min(100%, 420px);
+    max-width: 420px;
   }
 }
 

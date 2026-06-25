@@ -702,7 +702,7 @@ if ($page === 'spiritual_journey') {
     echo "      <h1>Spiritual Journey</h1>\n";
     echo "      <p>Pantau progres MSK peserta dan siapkan tahap lanjutan perjalanan pemuridannya dalam satu tampilan yang lebih rapi.</p>\n";
     echo "    </div>\n";
-    echo "    <div class=\"journey-hero-stats\">\n";
+    echo "    <div class=\"journey-hero-stats discipleship-hero-stats\">\n";
     foreach ($journeyProgressRows as $row) {
         $value = max(0, (int) ($row['value'] ?? 0));
         $target = max(0, (int) ($row['target'] ?? 0));
@@ -711,7 +711,7 @@ if ($page === 'spiritual_journey') {
         if (substr($percentLabel, -2) === ',0') {
             $percentLabel = substr($percentLabel, 0, -2);
         }
-        echo '      <div class="journey-hero-stat"><span class="journey-hero-stat-label">'.h((string) ($row['label'] ?? '-')).'</span><strong class="journey-hero-stat-value">'.h((string) $value)."</strong></div>\n";
+        echo '      <div class="journey-hero-stat discipleship-hero-stat"><span class="journey-hero-stat-label">'.h((string) ($row['label'] ?? '-')).'</span><strong class="journey-hero-stat-value">'.h((string) $value)."</strong></div>\n";
     }
     echo "    </div>\n";
     echo "  </div>\n";

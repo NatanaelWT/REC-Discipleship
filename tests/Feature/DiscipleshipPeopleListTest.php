@@ -55,6 +55,8 @@ class DiscipleshipPeopleListTest extends TestCase
         $response->assertDontSee('people-child-count', false);
         $response->assertSee('Export Excel');
         $response->assertSee(route('discipleship.people-list.export'), false);
+        $response->assertSee('people-hero-stats discipleship-hero-stats', false);
+        $response->assertSee('people-hero-stat discipleship-hero-stat', false);
     }
 
     public function test_people_list_hides_archived_duplicate_identity(): void

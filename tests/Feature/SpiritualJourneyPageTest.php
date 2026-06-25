@@ -28,6 +28,8 @@ class SpiritualJourneyPageTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Spiritual Journey');
         $response->assertSee('Peserta Journey');
+        $response->assertSee('journey-hero-stats discipleship-hero-stats', false);
+        $response->assertSee('journey-hero-stat discipleship-hero-stat', false);
     }
 
     public function test_spiritual_journey_renders_all_participants_without_pagination_and_uses_live_search(): void

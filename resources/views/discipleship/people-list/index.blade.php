@@ -20,11 +20,11 @@
           <h1>Daftar Anggota DG</h1>
           <p>Pantau relasi pembinaan, progres DG, dan kontak anggota yang sedang berjalan di alur DG.</p>
         </div>
-        <div class="people-hero-stats">
-          <div class="people-hero-stat"><span class="people-hero-stat-label">Peserta DG</span><strong class="people-hero-stat-value" data-people-stat="total">{{ (string) $totalPeopleRows }}</strong></div>
-          <div class="people-hero-stat"><span class="people-hero-stat-label">DG1</span><strong class="people-hero-stat-value" data-people-stat="dg1">{{ (string) $peopleInDg1Count }}</strong></div>
-          <div class="people-hero-stat"><span class="people-hero-stat-label">DG2</span><strong class="people-hero-stat-value" data-people-stat="dg2">{{ (string) $peopleInDg2Count }}</strong></div>
-          <div class="people-hero-stat"><span class="people-hero-stat-label">DG3</span><strong class="people-hero-stat-value" data-people-stat="dg3">{{ (string) $peopleInDg3Count }}</strong></div>
+        <div class="people-hero-stats discipleship-hero-stats">
+          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">Peserta DG</span><strong class="people-hero-stat-value" data-people-stat="total">{{ (string) $totalPeopleRows }}</strong></div>
+          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">DG1</span><strong class="people-hero-stat-value" data-people-stat="dg1">{{ (string) $peopleInDg1Count }}</strong></div>
+          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">DG2</span><strong class="people-hero-stat-value" data-people-stat="dg2">{{ (string) $peopleInDg2Count }}</strong></div>
+          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">DG3</span><strong class="people-hero-stat-value" data-people-stat="dg3">{{ (string) $peopleInDg3Count }}</strong></div>
         </div>
       </div>
       <form method="get" action="{{ route('discipleship.people-list') }}" class="actions people-hero-tools" data-discipleship-people-search-form>

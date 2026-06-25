@@ -37,6 +37,8 @@ class MskParticipantPageTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Kelas MSK');
+        $response->assertSee('msk-hero-stats discipleship-hero-stats', false);
+        $response->assertSee('msk-hero-stat discipleship-hero-stat', false);
     }
 
     public function test_central_and_developer_see_export_without_import_controls(): void

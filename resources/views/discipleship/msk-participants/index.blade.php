@@ -455,11 +455,11 @@ if ($page === 'msk_classes') {
     echo "      <h1>Kelas MSK</h1>\n";
     echo "      <p>Pantau batch aktif, progres penyelesaian sesi, dan kelola peserta MSK dari satu panel yang lebih ringkas.</p>\n";
     echo "    </div>\n";
-    echo "    <div class=\"msk-hero-stats\" aria-label=\"Ringkasan kelas MSK\">\n";
-    echo '      <div class="msk-hero-stat"><span class="msk-hero-stat-label">Filter</span><strong class="msk-hero-stat-value">'.h($batchMonthFilterLabel)."</strong></div>\n";
-    echo '      <div class="msk-hero-stat"><span class="msk-hero-stat-label">Peserta</span><strong class="msk-hero-stat-value">'.h((string) $totalParticipantsFiltered)."</strong></div>\n";
-    echo '      <div class="msk-hero-stat"><span class="msk-hero-stat-label">Selesai</span><strong class="msk-hero-stat-value">'.h((string) $completedParticipantsFiltered)."</strong></div>\n";
-    echo '      <div class="msk-hero-stat"><span class="msk-hero-stat-label">Berjalan</span><strong class="msk-hero-stat-value">'.h((string) $inProgressParticipantsFiltered)."</strong></div>\n";
+    echo "    <div class=\"msk-hero-stats discipleship-hero-stats\" aria-label=\"Ringkasan kelas MSK\">\n";
+    echo '      <div class="msk-hero-stat discipleship-hero-stat"><span class="msk-hero-stat-label">Filter</span><strong class="msk-hero-stat-value">'.h($batchMonthFilterLabel)."</strong></div>\n";
+    echo '      <div class="msk-hero-stat discipleship-hero-stat"><span class="msk-hero-stat-label">Peserta</span><strong class="msk-hero-stat-value">'.h((string) $totalParticipantsFiltered)."</strong></div>\n";
+    echo '      <div class="msk-hero-stat discipleship-hero-stat"><span class="msk-hero-stat-label">Selesai</span><strong class="msk-hero-stat-value">'.h((string) $completedParticipantsFiltered)."</strong></div>\n";
+    echo '      <div class="msk-hero-stat discipleship-hero-stat"><span class="msk-hero-stat-label">Berjalan</span><strong class="msk-hero-stat-value">'.h((string) $inProgressParticipantsFiltered)."</strong></div>\n";
     echo "    </div>\n";
     echo "  </div>\n";
     echo "  <div class=\"actions table-tools msk-table-tools msk-hero-tools\">\n";

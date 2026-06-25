@@ -795,11 +795,11 @@ if ($page === 'dg_reports_recap') {
     echo "      <h1>Rekap Laporan DG</h1>\n";
     echo "      <p>Ringkas performa pemimpin, perkembangan kelompok, dan catatan pertemuan DG dalam satu tampilan yang lebih mudah dipantau.</p>\n";
     echo "    </div>\n";
-    echo "    <div class=\"groups-hero-stats dg-recap-hero-stats\">\n";
-    echo '      <div class="groups-hero-stat dg-recap-hero-stat"><span class="groups-hero-stat-label dg-recap-hero-stat-label">Total Laporan</span><strong class="groups-hero-stat-value dg-recap-hero-stat-value">'.h((string) $totalReports)."</strong></div>\n";
-    echo '      <div class="groups-hero-stat dg-recap-hero-stat"><span class="groups-hero-stat-label dg-recap-hero-stat-label">Pemimpin Aktif</span><strong class="groups-hero-stat-value dg-recap-hero-stat-value">'.h((string) $totalLeaders)."</strong></div>\n";
-    echo '      <div class="groups-hero-stat dg-recap-hero-stat"><span class="groups-hero-stat-label dg-recap-hero-stat-label">Kelompok</span><strong class="groups-hero-stat-value dg-recap-hero-stat-value">'.h((string) $totalGroups)."</strong></div>\n";
-    echo "      <button class=\"groups-hero-stat dg-recap-hero-stat dg-recap-hero-stat-action\" type=\"button\" data-dg-calendar-open><span class=\"groups-hero-stat-label dg-recap-hero-stat-label\">Lihat Kalender</span><strong class=\"groups-hero-stat-value dg-recap-hero-stat-value\">Laporan</strong></button>\n";
+    echo "    <div class=\"groups-hero-stats dg-recap-hero-stats discipleship-hero-stats\">\n";
+    echo '      <div class="groups-hero-stat dg-recap-hero-stat discipleship-hero-stat"><span class="groups-hero-stat-label dg-recap-hero-stat-label">Total Laporan</span><strong class="groups-hero-stat-value dg-recap-hero-stat-value">'.h((string) $totalReports)."</strong></div>\n";
+    echo '      <div class="groups-hero-stat dg-recap-hero-stat discipleship-hero-stat"><span class="groups-hero-stat-label dg-recap-hero-stat-label">Pemimpin Aktif</span><strong class="groups-hero-stat-value dg-recap-hero-stat-value">'.h((string) $totalLeaders)."</strong></div>\n";
+    echo '      <div class="groups-hero-stat dg-recap-hero-stat discipleship-hero-stat"><span class="groups-hero-stat-label dg-recap-hero-stat-label">Kelompok</span><strong class="groups-hero-stat-value dg-recap-hero-stat-value">'.h((string) $totalGroups)."</strong></div>\n";
+    echo "      <button class=\"groups-hero-stat dg-recap-hero-stat dg-recap-hero-stat-action discipleship-hero-stat\" type=\"button\" data-dg-calendar-open><span class=\"groups-hero-stat-label dg-recap-hero-stat-label\">Lihat Kalender</span><strong class=\"groups-hero-stat-value dg-recap-hero-stat-value\">Laporan</strong></button>\n";
     echo "    </div>\n";
     echo "  </div>\n";
     echo "  <div class=\"actions groups-hero-tools dg-recap-hero-tools\">\n";

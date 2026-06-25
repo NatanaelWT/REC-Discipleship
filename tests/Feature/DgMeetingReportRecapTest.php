@@ -32,6 +32,8 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertSee('Pemimpin Test');
         $response->assertSee('Materi Test');
         $response->assertSee('groups-hero-card dg-recap-hero-card', false);
+        $response->assertSee('dg-recap-hero-stats discipleship-hero-stats', false);
+        $response->assertSee('dg-recap-hero-stat discipleship-hero-stat', false);
         $response->assertSee('groups-hero-filter-wrap dg-recap-hero-filter-wrap', false);
         $response->assertSee('data-filter-role="recap-progress"', false);
         $response->assertSee('groups-hero-search-wrap dg-recap-hero-search-wrap', false);

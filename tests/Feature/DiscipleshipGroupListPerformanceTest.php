@@ -44,6 +44,8 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
             ->assertDontSee('Halaman 1 dari')
             ->assertSee('data-auto-submit-search-form', false)
             ->assertSee('data-auto-submit-search-input', false)
+            ->assertSee('groups-hero-stats discipleship-hero-stats', false)
+            ->assertSee('groups-hero-stat discipleship-hero-stat', false)
             ->assertDontSee('>Cari</button>', false);
         $this->assertLessThanOrEqual(8, $queries);
 

@@ -14,11 +14,11 @@
           <h1>Daftar Kelompok DG</h1>
           <p>Lihat leader, progres, dan komposisi peserta aktif dalam setiap Kelompok DG secara ringkas.</p>
         </div>
-        <div class="groups-hero-stats">
-          <div class="groups-hero-stat"><span class="groups-hero-stat-label">Kelompok DG</span><strong class="groups-hero-stat-value" data-groups-stat="total">{{ (string) $totalGroupRows }}</strong></div>
-          <div class="groups-hero-stat"><span class="groups-hero-stat-label">DG 1</span><strong class="groups-hero-stat-value" data-groups-stat="dg1">{{ (string) $groupsInDg1Count }}</strong></div>
-          <div class="groups-hero-stat"><span class="groups-hero-stat-label">DG 2</span><strong class="groups-hero-stat-value" data-groups-stat="dg2">{{ (string) $groupsInDg2Count }}</strong></div>
-          <div class="groups-hero-stat"><span class="groups-hero-stat-label">DG 3</span><strong class="groups-hero-stat-value" data-groups-stat="dg3">{{ (string) $groupsInDg3Count }}</strong></div>
+        <div class="groups-hero-stats discipleship-hero-stats">
+          <div class="groups-hero-stat discipleship-hero-stat"><span class="groups-hero-stat-label">Kelompok DG</span><strong class="groups-hero-stat-value" data-groups-stat="total">{{ (string) $totalGroupRows }}</strong></div>
+          <div class="groups-hero-stat discipleship-hero-stat"><span class="groups-hero-stat-label">DG 1</span><strong class="groups-hero-stat-value" data-groups-stat="dg1">{{ (string) $groupsInDg1Count }}</strong></div>
+          <div class="groups-hero-stat discipleship-hero-stat"><span class="groups-hero-stat-label">DG 2</span><strong class="groups-hero-stat-value" data-groups-stat="dg2">{{ (string) $groupsInDg2Count }}</strong></div>
+          <div class="groups-hero-stat discipleship-hero-stat"><span class="groups-hero-stat-label">DG 3</span><strong class="groups-hero-stat-value" data-groups-stat="dg3">{{ (string) $groupsInDg3Count }}</strong></div>
         </div>
       </div>
       <form method="get" action="{{ route('discipleship.groups') }}" class="actions groups-hero-tools" data-auto-submit-search-form>
