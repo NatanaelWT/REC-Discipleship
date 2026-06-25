@@ -332,6 +332,59 @@
       });
     });
 
+    const spiritualJourneySearchForm = document.querySelector('[data-spiritual-journey-search-form]');
+    if (spiritualJourneySearchForm) {
+      const input = spiritualJourneySearchForm.querySelector('[data-spiritual-journey-search-input]');
+      const rows = Array.from(document.querySelectorAll('[data-spiritual-journey-search-row]'));
+      const emptyRow = document.querySelector('[data-spiritual-journey-search-empty]');
+
+      const normalizeSpiritualJourneySearch = (value) => String(value || '')
+        .trim()
+        .toLocaleLowerCase('id-ID');
+
+      const updateSpiritualJourneySearchUrl = (query) => {
+        if (!window.history || typeof window.history.replaceState !== 'function') {
+          return;
+        }
+        const url = new URL(window.location.href);
+        if (query) {
+          url.searchParams.set('q', query);
+        } else {
+          url.searchParams.delete('q');
+        }
+        url.searchParams.delete('page');
+        window.history.replaceState(window.history.state, '', url.toString());
+      };
+
+      const filterSpiritualJourneyRows = () => {
+        if (!input) {
+          return;
+        }
+        const rawQuery = String(input.value || '').trim();
+        const query = normalizeSpiritualJourneySearch(rawQuery);
+        let visibleRows = 0;
+
+        rows.forEach((row) => {
+          const searchText = normalizeSpiritualJourneySearch(row.getAttribute('data-search-text'));
+          const matches = query === '' || searchText.includes(query);
+          row.hidden = !matches;
+          if (matches) {
+            visibleRows += 1;
+          }
+        });
+
+        if (emptyRow) {
+          emptyRow.hidden = visibleRows !== 0;
+        }
+        updateSpiritualJourneySearchUrl(rawQuery);
+      };
+
+      if (input) {
+        input.addEventListener('input', filterSpiritualJourneyRows);
+        filterSpiritualJourneyRows();
+      }
+    }
+
     const mskViewModal = document.querySelector('[data-msk-view-modal]');
     if (mskViewModal) {
       const titleEl = mskViewModal.querySelector('[data-msk-view-title]');

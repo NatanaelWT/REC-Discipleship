@@ -31,21 +31,12 @@ class SpiritualJourneyPageData
                 'birth_place', 'address', 'email', 'whatsapp', 'batch_month', 'notes', 'completed_at',
                 'journey_bridge_status', 'status', 'session_numbers', 'photos', 'created_at', 'updated_at',
             ])
-            ->whereIn('branch_id', $this->scope->branchIds())
-            ->when($search !== '', static function ($query) use ($search): void {
-                $query->where(static function ($searchQuery) use ($search): void {
-                    $searchQuery->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%'])
-                        ->orWhereRaw('LOWER(whatsapp) LIKE ?', ['%'.$search.'%']);
-                });
-            });
+            ->whereIn('branch_id', $this->scope->branchIds());
         $this->applyJourneyFilter($query, $journeyFilter);
 
-        $pagination = $query
+        $participants = $query
             ->orderBy('full_name')->orderBy('id')
-            ->paginate(min(100, max(1, $request->integer('per_page', 50))))
-            ->withQueryString();
-
-        $participants = $pagination->getCollection();
+            ->get();
         $personIds = $participants->pluck('discipleship_person_id')->filter()->map(static fn ($id): int => (int) $id)->unique()->all();
         $people = $this->people($personIds);
         $groupPeople = $this->groupPeople($personIds);
@@ -67,10 +58,9 @@ class SpiritualJourneyPageData
             'people' => array_values($people),
             'peopleById' => $people,
             'mskClasses' => $participantRows,
-            'spiritualJourneyPagination' => $pagination,
             'spiritualJourneySearch' => $search,
             'spiritualJourneyFilter' => $journeyFilter,
-            'spiritualJourneyTotalParticipants' => $pagination->total(),
+            'spiritualJourneyTotalParticipants' => $participants->count(),
             'discipleshipTargets' => $this->targets(),
             'discipleshipV2Model' => [
                 'discipleship_persons' => array_values($people),

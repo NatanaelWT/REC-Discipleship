@@ -638,6 +638,7 @@ if ($page === 'spiritual_journey') {
         $rows[] = [
             'id' => (string) ($participant['id'] ?? ''),
             'name' => $fullName,
+            'search_text' => trim($fullName.' '.(string) ($participant['whatsapp'] ?? '')),
             'msk_progress' => $mskProgress,
             'session_count' => $sessionCount,
             'msk_percent' => $mskPercent,
@@ -722,7 +723,7 @@ if ($page === 'spiritual_journey') {
 
     echo "  <div class=\"actions journey-hero-tools\">\n";
     echo "    <div class=\"journey-hero-search-wrap\">\n";
-    echo '      <form method="get" action="'.h(route('discipleship.spiritual-journey'))."\" class=\"form-row\">\n";
+    echo '      <form method="get" action="'.h(route('discipleship.spiritual-journey'))."\" class=\"form-row\" data-spiritual-journey-search-form>\n";
     if (request()->filled('branch_id')) {
         echo '        <input type="hidden" name="branch_id" value="'.h((string) request()->query('branch_id'))."\">\n";
     }
@@ -734,12 +735,10 @@ if ($page === 'spiritual_journey') {
     }
     echo "          </select>\n";
     echo "        </div>\n";
-    echo '        <input type="search" name="q" value="'.h($spiritualJourneySearch)."\" class=\"search journey-table-search\" placeholder=\"Cari peserta spiritual journey...\" aria-label=\"Cari peserta spiritual journey\">\n";
-    echo "        <button class=\"btn tiny secondary\" type=\"submit\">Cari</button>\n";
+    echo '        <input type="search" name="q" value="'.h($spiritualJourneySearch)."\" class=\"search journey-table-search\" placeholder=\"Cari peserta spiritual journey...\" aria-label=\"Cari peserta spiritual journey\" autocomplete=\"off\" data-spiritual-journey-search-input>\n";
     echo "      </form>\n";
     echo "    </div>\n";
     echo "  </div>\n";
-    echo view('partials.compact-pagination', ['paginator' => $spiritualJourneyPagination])->render();
     echo "</section>\n";
 
     echo "<section class=\"card table-card-plain\">\n";
@@ -794,7 +793,7 @@ if ($page === 'spiritual_journey') {
             $bridgeSelect .= '<option value="'.h($bridgeValue).'"'.$selected.'>'.h($bridgeLabel).'</option>';
         }
         $bridgeSelect .= '</select></form></span>';
-        echo '<tr>';
+        echo '<tr data-spiritual-journey-search-row data-search-text="'.h((string) ($row['search_text'] ?? $journeyName)).'">';
         echo '<td><div class="journey-name-cell"><div class="journey-name-main">'.h($journeyName).'</div><div class="journey-name-sub">Peserta kelas MSK</div><button class="note-link member-inline-trigger journey-history-trigger" type="button" data-spiritual-journey-view-open="'.h($journeyViewKey).'" aria-label="'.h('Lihat riwayat pemuridan '.$journeyName).'">Lihat riwayat pemuridan</button></div></td>';
         $mskDone = $mskPercent >= 100;
         $mskBadgeClass = $mskDone ? 'journey-track-badge is-msk is-msk-done' : 'journey-track-badge is-msk is-msk-progress';
@@ -806,7 +805,9 @@ if ($page === 'spiritual_journey') {
         $emptyMessage = $journeyFilter === 'dg_without_kgap'
             ? 'Belum ada peserta minimal DG 1 yang belum mengikuti Kamp GAP.'
             : 'Belum ada data peserta MSK.';
-        echo '<tr><td colspan="3">'.h($emptyMessage)."</td></tr>\n";
+        echo '<tr><td colspan="2">'.h($emptyMessage)."</td></tr>\n";
+    } else {
+        echo '<tr data-spiritual-journey-search-empty hidden><td colspan="2" aria-live="polite">Peserta tidak ditemukan.</td></tr>'."\n";
     }
     echo "      </tbody>\n";
     echo "    </table>\n";

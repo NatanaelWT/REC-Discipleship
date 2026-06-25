@@ -30,6 +30,43 @@ class SpiritualJourneyPageTest extends TestCase
         $response->assertSee('Peserta Journey');
     }
 
+    public function test_spiritual_journey_renders_all_participants_without_pagination_and_uses_live_search(): void
+    {
+        $this->createMskTables();
+        $now = now();
+        $participants = [];
+        for ($index = 1; $index <= 125; $index++) {
+            $participants[] = [
+                'branch_id' => 1,
+                'discipleship_person_id' => null,
+                'full_name' => sprintf('Peserta Journey %03d', $index),
+                'whatsapp' => sprintf('08120000%04d', $index),
+                'batch_month' => '2026-06',
+                'completed_at' => null,
+                'journey_bridge_status' => 'belum',
+                'status' => 'active',
+                'session_numbers' => json_encode([1, 2]),
+                'photos' => json_encode([]),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+        DB::table('msk_participants')->insert($participants);
+        $this->actingAsRecUser();
+
+        $response = $this->get('/pemuridan/spiritual-journey?q=Journey+125');
+
+        $response->assertOk();
+        $response->assertSee('Peserta Journey 001');
+        $response->assertSee('Peserta Journey 125');
+        $response->assertSee('data-spiritual-journey-search-form', false);
+        $response->assertSee('data-spiritual-journey-search-input', false);
+        $response->assertSee('data-spiritual-journey-search-row', false);
+        $response->assertSee('value="journey 125"', false);
+        $response->assertDontSee('class="rec-pagination"', false);
+        $response->assertDontSee('type="submit">Cari</button>', false);
+    }
+
     public function test_spiritual_journey_filters_dg_participants_without_kgap(): void
     {
         $this->createMskTables();
