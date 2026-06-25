@@ -54,17 +54,6 @@ $formatPercent = static function (float $value): string {
     @endforeach
   </div>
 
-  <div class="card-row discipleship-dashboard-section-head"><h2>Kelompok Berjalan</h2><span class="badge muted">Kelompok aktif</span></div>
-  <div class="journey-progress-grid journey-progress-grid-standalone">
-    @foreach ($groupProgressRows as $row)
-      <?php $percent = $row['target'] > 0 ? min(100, ($row['value'] / $row['target']) * 100) : 0; ?>
-      <div class="journey-progress-chip">
-        <div class="journey-progress-ring" style="--pct:{{ $percent }};--ring-color:{{ $row['color'] }};"><span>{{ $formatPercent($percent) }}%</span></div>
-        <div class="journey-progress-copy"><div class="journey-progress-label">{{ $row['label'] }}</div><div class="journey-progress-value">{{ number_format($row['value'], 0, ',', '.') }} / {{ number_format($row['target'], 0, ',', '.') }} kelompok aktif</div></div>
-      </div>
-    @endforeach
-  </div>
-
   <div class="discipleship-dashboard-data-stats">
     @foreach ($summaryStats as $stat)
       <article class="discipleship-dashboard-data-stat {{ $stat['tone'] }}">
@@ -72,6 +61,16 @@ $formatPercent = static function (float $value): string {
         <strong class="discipleship-dashboard-data-stat-value">{{ number_format($stat['value'], 0, ',', '.') }}</strong>
         <span class="discipleship-dashboard-data-stat-sub">{{ $stat['sub'] }}</span>
       </article>
+    @endforeach
+  </div>
+
+  <div class="journey-progress-grid journey-progress-grid-standalone discipleship-dashboard-group-progress">
+    @foreach ($groupProgressRows as $row)
+      <?php $percent = $row['target'] > 0 ? min(100, ($row['value'] / $row['target']) * 100) : 0; ?>
+      <div class="journey-progress-chip">
+        <div class="journey-progress-ring" style="--pct:{{ $percent }};--ring-color:{{ $row['color'] }};"><span>{{ $formatPercent($percent) }}%</span></div>
+        <div class="journey-progress-copy"><div class="journey-progress-label">{{ $row['label'] }}</div><div class="journey-progress-value">{{ number_format($row['value'], 0, ',', '.') }} / {{ number_format($row['target'], 0, ',', '.') }}</div></div>
+      </div>
     @endforeach
   </div>
 </section>

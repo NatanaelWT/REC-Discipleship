@@ -22,6 +22,13 @@ class DiscipleshipDashboardTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Dashboard Pemuridan');
         $response->assertSee('Belum Selesai MSK');
+        $response->assertDontSee('Kelompok Berjalan');
+        $response->assertDontSee('Kelompok aktif');
+        $response->assertSee('discipleship-dashboard-group-progress', false);
+        $this->assertLessThan(
+            strpos((string) $response->getContent(), 'discipleship-dashboard-group-progress'),
+            strpos((string) $response->getContent(), 'discipleship-dashboard-data-stats'),
+        );
         $response->assertDontSee('Peserta MSK Dashboard');
         $response->assertDontSee('?page=discipleship_dashboard', false);
 

@@ -10573,6 +10573,11 @@ textarea:focus-visible {
   margin-top: 14px;
 }
 
+.discipleship-dashboard-group-progress {
+  margin-top: 18px;
+  margin-bottom: 0;
+}
+
 .discipleship-dashboard-data-stat {
   --dash-accent: #0f766e;
   --dash-glow: rgba(15, 118, 110, 0.16);
