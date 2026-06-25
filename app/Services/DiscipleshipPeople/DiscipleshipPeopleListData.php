@@ -19,12 +19,11 @@ class DiscipleshipPeopleListData
         $search = strtolower(trim((string) $request->query('q', '')));
         $progress = trim((string) $request->query('progress', 'all'));
         $base = DiscipleshipPerson::query()->whereIn('branch_id', $this->scope->branchIds());
-        $query = (clone $base)->select(['id', 'branch_id', 'full_name', 'phone', 'status']);
+        $query = (clone $base)->select(['id', 'branch_id', 'full_name', 'status']);
 
         if ($search !== '') {
             $query->where(function (Builder $builder) use ($search): void {
-                $builder->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%'])
-                    ->orWhereRaw('LOWER(phone) LIKE ?', ['%'.$search.'%']);
+                $builder->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%']);
             });
         }
         $this->applyProgressFilter($query, $progress);
@@ -47,7 +46,9 @@ class DiscipleshipPeopleListData
                 ->where('status', 'active')
                 ->map(static fn (DiscipleshipRelationship $row): string => trim((string) ($names[(int) $row->mentor_person_id] ?? '')))
                 ->filter()->unique()->values()->all();
-            $childCount = $relationships->where('mentor_person_id', $personId)->where('status', 'active')->pluck('disciple_person_id')->unique()->count();
+            $hasChildren = $relationships->where('mentor_person_id', $personId)
+                ->where('status', 'active')
+                ->isNotEmpty();
             $links = $groupPeople->where('person_id', $personId);
             $isLeader = $links->contains(static fn (DiscipleshipGroupPerson $row): bool => $row->role !== 'member' && $row->status === 'active' && $row->ended_on === null);
             $progress = $this->progress($links);
@@ -58,7 +59,6 @@ class DiscipleshipPeopleListData
             if ($this->scope->includesAllBranches()) {
                 $name = append_branch_suffix($name, $branchLabel);
             }
-            $phone = trim((string) $person->phone);
 
             return [
                 'id' => $personId,
@@ -66,14 +66,11 @@ class DiscipleshipPeopleListData
                 'row_progress_key' => $lastStage !== '' ? strtolower(str_replace(' ', '', $lastStage)) : 'none',
                 'name' => $name,
                 'parent_summary' => $parents !== [] ? 'Dibina oleh '.implode(', ', $parents) : 'Belum terhubung ke pembina',
-                'role_label' => $isLeader ? 'Pemimpin' : ($childCount > 0 ? 'Pembina' : 'Anggota'),
-                'role_tone_class' => $isLeader ? 'is-leader' : ($childCount > 0 ? 'is-mentor' : 'is-member'),
-                'role_subtitle' => $childCount > 0 ? $childCount.' binaan langsung' : 'Belum punya binaan langsung',
+                'role_label' => $isLeader ? 'Pemimpin' : ($hasChildren ? 'Pembina' : 'Anggota'),
+                'role_tone_class' => $isLeader ? 'is-leader' : ($hasChildren ? 'is-mentor' : 'is-member'),
+                'role_subtitle' => $hasChildren ? 'Memiliki binaan langsung' : 'Belum memiliki binaan langsung',
                 'progress_steps' => $progress['steps'],
                 'progress_summary' => $progress['summary'],
-                'phone_label' => $phone !== '' ? $phone : 'Belum ada nomor',
-                'phone_digits' => normalize_whatsapp_digits($phone),
-                'child_count' => $childCount,
             ];
         })->values();
         $paginator->setCollection($rows);

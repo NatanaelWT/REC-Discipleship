@@ -9963,8 +9963,7 @@ textarea:focus-visible {
 }
 
 .people-name-cell,
-.people-role-cell,
-.people-contact-cell {
+.people-role-cell {
   display: grid;
   gap: 8px;
 }
@@ -9976,8 +9975,7 @@ textarea:focus-visible {
 }
 
 .people-name-sub,
-.people-role-sub,
-.people-contact-empty {
+.people-role-sub {
   color: #64748b;
   font-size: 13px;
   line-height: 1.55;
@@ -10102,37 +10100,6 @@ textarea:focus-visible {
   font-size: 12px;
   font-weight: 700;
   line-height: 1.35;
-}
-
-.people-contact-link {
-  color: var(--discipleship-kgap);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.people-contact-link:hover {
-  text-decoration: underline;
-}
-
-.people-child-count {
-  display: inline-grid;
-  justify-items: center;
-  gap: 3px;
-  min-width: 74px;
-  padding: 10px 12px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--discipleship-kgap) 8%, white), color-mix(in srgb, var(--discipleship-kgap) 14%, white));
-}
-
-.people-child-count strong {
-  color: #0f172a;
-  font-size: 20px;
-  line-height: 1;
-}
-
-.people-child-count span {
-  color: #64748b;
-  font-size: 12px;
 }
 
 .groups-hero-card {

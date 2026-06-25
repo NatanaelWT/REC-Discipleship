@@ -37,7 +37,7 @@
           </select>
         </div>
         <div class="people-hero-search-wrap">
-          <input type="search" name="q" value="{{ $peopleSearch }}" class="search people-table-search" placeholder="Cari peserta, pembina, progres, atau kontak..." aria-label="Cari daftar peserta DG">
+          <input type="search" name="q" value="{{ $peopleSearch }}" class="search people-table-search" placeholder="Cari nama peserta DG..." aria-label="Cari daftar peserta DG">
         </div>
         <button class="btn tiny secondary" type="submit">Cari</button>
       </form>
@@ -46,7 +46,7 @@
     <section class="card discipleship-list-card table-card-plain" id="discipleship-people-list">
       <div class="table-wrap">
         <table class="table people-dashboard-table" id="people-dashboard-table">
-          <thead><tr><th>Nama & Relasi</th><th>Peran</th><th>Progress DG</th><th>Kontak</th><th>Jumlah Binaan</th></tr></thead>
+          <thead><tr><th>Nama & Relasi</th><th>Peran</th><th>Progress DG</th></tr></thead>
           <tbody>
             @foreach ($people as $row)
               @php
@@ -65,18 +65,12 @@
                       $roleLabel = 'Anggota';
                   }
                   $roleToneClass = trim((string) ($row['role_tone_class'] ?? 'is-member'));
-                  $roleSubtitle = trim((string) ($row['role_subtitle'] ?? 'Belum punya binaan langsung'));
+                  $roleSubtitle = trim((string) ($row['role_subtitle'] ?? 'Belum memiliki binaan langsung'));
                   if ($roleSubtitle === '') {
-                      $roleSubtitle = 'Belum punya binaan langsung';
+                      $roleSubtitle = 'Belum memiliki binaan langsung';
                   }
                   $progressSteps = is_array($row['progress_steps'] ?? null) ? $row['progress_steps'] : [];
                   $progressSummary = trim((string) ($row['progress_summary'] ?? 'Belum memulai DG'));
-                  $phoneLabel = trim((string) ($row['phone_label'] ?? 'Belum ada nomor'));
-                  if ($phoneLabel === '') {
-                      $phoneLabel = 'Belum ada nomor';
-                  }
-                  $phoneDigits = trim((string) ($row['phone_digits'] ?? ''));
-                  $childCount = max(0, (int) ($row['child_count'] ?? 0));
               @endphp
               <tr data-people-filter="{{ $rowFilterState }}" data-people-progress="{{ $rowProgressKey }}">
                 <td>
@@ -112,22 +106,10 @@
                     <span class="people-progress-summary">{{ $progressSummary }}</span>
                   </div>
                 </td>
-                <td>
-                  <div class="people-contact-cell">
-                    @if ($phoneDigits !== '')
-                      <a class="people-contact-link" href="https://wa.me/{{ $phoneDigits }}" target="_blank" rel="noopener">{{ $phoneLabel }}</a>
-                    @else
-                      <span class="people-contact-empty">{{ $phoneLabel }}</span>
-                    @endif
-                  </div>
-                </td>
-                <td>
-                  <div class="people-child-count"><strong>{{ (string) $childCount }}</strong><span>peserta</span></div>
-                </td>
               </tr>
             @endforeach
             @if ($filteredPeopleRows === 0)
-              <tr><td colspan="5">Belum ada data orang.</td></tr>
+              <tr><td colspan="3">Belum ada data orang.</td></tr>
             @endif
           </tbody>
         </table>

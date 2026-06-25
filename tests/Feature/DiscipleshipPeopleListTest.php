@@ -45,6 +45,10 @@ class DiscipleshipPeopleListTest extends TestCase
         $response->assertDontSee('Anggota GM Rahasia');
         $response->assertDontSee('Selesai Camp GAP');
         $response->assertDontSee('Selesai RG');
+        $response->assertDontSee('<th>Kontak</th>', false);
+        $response->assertDontSee('<th>Jumlah Binaan</th>', false);
+        $response->assertDontSee('people-contact-cell', false);
+        $response->assertDontSee('people-child-count', false);
     }
 
     public function test_people_list_shows_dg_only_progress_track_and_ignores_legacy_bridge_filter(): void
