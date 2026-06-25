@@ -13,46 +13,27 @@
       <div class="alert danger">Export data Anggota DG gagal. Silakan coba kembali.</div>
     @endif
 
-    <section class="card people-hero-card">
-      <div class="people-hero-head">
-        <div class="people-hero-copy">
-          <div class="people-hero-kicker">ANGGOTA DG</div>
-          <h1>Daftar Anggota DG</h1>
-          <p>Pantau relasi pembinaan dan progres seluruh peserta yang pernah mengikuti DG, baik yang masih aktif maupun sudah selesai.</p>
-        </div>
-        <div class="people-hero-stats discipleship-hero-stats">
-          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">Semua Peserta</span><strong class="people-hero-stat-value" data-people-stat="total">{{ (string) $totalPeopleRows }}</strong></div>
-          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">Terakhir DG 1</span><strong class="people-hero-stat-value" data-people-stat="dg1">{{ (string) $peopleInDg1Count }}</strong></div>
-          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">Terakhir DG 2</span><strong class="people-hero-stat-value" data-people-stat="dg2">{{ (string) $peopleInDg2Count }}</strong></div>
-          <div class="people-hero-stat discipleship-hero-stat"><span class="people-hero-stat-label">Terakhir DG 3</span><strong class="people-hero-stat-value" data-people-stat="dg3">{{ (string) $peopleInDg3Count }}</strong></div>
-        </div>
-      </div>
-      <form method="get" action="{{ route('discipleship.people-list') }}" class="actions people-hero-tools" data-discipleship-people-search-form>
-        @if (request()->filled('branch_id'))
-          <input type="hidden" name="branch_id" value="{{ request()->query('branch_id') }}">
-        @endif
-        <div class="people-hero-filter-actions">
-          <div class="people-hero-filter-wrap">
-            <select name="progress" class="search people-status-filter" aria-label="Filter status progress anggota DG" onchange="this.form.submit()">
-              <option value="all" @selected($peopleProgressFilter === 'all')>Semua Peserta</option>
-              <option value="active_dg1" @selected($peopleProgressFilter === 'active_dg1')>Sedang DG 1</option>
-              <option value="complete_dg1" @selected($peopleProgressFilter === 'complete_dg1')>Selesai DG 1</option>
-              <option value="active_dg2" @selected($peopleProgressFilter === 'active_dg2')>Sedang DG 2</option>
-              <option value="complete_dg2" @selected($peopleProgressFilter === 'complete_dg2')>Selesai DG 2</option>
-              <option value="active_dg3" @selected($peopleProgressFilter === 'active_dg3')>Sedang DG 3</option>
-              <option value="complete_dg3" @selected($peopleProgressFilter === 'complete_dg3')>Selesai DG 3</option>
-            </select>
-          </div>
-          <button class="btn tiny ghost people-export-button" type="submit" formaction="{{ route('discipleship.people-list.export') }}" formmethod="get" data-live-search-external-submit>
-            <?php echo icon_svg('download'); ?>
-            <span>Export</span>
-          </button>
-        </div>
-        <div class="people-hero-search-wrap">
-          <input type="search" name="q" value="{{ $peopleSearch }}" class="search people-table-search" placeholder="Cari nama peserta DG..." aria-label="Cari daftar peserta DG" autocomplete="off" data-discipleship-people-search-input>
-        </div>
-      </form>
-    </section>
+    @include('discipleship.partials.page-header', [
+        'header' => [
+            'kicker' => 'Anggota DG',
+            'title' => 'Daftar Anggota DG',
+            'description' => 'Pantau relasi pembinaan dan progres seluruh peserta yang pernah mengikuti DG, baik yang masih aktif maupun sudah selesai.',
+            'stats' => [
+                ['label' => 'Semua Peserta', 'value' => (string) $totalPeopleRows, 'value_attributes' => ['data-people-stat' => 'total']],
+                ['label' => 'Terakhir DG 1', 'value' => (string) $peopleInDg1Count, 'value_attributes' => ['data-people-stat' => 'dg1']],
+                ['label' => 'Terakhir DG 2', 'value' => (string) $peopleInDg2Count, 'value_attributes' => ['data-people-stat' => 'dg2']],
+                ['label' => 'Terakhir DG 3', 'value' => (string) $peopleInDg3Count, 'value_attributes' => ['data-people-stat' => 'dg3']],
+            ],
+            'tools' => [
+                'element' => 'form',
+                'method' => 'get',
+                'action' => route('discipleship.people-list'),
+                'attributes' => ['data-discipleship-people-search-form' => true],
+                'partial' => 'discipleship.partials.page-header-controls.people',
+                'data' => compact('peopleProgressFilter', 'peopleSearch'),
+            ],
+        ],
+    ])
 
     <section class="card discipleship-list-card table-card-plain" id="discipleship-people-list">
       <div class="table-wrap">

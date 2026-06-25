@@ -7,36 +7,27 @@
 ])
 
 @section('content')
-    <section class="card groups-hero-card">
-      <div class="groups-hero-head">
-        <div class="groups-hero-copy">
-          <div class="groups-hero-kicker">Kelompok DG</div>
-          <h1>Daftar Kelompok DG</h1>
-          <p>Lihat leader, progres, dan komposisi peserta aktif dalam setiap Kelompok DG secara ringkas.</p>
-        </div>
-        <div class="groups-hero-stats discipleship-hero-stats">
-          <div class="groups-hero-stat discipleship-hero-stat"><span class="groups-hero-stat-label">Kelompok DG</span><strong class="groups-hero-stat-value" data-groups-stat="total">{{ (string) $totalGroupRows }}</strong></div>
-          <div class="groups-hero-stat discipleship-hero-stat"><span class="groups-hero-stat-label">DG 1</span><strong class="groups-hero-stat-value" data-groups-stat="dg1">{{ (string) $groupsInDg1Count }}</strong></div>
-          <div class="groups-hero-stat discipleship-hero-stat"><span class="groups-hero-stat-label">DG 2</span><strong class="groups-hero-stat-value" data-groups-stat="dg2">{{ (string) $groupsInDg2Count }}</strong></div>
-          <div class="groups-hero-stat discipleship-hero-stat"><span class="groups-hero-stat-label">DG 3</span><strong class="groups-hero-stat-value" data-groups-stat="dg3">{{ (string) $groupsInDg3Count }}</strong></div>
-        </div>
-      </div>
-      <form method="get" action="{{ route('discipleship.groups') }}" class="actions groups-hero-tools" data-auto-submit-search-form>
-        @if (request()->filled('branch_id'))
-          <input type="hidden" name="branch_id" value="{{ request()->query('branch_id') }}">
-        @endif
-        <div class="groups-hero-filter-wrap">
-          <select name="status" class="search groups-status-filter" aria-label="Filter status kelompok DG" onchange="this.form.submit()">
-            <option value="all" @selected($groupsStatusFilter === 'all')>Semua Kelompok</option>
-            <option value="active" @selected($groupsStatusFilter === 'active')>Kelompok Aktif</option>
-            <option value="inactive" @selected($groupsStatusFilter === 'inactive')>Kelompok Tidak Aktif</option>
-          </select>
-        </div>
-        <div class="groups-hero-search-wrap">
-          <input type="search" name="q" value="{{ $groupsSearch }}" class="search groups-table-search" placeholder="Cari leader, pendamping, progres, atau peserta..." aria-label="Cari Kelompok DG" autocomplete="off" data-auto-submit-search-input @if ($groupsSearch !== '') autofocus @endif>
-        </div>
-      </form>
-    </section>
+    @include('discipleship.partials.page-header', [
+        'header' => [
+            'kicker' => 'Kelompok DG',
+            'title' => 'Daftar Kelompok DG',
+            'description' => 'Lihat leader, progres, dan komposisi peserta aktif dalam setiap Kelompok DG secara ringkas.',
+            'stats' => [
+                ['label' => 'Kelompok DG', 'value' => (string) $totalGroupRows, 'value_attributes' => ['data-groups-stat' => 'total']],
+                ['label' => 'DG 1', 'value' => (string) $groupsInDg1Count, 'value_attributes' => ['data-groups-stat' => 'dg1']],
+                ['label' => 'DG 2', 'value' => (string) $groupsInDg2Count, 'value_attributes' => ['data-groups-stat' => 'dg2']],
+                ['label' => 'DG 3', 'value' => (string) $groupsInDg3Count, 'value_attributes' => ['data-groups-stat' => 'dg3']],
+            ],
+            'tools' => [
+                'element' => 'form',
+                'method' => 'get',
+                'action' => route('discipleship.groups'),
+                'attributes' => ['data-auto-submit-search-form' => true],
+                'partial' => 'discipleship.partials.page-header-controls.groups',
+                'data' => compact('groupsStatusFilter', 'groupsSearch'),
+            ],
+        ],
+    ])
 
     <section class="card discipleship-list-card table-card-plain" id="discipleship-groups-list">
       <div class="table-wrap">

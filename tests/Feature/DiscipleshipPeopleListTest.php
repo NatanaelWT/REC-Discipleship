@@ -86,8 +86,8 @@ class DiscipleshipPeopleListTest extends TestCase
         $response->assertSee('>Export</span>', false);
         $response->assertDontSee('Export Excel');
         $response->assertSee(route('discipleship.people-list.export'), false);
-        $response->assertSee('people-hero-stats discipleship-hero-stats', false);
-        $response->assertSee('people-hero-stat discipleship-hero-stat', false);
+        $response->assertSee('discipleship-page-header__stats', false);
+        $response->assertSee('discipleship-page-header__stat', false);
         $response->assertSee('people-export-button', false);
         $response->assertSee(icon_svg('download'), false);
     }

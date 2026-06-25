@@ -551,79 +551,41 @@ if ($page === 'msk_classes') {
         $appendMskViewTemplate($participant);
     }
 
-    echo "<section class=\"card msk-hero-card\">\n";
-    echo "  <div class=\"msk-hero-head\">\n";
-    echo "    <div class=\"msk-hero-copy\">\n";
-    echo "      <span class=\"msk-hero-kicker\">Mengapa Saya Kristen</span>\n";
-    echo "      <h1>Kelas MSK</h1>\n";
-    echo "      <p>Pantau batch aktif, progres penyelesaian sesi, dan kelola peserta MSK dari satu panel yang lebih ringkas.</p>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"msk-hero-stats discipleship-hero-stats\" aria-label=\"Ringkasan kelas MSK\">\n";
-    echo '      <div class="msk-hero-stat discipleship-hero-stat"><span class="msk-hero-stat-label">Filter</span><strong class="msk-hero-stat-value">'.h($batchMonthFilterLabel)."</strong></div>\n";
-    echo '      <div class="msk-hero-stat discipleship-hero-stat"><span class="msk-hero-stat-label">Peserta</span><strong class="msk-hero-stat-value">'.h((string) $totalParticipantsFiltered)."</strong></div>\n";
-    echo '      <div class="msk-hero-stat discipleship-hero-stat"><span class="msk-hero-stat-label">Selesai</span><strong class="msk-hero-stat-value">'.h((string) $completedParticipantsFiltered)."</strong></div>\n";
-    echo '      <div class="msk-hero-stat discipleship-hero-stat"><span class="msk-hero-stat-label">Berjalan</span><strong class="msk-hero-stat-value">'.h((string) $inProgressParticipantsFiltered)."</strong></div>\n";
-    echo "    </div>\n";
-    echo "  </div>\n";
-    echo "  <div class=\"actions table-tools msk-table-tools msk-hero-tools\">\n";
-    echo "    <div class=\"msk-hero-controls\">\n";
-    if (! $centralReadOnly) {
-        echo '      <button class="btn tiny icon-btn" type="button" data-msk-create-open aria-label="Tambah Peserta MSK" title="Tambah Peserta MSK">'.icon_svg('plus')."</button>\n";
-    }
-    echo "      <div class=\"msk-batch-actions\">\n";
-    if (count($batchMonthOptions) > 0) {
-        echo '      <form method="get" action="'.h($mskIndexAction)."\" class=\"form-row cash-filter-form\">\n";
-        if (request()->filled('branch_id')) {
-            echo '      <input type="hidden" name="branch_id" value="'.h((string) request()->query('branch_id'))."\">\n";
-        }
-        if ($editId !== '' && $editParticipant !== null) {
-            echo '      <input type="hidden" name="edit" value="'.h($editId)."\">\n";
-        }
-        if ($autoOpenViewParticipantId !== '') {
-            echo '      <input type="hidden" name="view" value="'.h($autoOpenViewParticipantId)."\">\n";
-        }
-        if ($participantsSearch !== '') {
-            echo '      <input type="hidden" name="q" value="'.h($participantsSearch)."\">\n";
-        }
-        echo "      <select name=\"batch_month\" class=\"msk-batch-select\" aria-label=\"Filter batch bulan MSK\" required onchange=\"this.form.submit()\">\n";
-        echo '        <option value="all" '.($batchMonthFilterIsAll ? 'selected' : '').'>Semua Batch ('.h((string) $totalParticipantsAll).")</option>\n";
-        foreach ($batchMonthOptions as $batchMonthOption) {
-            $selected = ! $batchMonthFilterIsAll && $batchMonthOption === $batchMonthFilter ? 'selected' : '';
-            $batchCount = (int) ($batchMonthMap[$batchMonthOption] ?? 0);
-            $batchLabel = format_indo_month($batchMonthOption).' ('.(string) $batchCount.')';
-            echo '        <option value="'.h($batchMonthOption).'" '.$selected.'>'.h($batchLabel)."</option>\n";
-        }
-        echo "      </select>\n";
-        echo "      </form>\n";
-    }
-    if (! $centralReadOnly) {
-        echo '      <form method="post" action="'.h($mskImportAction)."\" enctype=\"multipart/form-data\" class=\"msk-import-inline-form\">\n";
-        echo '        '.csrf_field()."\n";
-        echo "        <input type=\"hidden\" name=\"action\" value=\"import_pemuridan_excel\">\n";
-        echo "        <input type=\"hidden\" name=\"return_page\" value=\"msk_classes\">\n";
-        echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
-        echo '        <label class="btn tiny ghost msk-import-trigger msk-transfer-button" aria-label="Import Data Kelas MSK" title="Import Data Kelas MSK">'.icon_svg('upload').'<span>Import</span><input class="msk-import-input" type="file" name="import_pemuridan_excel" accept=".xlsx" onchange="this.form.submit()"></label>'."\n";
-        echo "      </form>\n";
-    }
-    echo '      <form method="post" action="'.h($mskExportAction)."\" class=\"msk-export-inline-form\">\n";
-    echo '        '.csrf_field()."\n";
-    echo "        <input type=\"hidden\" name=\"action\" value=\"export_pemuridan_excel\">\n";
-    echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
-    echo '        <button class="btn tiny ghost msk-transfer-button" type="submit">'.icon_svg('download')."<span>Export</span></button>\n";
-    echo "      </form>\n";
-    echo "      </div>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"msk-hero-search-wrap\">\n";
-    echo '      <form method="get" action="'.h($mskIndexAction)."\" class=\"form-row\" data-msk-search-form>\n";
-    if (request()->filled('branch_id')) {
-        echo '        <input type="hidden" name="branch_id" value="'.h((string) request()->query('branch_id'))."\">\n";
-    }
-    echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
-    echo '        <input type="search" name="q" value="'.h($participantsSearch)."\" class=\"search msk-table-search\" placeholder=\"Cari peserta MSK...\" aria-label=\"Cari peserta MSK\" autocomplete=\"off\" data-msk-search-input>\n";
-    echo "      </form>\n";
-    echo "    </div>\n";
-    echo "  </div>\n";
-    echo "</section>\n";
+    echo view('discipleship.partials.page-header', [
+        'header' => [
+            'kicker' => 'Mengapa Saya Kristen',
+            'title' => 'Kelas MSK',
+            'description' => 'Pantau batch aktif, progres penyelesaian sesi, dan kelola peserta MSK dari satu panel yang lebih ringkas.',
+            'stats_aria_label' => 'Ringkasan kelas MSK',
+            'stats' => [
+                ['label' => 'Filter', 'value' => $batchMonthFilterLabel],
+                ['label' => 'Peserta', 'value' => (string) $totalParticipantsFiltered],
+                ['label' => 'Selesai', 'value' => (string) $completedParticipantsFiltered],
+                ['label' => 'Berjalan', 'value' => (string) $inProgressParticipantsFiltered],
+            ],
+            'tools' => [
+                'element' => 'div',
+                'attributes' => ['class' => 'table-tools msk-table-tools'],
+                'partial' => 'discipleship.partials.page-header-controls.msk',
+                'data' => compact(
+                    'centralReadOnly',
+                    'mskIndexAction',
+                    'mskImportAction',
+                    'mskExportAction',
+                    'batchMonthOptions',
+                    'editId',
+                    'editParticipant',
+                    'autoOpenViewParticipantId',
+                    'participantsSearch',
+                    'batchMonthFilterIsAll',
+                    'totalParticipantsAll',
+                    'batchMonthFilter',
+                    'batchMonthMap',
+                    'batchMonthFilterParam',
+                ),
+            ],
+        ],
+    ])->render();
 
     echo "<section class=\"card table-card-plain\">\n";
     echo "  <div class=\"table-wrap\">\n";

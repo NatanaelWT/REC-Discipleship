@@ -31,18 +31,18 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertSee('Rekap Laporan DG');
         $response->assertSee('Pemimpin Test');
         $response->assertSee('Materi Test');
-        $response->assertSee('groups-hero-card dg-recap-hero-card', false);
-        $response->assertSee('dg-recap-hero-stats discipleship-hero-stats', false);
-        $response->assertSee('dg-recap-hero-stat discipleship-hero-stat', false);
-        $response->assertSee('groups-hero-filter-wrap dg-recap-hero-filter-wrap', false);
+        $response->assertSee('card discipleship-page-header', false);
+        $response->assertSee('discipleship-page-header__stats', false);
+        $response->assertSee('discipleship-page-header__stat', false);
+        $response->assertSee('discipleship-page-header__filter', false);
         $response->assertSee('data-filter-role="recap-progress"', false);
-        $response->assertSee('groups-hero-search-wrap dg-recap-hero-search-wrap', false);
+        $response->assertSee('discipleship-page-header__search', false);
         $response->assertSee('data-recap-progress="dg1"', false);
 
         $content = $response->getContent();
         $this->assertLessThan(
-            strpos($content, 'groups-hero-search-wrap dg-recap-hero-search-wrap'),
-            strpos($content, 'groups-hero-filter-wrap dg-recap-hero-filter-wrap'),
+            strpos($content, 'discipleship-page-header__search'),
+            strpos($content, 'discipleship-page-header__filter'),
         );
     }
 

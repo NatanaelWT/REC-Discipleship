@@ -28,8 +28,8 @@ class SpiritualJourneyPageTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Spiritual Journey');
         $response->assertSee('Peserta Journey');
-        $response->assertSee('journey-hero-stats discipleship-hero-stats', false);
-        $response->assertSee('journey-hero-stat discipleship-hero-stat', false);
+        $response->assertSee('discipleship-page-header__stats', false);
+        $response->assertSee('discipleship-page-header__stat', false);
         $response->assertSee('Lihat profil');
         $response->assertDontSee('Lihat riwayat pemuridan');
         $response->assertSee('Profil peserta');

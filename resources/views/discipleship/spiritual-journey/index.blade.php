@@ -682,49 +682,35 @@ if ($page === 'spiritual_journey') {
         ['label' => 'Selesai DG 3', 'value' => $completedDg3Count, 'target' => $journeyTargetDg3, 'color' => discipleship_stage_color('DG 3')],
     ];
 
-    echo "<section class=\"card journey-hero-card\">\n";
-    echo "  <div class=\"journey-hero-head\">\n";
-    echo "    <div class=\"journey-hero-copy\">\n";
-    echo "      <div class=\"journey-hero-kicker\">PEMANTAUAN PERTUMBUHAN</div>\n";
-    echo "      <h1>Spiritual Journey</h1>\n";
-    echo "      <p>Pantau progres MSK peserta dan siapkan tahap lanjutan perjalanan pemuridannya dalam satu tampilan yang lebih rapi.</p>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"journey-hero-stats discipleship-hero-stats\">\n";
-    foreach ($journeyProgressRows as $row) {
-        $value = max(0, (int) ($row['value'] ?? 0));
-        $target = max(0, (int) ($row['target'] ?? 0));
-        $percent = $target > 0 ? min(100, ($value / $target) * 100) : 0;
-        $percentLabel = number_format($percent, 1, ',', '.');
-        if (substr($percentLabel, -2) === ',0') {
-            $percentLabel = substr($percentLabel, 0, -2);
-        }
-        echo '      <div class="journey-hero-stat discipleship-hero-stat"><span class="journey-hero-stat-label">'.h((string) ($row['label'] ?? '-')).'</span><strong class="journey-hero-stat-value">'.h((string) $value)."</strong></div>\n";
-    }
-    echo "    </div>\n";
-    echo "  </div>\n";
     $journeyFilter = trim((string) ($spiritualJourneyFilter ?? 'all'));
     $journeyFilterOptions = [
         'all' => 'Semua Peserta',
         'dg_without_kgap' => 'Minimal DG 1, Belum Kamp GAP',
     ];
-
-    echo '  <form method="get" action="'.h(route('discipleship.spiritual-journey'))."\" class=\"actions journey-hero-tools\" data-spiritual-journey-search-form>\n";
-    if (request()->filled('branch_id')) {
-        echo '    <input type="hidden" name="branch_id" value="'.h((string) request()->query('branch_id'))."\">\n";
-    }
-    echo "    <div class=\"journey-hero-filter-wrap\">\n";
-    echo "      <select name=\"journey_filter\" class=\"search journey-status-filter\" aria-label=\"Filter spiritual journey\" onchange=\"this.form.submit()\">\n";
-    foreach ($journeyFilterOptions as $filterValue => $filterLabel) {
-        $selected = $journeyFilter === $filterValue ? ' selected' : '';
-        echo '        <option value="'.h($filterValue).'"'.$selected.'>'.h($filterLabel)."</option>\n";
-    }
-    echo "      </select>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"journey-hero-search-wrap\">\n";
-    echo '      <input type="search" name="q" value="'.h($spiritualJourneySearch)."\" class=\"search journey-table-search\" placeholder=\"Cari peserta spiritual journey...\" aria-label=\"Cari peserta spiritual journey\" autocomplete=\"off\" data-spiritual-journey-search-input>\n";
-    echo "    </div>\n";
-    echo "  </form>\n";
-    echo "</section>\n";
+    $journeyHeaderStats = array_map(static fn (array $row): array => [
+        'label' => (string) ($row['label'] ?? '-'),
+        'value' => (string) max(0, (int) ($row['value'] ?? 0)),
+    ], $journeyProgressRows);
+    echo view('discipleship.partials.page-header', [
+        'header' => [
+            'kicker' => 'Pemantauan Pertumbuhan',
+            'title' => 'Spiritual Journey',
+            'description' => 'Pantau progres MSK peserta dan siapkan tahap lanjutan perjalanan pemuridannya dalam satu tampilan yang lebih rapi.',
+            'stats' => $journeyHeaderStats,
+            'tools' => [
+                'element' => 'form',
+                'method' => 'get',
+                'action' => route('discipleship.spiritual-journey'),
+                'attributes' => ['data-spiritual-journey-search-form' => true],
+                'partial' => 'discipleship.partials.page-header-controls.spiritual-journey',
+                'data' => compact(
+                    'journeyFilter',
+                    'journeyFilterOptions',
+                    'spiritualJourneySearch',
+                ),
+            ],
+        ],
+    ])->render();
 
     echo "<section class=\"card table-card-plain\">\n";
     echo "  <div class=\"table-wrap\">\n";
