@@ -53,7 +53,8 @@ class DiscipleshipPeopleListTest extends TestCase
         $response->assertDontSee('<th>Jumlah Binaan</th>', false);
         $response->assertDontSee('people-contact-cell', false);
         $response->assertDontSee('people-child-count', false);
-        $response->assertSee('Export Excel');
+        $response->assertSee('>Export</span>', false);
+        $response->assertDontSee('Export Excel');
         $response->assertSee(route('discipleship.people-list.export'), false);
         $response->assertSee('people-hero-stats discipleship-hero-stats', false);
         $response->assertSee('people-hero-stat discipleship-hero-stat', false);

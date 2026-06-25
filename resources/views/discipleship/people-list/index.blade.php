@@ -45,7 +45,7 @@
           </div>
           <button class="btn tiny ghost people-export-button" type="submit" formaction="{{ route('discipleship.people-list.export') }}" formmethod="get" data-live-search-external-submit>
             <?php echo icon_svg('download'); ?>
-            <span>Export Excel</span>
+            <span>Export</span>
           </button>
         </div>
         <div class="people-hero-search-wrap">

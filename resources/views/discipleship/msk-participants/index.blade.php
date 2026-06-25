@@ -499,14 +499,14 @@ if ($page === 'msk_classes') {
         echo "        <input type=\"hidden\" name=\"action\" value=\"import_pemuridan_excel\">\n";
         echo "        <input type=\"hidden\" name=\"return_page\" value=\"msk_classes\">\n";
         echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
-        echo '        <label class="btn tiny ghost msk-import-trigger msk-transfer-button" aria-label="Import Data Kelas MSK" title="Import Data Kelas MSK">'.icon_svg('upload').'<span>Import MSK</span><input class="msk-import-input" type="file" name="import_pemuridan_excel" accept=".xlsx" onchange="this.form.submit()"></label>'."\n";
+        echo '        <label class="btn tiny ghost msk-import-trigger msk-transfer-button" aria-label="Import Data Kelas MSK" title="Import Data Kelas MSK">'.icon_svg('upload').'<span>Import</span><input class="msk-import-input" type="file" name="import_pemuridan_excel" accept=".xlsx" onchange="this.form.submit()"></label>'."\n";
         echo "      </form>\n";
     }
     echo '      <form method="post" action="'.h($mskExportAction)."\" class=\"msk-export-inline-form\">\n";
     echo '        '.csrf_field()."\n";
     echo "        <input type=\"hidden\" name=\"action\" value=\"export_pemuridan_excel\">\n";
     echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
-    echo '        <button class="btn tiny ghost msk-transfer-button" type="submit">'.icon_svg('download')."<span>Export MSK</span></button>\n";
+    echo '        <button class="btn tiny ghost msk-transfer-button" type="submit">'.icon_svg('download')."<span>Export</span></button>\n";
     echo "      </form>\n";
     echo "      </div>\n";
     echo "    </div>\n";

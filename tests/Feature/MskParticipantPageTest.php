@@ -45,8 +45,8 @@ class MskParticipantPageTest extends TestCase
         $response->assertSee(icon_svg('download'), false);
 
         $content = $response->getContent();
-        $this->assertLessThan(strpos($content, 'Import MSK'), strpos($content, 'msk-batch-select'));
-        $this->assertLessThan(strpos($content, 'Export MSK'), strpos($content, 'Import MSK'));
+        $this->assertLessThan(strpos($content, '<span>Import</span>'), strpos($content, 'msk-batch-select'));
+        $this->assertLessThan(strpos($content, '<span>Export</span>'), strpos($content, '<span>Import</span>'));
     }
 
     public function test_central_and_developer_see_export_without_import_controls(): void
@@ -56,15 +56,15 @@ class MskParticipantPageTest extends TestCase
         $this->actingAsRecUser('central_reader', null, 'pemuridan_pusat');
         $this->get('/pemuridan/msk?branch_id=all')
             ->assertOk()
-            ->assertSee('Export MSK')
-            ->assertDontSee('Import MSK')
+            ->assertSee('<span>Export</span>', false)
+            ->assertDontSee('<span>Import</span>', false)
             ->assertDontSee('data-msk-create-open', false);
 
         $this->actingAsRecUser('developer', null, 'developer');
         $this->get('/pemuridan/msk?branch_id=all')
             ->assertOk()
-            ->assertSee('Export MSK')
-            ->assertDontSee('Import MSK')
+            ->assertSee('<span>Export</span>', false)
+            ->assertDontSee('<span>Import</span>', false)
             ->assertDontSee('data-msk-create-open', false);
     }
 
