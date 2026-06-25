@@ -9946,19 +9946,23 @@ textarea:focus-visible {
   z-index: 1;
   display: flex;
   gap: 12px;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
+  width: 100%;
   margin-top: 18px;
   padding-top: 18px;
   border-top: 1px solid rgba(203, 213, 225, 0.7);
 }
 
 .people-hero-filter-wrap {
-  width: min(100%, 250px);
+  flex: 0 1 220px;
+  width: 220px;
 }
 
 .people-hero-search-wrap {
-  width: min(100%, 440px);
+  flex: 0 1 440px;
+  width: 440px;
+  margin-left: auto;
 }
 
 .people-status-filter,
@@ -11737,12 +11741,17 @@ textarea:focus-visible {
   }
 
   .people-hero-tools {
+    flex-direction: column;
+    align-items: stretch;
     margin-top: 16px;
     padding-top: 16px;
   }
 
+  .people-hero-filter-wrap,
   .people-hero-search-wrap {
+    flex-basis: auto;
     width: 100%;
+    margin-left: 0;
   }
 
   .people-progress-cell {
