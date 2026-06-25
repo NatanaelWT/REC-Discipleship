@@ -147,6 +147,7 @@ class WebsiteAnalyticsTest extends TestCase
             ->get('/developer/statistics?range=today&segment=publik&country=ID&city=Surabaya')
             ->assertOk()
             ->assertSee('data-developer-header', false)
+            ->assertSee('discipleship-page-header__stats', false)
             ->assertDontSee('developer-hub-nav', false)
             ->assertSee('class="btn tiny ghost developer-link-button"', false)
             ->assertSee('Statistik Kunjungan Publik')

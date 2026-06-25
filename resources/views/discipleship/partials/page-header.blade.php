@@ -4,6 +4,9 @@
     $header = is_array($header ?? null) ? $header : [];
     $headerStats = is_array($header['stats'] ?? null) ? $header['stats'] : [];
     $headerTools = is_array($header['tools'] ?? null) ? $header['tools'] : [];
+    $headerAttributes = new ComponentAttributeBag(
+        is_array($header['attributes'] ?? null) ? $header['attributes'] : [],
+    );
     $toolsPartial = trim((string) ($headerTools['partial'] ?? ''));
     $toolsData = is_array($headerTools['data'] ?? null) ? $headerTools['data'] : [];
     $toolsAttributes = new ComponentAttributeBag(
@@ -11,7 +14,7 @@
     );
 @endphp
 
-<section class="card discipleship-page-header">
+<section {{ $headerAttributes->merge(['class' => 'card discipleship-page-header']) }}>
   <div class="discipleship-page-header__main">
     <div class="discipleship-page-header__copy">
       <div class="discipleship-page-header__kicker">{{ $header['kicker'] ?? '' }}</div>

@@ -55,4 +55,30 @@ class DiscipleshipHeroStatsLayoutTest extends TestCase
         $this->assertStringNotContainsString('dg-recap-hero-card', $allSources);
         $this->assertStringNotContainsString('msk-hero-card', $allSources);
     }
+
+    public function test_worship_and_developer_pages_use_the_same_shared_header_partial(): void
+    {
+        $worshipSource = file_get_contents(resource_path('views/worship/service-schedules/partials/hero.blade.php'));
+        $developerHeaderSource = file_get_contents(resource_path('views/developer/_header.blade.php'));
+
+        $this->assertIsString($worshipSource);
+        $this->assertIsString($developerHeaderSource);
+        $this->assertStringContainsString("@include('discipleship.partials.page-header'", $worshipSource);
+        $this->assertStringContainsString("@include('discipleship.partials.page-header'", $developerHeaderSource);
+        $this->assertStringNotContainsString('msk-hero-card', $worshipSource);
+        $this->assertStringNotContainsString('developer-page-hero', $developerHeaderSource);
+
+        foreach ([
+            'dashboard.blade.php',
+            'users.blade.php',
+            'config.blade.php',
+            'statistics/index.blade.php',
+            'activities/index.blade.php',
+            'activities/show.blade.php',
+        ] as $relativePath) {
+            $source = file_get_contents(resource_path('views/developer/'.$relativePath));
+            $this->assertIsString($source);
+            $this->assertStringContainsString("@include('developer._header'", $source);
+        }
+    }
 }

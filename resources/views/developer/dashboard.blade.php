@@ -11,10 +11,12 @@
       'title' => 'Pusat Kendali Developer',
       'description' => 'Pantau kondisi aplikasi dan buka alat administrasi utama melalui panel yang terpusat.',
       'eyebrow' => 'System Overview',
-      'icon' => 'dashboard',
-      'metaLabel' => 'Status sistem',
-      'metaValue' => 'Aktif',
-      'metaHint' => 'Developer / '.app_timezone()->getName(),
+      'stats' => [
+        ['label' => 'Status Sistem', 'value' => 'Aktif'],
+        ['label' => 'Total User', 'value' => number_format((int) ($diagnostics['counts']['users'] ?? 0), 0, ',', '.')],
+        ['label' => 'User Aktif', 'value' => number_format((int) ($diagnostics['counts']['active_users'] ?? 0), 0, ',', '.')],
+        ['label' => 'Cabang Pemuridan', 'value' => number_format((int) ($diagnostics['counts']['branches'] ?? 0), 0, ',', '.')],
+      ],
     ])
 
     <section class="card developer-panel developer-section-card">

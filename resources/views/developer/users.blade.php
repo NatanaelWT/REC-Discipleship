@@ -7,14 +7,21 @@
 ])
 
 @section('content')
+    @php
+      $activeUserCount = $users->filter(static fn ($user): bool => (bool) ($user->is_active ?? true))->count();
+      $inactiveUserCount = max(0, $users->count() - $activeUserCount);
+    @endphp
+
     @include('developer._header', [
       'title' => 'Manajemen User',
       'description' => 'Buat akun, atur role dan cabang, serta kelola akses pengguna aplikasi.',
       'eyebrow' => 'Access Management',
-      'icon' => 'users',
-      'metaLabel' => 'Akun dikelola',
-      'metaValue' => number_format($users->count(), 0, ',', '.'),
-      'metaHint' => 'User non-developer',
+      'stats' => [
+        ['label' => 'Akun Dikelola', 'value' => number_format($users->count(), 0, ',', '.')],
+        ['label' => 'User Aktif', 'value' => number_format($activeUserCount, 0, ',', '.')],
+        ['label' => 'User Nonaktif', 'value' => number_format($inactiveUserCount, 0, ',', '.')],
+        ['label' => 'Pilihan Role', 'value' => number_format(count($roleOptions), 0, ',', '.')],
+      ],
     ])
 
     @if ($statusCode === 'created')

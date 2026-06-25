@@ -34,10 +34,12 @@
     'title' => 'Statistik Website',
     'description' => 'Analisis kunjungan anonim pada halaman publik, perangkat, bahasa, dan pola akses.',
     'eyebrow' => 'Public Analytics',
-    'icon' => 'statistics',
-    'metaLabel' => 'Periode aktif',
-    'metaValue' => $rangeLabels[$filters['range']] ?? 'Khusus',
-    'metaHint' => $filters['from'].' - '.$filters['to'],
+    'stats' => [
+      ['label' => 'Periode Aktif', 'value' => $rangeLabels[$filters['range']] ?? 'Khusus'],
+      ['label' => 'Page View', 'value' => number_format((int) ($summary['page_views'] ?? 0), 0, ',', '.')],
+      ['label' => 'Pengunjung Unik', 'value' => number_format((int) ($summary['visitors'] ?? 0), 0, ',', '.')],
+      ['label' => 'Sesi', 'value' => number_format((int) ($summary['sessions'] ?? 0), 0, ',', '.')],
+    ],
   ])
 
   <section class="card analytics-filter-card developer-section-card">

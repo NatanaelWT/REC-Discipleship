@@ -4600,7 +4600,6 @@ textarea {
 }
 
 .discipleship-dashboard-hero-card,
-.msk-hero-card,
 .discipleship-page-header,
 .tree-hero-card {
   border-radius: 24px;
@@ -4609,7 +4608,6 @@ textarea {
 }
 
 .discipleship-dashboard-hero-copy h2,
-.msk-hero-copy h1,
 .discipleship-page-header__copy h1,
 .tree-hero-copy h1,
 .central-page-head h1 {
@@ -4622,7 +4620,6 @@ textarea {
 }
 
 .discipleship-dashboard-hero-copy p,
-.msk-hero-copy p,
 .discipleship-page-header__copy p,
 .tree-hero-copy p {
   margin: 0;
@@ -4632,7 +4629,6 @@ textarea {
 }
 
 .discipleship-dashboard-hero-kicker,
-.msk-hero-kicker,
 .discipleship-page-header__kicker,
 .tree-hero-kicker {
   min-height: 34px;
@@ -8180,7 +8176,6 @@ textarea:focus-visible {
 
   .central-page-head h1,
   .discipleship-dashboard-hero-copy h2,
-  .msk-hero-copy h1,
   .tree-hero-copy h1 {
     font-size: clamp(28px, 10vw, 40px);
   }
@@ -9142,46 +9137,6 @@ textarea:focus-visible {
   vertical-align: middle;
 }
 
-.msk-hero-card {
-  position: relative;
-  overflow: hidden;
-  margin-bottom: 16px;
-  padding: 24px;
-  border-radius: 24px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background:
-    radial-gradient(460px 200px at 0% 0%, rgba(20, 184, 166, 0.12), transparent 62%),
-    radial-gradient(380px 180px at 100% 0%, rgba(245, 158, 11, 0.1), transparent 58%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
-}
-
-.msk-hero-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 5px;
-  background: linear-gradient(90deg, var(--discipleship-kgap) 0%, color-mix(in srgb, var(--discipleship-msk) 72%, white) 46%, var(--discipleship-dg1) 100%);
-}
-
-.members-hero-card::before {
-  background: linear-gradient(90deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 60%, white) 44%, var(--accent) 100%);
-}
-
-.members-hero-card .msk-hero-kicker {
-  background: color-mix(in srgb, var(--primary) 12%, white);
-  color: var(--primary);
-}
-
-.dashboard-main-hero-card::before {
-  background: linear-gradient(90deg, #0f766e 0%, color-mix(in srgb, #0ea5e9 52%, white) 44%, #f59e0b 100%);
-}
-
-.dashboard-main-hero-card .msk-hero-kicker {
-  background: color-mix(in srgb, #0f766e 12%, white);
-  color: #0f766e;
-}
-
 .dashboard-main-hero-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
@@ -9243,99 +9198,6 @@ textarea:focus-visible {
   justify-content: center;
 }
 
-.worship-hero-card::before {
-  background: linear-gradient(90deg, #d97706 0%, color-mix(in srgb, #0284c7 54%, white) 44%, #7c3aed 100%);
-}
-
-.worship-hero-card .msk-hero-kicker {
-  background: color-mix(in srgb, #d97706 12%, white);
-  color: #b45309;
-}
-
-.msk-hero-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 20px;
-}
-
-.msk-hero-copy {
-  display: grid;
-  gap: 10px;
-  max-width: 640px;
-}
-
-.msk-hero-kicker {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  padding: 7px 12px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--discipleship-msk) 12%, white);
-  color: var(--discipleship-msk);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.msk-hero-copy h1 {
-  margin: 0;
-  font-family: "Fraunces", serif;
-  font-size: clamp(34px, 4.2vw, 48px);
-  line-height: 1.02;
-  letter-spacing: -0.03em;
-}
-
-.msk-hero-copy p {
-  margin: 0;
-  color: #64748b;
-  font-size: 15px;
-  line-height: 1.65;
-}
-
-.msk-hero-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(120px, 1fr));
-  gap: 12px;
-  width: min(100%, 420px);
-}
-
-.msk-hero-stat {
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(203, 213, 225, 0.82);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
-}
-
-.msk-hero-stat-label {
-  display: block;
-  margin-bottom: 5px;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.msk-hero-stat-value {
-  display: block;
-  color: #0f172a;
-  font-size: 18px;
-  line-height: 1.2;
-}
-
-.msk-hero-tools {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(203, 213, 225, 0.72);
-}
-
 .msk-hero-controls {
   display: flex;
   align-items: center;
@@ -9392,79 +9254,6 @@ textarea:focus-visible {
   inset: 0;
   opacity: 0;
   cursor: pointer;
-}
-
-.msk-hero-search-wrap {
-  width: min(100%, 440px);
-  flex: 0 1 440px;
-  min-width: 220px;
-  display: flex;
-  justify-content: flex-end;
-  margin-left: auto;
-}
-
-.msk-hero-tools .msk-table-search,
-.msk-hero-tools .btn.tiny.icon-btn {
-  margin: 0;
-}
-
-.msk-hero-tools .msk-batch-select {
-  min-width: 220px;
-}
-
-.msk-hero-tools .msk-table-search {
-  width: 100%;
-  min-width: 220px;
-}
-
-.members-hero-tools .btn.tiny.icon-btn,
-.members-hero-tools .members-table-search {
-  margin: 0;
-}
-
-.members-hero-tools .members-table-search {
-  width: 100%;
-  min-width: 220px;
-}
-
-.member-family-hero-tools .member-family-search {
-  width: 100%;
-  min-width: 220px;
-  margin: 0;
-}
-
-.member-family-hero-search-wrap {
-  width: min(100%, 380px);
-  flex: 0 1 380px;
-}
-
-.member-dashboard-hero-controls {
-  flex-wrap: wrap;
-}
-
-.member-dashboard-hero-meta {
-  justify-content: flex-end;
-  flex-wrap: wrap;
-}
-
-.worship-hero-tools .btn.tiny.icon-btn,
-.worship-hero-tools .worship-table-search {
-  margin: 0;
-}
-
-.worship-hero-tools .worship-table-search {
-  width: 100%;
-  min-width: 220px;
-}
-
-.worship-hero-meta {
-  justify-content: flex-end;
-  flex-wrap: wrap;
-}
-
-.worship-hero-search-wrap {
-  width: min(100%, 380px);
-  flex: 0 1 380px;
 }
 
 .worship-steward-hero-controls {
@@ -11225,24 +11014,6 @@ textarea:focus-visible {
     max-width: none;
   }
 
-  .msk-hero-head {
-    flex-direction: column;
-  }
-
-  .msk-hero-stats {
-    width: 100%;
-    max-width: none;
-  }
-
-  .msk-hero-tools {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .msk-hero-search-wrap {
-    justify-content: stretch;
-  }
-
   #msk-table .msk-progress-cell {
     min-width: 180px;
   }
@@ -11489,45 +11260,6 @@ textarea:focus-visible {
     font-size: 13px;
   }
 
-  .msk-hero-card {
-    padding: 20px;
-    border-radius: 22px;
-  }
-
-  .msk-hero-copy h1 {
-    font-size: clamp(28px, 10vw, 40px);
-  }
-
-  .msk-hero-copy p {
-    font-size: 14px;
-    line-height: 1.55;
-  }
-
-  .msk-hero-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .msk-hero-stat {
-    padding: 12px 14px;
-    border-radius: 16px;
-  }
-
-  .msk-hero-stat-value {
-    font-size: 16px;
-  }
-
-  .msk-hero-tools {
-    margin-top: 16px;
-    padding-top: 16px;
-    gap: 12px;
-  }
-
-  .card-row .actions.msk-hero-tools > * {
-    flex: 0 0 auto;
-    width: 100%;
-  }
-
   .msk-hero-controls {
     width: 100%;
     flex-wrap: wrap;
@@ -11552,23 +11284,8 @@ textarea:focus-visible {
     flex: 0 0 auto;
   }
 
-  .msk-hero-search-wrap {
-    flex: 0 0 auto;
-    min-width: 0;
-    width: 100%;
-  }
-
-  .msk-hero-tools .msk-batch-select {
-    width: 100%;
-    min-width: 0;
-  }
-
   .msk-transfer-button {
     min-height: 40px;
-  }
-
-  .msk-hero-tools .msk-table-search {
-    width: 100%;
   }
 
   .msk-name-main {
@@ -14330,72 +14047,6 @@ details[open] > summary .activity-disclosure-icon::after {
   padding: 24px 28px 46px;
 }
 
-.developer-page-hero {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 28px;
-  overflow: hidden;
-  margin-bottom: 20px;
-  padding: 24px 26px;
-  border: 1px solid rgba(148, 163, 184, .24);
-  border-radius: 16px;
-  background: linear-gradient(135deg, #fff 0%, #f0fdfa 100%);
-  box-shadow: 0 14px 32px rgba(15, 23, 42, .07);
-}
-
-.developer-page-hero::before {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 5px;
-  background: linear-gradient(180deg, #0f766e, #14b8a6);
-  content: "";
-}
-
-.developer-page-hero::after {
-  position: absolute;
-  top: -74px;
-  right: 16%;
-  width: 190px;
-  height: 190px;
-  border-radius: 50%;
-  background: rgba(20, 184, 166, .07);
-  content: "";
-  pointer-events: none;
-}
-
-.developer-page-hero-main {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 17px;
-}
-
-.developer-page-hero-icon {
-  display: grid;
-  width: 54px;
-  height: 54px;
-  flex: 0 0 54px;
-  place-items: center;
-  border-radius: 16px;
-  background: linear-gradient(145deg, #0f766e, #14b8a6);
-  box-shadow: 0 10px 22px rgba(15, 118, 110, .2);
-  color: #fff;
-}
-
-.developer-page-hero-icon svg {
-  width: 25px;
-  height: 25px;
-}
-
-.developer-page-hero-copy {
-  min-width: 0;
-}
-
-.developer-page-hero-kicker,
 .developer-section-kicker {
   color: #0f766e;
   font-size: 10px;
@@ -14404,64 +14055,13 @@ details[open] > summary .activity-disclosure-icon::after {
   text-transform: uppercase;
 }
 
-.developer-page-hero h1,
-.developer-page-hero p {
-  margin: 0;
-}
-
-.developer-page-hero h1 {
-  margin-top: 4px;
-  color: #0f172a;
-  font-size: clamp(26px, 3vw, 36px);
-  line-height: 1.15;
-}
-
-.developer-page-hero p {
-  max-width: 720px;
-  margin-top: 6px;
-  color: #526174;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.developer-page-hero-meta {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  min-width: 190px;
-  gap: 2px;
-  padding: 13px 15px;
-  border: 1px solid rgba(13, 148, 136, .18);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, .82);
-}
-
-.developer-page-hero-meta span {
-  color: #64748b;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-}
-
-.developer-page-hero-meta strong {
-  overflow-wrap: anywhere;
-  color: #0f766e;
-  font-size: 17px;
-}
-
-.developer-page-hero-meta small {
-  color: #64748b;
-  font-size: 10px;
-}
-
 .nav-item-visual[data-nav-icon="dashboard"] .nav-item-visual-icon::before { content: "\25A6"; }
 .nav-item-visual[data-nav-icon="users"] .nav-item-visual-icon::before { content: "\25CE"; }
 .nav-item-visual[data-nav-icon="config"] .nav-item-visual-icon::before { content: "\2699"; }
 .nav-item-visual[data-nav-icon="statistics"] .nav-item-visual-icon::before { content: "\25A5"; }
 .nav-item-visual[data-nav-icon="activities"] .nav-item-visual-icon::before { content: "\21BB"; }
 
-.page-developer .card,
+.page-developer .card:not(.discipleship-page-header),
 .page-developer .developer-section-card {
   border-color: rgba(148, 163, 184, .24);
   border-radius: 14px;
@@ -14702,17 +14302,6 @@ details[open] > summary .activity-disclosure-icon::after {
     padding: 18px 16px 36px;
   }
 
-  .developer-page-hero {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 16px;
-    padding: 21px 20px;
-  }
-
-  .developer-page-hero-meta {
-    width: 100%;
-  }
-
   .analytics-filter-grid,
   .activity-filter-grid,
   .activity-filter-primary {
@@ -14732,25 +14321,6 @@ details[open] > summary .activity-disclosure-icon::after {
   .page-developer .container,
   .page-developer.page-analytics .container {
     padding: 14px 11px 30px;
-  }
-
-  .developer-page-hero {
-    border-radius: 14px;
-  }
-
-  .developer-page-hero-main {
-    align-items: flex-start;
-  }
-
-  .developer-page-hero-icon {
-    width: 46px;
-    height: 46px;
-    flex-basis: 46px;
-    border-radius: 13px;
-  }
-
-  .developer-page-hero h1 {
-    font-size: 25px;
   }
 
   .developer-section-head,

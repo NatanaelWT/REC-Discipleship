@@ -16,10 +16,12 @@
     'title' => 'Riwayat Aktivitas',
     'description' => 'Telusuri request, perubahan data, error, dan akses user dengan audit yang terpusat.',
     'eyebrow' => 'System Audit',
-    'icon' => 'activities',
-    'metaLabel' => 'Kapasitas halaman',
-    'metaValue' => '100 request',
-    'metaHint' => 'Urutan terbaru lebih dahulu',
+    'stats' => [
+      ['label' => 'Kapasitas Halaman', 'value' => '100 request'],
+      ['label' => 'Ditampilkan', 'value' => number_format($activities->count(), 0, ',', '.')],
+      ['label' => 'Filter Lanjutan', 'value' => number_format($activeAdvancedCount, 0, ',', '.').' aktif'],
+      ['label' => 'Urutan Data', 'value' => 'Terbaru'],
+    ],
   ])
 
   <section class="card developer-panel activity-filter-card developer-section-card">

@@ -11,10 +11,12 @@
       'title' => 'Konfigurasi Aplikasi',
       'description' => 'Atur identitas aplikasi, zona waktu, dan alat bantu khusus developer.',
       'eyebrow' => 'Application Settings',
-      'icon' => 'config',
-      'metaLabel' => 'Timezone aktif',
-      'metaValue' => $configValues['app_timezone'] ?? 'Asia/Jakarta',
-      'metaHint' => 'Konfigurasi global',
+      'stats' => [
+        ['label' => 'Timezone Aktif', 'value' => $configValues['app_timezone'] ?? 'Asia/Jakarta'],
+        ['label' => 'Nama Aplikasi', 'value' => $configValues['church_name'] ?? app_church_name()],
+        ['label' => 'Debug Banner', 'value' => ($configValues['developer_debug_banner'] ?? '0') === '1' ? 'Aktif' : 'Nonaktif'],
+        ['label' => 'Pilihan Timezone', 'value' => number_format(count($timezoneOptions), 0, ',', '.')],
+      ],
     ])
 
     @if ($statusCode === 'saved')

@@ -46,6 +46,20 @@ class WorshipGlobalScopeTest extends TestCase
         ]);
     }
 
+    public function test_worship_page_uses_the_shared_page_header(): void
+    {
+        $this->createWorshipScheduleTable();
+        $this->actingAsRecUser('keziaae', null, 'pelayan');
+
+        $this->get('/ibadah/penatalayan?month=2026-06')
+            ->assertOk()
+            ->assertSee('data-worship-header', false)
+            ->assertSee('discipleship-page-header__stats', false)
+            ->assertSee('discipleship-page-header__tools', false)
+            ->assertSee('Penatalayan Ibadah Umum')
+            ->assertSee('Judul Jadwal');
+    }
+
     private function createWorshipScheduleTable(): void
     {
         Schema::dropIfExists('worship_schedules');

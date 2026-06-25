@@ -21,10 +21,12 @@
     'title' => 'Detail Aktivitas',
     'description' => 'Periksa konteks request, perubahan record, metadata teknis, dan detail kegagalan.',
     'eyebrow' => 'Audit Detail',
-    'icon' => 'activities',
-    'metaLabel' => 'Hasil request',
-    'metaValue' => ucfirst((string) $activity->outcome),
-    'metaHint' => 'HTTP '.($activity->http_status ?? '-'),
+    'stats' => [
+      ['label' => 'Hasil Request', 'value' => ucfirst((string) $activity->outcome)],
+      ['label' => 'Status HTTP', 'value' => (string) ($activity->http_status ?? '-')],
+      ['label' => 'Method', 'value' => (string) ($activity->method ?? '-')],
+      ['label' => 'Durasi', 'value' => ($activity->duration_ms ?? '-').' ms'],
+    ],
   ])
 
   <section class="card developer-panel developer-section-card activity-request-summary">
