@@ -466,20 +466,8 @@ if ($page === 'msk_classes') {
     echo "    <div class=\"msk-hero-controls\">\n";
     if (! $centralReadOnly) {
         echo '      <button class="btn tiny icon-btn" type="button" data-msk-create-open aria-label="Tambah Peserta MSK" title="Tambah Peserta MSK">'.icon_svg('plus')."</button>\n";
-        echo '      <form method="post" action="'.h($mskImportAction)."\" enctype=\"multipart/form-data\" class=\"msk-import-inline-form\">\n";
-        echo '        '.csrf_field()."\n";
-        echo "        <input type=\"hidden\" name=\"action\" value=\"import_pemuridan_excel\">\n";
-        echo "        <input type=\"hidden\" name=\"return_page\" value=\"msk_classes\">\n";
-        echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
-        echo "        <label class=\"btn tiny msk-import-trigger\" aria-label=\"Import Data Kelas MSK\" title=\"Import Data Kelas MSK\">Import MSK<input class=\"msk-import-input\" type=\"file\" name=\"import_pemuridan_excel\" accept=\".xlsx\" onchange=\"this.form.submit()\"></label>\n";
-        echo "      </form>\n";
     }
-    echo '      <form method="post" action="'.h($mskExportAction)."\" class=\"msk-export-inline-form\">\n";
-    echo '        '.csrf_field()."\n";
-    echo "        <input type=\"hidden\" name=\"action\" value=\"export_pemuridan_excel\">\n";
-    echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
-    echo "        <button class=\"btn tiny ghost\" type=\"submit\">Export MSK</button>\n";
-    echo "      </form>\n";
+    echo "      <div class=\"msk-batch-actions\">\n";
     if (count($batchMonthOptions) > 0) {
         echo '      <form method="get" action="'.h($mskIndexAction)."\" class=\"form-row cash-filter-form\">\n";
         if (request()->filled('branch_id')) {
@@ -505,6 +493,22 @@ if ($page === 'msk_classes') {
         echo "      </select>\n";
         echo "      </form>\n";
     }
+    if (! $centralReadOnly) {
+        echo '      <form method="post" action="'.h($mskImportAction)."\" enctype=\"multipart/form-data\" class=\"msk-import-inline-form\">\n";
+        echo '        '.csrf_field()."\n";
+        echo "        <input type=\"hidden\" name=\"action\" value=\"import_pemuridan_excel\">\n";
+        echo "        <input type=\"hidden\" name=\"return_page\" value=\"msk_classes\">\n";
+        echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
+        echo '        <label class="btn tiny ghost msk-import-trigger msk-transfer-button" aria-label="Import Data Kelas MSK" title="Import Data Kelas MSK">'.icon_svg('upload').'<span>Import MSK</span><input class="msk-import-input" type="file" name="import_pemuridan_excel" accept=".xlsx" onchange="this.form.submit()"></label>'."\n";
+        echo "      </form>\n";
+    }
+    echo '      <form method="post" action="'.h($mskExportAction)."\" class=\"msk-export-inline-form\">\n";
+    echo '        '.csrf_field()."\n";
+    echo "        <input type=\"hidden\" name=\"action\" value=\"export_pemuridan_excel\">\n";
+    echo '        <input type="hidden" name="batch_month" value="'.h($batchMonthFilterParam)."\">\n";
+    echo '        <button class="btn tiny ghost msk-transfer-button" type="submit">'.icon_svg('download')."<span>Export MSK</span></button>\n";
+    echo "      </form>\n";
+    echo "      </div>\n";
     echo "    </div>\n";
     echo "    <div class=\"msk-hero-search-wrap\">\n";
     echo '      <form method="get" action="'.h($mskIndexAction)."\" class=\"form-row\" data-msk-search-form>\n";

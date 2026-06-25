@@ -57,6 +57,8 @@ class DiscipleshipPeopleListTest extends TestCase
         $response->assertSee(route('discipleship.people-list.export'), false);
         $response->assertSee('people-hero-stats discipleship-hero-stats', false);
         $response->assertSee('people-hero-stat discipleship-hero-stat', false);
+        $response->assertSee('people-export-button', false);
+        $response->assertSee(icon_svg('download'), false);
     }
 
     public function test_people_list_hides_archived_duplicate_identity(): void

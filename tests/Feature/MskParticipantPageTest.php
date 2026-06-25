@@ -39,6 +39,14 @@ class MskParticipantPageTest extends TestCase
         $response->assertSee('Kelas MSK');
         $response->assertSee('msk-hero-stats discipleship-hero-stats', false);
         $response->assertSee('msk-hero-stat discipleship-hero-stat', false);
+        $response->assertSee('msk-batch-actions', false);
+        $response->assertSee('msk-transfer-button', false);
+        $response->assertSee(icon_svg('upload'), false);
+        $response->assertSee(icon_svg('download'), false);
+
+        $content = $response->getContent();
+        $this->assertLessThan(strpos($content, 'Import MSK'), strpos($content, 'msk-batch-select'));
+        $this->assertLessThan(strpos($content, 'Export MSK'), strpos($content, 'Import MSK'));
     }
 
     public function test_central_and_developer_see_export_without_import_controls(): void

@@ -9345,23 +9345,47 @@ textarea:focus-visible {
   min-width: 0;
 }
 
+.msk-batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .msk-import-inline-form {
   display: flex;
   align-items: center;
-  gap: 10px;
   flex: 0 0 auto;
+  margin: 0;
 }
 
 .msk-export-inline-form {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
+  margin: 0;
 }
 
 .msk-import-trigger {
   position: relative;
   overflow: hidden;
   cursor: pointer;
+}
+
+.msk-transfer-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.msk-transfer-button .icon {
+  width: 16px;
+  height: 16px;
 }
 
 .msk-import-input {
@@ -10015,8 +10039,19 @@ textarea:focus-visible {
 
 .people-export-button {
   flex: 0 0 auto;
-  gap: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
   white-space: nowrap;
+}
+
+.people-export-button .icon {
+  width: 16px;
+  height: 16px;
 }
 
 .people-hero-search-wrap {
@@ -11733,12 +11768,23 @@ textarea:focus-visible {
     flex-wrap: wrap;
   }
 
-  .msk-import-inline-form {
+  .msk-batch-actions {
+    flex: 1 1 100%;
+    width: 100%;
     flex-wrap: wrap;
   }
 
+  .msk-batch-actions .cash-filter-form {
+    flex: 1 1 220px;
+    min-width: 0;
+  }
+
+  .msk-import-inline-form {
+    flex: 0 0 auto;
+  }
+
   .msk-export-inline-form {
-    flex-wrap: wrap;
+    flex: 0 0 auto;
   }
 
   .msk-hero-search-wrap {
@@ -11750,6 +11796,10 @@ textarea:focus-visible {
   .msk-hero-tools .msk-batch-select {
     width: 100%;
     min-width: 0;
+  }
+
+  .msk-transfer-button {
+    min-height: 40px;
   }
 
   .msk-hero-tools .msk-table-search {
@@ -11852,10 +11902,15 @@ textarea:focus-visible {
 
   .people-hero-filter-actions {
     width: 100%;
+    align-items: stretch;
   }
 
   .people-hero-filter-actions .people-hero-filter-wrap {
     flex: 1 1 auto;
+  }
+
+  .people-export-button {
+    min-height: 40px;
   }
 
   .people-progress-cell {
