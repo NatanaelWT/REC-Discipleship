@@ -148,6 +148,7 @@ class MskParticipantController extends Controller
             return redirect()->route('discipleship.msk-classes', $redirectParams + ['error' => $result['error']]);
         }
 
+        unset($redirectParams['edit']);
         $redirectParams['batch_month'] = $result['batch_month'] !== '' ? $result['batch_month'] : (string) ($payload['batch_month'] ?? '');
         $redirectParams['saved'] = 1;
         if ($result['auto_converted']) {

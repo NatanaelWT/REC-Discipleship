@@ -212,7 +212,10 @@ class MskParticipantPageTest extends TestCase
             'notes' => 'Catatan edit',
         ]);
 
-        $response->assertRedirect('/pemuridan/msk?edit='.$participantId.'&batch_month=2024-11&saved=1');
+        $response->assertRedirect('/pemuridan/msk?batch_month=2024-11&saved=1');
+        $this->get($response->headers->get('Location'))
+            ->assertOk()
+            ->assertSee('data-msk-edit-auto-open=""', false);
         $this->assertDatabaseHas('msk_participants', [
             'id' => $participantId,
             'full_name' => 'Peserta Lama Diedit',
