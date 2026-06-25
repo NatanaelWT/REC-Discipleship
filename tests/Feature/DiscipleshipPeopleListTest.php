@@ -43,6 +43,60 @@ class DiscipleshipPeopleListTest extends TestCase
         $response->assertSee('Daftar Anggota DG');
         $response->assertSee('Anggota Kutisari');
         $response->assertDontSee('Anggota GM Rahasia');
+        $response->assertDontSee('Selesai Camp GAP');
+        $response->assertDontSee('Selesai RG');
+    }
+
+    public function test_people_list_shows_dg_only_progress_track_and_ignores_legacy_bridge_filter(): void
+    {
+        $this->createDiscipleshipTables();
+        $personId = DB::table('discipleship_people')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Peserta Progres DG',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 1,
+                'person_id' => $personId,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'closed',
+                'started_on' => '2026-01-01',
+                'ended_on' => '2026-03-01',
+                'end_reason' => 'continued_to_child_group',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 2,
+                'person_id' => $personId,
+                'role' => 'member',
+                'stage' => 'DG 2',
+                'status' => 'active',
+                'started_on' => '2026-03-02',
+                'ended_on' => null,
+                'end_reason' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/anggota?progress=kgap_complete')
+            ->assertOk()
+            ->assertSee('Peserta Progres DG')
+            ->assertSee('<option value="all" selected>Semua Peserta</option>', false)
+            ->assertSee('people-progress-track', false)
+            ->assertSee('people-progress-step is-complete', false)
+            ->assertSee('people-progress-step is-current', false)
+            ->assertSee('Sedang menjalani DG 2')
+            ->assertDontSee('Selesai Camp GAP')
+            ->assertDontSee('Selesai RG');
     }
 
     public function test_people_list_limits_large_datasets_and_keeps_query_count_constant(): void

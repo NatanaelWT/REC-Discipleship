@@ -34,8 +34,6 @@
             <option value="complete_dg2" @selected($peopleProgressFilter === 'complete_dg2')>Selesai DG 2</option>
             <option value="active_dg3" @selected($peopleProgressFilter === 'active_dg3')>Sedang DG 3</option>
             <option value="complete_dg3" @selected($peopleProgressFilter === 'complete_dg3')>Selesai DG 3</option>
-            <option value="kgap_complete" @selected($peopleProgressFilter === 'kgap_complete')>Selesai Camp GAP</option>
-            <option value="rg_complete" @selected($peopleProgressFilter === 'rg_complete')>Selesai RG</option>
           </select>
         </div>
         <div class="people-hero-search-wrap">
@@ -71,7 +69,8 @@
                   if ($roleSubtitle === '') {
                       $roleSubtitle = 'Belum punya binaan langsung';
                   }
-                  $progressBadges = is_array($row['progress_badges'] ?? null) ? $row['progress_badges'] : [];
+                  $progressSteps = is_array($row['progress_steps'] ?? null) ? $row['progress_steps'] : [];
+                  $progressSummary = trim((string) ($row['progress_summary'] ?? 'Belum memulai DG'));
                   $phoneLabel = trim((string) ($row['phone_label'] ?? 'Belum ada nomor'));
                   if ($phoneLabel === '') {
                       $phoneLabel = 'Belum ada nomor';
@@ -94,20 +93,23 @@
                 </td>
                 <td>
                   <div class="people-progress-cell">
-                    @if (count($progressBadges) > 0)
-                      @foreach ($progressBadges as $badge)
+                    <div class="people-progress-track" aria-label="{{ $progressSummary }}">
+                      @foreach ($progressSteps as $step)
                         @php
-                            $badgeClass = trim((string) ($badge['class'] ?? 'is-neutral'));
-                            $badgeLabel = trim((string) ($badge['label'] ?? '-'));
-                            if ($badgeLabel === '') {
-                                $badgeLabel = '-';
-                            }
+                            $stepState = trim((string) ($step['state'] ?? 'is-pending'));
+                            $stepLabel = trim((string) ($step['label'] ?? '-')) ?: '-';
+                            $stepStateLabel = trim((string) ($step['state_label'] ?? 'Belum')) ?: 'Belum';
                         @endphp
-                        <span class="people-progress-badge {{ $badgeClass }}">{{ $badgeLabel }}</span>
+                        <span class="people-progress-step {{ $stepState }}">
+                          <span class="people-progress-step-marker" aria-hidden="true"></span>
+                          <span class="people-progress-step-copy">
+                            <strong>{{ $stepLabel }}</strong>
+                            <small>{{ $stepStateLabel }}</small>
+                          </span>
+                        </span>
                       @endforeach
-                    @else
-                      <span class="people-progress-badge is-neutral">Belum masuk progres</span>
-                    @endif
+                    </div>
+                    <span class="people-progress-summary">{{ $progressSummary }}</span>
                   </div>
                 </td>
                 <td>

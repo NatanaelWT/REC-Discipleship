@@ -5,11 +5,9 @@ namespace App\Services\DiscipleshipPeople;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipPerson;
 use App\Models\DiscipleshipRelationship;
-use App\Models\MskParticipant;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Throwable;
 
 class DiscipleshipPeopleListData
 {
@@ -38,13 +36,12 @@ class DiscipleshipPeopleListData
         $personIds = $people->pluck('id')->map(static fn ($id): int => (int) $id)->all();
         $relationships = $this->relationships($personIds);
         $groupPeople = $this->groupPeople($personIds);
-        $participants = $this->participants($personIds);
         $relatedIds = $relationships->flatMap(static fn (DiscipleshipRelationship $row): array => [(int) $row->mentor_person_id, (int) $row->disciple_person_id])
             ->merge($groupPeople->pluck('person_id'))->filter()->unique()->all();
         $names = DiscipleshipPerson::query()->whereIn('id', $relatedIds)->pluck('full_name', 'id')->all();
         $branchOptions = $this->scope->optionsById();
 
-        $rows = $people->map(function (DiscipleshipPerson $person) use ($relationships, $groupPeople, $participants, $names, $branchOptions): array {
+        $rows = $people->map(function (DiscipleshipPerson $person) use ($relationships, $groupPeople, $names, $branchOptions): array {
             $personId = (int) $person->id;
             $parents = $relationships->where('disciple_person_id', $personId)
                 ->where('status', 'active')
@@ -53,8 +50,8 @@ class DiscipleshipPeopleListData
             $childCount = $relationships->where('mentor_person_id', $personId)->where('status', 'active')->pluck('disciple_person_id')->unique()->count();
             $links = $groupPeople->where('person_id', $personId);
             $isLeader = $links->contains(static fn (DiscipleshipGroupPerson $row): bool => $row->role !== 'member' && $row->status === 'active' && $row->ended_on === null);
-            $progressBadges = $this->progressBadges($links, $participants->get($personId));
-            $tokens = array_column($progressBadges, 'filter');
+            $progress = $this->progress($links);
+            $tokens = $progress['filters'];
             $lastStage = $this->lastStage($links);
             $branchLabel = $branchOptions[(int) $person->branch_id]['label'] ?? 'Tanpa cabang';
             $name = trim((string) $person->full_name) ?: '-';
@@ -72,7 +69,8 @@ class DiscipleshipPeopleListData
                 'role_label' => $isLeader ? 'Pemimpin' : ($childCount > 0 ? 'Pembina' : 'Anggota'),
                 'role_tone_class' => $isLeader ? 'is-leader' : ($childCount > 0 ? 'is-mentor' : 'is-member'),
                 'role_subtitle' => $childCount > 0 ? $childCount.' binaan langsung' : 'Belum punya binaan langsung',
-                'progress_badges' => array_map(static fn (array $badge): array => ['class' => $badge['class'], 'label' => $badge['label']], $progressBadges),
+                'progress_steps' => $progress['steps'],
+                'progress_summary' => $progress['summary'],
                 'phone_label' => $phone !== '' ? $phone : 'Belum ada nomor',
                 'phone_digits' => normalize_whatsapp_digits($phone),
                 'child_count' => $childCount,
@@ -132,18 +130,6 @@ class DiscipleshipPeopleListData
             return;
         }
 
-        $bridge = ['kgap_complete' => ['sudah_kgap', 'ikut_keduanya'], 'rg_complete' => ['sudah_rg', 'ikut_keduanya']];
-        if (isset($bridge[$progress])) {
-            $statuses = $bridge[$progress];
-            $query->whereExists(static function ($subquery) use ($statuses): void {
-                $subquery->selectRaw('1')->from('msk_participants as filter_msk')
-                    ->whereColumn('filter_msk.discipleship_person_id', 'discipleship_people.id')
-                    ->whereIn('filter_msk.journey_bridge_status', $statuses);
-            });
-
-            return;
-        }
-
         $progress = 'all';
     }
 
@@ -171,43 +157,63 @@ class DiscipleshipPeopleListData
             ->get(['id', 'person_id', 'role', 'stage', 'status', 'ended_on', 'end_reason', 'started_on']);
     }
 
-    private function participants(array $personIds)
+    /**
+     * @return array{
+     *     filters: array<int, string>,
+     *     steps: array<int, array{label:string,state:string,state_label:string}>,
+     *     summary: string
+     * }
+     */
+    private function progress($links): array
     {
-        if ($personIds === []) {
-            return collect();
-        }
-
-        try {
-            return MskParticipant::query()->whereIn('discipleship_person_id', $personIds)
-                ->get(['discipleship_person_id', 'journey_bridge_status'])->keyBy('discipleship_person_id');
-        } catch (Throwable) {
-            return collect();
-        }
-    }
-
-    private function progressBadges($links, ?MskParticipant $participant): array
-    {
-        $badges = [];
-        foreach (['DG 1', 'DG 2', 'DG 3'] as $stage) {
-            $active = $links->contains(static fn (DiscipleshipGroupPerson $row): bool => $row->role === 'member' && $row->stage === $stage && $row->status === 'active' && $row->ended_on === null);
-            if ($active) {
-                $badges[] = ['filter' => 'active_'.strtolower(str_replace(' ', '', $stage)), 'label' => 'Sedang '.$stage, 'class' => 'is-active'];
-            }
-        }
+        $filters = [];
+        $steps = [];
+        $currentStage = '';
+        $highestCompletedStage = '';
         foreach ([1 => 'DG 1', 2 => 'DG 2', 3 => 'DG 3'] as $rank => $stage) {
-            if ($this->completedStage($links, $rank)) {
-                $badges[] = ['filter' => 'complete_dg'.$rank, 'label' => 'Selesai '.$stage, 'class' => 'is-complete'];
+            $active = $links->contains(static fn (DiscipleshipGroupPerson $row): bool => $row->role === 'member' && $row->stage === $stage && $row->status === 'active' && $row->ended_on === null);
+            $completed = $this->completedStage($links, $rank);
+            $recorded = $links->contains(static fn (DiscipleshipGroupPerson $row): bool => $row->role === 'member' && $row->stage === $stage);
+
+            $state = 'is-pending';
+            $stateLabel = 'Belum';
+            if ($completed) {
+                $state = 'is-complete';
+                $stateLabel = 'Selesai';
+                $highestCompletedStage = $stage;
+                $filters[] = 'complete_dg'.$rank;
             }
-        }
-        $bridge = normalize_journey_bridge_status((string) ($participant?->journey_bridge_status ?? 'belum'));
-        if (in_array($bridge, ['sudah_kgap', 'ikut_keduanya'], true)) {
-            $badges[] = ['filter' => 'kgap_complete', 'label' => 'Selesai Camp GAP', 'class' => 'is-bridge'];
-        }
-        if (in_array($bridge, ['sudah_rg', 'ikut_keduanya'], true)) {
-            $badges[] = ['filter' => 'rg_complete', 'label' => 'Selesai RG', 'class' => 'is-bridge'];
+            if ($active) {
+                $state = 'is-current';
+                $stateLabel = 'Sedang';
+                $currentStage = $stage;
+                $filters[] = 'active_dg'.$rank;
+            } elseif (! $completed && $recorded) {
+                $state = 'is-stopped';
+                $stateLabel = 'Terhenti';
+            }
+
+            $steps[] = [
+                'label' => $stage,
+                'state' => $state,
+                'state_label' => $stateLabel,
+            ];
         }
 
-        return $badges;
+        $summary = 'Belum memulai DG';
+        if ($currentStage !== '') {
+            $summary = 'Sedang menjalani '.$currentStage;
+        } elseif ($highestCompletedStage !== '') {
+            $summary = 'Terakhir menyelesaikan '.$highestCompletedStage;
+        } elseif ($links->contains(static fn (DiscipleshipGroupPerson $row): bool => $row->role === 'member')) {
+            $summary = 'Progres DG terhenti';
+        }
+
+        return [
+            'filters' => array_values(array_unique($filters)),
+            'steps' => $steps,
+            'summary' => $summary,
+        ];
     }
 
     private function completedStage($links, int $rank): bool
