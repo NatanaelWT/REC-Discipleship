@@ -23,24 +23,28 @@ $formatPercent = static function (float $value): string {
   <?php render_pemuridan_import_feedback(); ?>
 @endif
 
-<section class="card discipleship-dashboard-hero-card">
-  <div class="discipleship-dashboard-hero-head">
-    <div class="discipleship-dashboard-hero-copy">
-      <span class="discipleship-dashboard-hero-kicker">Dashboard Pemuridan</span>
-      <h2>Monitor Pemuridan <span class="discipleship-dashboard-hero-branch">REC {{ $selectedBranchLabel }}</span></h2>
-      <p>Ringkasan capaian target, kesehatan kelompok, dan area yang perlu segera ditindaklanjuti.</p>
-      <p class="discipleship-dashboard-hero-actions"><a class="btn" href="/">Buka Halaman Public Link</a></p>
-    </div>
-    <div class="discipleship-dashboard-hero-summary">
-      <div class="discipleship-dashboard-hero-summary-ring" style="--pct:{{ $overallProgress }};"><span>{{ $formatPercent($overallProgress) }}%</span></div>
-      <div class="discipleship-dashboard-hero-summary-copy">
-        <span class="discipleship-dashboard-hero-summary-label">Rata-rata Achievement</span>
-        <strong class="discipleship-dashboard-hero-summary-value">{{ $formatPercent($overallProgress) }}%</strong>
-        <span class="discipleship-dashboard-hero-summary-sub">Gabungan capaian MSK, DG, Kamp GAP, dan RG.</span>
-      </div>
-    </div>
-  </div>
-</section>
+@include('discipleship.partials.page-header', [
+    'header' => [
+        'kicker' => 'Dashboard Pemuridan',
+        'title' => 'Monitor Pemuridan',
+        'description' => 'Ringkasan capaian target, kesehatan kelompok, dan area yang perlu segera ditindaklanjuti.',
+        'attributes' => [
+            'class' => 'discipleship-dashboard-hero-card',
+            'data-discipleship-dashboard-header' => true,
+        ],
+        'title_content' => [
+            'partial' => 'discipleship.dashboard.partials.header-title',
+            'data' => compact('selectedBranchLabel'),
+        ],
+        'after_copy' => [
+            'partial' => 'discipleship.dashboard.partials.header-actions',
+        ],
+        'aside' => [
+            'partial' => 'discipleship.dashboard.partials.header-summary',
+            'data' => compact('overallProgress', 'formatPercent'),
+        ],
+    ],
+])
 
 <section class="card discipleship-dashboard-progress-card">
   <div class="card-row discipleship-dashboard-section-head"><h2>Achievement Target</h2><span class="badge muted">Ringkasan terkini</span></div>

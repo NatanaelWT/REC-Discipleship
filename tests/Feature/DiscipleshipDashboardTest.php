@@ -21,6 +21,11 @@ class DiscipleshipDashboardTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Dashboard Pemuridan');
+        $response->assertSee('data-discipleship-dashboard-header', false);
+        $response->assertSee('card discipleship-page-header discipleship-dashboard-hero-card', false);
+        $response->assertSee('discipleship-dashboard-hero-summary-ring', false);
+        $response->assertSee('style="--pct:', false);
+        $response->assertSee('Buka Halaman Public Link');
         $response->assertSee('Belum Selesai MSK');
         $response->assertDontSee('Kelompok Berjalan');
         $response->assertDontSee('Kelompok aktif');

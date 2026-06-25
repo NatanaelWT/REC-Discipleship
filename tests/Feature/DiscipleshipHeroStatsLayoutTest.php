@@ -81,4 +81,18 @@ class DiscipleshipHeroStatsLayoutTest extends TestCase
             $this->assertStringContainsString("@include('developer._header'", $source);
         }
     }
+
+    public function test_discipleship_dashboard_uses_shared_header_with_custom_chart_aside(): void
+    {
+        $source = file_get_contents(resource_path('views/discipleship/dashboard/index.blade.php'));
+        $headerSource = file_get_contents(resource_path('views/discipleship/partials/page-header.blade.php'));
+
+        $this->assertIsString($source);
+        $this->assertIsString($headerSource);
+        $this->assertStringContainsString("@include('discipleship.partials.page-header'", $source);
+        $this->assertStringContainsString("'aside' => [", $source);
+        $this->assertStringContainsString('discipleship.dashboard.partials.header-summary', $source);
+        $this->assertStringContainsString('$asidePartial', $headerSource);
+        $this->assertStringNotContainsString('<section class="card discipleship-dashboard-hero-card">', $source);
+    }
 }

@@ -4599,7 +4599,6 @@ textarea {
   line-height: 1;
 }
 
-.discipleship-dashboard-hero-card,
 .discipleship-page-header,
 .tree-hero-card {
   border-radius: 24px;
@@ -4607,7 +4606,6 @@ textarea {
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
 }
 
-.discipleship-dashboard-hero-copy h2,
 .discipleship-page-header__copy h1,
 .tree-hero-copy h1,
 .central-page-head h1 {
@@ -4619,7 +4617,6 @@ textarea {
   color: #0f172a;
 }
 
-.discipleship-dashboard-hero-copy p,
 .discipleship-page-header__copy p,
 .tree-hero-copy p {
   margin: 0;
@@ -4628,7 +4625,6 @@ textarea {
   line-height: 1.65;
 }
 
-.discipleship-dashboard-hero-kicker,
 .discipleship-page-header__kicker,
 .tree-hero-kicker {
   min-height: 34px;
@@ -8175,7 +8171,6 @@ textarea:focus-visible {
   }
 
   .central-page-head h1,
-  .discipleship-dashboard-hero-copy h2,
   .tree-hero-copy h1 {
     font-size: clamp(28px, 10vw, 40px);
   }
@@ -10014,35 +10009,11 @@ textarea:focus-visible {
   background: linear-gradient(90deg, var(--discipleship-kgap) 0%, color-mix(in srgb, var(--discipleship-msk) 72%, white) 44%, var(--discipleship-dg3) 100%);
 }
 
-.discipleship-dashboard-hero-head {
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 20px;
-}
-
-.discipleship-dashboard-hero-copy {
-  display: grid;
-  gap: 10px;
+.discipleship-dashboard-hero-card .discipleship-page-header__copy {
   max-width: 700px;
 }
 
-.discipleship-dashboard-hero-kicker {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  padding: 7px 12px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--discipleship-kgap) 12%, white);
-  color: var(--discipleship-kgap);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.discipleship-dashboard-hero-copy h2 {
+.discipleship-dashboard-hero-card .discipleship-page-header__copy h1 {
   margin: 0;
   font-family: "Fraunces", serif;
   font-size: clamp(32px, 3.6vw, 46px);
@@ -10055,7 +10026,7 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
-.discipleship-dashboard-hero-copy p {
+.discipleship-dashboard-hero-card .discipleship-page-header__copy p {
   margin: 0;
   color: #64748b;
   font-size: 15px;
@@ -10141,47 +10112,6 @@ textarea:focus-visible {
   font-size: 13px;
   line-height: 1.55;
   max-width: 260px;
-}
-
-.discipleship-dashboard-hero-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(150px, 1fr));
-  gap: 12px;
-  width: min(100%, 460px);
-}
-
-.discipleship-dashboard-hero-stat {
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(203, 213, 225, 0.82);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
-}
-
-.discipleship-dashboard-hero-stat-label {
-  display: block;
-  margin-bottom: 5px;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.discipleship-dashboard-hero-stat-value {
-  display: block;
-  color: #0f172a;
-  font-size: 22px;
-  line-height: 1.1;
-  font-weight: 800;
-}
-
-.discipleship-dashboard-hero-stat-sub {
-  display: block;
-  margin-top: 6px;
-  color: #64748b;
-  font-size: 12px;
-  line-height: 1.45;
 }
 
 .discipleship-dashboard-progress-card {
@@ -10999,19 +10929,10 @@ textarea:focus-visible {
     justify-content: center;
   }
 
-  .discipleship-dashboard-hero-head {
-    flex-direction: column;
-  }
-
   .discipleship-dashboard-hero-summary {
     width: 100%;
     min-width: 0;
     justify-content: center;
-  }
-
-  .discipleship-dashboard-hero-stats {
-    width: 100%;
-    max-width: none;
   }
 
   #msk-table .msk-progress-cell {
@@ -11061,7 +10982,7 @@ textarea:focus-visible {
     border-radius: 22px;
   }
 
-  .discipleship-dashboard-hero-copy h2 {
+  .discipleship-dashboard-hero-card .discipleship-page-header__copy h1 {
     font-size: clamp(28px, 9vw, 38px);
   }
 
@@ -11093,12 +11014,6 @@ textarea:focus-visible {
     font-size: 12px;
   }
 
-  .discipleship-dashboard-hero-stats {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .discipleship-dashboard-hero-stat,
   .discipleship-dashboard-data-stat {
     padding: 14px 16px;
     border-radius: 18px;
