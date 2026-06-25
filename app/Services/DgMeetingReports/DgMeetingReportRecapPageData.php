@@ -144,6 +144,7 @@ class DgMeetingReportRecapPageData
         try {
             $groups = DiscipleshipGroup::query()
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+                ->where('status', 'active')
                 ->orderBy('id')
                 ->get(['id', 'branch_id', 'name', 'status', 'start_stage', 'current_stage', 'created_at', 'updated_at']);
         } catch (Throwable) {
@@ -314,6 +315,13 @@ class DgMeetingReportRecapPageData
                     'shared_meditation', 'relationally_contacted', 'source', 'created_at', 'updated_at',
                 ])
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+                ->whereExists(static function ($subquery): void {
+                    $subquery->selectRaw('1')
+                        ->from('discipleship_groups as report_group')
+                        ->whereColumn('report_group.id', 'discipleship_meeting_reports.discipleship_group_id')
+                        ->whereColumn('report_group.branch_id', 'discipleship_meeting_reports.branch_id')
+                        ->where('report_group.status', 'active');
+                })
                 ->orderByDesc('meeting_date')
                 ->orderByDesc('created_at')
                 ->orderByDesc('id')

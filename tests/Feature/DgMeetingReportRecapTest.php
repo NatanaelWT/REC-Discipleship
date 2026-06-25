@@ -46,6 +46,56 @@ class DgMeetingReportRecapTest extends TestCase
         );
     }
 
+    public function test_dg_report_recap_only_displays_active_groups_and_their_reports(): void
+    {
+        $this->createTables();
+        $ids = $this->seedReport();
+        $inactiveGroupId = DB::table('discipleship_groups')->insertGetId([
+            'branch_id' => 1,
+            'name' => 'Kelompok Nonaktif',
+            'status' => 'completed',
+            'start_stage' => 'DG 1',
+            'current_stage' => 'DG 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            'branch_id' => 1,
+            'discipleship_group_id' => $inactiveGroupId,
+            'person_id' => $ids['leader_id'],
+            'role' => 'leader',
+            'status' => 'closed',
+            'started_on' => '2025-01-01',
+            'ended_on' => '2025-12-31',
+            'end_reason' => 'group_completed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_meeting_reports')->insert([
+            'branch_id' => 1,
+            'leader_person_id' => $ids['leader_id'],
+            'leader_name_snapshot' => 'Pemimpin Test',
+            'discipleship_group_id' => $inactiveGroupId,
+            'group_name_snapshot' => 'Kelompok Nonaktif',
+            'meeting_date' => '2025-12-01',
+            'material_topic' => 'Materi Kelompok Nonaktif',
+            'group_progress_snapshot' => 'DG 1',
+            'absences' => json_encode([]),
+            'meditation_sharers' => json_encode([]),
+            'photos' => json_encode([]),
+            'source' => 'public_form',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/laporan-dg')
+            ->assertOk()
+            ->assertSee('Materi Test')
+            ->assertDontSee('Kelompok Nonaktif')
+            ->assertDontSee('Materi Kelompok Nonaktif');
+    }
+
     public function test_calendar_cells_keep_dates_and_report_counts_visible(): void
     {
         $css = file_get_contents(public_path('assets/style.css'));
