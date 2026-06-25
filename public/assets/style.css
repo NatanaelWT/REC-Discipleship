@@ -10573,11 +10573,6 @@ textarea:focus-visible {
   margin-top: 14px;
 }
 
-.discipleship-dashboard-group-progress {
-  margin-top: 18px;
-  margin-bottom: 0;
-}
-
 .discipleship-dashboard-data-stat {
   --dash-accent: #0f766e;
   --dash-glow: rgba(15, 118, 110, 0.16);
@@ -10827,6 +10822,11 @@ textarea:focus-visible {
 .journey-progress-grid-standalone {
   margin-top: 0;
   margin-bottom: 18px;
+}
+
+.journey-progress-grid-standalone.discipleship-dashboard-group-progress {
+  margin-top: 20px;
+  margin-bottom: 0;
 }
 
 .journey-progress-chip {
@@ -11458,6 +11458,10 @@ textarea:focus-visible {
     justify-content: center;
     gap: 10px;
     margin-top: 12px;
+  }
+
+  .journey-progress-grid-standalone.discipleship-dashboard-group-progress {
+    margin-top: 14px;
   }
 
   .journey-progress-grid .journey-progress-chip:first-child {
