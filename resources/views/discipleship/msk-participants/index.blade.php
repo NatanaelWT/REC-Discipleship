@@ -467,19 +467,6 @@ if ($page === 'msk_classes') {
         echo '    <div class="msk-view-person-copy"><div class="msk-view-person-name">'.h($viewFullName).'</div><div class="msk-view-person-sub">Peserta Kelas MSK'.($viewPersonId !== '' ? ' · ID Pemuridan '.h($viewPersonId) : '').'</div></div>';
         echo '    <div class="msk-view-person-badges">'.$viewStatusBadge.'<span class="journey-track-badge is-msk">Batch '.h($viewMskMonthLabel).'</span>'.$viewStageBadge.'</div>';
         echo '  </section>';
-        echo '  <section class="msk-view-summary-card">';
-        echo '    <div class="msk-view-summary-grid">';
-        echo '      <div class="msk-view-summary-item"><span>Sesi MSK</span><strong>'.h($viewProgressLabel).'</strong></div>';
-        echo '      <div class="msk-view-summary-item"><span>Mentor Aktif</span><strong>'.h($viewCurrentMentors !== [] ? implode(', ', $viewCurrentMentors) : '-').'</strong></div>';
-        echo '      <div class="msk-view-summary-item"><span>Kelompok Aktif</span><strong>'.h($viewCurrentGroups !== [] ? implode(', ', $viewCurrentGroups) : '-').'</strong></div>';
-        echo '      <div class="msk-view-summary-item"><span>Tahap DG</span><strong>'.h($viewCurrentStage !== '' ? $viewCurrentStage : 'Belum DG').'</strong></div>';
-        echo '    </div>';
-        echo '    <div class="msk-view-progress">';
-        echo '      <div class="msk-progress-top"><span class="msk-progress-value">'.h($viewProgressLabel).'</span><span class="msk-progress-percent">'.h((string) $viewProgressPercent).'%</span></div>';
-        echo '      <div class="msk-progress-bar" aria-hidden="true"><span style="width:'.h((string) $viewProgressPercent).'%"></span></div>';
-        echo '      <div class="msk-progress-meta">'.h($viewSessionLabel).'</div>';
-        echo '    </div>';
-        echo '  </section>';
         echo '  <div class="msk-view-sections">';
         echo '    <section class="msk-view-section">';
         echo '      <div class="msk-view-section-head"><span class="msk-view-section-kicker">Identitas</span><h4>Profil peserta</h4></div>';
@@ -505,7 +492,22 @@ if ($page === 'msk_classes') {
         echo '        <div class="msk-view-rich-card"><span>Keterangan</span><div>'.h($viewNotes).'</div></div>';
         echo '      </div>';
         echo '    </section>';
-        echo '    <section class="msk-view-section is-wide msk-view-history-section">';
+        echo '  </div>';
+        echo '  <section class="msk-view-summary-card">';
+        echo '    <div class="msk-view-section-head"><span class="msk-view-section-kicker">Perjalanan</span><h4>MSK dan pemuridan aktif</h4></div>';
+        echo '    <div class="msk-view-summary-grid">';
+        echo '      <div class="msk-view-summary-item"><span>Sesi MSK</span><strong>'.h($viewProgressLabel).'</strong></div>';
+        echo '      <div class="msk-view-summary-item"><span>Mentor Aktif</span><strong>'.h($viewCurrentMentors !== [] ? implode(', ', $viewCurrentMentors) : '-').'</strong></div>';
+        echo '      <div class="msk-view-summary-item"><span>Kelompok Aktif</span><strong>'.h($viewCurrentGroups !== [] ? implode(', ', $viewCurrentGroups) : '-').'</strong></div>';
+        echo '      <div class="msk-view-summary-item"><span>Tahap DG</span><strong>'.h($viewCurrentStage !== '' ? $viewCurrentStage : 'Belum DG').'</strong></div>';
+        echo '    </div>';
+        echo '    <div class="msk-view-progress">';
+        echo '      <div class="msk-progress-top"><span class="msk-progress-value">'.h($viewProgressLabel).'</span><span class="msk-progress-percent">'.h((string) $viewProgressPercent).'%</span></div>';
+        echo '      <div class="msk-progress-bar" aria-hidden="true"><span style="width:'.h((string) $viewProgressPercent).'%"></span></div>';
+        echo '      <div class="msk-progress-meta">'.h($viewSessionLabel).'</div>';
+        echo '    </div>';
+        echo '  </section>';
+        echo '  <section class="msk-view-section is-wide msk-view-history-section">';
         echo '      <div class="msk-view-section-head"><span class="msk-view-section-kicker">Pemuridan</span><h4>Riwayat pemuridan</h4></div>';
         if (! $viewLinked) {
             echo '      <div class="journey-history-empty">Peserta ini belum terhubung ke data pemuridan. Setelah peserta dihubungkan ke Anggota DG, riwayat kelompok, mentor, dan kepemimpinan akan muncul di sini.</div>';
@@ -519,8 +521,7 @@ if ($page === 'msk_classes') {
             echo $viewLeaderItems !== [] ? $renderHistoryItems($viewLeaderItems) : '<div class="journey-history-empty">Belum ada riwayat memimpin kelompok.</div>';
             echo '      </div>';
         }
-        echo '    </section>';
-        echo '  </div>';
+        echo '  </section>';
         echo '</div>';
 
         $templateData = [

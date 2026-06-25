@@ -116,9 +116,13 @@ class MskParticipantPageTest extends TestCase
         ]);
 
         $this->actingAsRecUser();
-        $this->get('/pemuridan/msk?batch_month=2026-06')
+        $response = $this->get('/pemuridan/msk?batch_month=2026-06')
             ->assertOk()
             ->assertSee('msk-view-person-hero', false)
+            ->assertSee('Profil peserta')
+            ->assertSee('Kontak dan akses')
+            ->assertSee('Foto dan keterangan')
+            ->assertSee('MSK dan pemuridan aktif')
             ->assertSee('Riwayat pemuridan')
             ->assertSee('Mentor Aktif')
             ->assertSee('Pembina Modal')
@@ -128,6 +132,12 @@ class MskParticipantPageTest extends TestCase
             ->assertSee('Kelompok Dipimpin Modal')
             ->assertSee('Binaan Modal')
             ->assertSee('data-msk-view-edit-link', false);
+
+        $content = $response->getContent();
+        $this->assertLessThan(strpos($content, 'Kontak dan akses'), strpos($content, 'Profil peserta'));
+        $this->assertLessThan(strpos($content, 'Foto dan keterangan'), strpos($content, 'Kontak dan akses'));
+        $this->assertLessThan(strpos($content, 'MSK dan pemuridan aktif'), strpos($content, 'Foto dan keterangan'));
+        $this->assertLessThan(strpos($content, 'Riwayat pemuridan'), strpos($content, 'MSK dan pemuridan aktif'));
     }
 
     public function test_central_can_export_but_cannot_import_msk_data(): void
