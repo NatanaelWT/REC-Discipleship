@@ -31,6 +31,17 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertSee('Rekap Laporan DG');
         $response->assertSee('Pemimpin Test');
         $response->assertSee('Materi Test');
+        $response->assertSee('groups-hero-card dg-recap-hero-card', false);
+        $response->assertSee('groups-hero-filter-wrap dg-recap-hero-filter-wrap', false);
+        $response->assertSee('data-filter-role="recap-progress"', false);
+        $response->assertSee('groups-hero-search-wrap dg-recap-hero-search-wrap', false);
+        $response->assertSee('data-recap-progress="dg1"', false);
+
+        $content = $response->getContent();
+        $this->assertLessThan(
+            strpos($content, 'groups-hero-search-wrap dg-recap-hero-search-wrap'),
+            strpos($content, 'groups-hero-filter-wrap dg-recap-hero-filter-wrap'),
+        );
     }
 
     public function test_central_discipleship_user_can_view_and_filter_all_branches(): void

@@ -788,23 +788,31 @@ if ($page === 'dg_reports_recap') {
     }
     $defaultCalendarMonth = $calendarMaxMonth !== '' ? $calendarMaxMonth : date('Y-m');
 
-    echo "<section class=\"card dg-recap-hero-card\">\n";
-    echo "  <div class=\"dg-recap-hero-head\">\n";
-    echo "    <div class=\"dg-recap-hero-copy\">\n";
-    echo "      <div class=\"dg-recap-hero-kicker\">MONITORING PERTEMUAN DG</div>\n";
+    echo "<section class=\"card groups-hero-card dg-recap-hero-card\">\n";
+    echo "  <div class=\"groups-hero-head dg-recap-hero-head\">\n";
+    echo "    <div class=\"groups-hero-copy dg-recap-hero-copy\">\n";
+    echo "      <div class=\"groups-hero-kicker dg-recap-hero-kicker\">MONITORING PERTEMUAN DG</div>\n";
     echo "      <h1>Rekap Laporan DG</h1>\n";
     echo "      <p>Ringkas performa pemimpin, perkembangan kelompok, dan catatan pertemuan DG dalam satu tampilan yang lebih mudah dipantau.</p>\n";
     echo "    </div>\n";
-    echo "    <div class=\"dg-recap-hero-stats\">\n";
-    echo '      <div class="dg-recap-hero-stat"><span class="dg-recap-hero-stat-label">Total Laporan</span><strong class="dg-recap-hero-stat-value">'.h((string) $totalReports)."</strong></div>\n";
-    echo '      <div class="dg-recap-hero-stat"><span class="dg-recap-hero-stat-label">Pemimpin Aktif</span><strong class="dg-recap-hero-stat-value">'.h((string) $totalLeaders)."</strong></div>\n";
-    echo '      <div class="dg-recap-hero-stat"><span class="dg-recap-hero-stat-label">Kelompok</span><strong class="dg-recap-hero-stat-value">'.h((string) $totalGroups)."</strong></div>\n";
-    echo "      <button class=\"dg-recap-hero-stat dg-recap-hero-stat-action\" type=\"button\" data-dg-calendar-open><span class=\"dg-recap-hero-stat-label\">Lihat Kalender</span><strong class=\"dg-recap-hero-stat-value\">Laporan</strong></button>\n";
+    echo "    <div class=\"groups-hero-stats dg-recap-hero-stats\">\n";
+    echo '      <div class="groups-hero-stat dg-recap-hero-stat"><span class="groups-hero-stat-label dg-recap-hero-stat-label">Total Laporan</span><strong class="groups-hero-stat-value dg-recap-hero-stat-value">'.h((string) $totalReports)."</strong></div>\n";
+    echo '      <div class="groups-hero-stat dg-recap-hero-stat"><span class="groups-hero-stat-label dg-recap-hero-stat-label">Pemimpin Aktif</span><strong class="groups-hero-stat-value dg-recap-hero-stat-value">'.h((string) $totalLeaders)."</strong></div>\n";
+    echo '      <div class="groups-hero-stat dg-recap-hero-stat"><span class="groups-hero-stat-label dg-recap-hero-stat-label">Kelompok</span><strong class="groups-hero-stat-value dg-recap-hero-stat-value">'.h((string) $totalGroups)."</strong></div>\n";
+    echo "      <button class=\"groups-hero-stat dg-recap-hero-stat dg-recap-hero-stat-action\" type=\"button\" data-dg-calendar-open><span class=\"groups-hero-stat-label dg-recap-hero-stat-label\">Lihat Kalender</span><strong class=\"groups-hero-stat-value dg-recap-hero-stat-value\">Laporan</strong></button>\n";
     echo "    </div>\n";
     echo "  </div>\n";
-    echo "  <div class=\"actions dg-recap-hero-tools\">\n";
-    echo "    <div class=\"dg-recap-hero-search-wrap\">\n";
-    render_table_search_input('dg-recap-summary-table', 'Cari laporan rekap DG...', 'search dg-recap-summary-search', '', '      ');
+    echo "  <div class=\"actions groups-hero-tools dg-recap-hero-tools\">\n";
+    echo "    <div class=\"groups-hero-filter-wrap dg-recap-hero-filter-wrap\">\n";
+    echo "      <select class=\"search groups-status-filter dg-recap-progress-filter\" aria-label=\"Filter progres rekap laporan DG\" data-filter=\"dg-recap-summary-table\" data-filter-role=\"recap-progress\">\n";
+    echo "        <option value=\"all\">Semua Progress</option>\n";
+    echo "        <option value=\"dg1\">DG 1</option>\n";
+    echo "        <option value=\"dg2\">DG 2</option>\n";
+    echo "        <option value=\"dg3\">DG 3</option>\n";
+    echo "      </select>\n";
+    echo "    </div>\n";
+    echo "    <div class=\"groups-hero-search-wrap dg-recap-hero-search-wrap\">\n";
+    render_table_search_input('dg-recap-summary-table', 'Cari pemimpin, peserta, progres, atau laporan...', 'search groups-table-search dg-recap-summary-search', 'Cari rekap laporan DG', '      ');
     echo "    </div>\n";
     echo "  </div>\n";
     echo "</section>\n";
@@ -1099,7 +1107,8 @@ if ($page === 'dg_reports_recap') {
         } elseif ($progressLabel === 'DG 3') {
             $progressClass = 'is-dg3';
         }
-        echo '<tr>';
+        $progressFilter = strtolower(str_replace(' ', '', $progressLabel));
+        echo '<tr data-recap-progress="'.h($progressFilter).'">';
         echo '<td><div class="dg-recap-main-cell"><div class="dg-recap-main-title">'.h((string) ($groupRow['leader_name'] ?? '-')).'</div><div class="dg-recap-subtext">'.h($groupMembersLabel).'</div></div></td>';
         echo '<td><span class="dg-recap-stage-pill '.h($progressClass).'">'.h($progressLabel).'</span></td>';
         $reportCount = (int) ($groupRow['report_count'] ?? 0);

@@ -8,6 +8,7 @@
     let q = '';
     let statusFilter = 'all';
     let peopleStatusFilter = 'all';
+    let recapProgressFilter = 'all';
 
     controls.forEach((node) => {
       const role = String(node.getAttribute('data-filter-role') || '').toLowerCase();
@@ -15,6 +16,8 @@
         statusFilter = String(node.value || 'all').toLowerCase();
       } else if (role === 'people-status') {
         peopleStatusFilter = String(node.value || 'all').toLowerCase();
+      } else if (role === 'recap-progress') {
+        recapProgressFilter = String(node.value || 'all').toLowerCase();
       } else {
         q = String(node.value || '').toLowerCase();
       }
@@ -25,10 +28,12 @@
       const rowStatus = String(row.getAttribute('data-group-status') || '').toLowerCase();
       const rowPeopleFilter = String(row.getAttribute('data-people-filter') || '').toLowerCase();
       const rowPeopleFilterTokens = rowPeopleFilter.split(/[\s,|]+/).filter(Boolean);
+      const rowRecapProgress = String(row.getAttribute('data-recap-progress') || '').toLowerCase();
       const matchesSearch = text.includes(q);
       const matchesStatus = statusFilter === 'all' || rowStatus === statusFilter;
       const matchesPeopleStatus = peopleStatusFilter === 'all' || rowPeopleFilterTokens.includes(peopleStatusFilter) || rowPeopleFilter === peopleStatusFilter;
-      row.style.display = matchesSearch && matchesStatus && matchesPeopleStatus ? '' : 'none';
+      const matchesRecapProgress = recapProgressFilter === 'all' || rowRecapProgress === recapProgressFilter;
+      row.style.display = matchesSearch && matchesStatus && matchesPeopleStatus && matchesRecapProgress ? '' : 'none';
     });
 
     if (tableId === 'groups-dashboard-table') {
