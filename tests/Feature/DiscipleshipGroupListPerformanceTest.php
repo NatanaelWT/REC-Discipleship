@@ -40,7 +40,10 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
             ->assertSee('Kelompok 0001')
             ->assertSee('Kelompok 0050')
             ->assertDontSee('Kelompok 0051')
-            ->assertSee('Halaman 1 dari 6');
+            ->assertSee('Halaman 1 dari 6')
+            ->assertSee('data-auto-submit-search-form', false)
+            ->assertSee('data-auto-submit-search-input', false)
+            ->assertDontSee('>Cari</button>', false);
         $this->assertLessThanOrEqual(8, $queries);
         $this->assertLessThan(250 * 1024, strlen((string) $response->getContent()));
     }

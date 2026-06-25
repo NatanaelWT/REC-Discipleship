@@ -21,7 +21,7 @@
           <div class="groups-hero-stat"><span class="groups-hero-stat-label">DG 3</span><strong class="groups-hero-stat-value" data-groups-stat="dg3">{{ (string) $groupsInDg3Count }}</strong></div>
         </div>
       </div>
-      <form method="get" action="{{ route('discipleship.groups') }}" class="actions groups-hero-tools">
+      <form method="get" action="{{ route('discipleship.groups') }}" class="actions groups-hero-tools" data-auto-submit-search-form>
         @if (request()->filled('branch_id'))
           <input type="hidden" name="branch_id" value="{{ request()->query('branch_id') }}">
         @endif
@@ -33,9 +33,8 @@
           </select>
         </div>
         <div class="groups-hero-search-wrap">
-          <input type="search" name="q" value="{{ $groupsSearch }}" class="search groups-table-search" placeholder="Cari leader, pendamping, progres, atau peserta..." aria-label="Cari Kelompok DG">
+          <input type="search" name="q" value="{{ $groupsSearch }}" class="search groups-table-search" placeholder="Cari leader, pendamping, progres, atau peserta..." aria-label="Cari Kelompok DG" autocomplete="off" data-auto-submit-search-input @if ($groupsSearch !== '') autofocus @endif>
         </div>
-        <button class="btn tiny secondary" type="submit">Cari</button>
       </form>
     </section>
 
