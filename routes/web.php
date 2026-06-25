@@ -99,6 +99,7 @@ Route::group([], function (): void {
             return redirect()->route('discipleship.tree', $request->query());
         })->name('people');
         Route::get('/anggota', [DiscipleshipPeopleListController::class, 'index'])->middleware('rec.page:people_list')->name('people-list');
+        Route::get('/anggota/ekspor', [DiscipleshipPeopleListController::class, 'export'])->middleware('rec.page:people_list')->name('people-list.export');
         Route::get('/pohon', [DiscipleshipPeopleTreeController::class, 'index'])->middleware('rec.page:people_tree')->name('tree');
         Route::post('/pohon', [DiscipleshipPeopleTreeController::class, 'handleFormAction'])->middleware('rec.page:people_tree')->name('tree.action');
         Route::get('/pohon-v2', [DiscipleshipPeopleTreeController::class, 'treeV2'])->middleware('rec.page:people_tree')->name('tree-v2');

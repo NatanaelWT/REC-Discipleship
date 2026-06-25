@@ -47,7 +47,8 @@ class DiscipleshipPeopleListData
             $tokens = $progress['filters'];
             $lastStage = $this->lastStage($links);
             $branchLabel = $branchOptions[(int) $person->branch_id]['label'] ?? 'Tanpa cabang';
-            $name = trim((string) $person->full_name) ?: '-';
+            $exportName = trim((string) $person->full_name) ?: '-';
+            $name = $exportName;
             if ($this->scope->includesAllBranches()) {
                 $name = append_branch_suffix($name, $branchLabel);
             }
@@ -57,6 +58,8 @@ class DiscipleshipPeopleListData
                 'row_filter_state' => implode(' ', $tokens) ?: 'none',
                 'row_progress_key' => $lastStage !== '' ? strtolower(str_replace(' ', '', $lastStage)) : 'none',
                 'name' => $name,
+                'export_name' => $exportName,
+                'branch_label' => $branchLabel,
                 'parent_summary' => $parents !== [] ? 'Dibina oleh '.implode(', ', $parents) : 'Belum terhubung ke pembina',
                 'role_label' => $isLeader ? 'Pemimpin' : ($hasChildren ? 'Pembina' : 'Anggota'),
                 'role_tone_class' => $isLeader ? 'is-leader' : ($hasChildren ? 'is-mentor' : 'is-member'),

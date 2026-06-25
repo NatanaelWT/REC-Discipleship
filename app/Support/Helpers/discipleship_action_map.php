@@ -1,6 +1,7 @@
 <?php
 
-function discipleship_action_map(): array {
+function discipleship_action_map(): array
+{
     static $actions = null;
     if ($actions === null) {
         $actions = [
@@ -18,7 +19,9 @@ function discipleship_action_map(): array {
             'reactivate_msk_participant' => true,
             'import_pemuridan_excel' => true,
             'export_pemuridan_excel' => true,
+            'export_discipleship_people_excel' => true,
         ];
     }
+
     return $actions;
 }

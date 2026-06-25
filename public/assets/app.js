@@ -379,6 +379,9 @@
 
       input.addEventListener('input', filterRows);
       form.addEventListener('submit', (event) => {
+        if (event.submitter && event.submitter.hasAttribute('data-live-search-external-submit')) {
+          return;
+        }
         event.preventDefault();
         filterRows();
       });

@@ -2,10 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Services\Activity\ActivityRecorder;
+use App\Services\DiscipleshipPeople\DiscipleshipPeopleExportService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\TestCase;
+use ZipArchive;
 
 class DiscipleshipPeopleListTest extends TestCase
 {
@@ -49,6 +53,8 @@ class DiscipleshipPeopleListTest extends TestCase
         $response->assertDontSee('<th>Jumlah Binaan</th>', false);
         $response->assertDontSee('people-contact-cell', false);
         $response->assertDontSee('people-child-count', false);
+        $response->assertSee('Export Excel');
+        $response->assertSee(route('discipleship.people-list.export'), false);
     }
 
     public function test_people_list_shows_dg_only_progress_track_and_ignores_legacy_bridge_filter(): void
@@ -145,6 +151,99 @@ class DiscipleshipPeopleListTest extends TestCase
             ->assertOk()
             ->assertSee('Peserta 1000')
             ->assertDontSee('rec-pagination', false);
+    }
+
+    public function test_people_list_exports_filtered_rows_to_a_valid_excel_file(): void
+    {
+        $this->createDiscipleshipTables();
+        DB::table('discipleship_people')->insert([
+            [
+                'id' => 1,
+                'branch_id' => 1,
+                'full_name' => 'Anggota Export Utama',
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'id' => 2,
+                'branch_id' => 1,
+                'full_name' => 'Anggota Tidak Dipilih',
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 1,
+                'person_id' => 1,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'active',
+                'started_on' => '2026-01-01',
+                'ended_on' => null,
+                'end_reason' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+        $this->mock(ActivityRecorder::class)
+            ->shouldReceive('record')
+            ->once()
+            ->andReturnNull();
+        $this->actingAsRecUser();
+
+        $response = $this->get('/pemuridan/anggota/ekspor?progress=all&q=Export+Utama');
+
+        $response->assertOk();
+        $this->assertInstanceOf(BinaryFileResponse::class, $response->baseResponse);
+        $this->assertSame(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            $response->headers->get('Content-Type'),
+        );
+        $this->assertStringContainsString('anggota-dg-kutisari-semua-peserta-', (string) $response->headers->get('Content-Disposition'));
+
+        $path = $response->baseResponse->getFile()->getPathname();
+        try {
+            $error = '';
+            $sheets = import_read_xlsx_sheets($path, $error);
+            $this->assertSame('', $error);
+            $this->assertArrayHasKey('Anggota DG', $sheets);
+            $this->assertSame('Daftar Anggota DG', $sheets['Anggota DG'][0][0] ?? null);
+            $this->assertSame('No.', $sheets['Anggota DG'][2][0] ?? null);
+            $this->assertSame('Nama', $sheets['Anggota DG'][2][1] ?? null);
+            $this->assertSame('Anggota Export Utama', $sheets['Anggota DG'][3][1] ?? null);
+            $this->assertSame('Kutisari', $sheets['Anggota DG'][3][2] ?? null);
+            $this->assertSame('Sedang', $sheets['Anggota DG'][3][5] ?? null);
+            $this->assertStringNotContainsString('Anggota Tidak Dipilih', json_encode($sheets, JSON_UNESCAPED_UNICODE));
+
+            $zip = new ZipArchive;
+            $this->assertTrue($zip->open($path) === true);
+            $sheetXml = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
+            $zip->close();
+            $this->assertStringContainsString('<pane ySplit="4"', $sheetXml);
+            $this->assertStringContainsString('<autoFilter ref="A4:I5"/>', $sheetXml);
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    public function test_central_and_developer_can_export_discipleship_people(): void
+    {
+        $this->mock(DiscipleshipPeopleExportService::class)
+            ->shouldReceive('export')
+            ->twice()
+            ->andReturn(redirect('/pemuridan/anggota?exported=1'));
+
+        $this->actingAsRecUser('central_reader', null, 'pemuridan_pusat');
+        $this->get('/pemuridan/anggota/ekspor?branch_id=all')
+            ->assertRedirect('/pemuridan/anggota?exported=1');
+
+        $this->actingAsRecUser('developer', null, 'developer');
+        $this->get('/pemuridan/anggota/ekspor?branch_id=all')
+            ->assertRedirect('/pemuridan/anggota?exported=1');
     }
 
     private function createDiscipleshipTables(): void

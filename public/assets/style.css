@@ -9957,6 +9957,20 @@ textarea:focus-visible {
 .people-hero-filter-wrap {
   flex: 0 1 220px;
   width: 220px;
+  min-width: 0;
+}
+
+.people-hero-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.people-export-button {
+  flex: 0 0 auto;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .people-hero-search-wrap {
@@ -11754,6 +11768,14 @@ textarea:focus-visible {
     flex-basis: auto;
     width: 100%;
     margin-left: 0;
+  }
+
+  .people-hero-filter-actions {
+    width: 100%;
+  }
+
+  .people-hero-filter-actions .people-hero-filter-wrap {
+    flex: 1 1 auto;
   }
 
   .people-progress-cell {
