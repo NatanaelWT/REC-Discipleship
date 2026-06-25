@@ -161,6 +161,68 @@ class PeopleTreePageTest extends TestCase
             ->assertSee('Peserta Cache Baru');
     }
 
+    public function test_adding_archived_msk_participant_reactivates_existing_person_instead_of_duplicating(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+
+        $leaderId = (int) DB::table('discipleship_people')->where('full_name', 'Leader Test')->value('id');
+        $groupId = (int) DB::table('discipleship_groups')->where('name', 'Kelompok Test')->value('id');
+        $archivedPersonId = DB::table('discipleship_people')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Peserta Arsip MSK',
+            'phone' => '081298765432',
+            'gender' => 'Perempuan',
+            'status' => 'inactive',
+            'created_at' => now()->subMonth(),
+            'updated_at' => now()->subDay(),
+        ]);
+        DB::table('msk_participants')->insert([
+            'branch_id' => 1,
+            'discipleship_person_id' => $archivedPersonId,
+            'full_name' => 'Peserta Arsip MSK',
+            'gender' => 'Perempuan',
+            'whatsapp' => '081298765432',
+            'batch_month' => '2026-01',
+            'status' => 'active',
+            'session_numbers' => json_encode(range(1, 12)),
+            'photos' => json_encode([]),
+            'created_at' => now()->subMonth(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAsRecUser();
+        $this->post('/pemuridan/pohon/orang', [
+            'member_id' => (string) $archivedPersonId,
+            'leader_id' => (string) $leaderId,
+            'group_id' => (string) $groupId,
+            'return_page' => 'people_tree',
+        ])->assertRedirect('/pemuridan/pohon?saved=1');
+
+        $this->assertSame(
+            1,
+            DB::table('discipleship_people')->where('full_name', 'Peserta Arsip MSK')->count(),
+        );
+        $this->assertDatabaseHas('discipleship_people', [
+            'id' => $archivedPersonId,
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('msk_participants', [
+            'discipleship_person_id' => $archivedPersonId,
+        ]);
+        $this->assertDatabaseHas('discipleship_group_people', [
+            'discipleship_group_id' => $groupId,
+            'person_id' => $archivedPersonId,
+            'role' => 'member',
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('discipleship_relationships', [
+            'mentor_person_id' => $leaderId,
+            'disciple_person_id' => $archivedPersonId,
+            'status' => 'active',
+        ]);
+    }
+
     public function test_people_tree_store_maps_temporary_ids_to_numeric_foreign_keys(): void
     {
         $this->createTables();

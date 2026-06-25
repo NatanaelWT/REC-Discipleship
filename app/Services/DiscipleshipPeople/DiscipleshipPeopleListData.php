@@ -18,7 +18,9 @@ class DiscipleshipPeopleListData
     {
         $search = strtolower(trim((string) $request->query('q', '')));
         $progress = trim((string) $request->query('progress', 'all'));
-        $base = DiscipleshipPerson::query()->whereIn('branch_id', $this->scope->branchIds());
+        $base = DiscipleshipPerson::query()
+            ->whereIn('branch_id', $this->scope->branchIds())
+            ->where('status', 'active');
         $query = (clone $base)->select(['id', 'branch_id', 'full_name', 'status']);
 
         $this->applyProgressFilter($query, $progress);

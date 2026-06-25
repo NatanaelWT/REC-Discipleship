@@ -57,6 +57,34 @@ class DiscipleshipPeopleListTest extends TestCase
         $response->assertSee(route('discipleship.people-list.export'), false);
     }
 
+    public function test_people_list_hides_archived_duplicate_identity(): void
+    {
+        $this->createDiscipleshipTables();
+        DB::table('discipleship_people')->insert([
+            [
+                'branch_id' => 1,
+                'full_name' => 'Identitas DG Sama',
+                'phone' => '081234567890',
+                'status' => 'inactive',
+                'created_at' => now()->subDay(),
+                'updated_at' => now()->subDay(),
+            ],
+            [
+                'branch_id' => 1,
+                'full_name' => 'Identitas DG Sama',
+                'phone' => '081234567890',
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+        $this->actingAsRecUser();
+
+        $content = $this->get('/pemuridan/anggota')->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($content, '<div class="people-name-main">Identitas DG Sama</div>'));
+    }
+
     public function test_people_list_shows_dg_only_progress_track_and_ignores_legacy_bridge_filter(): void
     {
         $this->createDiscipleshipTables();

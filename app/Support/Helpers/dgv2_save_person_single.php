@@ -52,7 +52,9 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
     }
     $memberId = $canonicalMemberId;
 
-    foreach ($model['discipleship_persons'] as $row) {
+    $archivedPersonIndex = null;
+    $archivedPerson = null;
+    foreach ($model['discipleship_persons'] as $index => $row) {
         if (! is_array($row)) {
             continue;
         }
@@ -60,9 +62,22 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
         $rowMemberId = trim((string) ($row['member_id'] ?? ''));
         $rowCanonicalMemberId = dgv2_canonical_identity_source_id($rowMemberId, $mskClasses);
         $rowStatus = strtolower(trim((string) ($row['status'] ?? 'active')));
-        if ($rowCanonicalMemberId === $memberId && $rowId !== $id && $rowStatus === 'active') {
+        if ($rowCanonicalMemberId !== $memberId || $rowId === $id) {
+            continue;
+        }
+        if ($rowStatus === 'active') {
             return ['ok' => false, 'error' => 'member_exists'];
         }
+        if ($id === '' && $archivedPerson === null) {
+            $archivedPersonIndex = $index;
+            $archivedPerson = $row;
+        }
+    }
+
+    if ($person === null && $archivedPerson !== null) {
+        $personIndex = $archivedPersonIndex;
+        $person = $archivedPerson;
+        $id = trim((string) ($archivedPerson['id'] ?? ''));
     }
 
     $personId = $id !== '' ? $id : temporary_model_id('person');
