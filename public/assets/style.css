@@ -9461,20 +9461,25 @@ textarea:focus-visible {
 }
 
 .worship-steward-hero-controls {
-  flex-wrap: wrap;
+  display: flex;
+  flex-wrap: nowrap;
   align-items: flex-end;
   justify-content: space-between;
+  gap: 12px;
   width: 100%;
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .worship-steward-month-form {
   margin: 0;
-  flex: 0 0 auto;
+  flex: 0 0 220px;
+  width: 220px;
+  min-width: 0;
 }
 
 .worship-steward-month-form input[type="month"] {
-  min-width: 220px;
+  min-width: 0;
   height: 40px;
   border-radius: 14px;
   padding: 0 14px;
@@ -9488,8 +9493,10 @@ textarea:focus-visible {
   display: grid;
   grid-template-columns: minmax(220px, 1fr);
   gap: 12px;
-  flex: 1 1 320px;
+  flex: 0 1 560px;
   width: min(100%, 560px);
+  min-width: 0;
+  margin-left: auto;
 }
 
 .worship-steward-hero-field {
@@ -9773,6 +9780,15 @@ textarea:focus-visible {
 @media (max-width: 640px) {
   .dashboard-main-hero-stats {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .worship-steward-hero-controls {
+    flex-wrap: wrap;
+  }
+
+  .worship-steward-month-form {
+    flex-basis: 100%;
+    width: 100%;
   }
 }
 
