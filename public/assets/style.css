@@ -13230,8 +13230,8 @@ details[open] > summary .activity-disclosure-icon::after {
 .developer-runtime-panel {
   padding: 18px;
   border: 0;
-  border-radius: 17px;
-  background: #f8fafc;
+  border-radius: 0;
+  background: transparent;
 }
 
 .page-developer .developer-runtime-section .developer-section-head {
@@ -13239,8 +13239,8 @@ details[open] > summary .activity-disclosure-icon::after {
   gap: 14px;
   padding: 16px 18px;
   border: 0;
-  border-radius: 12px;
-  background: #f8fafc;
+  border-radius: 0;
+  background: transparent;
 }
 
 .page-developer .developer-runtime-section .developer-section-icon {
@@ -13277,7 +13277,7 @@ details[open] > summary .activity-disclosure-icon::after {
   border-spacing: 0;
   overflow: hidden;
   border: 0;
-  border-radius: 12px;
+  border-radius: 0;
   background: #fff;
 }
 
@@ -14151,8 +14151,7 @@ details[open] > summary .activity-disclosure-icon::after {
 }
 
 .developer-create-user-form,
-.developer-config-form,
-.developer-runtime-panel {
+.developer-config-form {
   border-radius: 12px;
   background: #f8fafc;
 }
