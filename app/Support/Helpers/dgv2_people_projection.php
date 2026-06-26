@@ -51,12 +51,15 @@ function dgv2_people_projection(array $model, array $members, array $mskClasses)
         }
         $identity = dgv2_find_identity($identityById, $memberId);
         $parentIds = array_keys($parentsByDisciple[$personId] ?? []);
+        $name = trim((string) ($person['full_name'] ?? '')) ?: trim((string) ($identity['full_name'] ?? ''));
+        $phone = trim((string) ($person['phone'] ?? '')) ?: trim((string) ($identity['whatsapp'] ?? ''));
+        $gender = trim((string) ($person['gender'] ?? '')) ?: trim((string) ($identity['gender'] ?? ''));
         $rows[] = [
             'id' => $personId,
             'member_id' => $memberId,
-            'name' => trim((string) ($person['full_name'] ?? $identity['full_name'] ?? '')),
-            'phone' => trim((string) ($person['phone'] ?? $identity['whatsapp'] ?? '')),
-            'gender' => trim((string) ($person['gender'] ?? $identity['gender'] ?? '')),
+            'name' => $name,
+            'phone' => $phone,
+            'gender' => $gender,
             'role' => (isset($leadersMap[$personId]) || isset($childrenMap[$personId])) ? 'Pemimpin' : 'Anggota',
             'parent_ids' => $parentIds,
             'notes' => trim((string) ($person['notes'] ?? '')),
