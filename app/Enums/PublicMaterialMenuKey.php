@@ -42,7 +42,7 @@ enum PublicMaterialMenuKey: string
         return match ($this) {
             self::MateriDg1 => 'Berpusat Pada Injil',
             self::MateriDg2 => 'Berubah Oleh Injil',
-            self::MateriDg3 => 'Bertumbuh Dalam Pemuridan Lanjutan',
+            self::MateriDg3 => 'Melayani Dengan Injil',
             self::MeditasiInjil => 'Merenungkan Injil Setiap Hari',
             self::HandbookPerjanjianKelompok => 'Bertumbuh Dalam Komitmen Kelompok',
         };

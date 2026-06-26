@@ -20,7 +20,7 @@ return new class extends Migration
         ],
         'materi_dg_3' => [
             'label' => 'Materi DG-3',
-            'subtitle' => 'Bertumbuh Dalam Pemuridan Lanjutan',
+            'subtitle' => 'Melayani Dengan Injil',
             'folder_path' => 'Materi-DG/DG-3',
         ],
         'meditasi_injil' => [
