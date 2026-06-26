@@ -41,7 +41,7 @@ class DifficultQuestionAdminTest extends TestCase
         $response->assertSee('Pertanyaan Sulit');
         $response->assertSee('+6281234567890');
         $response->assertSee('Apa arti pemuridan?');
-        $response->assertDontSee('name="answer_text"', false);
+        $response->assertSee('name="answer_text"', false);
     }
 
     public function test_public_submission_stores_optional_whatsapp_number(): void
@@ -71,7 +71,7 @@ class DifficultQuestionAdminTest extends TestCase
         ]);
     }
 
-    public function test_developer_cannot_save_answer_from_discipleship_preview(): void
+    public function test_developer_can_save_answer_from_difficult_question_admin(): void
     {
         $this->createDifficultQuestionsTable();
         $this->actingAsRecUser('developer', null, 'developer');
@@ -93,12 +93,12 @@ class DifficultQuestionAdminTest extends TestCase
             'answer_text' => 'Jawaban dari admin.',
         ]);
 
-        $response->assertRedirect('/developer?error=access_denied');
+        $response->assertRedirect('/pemuridan/pertanyaan-sulit?answered=1');
         $this->assertDatabaseHas('difficult_questions', [
             'id' => $questionId,
-            'status' => 'pending',
-            'answer' => null,
-            'answered_by_username' => null,
+            'status' => 'answered',
+            'answer' => 'Jawaban dari admin.',
+            'answered_by_username' => 'developer',
         ]);
     }
 
@@ -134,7 +134,7 @@ class DifficultQuestionAdminTest extends TestCase
         $response->assertSee('Jawaban publik tersedia.');
     }
 
-    public function test_central_discipleship_user_cannot_save_an_answer(): void
+    public function test_central_discipleship_user_can_save_an_answer(): void
     {
         $this->createDifficultQuestionsTable();
         $this->loginAsCentralDiscipleshipAdmin();
@@ -153,13 +153,14 @@ class DifficultQuestionAdminTest extends TestCase
         ]);
 
         $this->post("/pemuridan/pertanyaan-sulit/{$questionId}/jawaban", [
-            'answer_text' => 'Tidak boleh disimpan.',
-        ])->assertRedirect('/pemuridan/dashboard?error=access_denied');
+            'answer_text' => 'Jawaban dari pusat.',
+        ])->assertRedirect('/pemuridan/pertanyaan-sulit?answered=1');
 
         $this->assertDatabaseHas('difficult_questions', [
             'id' => $questionId,
-            'status' => 'pending',
-            'answer' => null,
+            'status' => 'answered',
+            'answer' => 'Jawaban dari pusat.',
+            'answered_by_username' => 'admin_pusat',
         ]);
     }
 

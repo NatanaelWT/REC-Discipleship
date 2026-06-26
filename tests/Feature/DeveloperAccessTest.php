@@ -54,7 +54,7 @@ class DeveloperAccessTest extends TestCase
         $this->assertFalse(branch_can_use_action(current_user_branch(), 'save_person'));
         $this->assertTrue(is_effective_central_discipleship_readonly());
         $this->assertTrue(can_manage_public_materials());
-        $this->assertFalse(can_manage_difficult_questions());
+        $this->assertTrue(can_manage_difficult_questions());
         $this->assertTrue(branch_can_access_secure_upload_path(current_user_branch(), 'restricted/example.pdf'));
     }
 
