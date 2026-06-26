@@ -13168,9 +13168,24 @@ details[open] > summary .activity-disclosure-icon::after {
 .developer-user-status.is-inactive { background: #fee2e2; color: #991b1b; }
 
 .developer-user-chevron {
-  color: #64748b;
-  font-size: 20px;
+  position: relative;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #475569;
   transition: transform .18s ease;
+}
+
+.developer-user-chevron::before {
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px);
+  content: "";
 }
 
 .developer-user-item[open] .developer-user-chevron {
@@ -14154,6 +14169,44 @@ details[open] > summary .activity-disclosure-icon::after {
 .developer-config-form {
   border-radius: 12px;
   background: #f8fafc;
+}
+
+.page-developer-users .developer-create-user-form {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+}
+
+.page-developer-users .developer-create-user-form label,
+.page-developer-users .developer-create-user-form .developer-form-actions {
+  min-width: 0;
+}
+
+.page-developer-users .developer-create-user-form input,
+.page-developer-users .developer-create-user-form select,
+.page-developer-users .developer-create-user-form .btn {
+  width: 100%;
+  min-height: 44px;
+}
+
+.page-developer-users .developer-create-user-form .developer-form-actions {
+  align-self: end;
+}
+
+.page-developer-users .developer-create-user-form .developer-primary-action {
+  width: 100%;
+  min-height: 44px;
+}
+
+@media (max-width: 900px) {
+  .page-developer-users .developer-create-user-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .page-developer-users .developer-create-user-form {
+    grid-template-columns: 1fr;
+  }
 }
 
 .developer-config-layout {

@@ -104,7 +104,7 @@
               <span class="developer-user-avatar">{{ $userInitial }}</span>
               <span class="developer-user-identity"><strong>{{ $user->username }}</strong><small>{{ $roleLabel }} · {{ $requiresBranch ? $branchLabel : 'Tanpa cabang' }}</small></span>
               <span class="developer-user-status {{ $active ? 'is-active' : 'is-inactive' }}">{{ $active ? 'Aktif' : 'Nonaktif' }}</span>
-              <span class="developer-user-chevron" aria-hidden="true">⌄</span>
+              <span class="developer-user-chevron" aria-hidden="true"></span>
             </summary>
             <div class="developer-user-detail">
               <div class="developer-user-detail-head"><strong>Pengaturan akses</strong><span>Perubahan langsung berlaku pada login berikutnya.</span></div>
