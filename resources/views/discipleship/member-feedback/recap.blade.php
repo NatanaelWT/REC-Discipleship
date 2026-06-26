@@ -53,7 +53,6 @@
               ['label' => 'Skor Rata-rata', 'value' => $scoreLabel($summary['overall_score'] ?? 0).'/10'],
               ['label' => 'Kelompok Terisi', 'value' => (string) ($summary['feedback_group_count'] ?? 0)],
               ['label' => 'Coverage Aktif', 'value' => $percentLabel($summary['coverage_percent'] ?? 0)],
-              ['label' => 'Update Terakhir', 'value' => format_datetime_id((string) ($summary['latest_submitted_at'] ?? ''))],
           ],
           'tools' => [
               'element' => 'div',
