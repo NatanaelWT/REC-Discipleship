@@ -50,6 +50,7 @@ class PublicMenuCatalog
                     'title' => 'Handbook & Perjanjian Kelompok',
                     'title_lines' => ['Handbook &', 'Perjanjian', 'Kelompok'],
                     'href' => route('materials.show', ['menu' => PublicMaterialMenuKey::HandbookPerjanjianKelompok->value], false),
+                    'tile_class' => 'is-wide-mobile',
                 ],
                 [
                     'title' => 'Unggah Pertanyaan Sulit',

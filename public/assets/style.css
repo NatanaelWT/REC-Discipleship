@@ -7381,15 +7381,13 @@ textarea:focus-visible {
 .page-public-menu-home .container {
   max-width: 1160px;
   min-height: 100svh;
-  height: 100svh;
-  max-height: 100svh;
   margin: 0 auto;
   padding-top: clamp(8px, 1.8vh, 20px);
   padding-bottom: clamp(8px, 1.8vh, 20px);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .page-public-menu-home .public-menu-card {
@@ -7406,8 +7404,8 @@ textarea:focus-visible {
 
 .page-public-menu-home {
   min-height: 100svh;
-  height: 100svh;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .page-public-menu-home .public-menu-shell {
@@ -7481,6 +7479,10 @@ textarea:focus-visible {
 
 .page-public-menu-home .public-menu-tile.is-primary .public-menu-tile-cta {
   font-size: clamp(12px, 1vw, 14px);
+}
+
+.page-public-menu-home .public-menu-tile.is-wide-mobile {
+  grid-column: span 4;
 }
 
 @media (min-width: 981px) {
@@ -7789,9 +7791,35 @@ textarea:focus-visible {
 }
 
 @media (max-width: 640px) {
+  .page-public-menu-home {
+    min-height: 100svh;
+    height: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .page-public-menu-home .container {
     padding-top: 8px;
     padding-bottom: 8px;
+    min-height: 100svh;
+    height: auto;
+    max-height: none;
+    justify-content: flex-start;
+    overflow: visible;
+  }
+
+  .page-public-menu-home .public-menu-tile.is-wide-mobile {
+    grid-column: span 2;
+    min-height: 104px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .page-public-menu-home .public-menu-tile.is-wide-mobile .public-menu-tile-title,
+  .page-public-menu-home .public-menu-tile.is-wide-mobile .public-menu-tile-title.is-long,
+  .page-public-menu-home .public-menu-tile.is-wide-mobile .public-menu-tile-title.is-xlong {
+    font-size: clamp(14px, 4.4vw, 18px);
+    line-height: 1.04;
   }
 
   .page-public-dg-branch .container {
@@ -7931,6 +7959,12 @@ textarea:focus-visible {
     gap: 3px;
   }
 
+  .page-public-menu-home .public-menu-tile.is-wide-mobile {
+    grid-column: span 2;
+    min-height: 104px;
+    padding: 10px 14px;
+  }
+
   .page-public-menu-home .public-menu-tile.is-primary {
     grid-column: span 2;
     min-height: 84px;
@@ -7945,6 +7979,13 @@ textarea:focus-visible {
   .page-public-menu-home .public-menu-tile:not(.is-primary) .public-menu-tile-title {
     font-size: clamp(12px, 3.55vw, 15px);
     line-height: 1.02;
+  }
+
+  .page-public-menu-home .public-menu-tile.is-wide-mobile .public-menu-tile-title,
+  .page-public-menu-home .public-menu-tile.is-wide-mobile .public-menu-tile-title.is-long,
+  .page-public-menu-home .public-menu-tile.is-wide-mobile .public-menu-tile-title.is-xlong {
+    font-size: clamp(14px, 4.2vw, 17px);
+    line-height: 1.04;
   }
 
   .page-public-menu-home .public-menu-tile.is-primary .public-menu-tile-title,
