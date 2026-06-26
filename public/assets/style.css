@@ -1225,6 +1225,54 @@ button.nav-item {
   font-weight: 700;
 }
 
+.public-material-text-actions {
+  padding: 8px max(16px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  border-top: 0;
+  background: transparent;
+  box-shadow: none;
+  gap: 12px;
+}
+
+.public-material-text-actions .public-material-journal-btn,
+.public-material-text-actions .public-material-feedback-btn {
+  min-height: 40px;
+  min-width: min(100%, 216px);
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.public-material-text-actions .public-material-journal-btn {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: #fff;
+}
+
+.public-material-text-actions .public-material-feedback-btn {
+  border-color: #d97706;
+  background: #f59e0b;
+  color: #111827;
+}
+
+.public-material-text-actions .public-material-journal-btn:hover,
+.public-material-text-actions .public-material-feedback-btn:hover {
+  filter: none;
+}
+
+.public-material-text-actions .public-material-journal-btn:hover {
+  background: #0b5f59;
+  border-color: #0b5f59;
+}
+
+.public-material-text-actions .public-material-feedback-btn:hover {
+  background: #e58a00;
+  border-color: #b86100;
+}
+
 .page-public-material-text-preview {
   background: #f8fafc;
 }
@@ -1369,6 +1417,11 @@ button.nav-item {
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
   }
 
+  .public-material-text-actions {
+    padding: 8px 12px calc(18px + env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+
   .public-material-text-main {
     width: min(100% - 24px, 900px);
     padding-top: 18px;
@@ -1420,6 +1473,11 @@ button.nav-item {
   .public-material-journal-btn,
   .public-material-feedback-btn {
     width: 100%;
+  }
+
+  .public-material-text-actions .public-material-journal-btn,
+  .public-material-text-actions .public-material-feedback-btn {
+    min-height: 42px;
   }
 }
 
