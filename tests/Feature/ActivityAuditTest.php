@@ -293,7 +293,7 @@ class ActivityAuditTest extends TestCase
             ->assertDontSee('developer-hub-nav', false)
             ->assertSee('Maksimal 100 per halaman')
             ->assertSee('100 aktivitas pada halaman ini')
-            ->assertSee('Berikutnya')
+            ->assertSee('Lebih lama')
             ->assertSee('data-developer-cursor-pagination', false)
             ->assertSee('aria-disabled="true"', false)
             ->assertSee('class="btn tiny ghost developer-cursor-button"', false)
@@ -304,6 +304,24 @@ class ActivityAuditTest extends TestCase
         $this->assertSame(100, substr_count($content, 'data-activity-row'));
         $this->assertSame(1, substr_count($content, 'class="activity-pagination"'));
         $this->assertTrue(strpos($content, 'class="activity-pagination"') < strpos($content, 'class="table-wrap activity-table-wrap"'));
+        $this->assertStringContainsString('/compact-activity/1', $content);
+        $this->assertStringContainsString('/compact-activity/100', $content);
+        $this->assertStringNotContainsString('/compact-activity/101', $content);
+
+        $olderUrl = $this->paginationUrl($content, 'next');
+        $olderResponse = $this->get($olderUrl)->assertOk()->assertSee('Lebih baru');
+        $olderContent = $olderResponse->getContent();
+        $this->assertSame(25, substr_count($olderContent, 'data-activity-row'));
+        $this->assertStringNotContainsString('/compact-activity/100', $olderContent);
+        $this->assertStringContainsString('/compact-activity/101', $olderContent);
+        $this->assertStringContainsString('/compact-activity/125', $olderContent);
+
+        $newerUrl = $this->paginationUrl($olderContent, 'prev');
+        $newerContent = $this->get($newerUrl)->assertOk()->getContent();
+        $this->assertSame(100, substr_count($newerContent, 'data-activity-row'));
+        $this->assertStringContainsString('/compact-activity/1', $newerContent);
+        $this->assertStringContainsString('/compact-activity/100', $newerContent);
+        $this->assertStringNotContainsString('/compact-activity/101', $newerContent);
     }
 
     public function test_advanced_activity_filters_open_only_when_an_advanced_filter_is_active(): void
@@ -470,6 +488,21 @@ class ActivityAuditTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    private function paginationUrl(string $content, string $rel): string
+    {
+        $rel = preg_quote($rel, '/');
+        if (! preg_match('/<a\b(?=[^>]*\brel="'.$rel.'")(?=[^>]*\bhref="([^"]+)")[^>]*>/i', $content, $matches)) {
+            $this->fail('Expected pagination link with rel="'.$rel.'".');
+        }
+
+        $url = html_entity_decode($matches[1], ENT_QUOTES);
+        $parts = parse_url($url);
+        $path = (string) ($parts['path'] ?? '/developer/activities');
+        $query = isset($parts['query']) ? '?'.$parts['query'] : '';
+
+        return $path.$query;
     }
 
     private function developer(): User
