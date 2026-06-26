@@ -333,7 +333,7 @@
                   <strong>{{ (string) ($rating['label'] ?? '-') }}</strong>
                 </div>
                 <div class="member-feedback-recap-modal-rating-score">
-                  <strong>{{ (string) ($rating['score'] ?? '-') }} / {{ (string) ($rating['scale'] ?? '-') }}</strong>
+                  <strong>Jawaban {{ (string) ($rating['score'] ?? '-') }} / {{ (string) ($rating['scale'] ?? '-') }}</strong>
                   <span>{{ $scoreLabel($normalizedScore) }}/10</span>
                   <div class="member-feedback-recap-modal-rating-bar"><i style="width: {{ $normalizedPercent }}%"></i></div>
                 </div>

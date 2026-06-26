@@ -34,7 +34,7 @@ class MemberFeedbackRecapPageData
 
         $branchCodes = $this->branchCodes($selectedBranch, $centralReadOnly);
         $data = $this->cache->remember(
-            'member-feedback-recap',
+            'member-feedback-recap-v2',
             [...$branchCodes, $centralReadOnly ? 'central' : 'branch'],
             fn (): array => $this->build($branchCodes, $centralReadOnly),
         );
