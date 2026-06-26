@@ -555,7 +555,7 @@ class MemberFeedbackRecapPageData
             return '-';
         }
 
-        return mb_strlen($text) > 180 ? mb_substr($text, 0, 177).'...' : $text;
+        return mb_strlen($text) > 140 ? mb_substr($text, 0, 137).'...' : $text;
     }
 
     private function noteSectionKey(string $noteKey): string

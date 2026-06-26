@@ -9808,18 +9808,42 @@ textarea:focus-visible {
 
 .member-feedback-recap-score-card {
   display: grid;
-  grid-template-columns: 86px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-areas:
+    "title title"
+    "ring meta";
   align-items: center;
-  gap: 14px;
-  padding: 18px;
+  gap: 12px;
+  min-height: 178px;
+  padding: 16px;
+}
+
+.member-feedback-recap-score-title {
+  grid-area: title;
+  min-width: 0;
+}
+
+.member-feedback-recap-score-title .member-feedback-recap-kicker {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-feedback-recap-score-title h2 {
+  margin: 4px 0 0;
+  color: #0f172a;
+  font-size: 22px;
+  line-height: 1.1;
 }
 
 .member-feedback-recap-score-ring {
+  grid-area: ring;
   position: relative;
   display: grid;
   place-items: center;
-  width: 78px;
-  height: 78px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background:
     radial-gradient(circle at center, #ffffff 0 56%, transparent 57%),
@@ -9848,6 +9872,7 @@ textarea:focus-visible {
 }
 
 .member-feedback-recap-score-copy {
+  grid-area: meta;
   min-width: 0;
 }
 
@@ -9862,7 +9887,7 @@ textarea:focus-visible {
 .member-feedback-recap-note-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
 }
 
 .member-feedback-recap-score-meta span,
@@ -9870,12 +9895,12 @@ textarea:focus-visible {
 .member-feedback-recap-note-meta span {
   display: inline-flex;
   align-items: center;
-  min-height: 24px;
-  padding: 4px 8px;
+  min-height: 22px;
+  padding: 3px 7px;
   border-radius: 999px;
   background: rgba(241, 245, 249, 0.9);
   color: #475569;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
 }
 
@@ -9994,9 +10019,19 @@ textarea:focus-visible {
   min-width: 0;
 }
 
-.member-feedback-recap-question-row strong {
+.member-feedback-recap-question-row > div:first-child strong {
+  display: -webkit-box;
+  overflow: hidden;
   font-size: 13px;
   line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.member-feedback-recap-question-row > div:first-child span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .member-feedback-recap-note-grid {
@@ -10007,12 +10042,15 @@ textarea:focus-visible {
 
 .member-feedback-recap-note {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 10px;
-  min-height: 170px;
+  height: 250px;
+  min-height: 0;
   padding: 14px;
   border: 1px solid rgba(203, 213, 225, 0.86);
-  border-radius: 16px;
+  border-radius: 12px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
+  overflow: hidden;
 }
 
 .member-feedback-recap-note-head {
@@ -10034,10 +10072,21 @@ textarea:focus-visible {
 }
 
 .member-feedback-recap-note p {
+  display: -webkit-box;
   margin: 0;
+  overflow: hidden;
   color: #1f2937;
   font-size: 13px;
   line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 8;
+}
+
+.member-feedback-recap-note-meta span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .member-feedback-recap-group-grid {
@@ -10081,15 +10130,75 @@ textarea:focus-visible {
   overflow-x: auto;
 }
 
+.member-feedback-recap-table {
+  width: 100%;
+  min-width: 1040px;
+  table-layout: fixed;
+}
+
 .member-feedback-recap-table th,
 .member-feedback-recap-table td {
-  vertical-align: top;
+  vertical-align: middle;
+}
+
+.member-feedback-recap-table td {
+  height: 72px;
+}
+
+.member-feedback-recap-table th {
+  white-space: nowrap;
+}
+
+.member-feedback-recap-table td:first-child,
+.member-feedback-recap-table td:nth-child(2),
+.member-feedback-recap-table td:nth-child(7) {
+  white-space: nowrap;
+}
+
+.member-feedback-recap-col-date {
+  width: 11%;
+}
+
+.member-feedback-recap-col-branch {
+  width: 7%;
+}
+
+.member-feedback-recap-col-session {
+  width: 9%;
+}
+
+.member-feedback-recap-col-progress {
+  width: 9%;
+}
+
+.member-feedback-recap-col-group {
+  width: 20%;
+}
+
+.member-feedback-recap-col-respondent {
+  width: 16%;
+}
+
+.member-feedback-recap-col-score {
+  width: 7%;
+}
+
+.member-feedback-recap-col-note {
+  width: 21%;
 }
 
 .member-feedback-recap-main-cell {
   display: grid;
   gap: 4px;
-  min-width: 180px;
+  min-width: 0;
+}
+
+.member-feedback-recap-main-cell strong {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .member-feedback-recap-main-cell span,
@@ -10099,9 +10208,18 @@ textarea:focus-visible {
   line-height: 1.45;
 }
 
+.member-feedback-recap-main-cell span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .member-feedback-recap-note-cell {
-  min-width: 240px;
-  max-width: 360px;
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .member-feedback-recap-score-pill {

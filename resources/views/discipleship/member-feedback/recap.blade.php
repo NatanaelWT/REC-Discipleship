@@ -42,6 +42,13 @@
       };
       $percentLabel = fn ($value): string => (string) max(0, min(100, (int) round((float) $value))).'%';
       $progressKey = fn (string $value): string => strtolower(str_replace(' ', '', normalize_dg_progress_value($value) ?: $value));
+      $sectionShortLabels = [
+          'leadership' => 'Kepemimpinan',
+          'meeting' => 'Teknis',
+          'teaching' => 'Pengajaran',
+          'personal_growth' => 'Pertumbuhan',
+          'relationships' => 'Relasi',
+      ];
   @endphp
 
   @include('discipleship.partials.page-header', [
@@ -84,23 +91,28 @@
           $scorePercent = max(0, min(100, $score * 10));
           $directionalScore = $section['directional_score'] ?? null;
           $balanceScore = $section['balance_score'] ?? null;
+          $sectionKey = (string) ($section['section_key'] ?? '');
+          $sectionLabel = (string) ($section['label'] ?? '-');
+          $sectionShortLabel = $sectionShortLabels[$sectionKey] ?? $sectionLabel;
       @endphp
       <article class="card member-feedback-recap-score-card">
+        <div class="member-feedback-recap-score-title">
+          <span class="member-feedback-recap-kicker" title="{{ $sectionLabel }}">{{ $sectionShortLabel }}</span>
+          <h2>{{ $scoreLabel($score) }}/10</h2>
+        </div>
         <div class="member-feedback-recap-score-ring" style="--score-percent: {{ $scorePercent }}%;">
           <strong>{{ $scoreLabel($score) }}</strong>
           <span>/10</span>
         </div>
         <div class="member-feedback-recap-score-copy">
-          <span class="member-feedback-recap-kicker">{{ (string) ($section['label'] ?? '-') }}</span>
-          <h2>{{ $scoreLabel($score) }} dari 10</h2>
           <div class="member-feedback-recap-score-meta">
             <span>{{ (string) ($section['rating_count'] ?? 0) }} rating</span>
             <span>{{ (string) ($section['note_count'] ?? 0) }} catatan</span>
           </div>
           @if ($directionalScore !== null || $balanceScore !== null)
             <div class="member-feedback-recap-score-sub">
-              @if ($directionalScore !== null)<span>Kepuasan {{ $scoreLabel($directionalScore) }}</span>@endif
-              @if ($balanceScore !== null)<span>Keseimbangan {{ $scoreLabel($balanceScore) }}</span>@endif
+              @if ($directionalScore !== null)<span>Puas {{ $scoreLabel($directionalScore) }}</span>@endif
+              @if ($balanceScore !== null)<span>Seimbang {{ $scoreLabel($balanceScore) }}</span>@endif
             </div>
           @endif
         </div>
@@ -231,6 +243,16 @@
     </div>
     <div class="table-wrap member-feedback-recap-table-wrap">
       <table class="table member-feedback-recap-table" id="member-feedback-recap-detail-table">
+        <colgroup>
+          <col class="member-feedback-recap-col-date">
+          <col class="member-feedback-recap-col-branch">
+          <col class="member-feedback-recap-col-session">
+          <col class="member-feedback-recap-col-progress">
+          <col class="member-feedback-recap-col-group">
+          <col class="member-feedback-recap-col-respondent">
+          <col class="member-feedback-recap-col-score">
+          <col class="member-feedback-recap-col-note">
+        </colgroup>
         <thead>
           <tr>
             <th>Tanggal</th>
@@ -250,13 +272,15 @@
               <td>{{ (string) ($row['branch_label'] ?? '-') }}</td>
               <td>{{ (string) ($row['session_label'] ?? '-') }}</td>
               <td><span class="group-progress-badge is-{{ $progressKey((string) ($row['group_progress'] ?? '')) }}">{{ (string) ($row['group_progress'] ?? '-') }}</span></td>
-              <td class="member-feedback-recap-main-cell">
-                <strong>{{ (string) ($row['leader_name'] ?? '-') }}</strong>
-                <span>{{ (string) ($row['group_name'] ?? 'Kelompok') }}</span>
+              <td>
+                <div class="member-feedback-recap-main-cell">
+                  <strong>{{ (string) ($row['leader_name'] ?? '-') }}</strong>
+                  <span>{{ (string) ($row['group_name'] ?? 'Kelompok') }}</span>
+                </div>
               </td>
               <td>{{ (string) ($row['respondent_name'] ?? '-') }}</td>
               <td><span class="member-feedback-recap-score-pill">{{ $row['score'] !== null ? $scoreLabel($row['score']) : '-' }}</span></td>
-              <td class="member-feedback-recap-note-cell">{{ (string) ($row['note_summary'] ?? '-') }}</td>
+              <td><span class="member-feedback-recap-note-cell">{{ (string) ($row['note_summary'] ?? '-') }}</span></td>
             </tr>
           @empty
             <tr><td colspan="8">Belum ada jurnal umpan balik anggota pada scope ini.</td></tr>
