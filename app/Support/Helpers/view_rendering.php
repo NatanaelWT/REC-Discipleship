@@ -292,11 +292,11 @@ function render_sidebar_navigation(string $currentPage, string $currentBranch, b
     $developerAccess = function_exists('is_developer_session') && is_developer_session();
     if ($developerAccess) {
         render_sidebar_nav_group('Developer', 'developer', [
-            ['label' => 'Dashboard', 'page' => 'developer_dashboard', 'href' => route('developer.dashboard'), 'icon' => 'dashboard'],
-            ['label' => 'User', 'page' => 'developer_users', 'href' => route('developer.users'), 'icon' => 'users'],
-            ['label' => 'Config', 'page' => 'developer_config', 'href' => route('developer.config'), 'icon' => 'config'],
-            ['label' => 'Statistik', 'page' => 'developer_statistics', 'href' => route('developer.statistics'), 'icon' => 'statistics'],
-            ['label' => 'Aktivitas', 'page' => 'developer_activities', 'href' => route('developer.activities'), 'icon' => 'activities'],
+            ['label' => 'Dashboard', 'page' => 'developer_dashboard', 'href' => route('developer.dashboard')],
+            ['label' => 'User', 'page' => 'developer_users', 'href' => route('developer.users')],
+            ['label' => 'Config', 'page' => 'developer_config', 'href' => route('developer.config')],
+            ['label' => 'Statistik', 'page' => 'developer_statistics', 'href' => route('developer.statistics')],
+            ['label' => 'Aktivitas', 'page' => 'developer_activities', 'href' => route('developer.activities')],
         ], $currentPage, $activeGroup);
 
         render_sidebar_nav_group('Ibadah Umum', 'worship', [
