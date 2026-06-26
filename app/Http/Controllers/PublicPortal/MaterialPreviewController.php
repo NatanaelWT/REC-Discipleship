@@ -116,6 +116,7 @@ class MaterialPreviewController extends Controller
                     'previewTitle' => $previewTitle,
                     'textKicker' => $menu->label(),
                     'textBlocks' => $textFormatter->blocks($textContent),
+                    'backUrl' => route('materials.show', ['menu' => $menu->value]),
                     'downloadUrl' => route('materials.download', [
                         'menu' => $menu->value,
                         'churchFile' => $churchFile->getKey(),
@@ -131,6 +132,7 @@ class MaterialPreviewController extends Controller
                 'settings' => ['church_name' => app_church_name()],
                 'previewTitle' => $previewTitle,
                 'rawUrl' => $rawUrl,
+                'backUrl' => route('materials.show', ['menu' => $menu->value]),
                 'showFeedbackButton' => $showFeedbackButton,
                 'feedbackSessionNumber' => public_material_session_number($row),
             ]);

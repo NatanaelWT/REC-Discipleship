@@ -15,6 +15,7 @@
         <div class="public-material-pdfjs-fallback" data-pdfjs-fallback hidden>PDF belum bisa ditampilkan di browser ini. <a href="{{ $rawUrl }}">Buka PDF</a></div>
       </div>
       <div class="public-material-preview-actions">
+        <a class="btn ghost public-material-back-btn" href="{{ $backUrl }}">Kembali</a>
         <a class="btn public-material-journal-btn" href="{{ route('public.dg.branch') }}">Isi Jurnal Temu DG</a>
         @if ($showFeedbackButton)
           @php

@@ -29,6 +29,7 @@
       </div>
 
       <div class="public-material-preview-actions public-material-text-actions">
+        <a class="btn ghost public-material-back-btn" href="{{ $backUrl }}">Kembali</a>
         <a class="btn secondary public-material-download-btn" href="{{ $downloadUrl }}">Unduh PDF</a>
         <a class="btn public-material-journal-btn" href="{{ route('public.dg.branch') }}">Isi Jurnal Temu DG</a>
         @if ($showFeedbackButton)

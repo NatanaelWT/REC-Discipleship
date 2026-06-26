@@ -27,7 +27,7 @@
     <div class="public-material-meta">{{ $sizeLabel }}</div>
     <div class="public-material-actions">
       @if ($isPreviewable)
-        <a class="btn tiny ghost" href="{{ route('materials.preview', ['menu' => $menu, 'churchFile' => $fileId]) }}" target="_blank" rel="noopener">Lihat</a>
+        <a class="btn tiny ghost" href="{{ route('materials.preview', ['menu' => $menu, 'churchFile' => $fileId]) }}">Lihat</a>
       @endif
       <a class="btn tiny secondary" href="{{ route('materials.download', ['menu' => $menu, 'churchFile' => $fileId]) }}">Unduh</a>
     </div>

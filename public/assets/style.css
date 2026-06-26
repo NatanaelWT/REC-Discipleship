@@ -1202,7 +1202,8 @@ button.nav-item {
 }
 
 .public-material-journal-btn,
-.public-material-feedback-btn {
+.public-material-feedback-btn,
+.public-material-back-btn {
   min-height: 44px;
   min-width: min(100%, 240px);
   justify-content: center;

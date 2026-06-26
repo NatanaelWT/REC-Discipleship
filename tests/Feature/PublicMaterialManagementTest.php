@@ -60,6 +60,18 @@ class PublicMaterialManagementTest extends TestCase
         ]);
     }
 
+    public function test_public_material_preview_link_stays_in_same_tab(): void
+    {
+        $fileId = $this->insertMaterialFile('church_file_same_tab', 'Materi Same Tab', 'file_same_tab.pdf');
+
+        $response = $this->get('/materi/materi_dg_1')->assertOk();
+        $content = $response->getContent();
+
+        $this->assertStringContainsString('/materi/materi_dg_1/'.$fileId.'/preview', $content);
+        $this->assertStringNotContainsString('target="_blank"', $content);
+        $this->assertStringNotContainsString('rel="noopener"', $content);
+    }
+
     public function test_developer_can_upload_public_material_file(): void
     {
         $this->loginAsMaterialManager();
@@ -112,6 +124,8 @@ class PublicMaterialManagementTest extends TestCase
         $response->assertSee('File Text Preview');
         $response->assertSee('Baris pertama materi.');
         $response->assertSee('Baris kedua materi.');
+        $response->assertSee('Kembali');
+        $response->assertSee('href="http://localhost/materi/materi_dg_1"', false);
         $response->assertSee('Unduh PDF');
         $response->assertSee('<h2 class="public-material-text-heading">PEMAPARAN MATERI</h2>', false);
         $response->assertSee('<strong>Pertama, Sub bagian.</strong>', false);
@@ -171,6 +185,8 @@ class PublicMaterialManagementTest extends TestCase
         $response->assertOk();
         $response->assertSee('data-public-material-pdf-viewer', false);
         $response->assertSee('public-material-preview-embed', false);
+        $response->assertSee('Kembali');
+        $response->assertSee('href="http://localhost/materi/materi_dg_1"', false);
     }
 
     public function test_dg2_pdf_preview_renders_stored_text_when_available(): void
