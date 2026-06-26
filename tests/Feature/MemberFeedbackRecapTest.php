@@ -29,8 +29,11 @@ class MemberFeedbackRecapTest extends TestCase
         $response->assertSee('member-feedback-recap-score-card', false);
         $response->assertSee('data-filter-role="member-feedback-session"', false);
         $response->assertSee('data-member-feedback-progress="dg1"', false);
+        $response->assertSee('data-member-feedback-group-open', false);
+        $response->assertSee('data-member-feedback-group-modal', false);
         $response->assertSee('data-member-feedback-detail-open', false);
         $response->assertSee('data-member-feedback-detail-modal', false);
+        $response->assertDontSee('Daftar Jurnal Umpan Balik Anggota');
     }
 
     public function test_feedback_detail_modal_template_contains_full_feedback_contents(): void
@@ -43,6 +46,7 @@ class MemberFeedbackRecapTest extends TestCase
 
         $this->get('/pemuridan/umpan-balik-anggota')
             ->assertOk()
+            ->assertSee('data-member-feedback-group-template', false)
             ->assertSee('data-member-feedback-detail-template', false)
             ->assertSee('Feedback Anggota Detail')
             ->assertSee('Skor Pertanyaan')

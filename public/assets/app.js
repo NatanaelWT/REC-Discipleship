@@ -37,12 +37,15 @@
       const rowRecapProgress = String(row.getAttribute('data-recap-progress') || '').toLowerCase();
       const rowMemberFeedbackProgress = String(row.getAttribute('data-member-feedback-progress') || '').toLowerCase();
       const rowMemberFeedbackSession = String(row.getAttribute('data-member-feedback-session') || '').toLowerCase();
+      const rowMemberFeedbackSessionTokens = rowMemberFeedbackSession.split(/[\s,|]+/).filter(Boolean);
       const matchesSearch = text.includes(q);
       const matchesStatus = statusFilter === 'all' || rowStatus === statusFilter;
       const matchesPeopleStatus = peopleStatusFilter === 'all' || rowPeopleFilterTokens.includes(peopleStatusFilter) || rowPeopleFilter === peopleStatusFilter;
       const matchesRecapProgress = recapProgressFilter === 'all' || rowRecapProgress === recapProgressFilter;
       const matchesMemberFeedbackProgress = memberFeedbackProgressFilter === 'all' || rowMemberFeedbackProgress === memberFeedbackProgressFilter;
-      const matchesMemberFeedbackSession = memberFeedbackSessionFilter === 'all' || rowMemberFeedbackSession === memberFeedbackSessionFilter;
+      const matchesMemberFeedbackSession = memberFeedbackSessionFilter === 'all'
+        || rowMemberFeedbackSession === memberFeedbackSessionFilter
+        || rowMemberFeedbackSessionTokens.includes(memberFeedbackSessionFilter);
       row.style.display = matchesSearch
         && matchesStatus
         && matchesPeopleStatus
@@ -428,6 +431,75 @@
       rowSelector: '[data-discipleship-people-search-row]',
       emptySelector: '[data-discipleship-people-search-empty]',
     });
+
+    const memberFeedbackGroupModal = document.querySelector('[data-member-feedback-group-modal]');
+    if (memberFeedbackGroupModal) {
+      const titleEl = memberFeedbackGroupModal.querySelector('[data-member-feedback-group-title]');
+      const bodyEl = memberFeedbackGroupModal.querySelector('[data-member-feedback-group-body]');
+      const closeButtons = memberFeedbackGroupModal.querySelectorAll('[data-member-feedback-group-close]');
+      const templateMap = new Map();
+
+      document.querySelectorAll('template[data-member-feedback-group-template]').forEach((templateEl) => {
+        const groupSessionId = templateEl.getAttribute('data-member-feedback-group-template') || '';
+        if (groupSessionId) {
+          templateMap.set(groupSessionId, templateEl);
+        }
+      });
+
+      const openMemberFeedbackGroup = (groupSessionId) => {
+        const key = String(groupSessionId || '').trim();
+        if (!key || !templateMap.has(key)) {
+          return;
+        }
+
+        const templateEl = templateMap.get(key);
+        if (titleEl) {
+          titleEl.textContent = templateEl?.getAttribute('data-member-feedback-group-template-title') || 'Feedback Kelompok';
+        }
+        if (bodyEl) {
+          bodyEl.innerHTML = templateEl ? templateEl.innerHTML : '';
+        }
+
+        memberFeedbackGroupModal.classList.add('is-open');
+        memberFeedbackGroupModal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+      };
+
+      const closeMemberFeedbackGroup = () => {
+        memberFeedbackGroupModal.classList.remove('is-open');
+        memberFeedbackGroupModal.setAttribute('aria-hidden', 'true');
+        syncBodyModalState();
+      };
+
+      document.addEventListener('click', function (event) {
+        const trigger = event.target.closest('[data-member-feedback-group-open]');
+        if (!trigger) {
+          return;
+        }
+
+        event.preventDefault();
+        openMemberFeedbackGroup(trigger.getAttribute('data-member-feedback-group-open') || '');
+      });
+
+      closeButtons.forEach((button) => {
+        button.addEventListener('click', function () {
+          closeMemberFeedbackGroup();
+        });
+      });
+
+      memberFeedbackGroupModal.addEventListener('click', function (event) {
+        if (event.target === memberFeedbackGroupModal) {
+          closeMemberFeedbackGroup();
+        }
+      });
+
+      document.addEventListener('keydown', function (event) {
+        const detailModalOpen = Boolean(document.querySelector('[data-member-feedback-detail-modal].is-open'));
+        if (event.key === 'Escape' && memberFeedbackGroupModal.classList.contains('is-open') && !detailModalOpen) {
+          closeMemberFeedbackGroup();
+        }
+      });
+    }
 
     const memberFeedbackDetailModal = document.querySelector('[data-member-feedback-detail-modal]');
     if (memberFeedbackDetailModal) {

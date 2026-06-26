@@ -16,22 +16,12 @@
       $detailRows = is_array($detail_rows ?? null) ? $detail_rows : [];
       $filters = is_array($filters ?? null) ? $filters : [];
       $totalRows = count($detailRows);
-      $perPage = max(1, min(100, (int) request()->query('per_page', 25)));
-      $currentPage = max(1, (int) request()->query('feedback_page', 1));
-      $totalPages = max(1, (int) ceil($totalRows / $perPage));
-      if ($currentPage > $totalPages) {
-          $currentPage = $totalPages;
+      $feedbackRowsByGroupSession = [];
+      foreach ($detailRows as $detailRow) {
+          $groupSessionKey = (string) ((int) ($detailRow['group_id'] ?? 0)).'-'.(string) ((int) ($detailRow['feedback_session'] ?? 0));
+          $feedbackRowsByGroupSession[$groupSessionKey] ??= [];
+          $feedbackRowsByGroupSession[$groupSessionKey][] = $detailRow;
       }
-      $offset = ($currentPage - 1) * $perPage;
-      $detailPageRows = array_slice($detailRows, $offset, $perPage);
-      $pageHref = function (int $targetPage) use ($totalPages, $perPage): string {
-          $params = request()->query();
-          unset($params['page']);
-          $params['feedback_page'] = max(1, min($totalPages, $targetPage));
-          $params['per_page'] = $perPage;
-
-          return route('discipleship.member-feedback-recap', $params).'#member-feedback-recap-detail';
-      };
       $scoreLabel = function ($value): string {
           if (! is_numeric($value)) {
               return '-';
@@ -42,6 +32,7 @@
       $percentLabel = fn ($value): string => (string) max(0, min(100, (int) round((float) $value))).'%';
       $progressKey = fn (string $value): string => strtolower(str_replace(' ', '', normalize_dg_progress_value($value) ?: $value));
       $feedbackRowKey = fn (array $row): string => (string) ($row['id'] ?? md5(json_encode($row) ?: 'feedback'));
+      $groupSessionKey = fn ($groupId, int $session): string => (string) ((int) $groupId).'-'.(string) $session;
       $sectionShortLabels = [
           'leadership' => 'Kepemimpinan',
           'meeting' => 'Teknis',
@@ -185,8 +176,8 @@
       </div>
       <span class="member-feedback-recap-muted">{{ (string) count($groupRows) }} kelompok aktif</span>
     </div>
-    <div class="table-wrap member-feedback-recap-group-table-wrap">
-      <table class="table member-feedback-recap-group-table">
+    <div class="member-feedback-recap-group-table-wrap">
+      <table class="table member-feedback-recap-group-table" id="member-feedback-recap-group-table">
         <thead>
           <tr>
             <th>Cabang</th>
@@ -203,19 +194,41 @@
             @php
                 $session3Count = (int) ($group['session_3_count'] ?? 0);
                 $session12Count = (int) ($group['session_12_count'] ?? 0);
+                $sessionTokens = trim(($session3Count > 0 ? '3 ' : '').($session12Count > 0 ? '12' : ''));
+                $session3Key = $groupSessionKey($group['group_id'] ?? 0, 3);
+                $session12Key = $groupSessionKey($group['group_id'] ?? 0, 12);
+                $groupSearchText = implode(' ', array_map(
+                    static fn (array $feedbackRow): string => (string) ($feedbackRow['respondent_name'] ?? '').' '.(string) ($feedbackRow['note_summary'] ?? ''),
+                    array_merge($feedbackRowsByGroupSession[$session3Key] ?? [], $feedbackRowsByGroupSession[$session12Key] ?? []),
+                ));
             @endphp
-            <tr>
+            <tr data-member-feedback-progress="{{ $progressKey((string) ($group['group_progress'] ?? '')) }}" data-member-feedback-session="{{ $sessionTokens }}">
               <td>{{ (string) ($group['branch_label'] ?? '-') }}</td>
               <td><span class="group-progress-badge is-{{ $progressKey((string) ($group['group_progress'] ?? '')) }}">{{ (string) ($group['group_progress'] ?? '-') }}</span></td>
               <td>
                 <div class="member-feedback-recap-main-cell">
                   <strong>{{ (string) ($group['leader_name'] ?? '-') }}</strong>
                   <span>{{ (string) ($group['group_name'] ?? 'Kelompok') }}</span>
+                  @if ($groupSearchText !== '')
+                    <small class="member-feedback-recap-search-shadow">{{ $groupSearchText }}</small>
+                  @endif
                 </div>
               </td>
               <td>{{ (string) ((int) ($group['active_member_count'] ?? 0)) }} orang</td>
-              <td><span class="member-feedback-recap-count-pill @if ($session3Count === 0) is-empty @endif">{{ (string) $session3Count }} orang</span></td>
-              <td><span class="member-feedback-recap-count-pill @if ($session12Count === 0) is-empty @endif">{{ (string) $session12Count }} orang</span></td>
+              <td>
+                @if ($session3Count > 0)
+                  <button class="member-feedback-recap-count-pill" type="button" data-member-feedback-group-open="{{ $session3Key }}">{{ (string) $session3Count }} orang</button>
+                @else
+                  <span class="member-feedback-recap-count-pill is-empty">0 orang</span>
+                @endif
+              </td>
+              <td>
+                @if ($session12Count > 0)
+                  <button class="member-feedback-recap-count-pill" type="button" data-member-feedback-group-open="{{ $session12Key }}">{{ (string) $session12Count }} orang</button>
+                @else
+                  <span class="member-feedback-recap-count-pill is-empty">0 orang</span>
+                @endif
+              </td>
               <td>{{ (string) ($group['latest_submitted_at'] ?? '') !== '' ? format_datetime_id((string) ($group['latest_submitted_at'] ?? '')) : '-' }}</td>
             </tr>
           @empty
@@ -226,71 +239,38 @@
     </div>
   </section>
 
-  <section class="card member-feedback-recap-detail-card" id="member-feedback-recap-detail">
-    <div class="member-feedback-recap-panel-head">
-      <div>
-        <span class="member-feedback-recap-kicker">Detail Jurnal</span>
-        <h2>Daftar Jurnal Umpan Balik Anggota</h2>
-      </div>
-      <span class="member-feedback-recap-muted">{{ (string) $totalRows }} jurnal</span>
-    </div>
-    <div class="table-wrap member-feedback-recap-table-wrap">
-      <table class="table member-feedback-recap-table" id="member-feedback-recap-detail-table">
-        <colgroup>
-          <col class="member-feedback-recap-col-date">
-          <col class="member-feedback-recap-col-branch">
-          <col class="member-feedback-recap-col-session">
-          <col class="member-feedback-recap-col-progress">
-          <col class="member-feedback-recap-col-group">
-          <col class="member-feedback-recap-col-respondent">
-          <col class="member-feedback-recap-col-score">
-          <col class="member-feedback-recap-col-note">
-          <col class="member-feedback-recap-col-action">
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Tanggal</th>
-            <th>Cabang</th>
-            <th>Sesi</th>
-            <th>Progress</th>
-            <th>Pemimpin / Kelompok</th>
-            <th>Pengisi</th>
-            <th>Skor</th>
-            <th>Catatan</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          @forelse ($detailPageRows as $row)
+  @foreach ($groupRows as $group)
+    @foreach ([3, 12] as $sessionNumber)
+      @php
+          $groupSessionModalKey = $groupSessionKey($group['group_id'] ?? 0, $sessionNumber);
+          $groupSessionRows = $feedbackRowsByGroupSession[$groupSessionModalKey] ?? [];
+      @endphp
+      <template data-member-feedback-group-template="{{ $groupSessionModalKey }}" data-member-feedback-group-template-title="{{ (string) ($group['group_name'] ?? 'Kelompok') }} - Pertemuan {{ (string) $sessionNumber }}">
+        <div class="member-feedback-recap-session-list">
+          @forelse ($groupSessionRows as $row)
             @php $detailKey = $feedbackRowKey($row); @endphp
-            <tr data-member-feedback-progress="{{ $progressKey((string) ($row['group_progress'] ?? '')) }}" data-member-feedback-session="{{ (string) ($row['feedback_session'] ?? '') }}">
-              <td>{{ format_datetime_id((string) ($row['submitted_at'] ?? '')) }}</td>
-              <td>{{ (string) ($row['branch_label'] ?? '-') }}</td>
-              <td>{{ (string) ($row['session_label'] ?? '-') }}</td>
-              <td><span class="group-progress-badge is-{{ $progressKey((string) ($row['group_progress'] ?? '')) }}">{{ (string) ($row['group_progress'] ?? '-') }}</span></td>
-              <td>
-                <div class="member-feedback-recap-main-cell">
-                  <strong>{{ (string) ($row['leader_name'] ?? '-') }}</strong>
-                  <span>{{ (string) ($row['group_name'] ?? 'Kelompok') }}</span>
-                </div>
-              </td>
-              <td>{{ (string) ($row['respondent_name'] ?? '-') }}</td>
-              <td><span class="member-feedback-recap-score-pill">{{ $row['score'] !== null ? $scoreLabel($row['score']) : '-' }}</span></td>
-              <td><span class="member-feedback-recap-note-cell">{{ (string) ($row['note_summary'] ?? '-') }}</span></td>
-              <td>
+            <article class="member-feedback-recap-session-item">
+              <div class="member-feedback-recap-session-copy">
+                <span>{{ format_datetime_id((string) ($row['submitted_at'] ?? '')) }}</span>
+                <strong>{{ (string) ($row['respondent_name'] ?? '-') }}</strong>
+                <p>{{ (string) ($row['note_summary'] ?? '-') }}</p>
+              </div>
+              <div class="member-feedback-recap-session-action">
+                <span class="member-feedback-recap-score-pill">{{ $row['score'] !== null ? $scoreLabel($row['score']) : '-' }}</span>
                 <button class="btn tiny ghost member-feedback-recap-detail-button" type="button" data-member-feedback-detail-open="{{ $detailKey }}">
                   Detail
                 </button>
-              </td>
-            </tr>
+              </div>
+            </article>
           @empty
-            <tr><td colspan="9">Belum ada jurnal umpan balik anggota pada scope ini.</td></tr>
+            <p class="panel-note">Belum ada feedback pada sesi ini.</p>
           @endforelse
-        </tbody>
-      </table>
-    </div>
+        </div>
+      </template>
+    @endforeach
+  @endforeach
 
-    @foreach ($detailPageRows as $row)
+  @foreach ($detailRows as $row)
       @php
           $detailKey = $feedbackRowKey($row);
           $ratingRows = is_array($row['rating_rows'] ?? null) ? $row['rating_rows'] : [];
@@ -354,16 +334,19 @@
           </div>
         </section>
       </template>
-    @endforeach
+  @endforeach
 
-    @if ($totalPages > 1)
-      <div class="member-feedback-recap-pagination">
-        <a class="btn tiny ghost" href="{{ $pageHref($currentPage - 1) }}" @if ($currentPage <= 1) aria-disabled="true" @endif>Sebelumnya</a>
-        <span>Halaman {{ (string) $currentPage }} dari {{ (string) $totalPages }}</span>
-        <a class="btn tiny ghost" href="{{ $pageHref($currentPage + 1) }}" @if ($currentPage >= $totalPages) aria-disabled="true" @endif>Berikutnya</a>
+  <div class="modal" id="member-feedback-group-modal" data-member-feedback-group-modal aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-card member-feedback-recap-session-modal-card">
+      <div class="modal-head">
+        <div class="modal-title" data-member-feedback-group-title>Feedback Kelompok</div>
+        <button class="btn tiny ghost" type="button" data-member-feedback-group-close>Tutup</button>
       </div>
-    @endif
-  </section>
+      <div class="modal-body member-feedback-recap-session-modal-body" data-member-feedback-group-body>
+        <p class="panel-note">Klik jumlah pengisi pada sesi 3 atau sesi 12 untuk melihat feedback kelompok.</p>
+      </div>
+    </div>
+  </div>
 
   <div class="modal" id="member-feedback-detail-modal" data-member-feedback-detail-modal aria-hidden="true" role="dialog" aria-modal="true">
     <div class="modal-card member-feedback-recap-modal-card">
@@ -372,7 +355,7 @@
         <button class="btn tiny ghost" type="button" data-member-feedback-detail-close>Tutup</button>
       </div>
       <div class="modal-body member-feedback-recap-modal-body" data-member-feedback-detail-body>
-        <p class="panel-note">Pilih tombol Detail pada tabel untuk melihat isi feedback.</p>
+        <p class="panel-note">Pilih tombol Detail pada daftar feedback untuk melihat isi lengkapnya.</p>
       </div>
     </div>
   </div>
