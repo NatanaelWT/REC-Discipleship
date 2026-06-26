@@ -42,23 +42,4 @@
         @endforeach
       </div>
     </section>
-
-    <section class="card table-card-plain developer-panel developer-section-card">
-      <div class="developer-section-head">
-        <span class="developer-section-icon is-slate">@include('developer._icon', ['name' => 'config'])</span>
-        <div><span class="developer-section-kicker">Environment</span><h2>Runtime</h2><p>Informasi lingkungan aplikasi yang sedang digunakan.</p></div>
-      </div>
-      <div class="table-wrap">
-        <table class="table developer-runtime-table">
-          <tbody>
-            @foreach (($diagnostics['runtime'] ?? []) as $key => $value)
-              <tr>
-                <th><span class="developer-runtime-key">{{ str_replace('_', ' ', $key) }}</span></th>
-                <td><code>{{ $value }}</code></td>
-              </tr>
-            @endforeach
-          </tbody>
-        </table>
-      </div>
-    </section>
 @endsection

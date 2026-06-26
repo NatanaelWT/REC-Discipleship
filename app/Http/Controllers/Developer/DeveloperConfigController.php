@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Developer;
 
 use App\Http\Controllers\Controller;
 use App\Services\AppConfig\AppConfigService;
+use App\Services\Developer\DeveloperDiagnosticsService;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,17 +12,23 @@ use Illuminate\View\View;
 
 class DeveloperConfigController extends Controller
 {
-    public function index(Request $request, AppConfigService $config): RedirectResponse|View
-    {
+    public function index(
+        Request $request,
+        AppConfigService $config,
+        DeveloperDiagnosticsService $diagnostics,
+    ): RedirectResponse|View {
         $guard = $this->guard($request);
         if ($guard instanceof RedirectResponse) {
             return $guard;
         }
 
+        $developerDiagnostics = $diagnostics->summary();
+
         return view('developer.config', [
             'settings' => ['church_name' => app_church_name()],
             'currentPage' => 'developer_config',
             'configValues' => $config->values(),
+            'runtime' => $developerDiagnostics['runtime'] ?? [],
             'timezoneOptions' => $config->timezoneOptions(),
             'statusCode' => trim((string) $request->query('status', '')),
             'errorCode' => trim((string) $request->query('error', '')),
