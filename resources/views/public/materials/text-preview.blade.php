@@ -12,6 +12,10 @@
             @include('developer._icon', ['name' => 'arrow-left'])
             <span>Kembali</span>
           </a>
+          <a class="btn secondary public-material-text-download-btn" href="{{ $downloadUrl }}">
+            @include('developer._icon', ['name' => 'download'])
+            <span>Unduh PDF</span>
+          </a>
           <div class="public-material-text-kicker">{{ $textKicker }}</div>
           <h1>{{ $previewTitle }}</h1>
         </header>
@@ -33,7 +37,6 @@
       </div>
 
       <div class="public-material-preview-actions public-material-text-actions">
-        <a class="btn secondary public-material-download-btn" href="{{ $downloadUrl }}">Unduh PDF</a>
         <a class="btn public-material-journal-btn" href="{{ route('public.dg.branch') }}">Isi Jurnal Temu DG</a>
         @if ($showFeedbackButton)
           @php

@@ -1262,10 +1262,10 @@ button.nav-item {
   text-align: center;
 }
 
-.public-material-text-back-btn {
+.public-material-text-back-btn,
+.public-material-text-download-btn {
   position: absolute;
   top: 0;
-  left: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1279,7 +1279,16 @@ button.nav-item {
   line-height: 1;
 }
 
-.public-material-text-back-btn svg {
+.public-material-text-back-btn {
+  left: 0;
+}
+
+.public-material-text-download-btn {
+  right: 0;
+}
+
+.public-material-text-back-btn svg,
+.public-material-text-download-btn svg {
   width: 16px;
   height: 16px;
   flex: 0 0 16px;
@@ -1355,15 +1364,6 @@ button.nav-item {
   text-indent: -1.4em;
 }
 
-.public-material-download-btn {
-  min-height: 44px;
-  min-width: min(100%, 160px);
-  justify-content: center;
-  padding: 10px 18px;
-  border-radius: 10px;
-  font-weight: 700;
-}
-
 @media (max-width: 720px) {
   .public-material-preview-actions {
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
@@ -1378,9 +1378,29 @@ button.nav-item {
     padding: 0 0 16px;
   }
 
-  .public-material-text-back-btn {
+  .public-material-text-back-btn,
+  .public-material-text-download-btn {
     position: static;
-    margin: 0 auto 14px 0;
+    margin: 0;
+  }
+
+  .public-material-text-back-btn {
+    justify-self: start;
+  }
+
+  .public-material-text-download-btn {
+    justify-self: end;
+  }
+
+  .public-material-text-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .public-material-text-kicker,
+  .public-material-text-header h1 {
+    grid-column: 1 / -1;
   }
 
   .public-material-text-header h1 {
@@ -1398,8 +1418,7 @@ button.nav-item {
   }
 
   .public-material-journal-btn,
-  .public-material-feedback-btn,
-  .public-material-download-btn {
+  .public-material-feedback-btn {
     width: 100%;
   }
 }

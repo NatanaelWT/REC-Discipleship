@@ -127,6 +127,8 @@ class PublicMaterialManagementTest extends TestCase
         $response->assertSee('Kembali');
         $response->assertSee('href="http://localhost/materi/materi_dg_1"', false);
         $response->assertSee('Unduh PDF');
+        $response->assertSee('public-material-text-download-btn', false);
+        $response->assertDontSee('public-material-download-btn', false);
         $response->assertSee('<h2 class="public-material-text-heading">PEMAPARAN MATERI</h2>', false);
         $response->assertSee('<strong>Pertama, Sub bagian.</strong>', false);
         $response->assertDontSee('data-public-material-pdf-viewer', false);

@@ -28,6 +28,9 @@
     @case('eye')
       <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/>
       @break
+    @case('download')
+      <path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>
+      @break
     @case('check')
       <path d="m5 12 4 4L19 6"/>
       @break
