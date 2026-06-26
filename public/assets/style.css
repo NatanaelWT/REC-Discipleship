@@ -13227,6 +13227,48 @@ details[open] > summary .activity-disclosure-icon::after {
   line-height: 1.45;
 }
 
+.developer-runtime-panel {
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, .22);
+  border-radius: 17px;
+  background: #f8fafc;
+}
+
+.developer-runtime-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.developer-runtime-table th,
+.developer-runtime-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid rgba(226, 232, 240, .92);
+  vertical-align: middle;
+}
+
+.developer-runtime-table tr:last-child th,
+.developer-runtime-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.developer-runtime-table th {
+  width: 240px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.developer-runtime-table td {
+  background: #fff;
+}
+
 .developer-config-guide {
   display: flex;
   align-items: flex-start;
@@ -14071,7 +14113,8 @@ details[open] > summary .activity-disclosure-icon::after {
 }
 
 .developer-create-user-form,
-.developer-config-form {
+.developer-config-form,
+.developer-runtime-panel {
   border-radius: 12px;
   background: #f8fafc;
 }
