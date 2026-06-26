@@ -6,7 +6,16 @@
         'stats' => [
             ['label' => 'Menunggu', 'value' => (string) $pendingQuestionCount],
             ['label' => 'Dijawab', 'value' => (string) $answeredQuestionCount],
+            ['label' => 'Dengan WA', 'value' => (string) $whatsappQuestionCount],
             ['label' => 'Total', 'value' => (string) $totalQuestionCount],
+        ],
+        'tools' => [
+            'element' => 'form',
+            'method' => 'get',
+            'action' => route('discipleship.difficult-questions'),
+            'attributes' => ['data-auto-submit-search-form' => true],
+            'partial' => 'discipleship.partials.page-header-controls.difficult-questions',
+            'data' => compact('questionMonthFilter', 'questionSearch'),
         ],
     ],
 ])

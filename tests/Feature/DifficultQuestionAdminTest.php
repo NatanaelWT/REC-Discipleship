@@ -71,6 +71,65 @@ class DifficultQuestionAdminTest extends TestCase
         ]);
     }
 
+    public function test_admin_page_filters_by_month_and_search(): void
+    {
+        $this->createDifficultQuestionsTable();
+        $this->loginAsCentralDiscipleshipAdmin();
+
+        DB::table('difficult_questions')->insert([
+            [
+                'asker_name' => 'Anna',
+                'asker_whatsapp' => '6281111111111',
+                'question' => 'Bagaimana menjelaskan pemuridan?',
+                'password_hash' => null,
+                'password_lookup_hash' => 'lookup-anna',
+                'status' => 'pending',
+                'answer' => null,
+                'answered_by_username' => null,
+                'answered_at' => null,
+                'created_at' => '2026-06-13 08:00:00',
+                'updated_at' => '2026-06-13 08:00:00',
+            ],
+            [
+                'asker_name' => 'Budi',
+                'asker_whatsapp' => '6282222222222',
+                'question' => 'Pertanyaan bulan lain',
+                'password_hash' => null,
+                'password_lookup_hash' => 'lookup-budi',
+                'status' => 'pending',
+                'answer' => null,
+                'answered_by_username' => null,
+                'answered_at' => null,
+                'created_at' => '2026-07-13 08:00:00',
+                'updated_at' => '2026-07-13 08:00:00',
+            ],
+            [
+                'asker_name' => 'Clara',
+                'asker_whatsapp' => null,
+                'question' => 'Pertanyaan Juni lain',
+                'password_hash' => null,
+                'password_lookup_hash' => 'lookup-clara',
+                'status' => 'answered',
+                'answer' => 'Sudah dijawab',
+                'answered_by_username' => 'admin_pusat',
+                'answered_at' => '2026-06-14 08:00:00',
+                'created_at' => '2026-06-14 08:00:00',
+                'updated_at' => '2026-06-14 08:00:00',
+            ],
+        ]);
+
+        $response = $this->get('/pemuridan/pertanyaan-sulit?month=2026-06&q=Anna');
+
+        $response->assertOk();
+        $response->assertSee('value="2026-06"', false);
+        $response->assertSee('value="Anna"', false);
+        $response->assertSee('Anna');
+        $response->assertSee('Bagaimana menjelaskan pemuridan?');
+        $response->assertDontSee('Budi');
+        $response->assertDontSee('Clara');
+        $response->assertSee('Dengan WA');
+    }
+
     public function test_developer_can_save_answer_from_difficult_question_admin(): void
     {
         $this->createDifficultQuestionsTable();
