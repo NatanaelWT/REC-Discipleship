@@ -7727,6 +7727,44 @@ textarea:focus-visible {
   }
 }
 
+@media (min-width: 641px) and (max-width: 980px) {
+  .page-public-menu-home .public-menu-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .page-public-menu-home .public-menu-tile {
+    grid-column: span 1;
+  }
+
+  .page-public-menu-home .public-menu-tile.is-primary,
+  .page-public-menu-home .public-menu-tile.is-half {
+    grid-column: span 2;
+    min-height: clamp(94px, 13svh, 120px);
+  }
+
+  .page-public-menu-home .public-menu-tile.is-wide-mobile {
+    grid-column: span 4;
+    min-height: clamp(96px, 13svh, 122px);
+  }
+
+  .page-public-menu-home .public-menu-tile.is-primary .public-menu-tile-title,
+  .page-public-menu-home .public-menu-tile.is-primary .public-menu-tile-title.is-long,
+  .page-public-menu-home .public-menu-tile.is-primary .public-menu-tile-title.is-xlong,
+  .page-public-menu-home .public-menu-tile.is-half .public-menu-tile-title,
+  .page-public-menu-home .public-menu-tile.is-half .public-menu-tile-title.is-long,
+  .page-public-menu-home .public-menu-tile.is-half .public-menu-tile-title.is-xlong {
+    font-size: clamp(15px, 2vw, 19px);
+    line-height: 1.04;
+  }
+
+  .page-public-menu-home .public-menu-tile.is-wide-mobile .public-menu-tile-title,
+  .page-public-menu-home .public-menu-tile.is-wide-mobile .public-menu-tile-title.is-long,
+  .page-public-menu-home .public-menu-tile.is-wide-mobile .public-menu-tile-title.is-xlong {
+    font-size: clamp(16px, 2.15vw, 20px);
+    line-height: 1.04;
+  }
+}
+
 @media (max-width: 900px) {
   .app-page .container > .card-row.discipleship-page-head {
     align-items: flex-start;
