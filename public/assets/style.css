@@ -13229,7 +13229,7 @@ details[open] > summary .activity-disclosure-icon::after {
 
 .developer-runtime-panel {
   padding: 18px;
-  border: 1px solid rgba(148, 163, 184, .22);
+  border: 0;
   border-radius: 17px;
   background: #f8fafc;
 }
@@ -13238,7 +13238,7 @@ details[open] > summary .activity-disclosure-icon::after {
   align-items: center;
   gap: 14px;
   padding: 16px 18px;
-  border: 1px solid rgba(148, 163, 184, .22);
+  border: 0;
   border-radius: 12px;
   background: #f8fafc;
 }
@@ -13276,7 +13276,7 @@ details[open] > summary .activity-disclosure-icon::after {
   border-collapse: separate;
   border-spacing: 0;
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, .18);
+  border: 0;
   border-radius: 12px;
   background: #fff;
 }
