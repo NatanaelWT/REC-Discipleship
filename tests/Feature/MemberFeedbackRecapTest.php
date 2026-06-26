@@ -1,0 +1,324 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Services\Branches\BranchCatalog;
+use App\Services\MemberFeedbackJournals\MemberFeedbackQuestionCatalog;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Tests\TestCase;
+
+class MemberFeedbackRecapTest extends TestCase
+{
+    public function test_member_feedback_recap_renders_for_branch_user(): void
+    {
+        $this->createTables();
+        $ids = $this->seedFeedbackFixture();
+        $this->seedFeedback($ids, respondentName: 'Anggota Test', noteContent: 'Catatan privat untuk pemimpin.');
+
+        $this->actingAsRecUser();
+
+        $response = $this->get('/pemuridan/umpan-balik-anggota');
+
+        $response->assertOk();
+        $response->assertSee('Rekap Feedback Anggota');
+        $response->assertSee('Pemimpin Test');
+        $response->assertSee('Anggota Test');
+        $response->assertSee('card discipleship-page-header', false);
+        $response->assertSee('member-feedback-recap-score-card', false);
+        $response->assertSee('data-filter-role="member-feedback-session"', false);
+        $response->assertSee('data-member-feedback-progress="dg1"', false);
+    }
+
+    public function test_central_user_can_view_all_branches_and_filter_to_one_branch(): void
+    {
+        $this->createTables();
+        $kutisari = $this->seedFeedbackFixture(branchId: 1, leaderName: 'Pemimpin Kutisari', memberName: 'Anggota Kutisari');
+        $gm = $this->seedFeedbackFixture(branchId: 2, leaderName: 'Pemimpin GM', memberName: 'Anggota GM');
+        $this->seedFeedback($kutisari, respondentName: 'Anggota Kutisari');
+        $this->seedFeedback($gm, respondentName: 'Anggota GM');
+
+        $this->actingAsRecUser('recpusat', null, 'pemuridan_pusat');
+
+        $this->get('/pemuridan/umpan-balik-anggota?rekap_cabang=all')
+            ->assertOk()
+            ->assertSee('Mode Pusat')
+            ->assertSee('Pemimpin Kutisari')
+            ->assertSee('Pemimpin GM');
+
+        $this->get('/pemuridan/umpan-balik-anggota?rekap_cabang=gm')
+            ->assertOk()
+            ->assertDontSee('Pemimpin Kutisari')
+            ->assertSee('Pemimpin GM');
+    }
+
+    public function test_note_board_hides_respondent_name_but_detail_table_shows_it(): void
+    {
+        $this->createTables();
+        $ids = $this->seedFeedbackFixture();
+        $this->seedFeedback($ids, respondentName: 'Nama Pengisi Rahasia', noteContent: 'Masukan tanpa nama pengisi di board.');
+
+        $this->actingAsRecUser();
+
+        $content = $this->get('/pemuridan/umpan-balik-anggota')->assertOk()->getContent();
+        $notesStart = strpos($content, 'Catatan Tematik');
+        $notesEnd = strpos($content, 'Kelompok yang Sudah Memiliki Feedback');
+        $this->assertIsInt($notesStart);
+        $this->assertIsInt($notesEnd);
+        $notesSegment = substr($content, $notesStart, $notesEnd - $notesStart);
+
+        $this->assertStringContainsString('Masukan tanpa nama pengisi di board.', $notesSegment);
+        $this->assertStringNotContainsString('Nama Pengisi Rahasia', $notesSegment);
+        $this->assertStringContainsString('Nama Pengisi Rahasia', $content);
+    }
+
+    public function test_balance_questions_do_not_pull_down_directional_overall_score_raw(): void
+    {
+        $this->createTables();
+        $ids = $this->seedFeedbackFixture();
+        $this->seedFeedback($ids, respondentName: 'Anggota Test', balanceScore: 5);
+
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/umpan-balik-anggota')
+            ->assertOk()
+            ->assertSee('10,0/10')
+            ->assertSee('Keseimbangan');
+    }
+
+    public function test_public_feedback_submit_invalidates_recap_cache(): void
+    {
+        $this->createTables();
+        $ids = $this->seedFeedbackFixture();
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/umpan-balik-anggota')
+            ->assertOk()
+            ->assertSee('Belum ada jurnal umpan balik anggota pada scope ini.');
+
+        $payload = [
+            'action' => 'save_public_member_feedback',
+            'public_cabang' => 'kutisari',
+            'group_id' => (string) $ids['group_id'],
+            'respondent_person_id' => (string) $ids['member_id'],
+            'feedback_session' => '3',
+            'ratings' => $this->fullRatingPayload(),
+            'notes' => [
+                'leader_notes' => 'Feedback baru setelah cache kosong.',
+            ],
+        ];
+
+        $this->post('/publik/umpan-balik-anggota/form', $payload)
+            ->assertRedirect(route('public.member-feedback.form', [
+                'submitted' => 1,
+                'cabang' => 'kutisari',
+                'feedback_session' => 3,
+            ]));
+
+        $this->get('/pemuridan/umpan-balik-anggota')
+            ->assertOk()
+            ->assertSee('Feedback baru setelah cache kosong.');
+    }
+
+    private function createTables(): void
+    {
+        Schema::dropIfExists('discipleship_feedbacks');
+        Schema::dropIfExists('discipleship_group_people');
+        Schema::dropIfExists('discipleship_groups');
+        Schema::dropIfExists('discipleship_people');
+        Schema::dropIfExists('branches');
+
+        Schema::create('branches', function (Blueprint $table): void {
+            $table->id();
+            $table->string('label')->unique();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+        DB::table('branches')->insert([
+            ['id' => 1, 'label' => 'Kutisari', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'label' => 'GM', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        app(BranchCatalog::class)->clearCache();
+
+        Schema::create('discipleship_people', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->string('full_name')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('gender')->nullable();
+            $table->string('status')->default('active');
+            $table->text('notes')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('discipleship_groups', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->string('name');
+            $table->string('status')->default('active');
+            $table->string('start_stage')->nullable();
+            $table->string('current_stage')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('discipleship_group_people', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->unsignedBigInteger('discipleship_group_id');
+            $table->unsignedBigInteger('person_id')->nullable();
+            $table->string('role')->default('member');
+            $table->string('stage')->nullable();
+            $table->string('status')->default('active');
+            $table->date('started_on')->nullable();
+            $table->date('ended_on')->nullable();
+            $table->string('end_reason')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('discipleship_feedbacks', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id')->nullable();
+            $table->unsignedTinyInteger('feedback_session');
+            $table->unsignedBigInteger('discipleship_group_id')->nullable();
+            $table->unsignedBigInteger('leader_person_id')->nullable();
+            $table->unsignedBigInteger('respondent_person_id')->nullable();
+            $table->string('respondent_name_snapshot')->nullable();
+            $table->string('leader_name_snapshot')->nullable();
+            $table->string('group_name_snapshot')->nullable();
+            $table->string('group_label_snapshot')->nullable();
+            $table->string('group_progress_snapshot', 80)->nullable();
+            $table->longText('ratings')->nullable();
+            $table->longText('notes')->nullable();
+            $table->string('source', 80)->default('public_form');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * @return array{leader_id:int,member_id:int,group_id:int,branch_id:int,leader_name:string,member_name:string}
+     */
+    private function seedFeedbackFixture(int $branchId = 1, string $leaderName = 'Pemimpin Test', string $memberName = 'Anggota Test'): array
+    {
+        $leaderId = DB::table('discipleship_people')->insertGetId([
+            'branch_id' => $branchId,
+            'full_name' => $leaderName,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $memberId = DB::table('discipleship_people')->insertGetId([
+            'branch_id' => $branchId,
+            'full_name' => $memberName,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $groupId = DB::table('discipleship_groups')->insertGetId([
+            'branch_id' => $branchId,
+            'name' => 'Kelompok Test',
+            'status' => 'active',
+            'start_stage' => 'DG 1',
+            'current_stage' => 'DG 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('discipleship_group_people')->insert([
+            [
+                'branch_id' => $branchId,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $leaderId,
+                'role' => 'leader',
+                'stage' => null,
+                'status' => 'active',
+                'started_on' => '2026-01-01',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => $branchId,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $memberId,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'active',
+                'started_on' => '2026-01-01',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        return [
+            'leader_id' => $leaderId,
+            'member_id' => $memberId,
+            'group_id' => $groupId,
+            'branch_id' => $branchId,
+            'leader_name' => $leaderName,
+            'member_name' => $memberName,
+        ];
+    }
+
+    /**
+     * @param  array{leader_id:int,member_id:int,group_id:int,branch_id:int,leader_name:string,member_name:string}  $ids
+     */
+    private function seedFeedback(array $ids, string $respondentName = 'Anggota Test', string $noteContent = 'Catatan feedback.', int $balanceScore = 3): void
+    {
+        DB::table('discipleship_feedbacks')->insert([
+            'branch_id' => $ids['branch_id'],
+            'feedback_session' => 3,
+            'discipleship_group_id' => $ids['group_id'],
+            'leader_person_id' => $ids['leader_id'],
+            'respondent_person_id' => $ids['member_id'],
+            'respondent_name_snapshot' => $respondentName,
+            'leader_name_snapshot' => $ids['leader_name'],
+            'group_name_snapshot' => 'Kelompok Test',
+            'group_label_snapshot' => 'DG 1 ('.$ids['leader_name'].') - '.$respondentName,
+            'group_progress_snapshot' => 'DG 1',
+            'ratings' => json_encode($this->ratingRows($balanceScore)),
+            'notes' => json_encode([[
+                'section_key' => 'leadership',
+                'note_key' => 'leader_notes',
+                'content' => $noteContent,
+            ]]),
+            'source' => 'public_form',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function fullRatingPayload(): array
+    {
+        $payload = [];
+        foreach (app(MemberFeedbackQuestionCatalog::class)->ratingQuestions() as $question) {
+            $payload[$question['key']] = $question['scale'] === 5 ? 3 : 10;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return array<int, array{section_key:string,question_key:string,score:int,scale:int}>
+     */
+    private function ratingRows(int $balanceScore): array
+    {
+        $rows = [];
+        foreach (app(MemberFeedbackQuestionCatalog::class)->ratingQuestions() as $question) {
+            $isBalance = in_array($question['key'], ['meeting_duration', 'meeting_member_count'], true);
+            $rows[] = [
+                'section_key' => $question['section_key'],
+                'question_key' => $question['key'],
+                'score' => $isBalance ? $balanceScore : 10,
+                'scale' => $question['scale'],
+            ];
+        }
+
+        return $rows;
+    }
+}

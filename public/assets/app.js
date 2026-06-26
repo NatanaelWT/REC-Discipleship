@@ -9,6 +9,8 @@
     let statusFilter = 'all';
     let peopleStatusFilter = 'all';
     let recapProgressFilter = 'all';
+    let memberFeedbackProgressFilter = 'all';
+    let memberFeedbackSessionFilter = 'all';
 
     controls.forEach((node) => {
       const role = String(node.getAttribute('data-filter-role') || '').toLowerCase();
@@ -18,6 +20,10 @@
         peopleStatusFilter = String(node.value || 'all').toLowerCase();
       } else if (role === 'recap-progress') {
         recapProgressFilter = String(node.value || 'all').toLowerCase();
+      } else if (role === 'member-feedback-progress') {
+        memberFeedbackProgressFilter = String(node.value || 'all').toLowerCase();
+      } else if (role === 'member-feedback-session') {
+        memberFeedbackSessionFilter = String(node.value || 'all').toLowerCase();
       } else {
         q = String(node.value || '').toLowerCase();
       }
@@ -29,11 +35,22 @@
       const rowPeopleFilter = String(row.getAttribute('data-people-filter') || '').toLowerCase();
       const rowPeopleFilterTokens = rowPeopleFilter.split(/[\s,|]+/).filter(Boolean);
       const rowRecapProgress = String(row.getAttribute('data-recap-progress') || '').toLowerCase();
+      const rowMemberFeedbackProgress = String(row.getAttribute('data-member-feedback-progress') || '').toLowerCase();
+      const rowMemberFeedbackSession = String(row.getAttribute('data-member-feedback-session') || '').toLowerCase();
       const matchesSearch = text.includes(q);
       const matchesStatus = statusFilter === 'all' || rowStatus === statusFilter;
       const matchesPeopleStatus = peopleStatusFilter === 'all' || rowPeopleFilterTokens.includes(peopleStatusFilter) || rowPeopleFilter === peopleStatusFilter;
       const matchesRecapProgress = recapProgressFilter === 'all' || rowRecapProgress === recapProgressFilter;
-      row.style.display = matchesSearch && matchesStatus && matchesPeopleStatus && matchesRecapProgress ? '' : 'none';
+      const matchesMemberFeedbackProgress = memberFeedbackProgressFilter === 'all' || rowMemberFeedbackProgress === memberFeedbackProgressFilter;
+      const matchesMemberFeedbackSession = memberFeedbackSessionFilter === 'all' || rowMemberFeedbackSession === memberFeedbackSessionFilter;
+      row.style.display = matchesSearch
+        && matchesStatus
+        && matchesPeopleStatus
+        && matchesRecapProgress
+        && matchesMemberFeedbackProgress
+        && matchesMemberFeedbackSession
+          ? ''
+          : 'none';
     });
 
     if (tableId === 'groups-dashboard-table') {

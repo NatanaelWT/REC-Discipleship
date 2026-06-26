@@ -25,7 +25,8 @@ class InvalidateDiscipleshipReadCache
 
         $routeName = (string) optional($request->route())->getName();
         if (str_starts_with($routeName, 'discipleship.')
-            || str_starts_with($routeName, 'public.dg.')) {
+            || str_starts_with($routeName, 'public.dg.')
+            || str_starts_with($routeName, 'public.member-feedback.')) {
             $branchIds = $this->branchIds($request);
             if ($branchIds === []) {
                 $this->cache->invalidate();
@@ -51,7 +52,10 @@ class InvalidateDiscipleshipReadCache
             $ids[(int) $participant->branch_id] = (int) $participant->branch_id;
         }
 
-        $branchSlug = trim((string) ($request->route('branch') ?? $request->input('branch', '')));
+        $branchSlug = trim((string) (
+            $request->route('branch')
+            ?? $request->input('branch', $request->input('public_cabang', ''))
+        ));
         if ($branchSlug !== '') {
             $branchId = $this->branches->idForSlug($branchSlug);
             if ($branchId !== null) {

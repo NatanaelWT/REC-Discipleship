@@ -35,6 +35,7 @@ class AppPageRouteMap
         'people_tree_v2' => 'discipleship.tree-v2',
         'spiritual_journey' => 'discipleship.spiritual-journey',
         'dg_reports_recap' => 'discipleship.reports-recap',
+        'member_feedback_recap' => 'discipleship.member-feedback-recap',
         'msk_classes' => 'discipleship.msk-classes',
         'discipleship_targets' => 'discipleship.targets',
         'difficult_questions_admin' => 'discipleship.difficult-questions',

@@ -11,6 +11,7 @@ function discipleship_page_map(): array {
             'people_tree_v2' => true,
             'spiritual_journey' => true,
             'dg_reports_recap' => true,
+            'member_feedback_recap' => true,
             'msk_classes' => true,
         ];
     }

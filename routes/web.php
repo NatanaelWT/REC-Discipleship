@@ -11,6 +11,7 @@ use App\Http\Controllers\Discipleship\DashboardController as DiscipleshipDashboa
 use App\Http\Controllers\Discipleship\DifficultQuestionController as DiscipleshipDifficultQuestionController;
 use App\Http\Controllers\Discipleship\GroupController as DiscipleshipGroupController;
 use App\Http\Controllers\Discipleship\MeetingReportRecapController as DiscipleshipMeetingReportRecapController;
+use App\Http\Controllers\Discipleship\MemberFeedbackRecapController as DiscipleshipMemberFeedbackRecapController;
 use App\Http\Controllers\Discipleship\MskParticipantController as DiscipleshipMskParticipantController;
 use App\Http\Controllers\Discipleship\PeopleListController as DiscipleshipPeopleListController;
 use App\Http\Controllers\Discipleship\PeopleTreeController as DiscipleshipPeopleTreeController;
@@ -114,6 +115,7 @@ Route::group([], function (): void {
         Route::post('/spiritual-journey', [DiscipleshipSpiritualJourneyController::class, 'updateBridgeStatusFromForm'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.bridge-status-form');
         Route::post('/spiritual-journey/{participant}/bridge-status', [DiscipleshipSpiritualJourneyController::class, 'updateBridgeStatus'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.bridge-status');
         Route::get('/laporan-dg', [DiscipleshipMeetingReportRecapController::class, 'index'])->middleware('rec.page:dg_reports_recap')->name('reports-recap');
+        Route::get('/umpan-balik-anggota', [DiscipleshipMemberFeedbackRecapController::class, 'index'])->middleware('rec.page:member_feedback_recap')->name('member-feedback-recap');
         Route::get('/msk', [DiscipleshipMskParticipantController::class, 'index'])->middleware('rec.page:msk_classes')->name('msk-classes');
         Route::post('/msk/peserta', [DiscipleshipMskParticipantController::class, 'store'])->middleware('rec.page:msk_classes')->name('msk-classes.store');
         Route::post('/msk/impor', [DiscipleshipMskParticipantController::class, 'import'])->middleware('rec.page:msk_classes')->name('msk-classes.import');
