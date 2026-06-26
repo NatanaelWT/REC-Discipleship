@@ -53,6 +53,7 @@ class DifficultQuestionAdminPageData
         $questionText = trim((string) $question->question);
         $answerText = trim((string) $question->answer);
         $askerName = trim((string) $question->asker_name);
+        $askerWhatsappDigits = normalize_whatsapp_digits((string) ($question->asker_whatsapp ?? ''));
         $answeredBy = trim((string) $question->answered_by_username);
         $status = strtolower(trim((string) $question->status));
 
@@ -70,6 +71,8 @@ class DifficultQuestionAdminPageData
             'questionText' => $questionText,
             'answerText' => $answerText,
             'askerName' => $askerName,
+            'askerWhatsapp' => $askerWhatsappDigits !== '' ? '+'.$askerWhatsappDigits : '',
+            'askerWhatsappUrl' => $askerWhatsappDigits !== '' ? 'https://wa.me/'.$askerWhatsappDigits : '',
             'createdAt' => $this->dateTimeLabel($question->created_at),
             'answeredAt' => $this->dateTimeLabel($question->answered_at),
             'answeredBy' => $answeredBy,

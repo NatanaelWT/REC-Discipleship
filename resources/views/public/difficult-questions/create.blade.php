@@ -10,6 +10,7 @@
             'missing_question' => 'Isi pertanyaan terlebih dahulu.',
             'password_short' => 'Password minimal 4 karakter.',
             'password_mismatch' => 'Konfirmasi password tidak sama.',
+            'invalid_whatsapp' => 'Nomor WhatsApp terlalu panjang.',
             'save_failed' => 'Pertanyaan gagal disimpan. Coba ulangi lagi.',
         ];
     @endphp
@@ -32,6 +33,7 @@
         @csrf
         <input type="hidden" name="action" value="submit_difficult_question">
         <label class="public-question-field">Nama (opsional)<input type="text" name="asker_name" maxlength="120" value="{{ (string) ($old['asker_name'] ?? '') }}" placeholder="Boleh dikosongkan"></label>
+        <label class="public-question-field">Nomor WhatsApp (opsional)<input type="tel" name="asker_whatsapp" maxlength="40" inputmode="tel" autocomplete="tel" value="{{ (string) ($old['asker_whatsapp'] ?? '') }}" placeholder="08xxxxxxxxxx"></label>
         <label class="public-question-field public-question-field-full">Pertanyaan <span class="required-mark">*</span><textarea name="question_text" rows="7" maxlength="6000" required placeholder="Tulis pertanyaan yang ingin dijawab...">{{ (string) ($old['question_text'] ?? '') }}</textarea></label>
         <div class="public-question-password-panel">
           <div class="public-question-password-copy"><strong>Password Jawaban</strong><span>Simpan password ini. Password diperlukan untuk membuka jawaban Anda nanti.</span></div>

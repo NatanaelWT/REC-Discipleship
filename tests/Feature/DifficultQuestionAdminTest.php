@@ -23,6 +23,7 @@ class DifficultQuestionAdminTest extends TestCase
 
         DB::table('difficult_questions')->insert([
             'asker_name' => 'Tester',
+            'asker_whatsapp' => '6281234567890',
             'question' => 'Apa arti pemuridan?',
             'password_hash' => null,
             'password_lookup_hash' => 'lookup-test',
@@ -38,8 +39,35 @@ class DifficultQuestionAdminTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Pertanyaan Sulit');
+        $response->assertSee('+6281234567890');
         $response->assertSee('Apa arti pemuridan?');
         $response->assertDontSee('name="answer_text"', false);
+    }
+
+    public function test_public_submission_stores_optional_whatsapp_number(): void
+    {
+        $this->createDifficultQuestionsTable();
+
+        $this->get('/publik/pertanyaan-sulit/kirim')
+            ->assertOk()
+            ->assertSee('Nomor WhatsApp (opsional)')
+            ->assertSee('name="asker_whatsapp"', false);
+
+        $response = $this->post('/publik/pertanyaan-sulit/kirim', [
+            'asker_name' => 'Tester',
+            'asker_whatsapp' => '0812 3456 7890',
+            'question_text' => 'Apakah nomor WhatsApp tersimpan?',
+            'question_password' => 'secret-test',
+            'question_password_confirm' => 'secret-test',
+        ]);
+
+        $response->assertRedirect('/publik/pertanyaan-sulit/kirim?submitted=1');
+        $this->assertDatabaseHas('difficult_questions', [
+            'asker_name' => 'Tester',
+            'asker_whatsapp' => '6281234567890',
+            'question' => 'Apakah nomor WhatsApp tersimpan?',
+            'status' => 'pending',
+        ]);
     }
 
     public function test_developer_cannot_save_answer_from_discipleship_preview(): void
@@ -136,6 +164,7 @@ class DifficultQuestionAdminTest extends TestCase
         Schema::create('difficult_questions', function (Blueprint $table): void {
             $table->id();
             $table->string('asker_name')->nullable();
+            $table->string('asker_whatsapp')->nullable();
             $table->longText('question');
             $table->string('password_hash')->nullable();
             $table->string('password_lookup_hash', 128)->index();

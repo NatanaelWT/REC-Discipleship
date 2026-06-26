@@ -36,6 +36,7 @@ class DifficultQuestionController extends Controller
 
             DifficultQuestion::query()->create([
                 'asker_name' => trim((string) $request->input('asker_name', '')) ?: null,
+                'asker_whatsapp' => trim((string) $request->input('asker_whatsapp', '')) ?: null,
                 'question' => (string) $request->input('question_text', ''),
                 'password_hash' => $passwordService->passwordHash($password),
                 'password_lookup_hash' => $passwordService->lookupHash($password),

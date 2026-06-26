@@ -2,6 +2,9 @@
   <div class="difficult-question-admin-head">
     <div>
       <strong>{{ $questionItem['askerName'] }}</strong>
+      @if ($questionItem['askerWhatsapp'] !== '')
+        <span>WhatsApp: <a class="note-link" href="{{ $questionItem['askerWhatsappUrl'] }}" target="_blank" rel="noopener">{{ $questionItem['askerWhatsapp'] }}</a></span>
+      @endif
       <span>Dikirim: {{ $questionItem['createdAt'] }}</span>
     </div>
     <span class="{{ $questionItem['statusClass'] }}">{{ $questionItem['statusLabel'] }}</span>

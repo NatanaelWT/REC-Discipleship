@@ -13,6 +13,7 @@ class DifficultQuestion extends Model
 
     protected $fillable = [
         'asker_name',
+        'asker_whatsapp',
         'question',
         'password_hash',
         'password_lookup_hash',

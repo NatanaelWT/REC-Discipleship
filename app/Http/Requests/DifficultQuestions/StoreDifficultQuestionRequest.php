@@ -21,15 +21,18 @@ class StoreDifficultQuestionRequest extends FormRequest
 
         $normalizer = app(DifficultQuestionTextNormalizer::class);
         $askerName = $normalizer->normalize((string) $this->input('asker_name', ''), 120);
+        $askerWhatsapp = normalize_whatsapp_digits((string) $this->input('asker_whatsapp', ''));
         $questionText = $normalizer->normalize((string) $this->input('question_text', ''), 6000);
 
         session()->put('difficult_question_old', [
             'asker_name' => $askerName,
+            'asker_whatsapp' => $askerWhatsapp,
             'question_text' => $questionText,
         ]);
 
         $this->merge([
             'asker_name' => $askerName,
+            'asker_whatsapp' => $askerWhatsapp,
             'question_text' => $questionText,
         ]);
     }
@@ -41,6 +44,7 @@ class StoreDifficultQuestionRequest extends FormRequest
     {
         return [
             'asker_name' => ['nullable', 'string', 'max:120'],
+            'asker_whatsapp' => ['nullable', 'string', 'max:20'],
             'question_text' => ['required', 'string', 'max:6000'],
             'question_password' => ['required', 'string', 'min:4'],
             'question_password_confirm' => ['required', 'same:question_password'],
@@ -54,6 +58,8 @@ class StoreDifficultQuestionRequest extends FormRequest
 
         if ($errors->has('question_text')) {
             $error = 'missing_question';
+        } elseif ($errors->has('asker_whatsapp')) {
+            $error = 'invalid_whatsapp';
         } elseif ($errors->has('question_password')) {
             $error = 'password_short';
         } elseif ($errors->has('question_password_confirm')) {
