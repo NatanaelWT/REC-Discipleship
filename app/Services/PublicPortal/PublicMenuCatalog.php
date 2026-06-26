@@ -39,6 +39,7 @@ class PublicMenuCatalog
                 ],
                 [
                     'title' => 'Materi DG-3',
+                    'sub' => '(MeDI)',
                     'href' => route('materials.show', ['menu' => PublicMaterialMenuKey::MateriDg3->value], false),
                 ],
                 [
