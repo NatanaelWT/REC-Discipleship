@@ -429,6 +429,74 @@
       emptySelector: '[data-discipleship-people-search-empty]',
     });
 
+    const memberFeedbackDetailModal = document.querySelector('[data-member-feedback-detail-modal]');
+    if (memberFeedbackDetailModal) {
+      const titleEl = memberFeedbackDetailModal.querySelector('[data-member-feedback-detail-title]');
+      const bodyEl = memberFeedbackDetailModal.querySelector('[data-member-feedback-detail-body]');
+      const closeButtons = memberFeedbackDetailModal.querySelectorAll('[data-member-feedback-detail-close]');
+      const templateMap = new Map();
+
+      document.querySelectorAll('template[data-member-feedback-detail-template]').forEach((templateEl) => {
+        const feedbackId = templateEl.getAttribute('data-member-feedback-detail-template') || '';
+        if (feedbackId) {
+          templateMap.set(feedbackId, templateEl);
+        }
+      });
+
+      const openMemberFeedbackDetail = (feedbackId) => {
+        const key = String(feedbackId || '').trim();
+        if (!key || !templateMap.has(key)) {
+          return;
+        }
+
+        const templateEl = templateMap.get(key);
+        if (titleEl) {
+          titleEl.textContent = templateEl?.getAttribute('data-member-feedback-detail-template-title') || 'Detail Feedback';
+        }
+        if (bodyEl) {
+          bodyEl.innerHTML = templateEl ? templateEl.innerHTML : '';
+        }
+
+        memberFeedbackDetailModal.classList.add('is-open');
+        memberFeedbackDetailModal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+      };
+
+      const closeMemberFeedbackDetail = () => {
+        memberFeedbackDetailModal.classList.remove('is-open');
+        memberFeedbackDetailModal.setAttribute('aria-hidden', 'true');
+        syncBodyModalState();
+      };
+
+      document.addEventListener('click', function (event) {
+        const trigger = event.target.closest('[data-member-feedback-detail-open]');
+        if (!trigger) {
+          return;
+        }
+
+        event.preventDefault();
+        openMemberFeedbackDetail(trigger.getAttribute('data-member-feedback-detail-open') || '');
+      });
+
+      closeButtons.forEach((button) => {
+        button.addEventListener('click', function () {
+          closeMemberFeedbackDetail();
+        });
+      });
+
+      memberFeedbackDetailModal.addEventListener('click', function (event) {
+        if (event.target === memberFeedbackDetailModal) {
+          closeMemberFeedbackDetail();
+        }
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && memberFeedbackDetailModal.classList.contains('is-open')) {
+          closeMemberFeedbackDetail();
+        }
+      });
+    }
+
     const mskViewModal = document.querySelector('[data-msk-view-modal]');
     if (mskViewModal) {
       const titleEl = mskViewModal.querySelector('[data-msk-view-title]');

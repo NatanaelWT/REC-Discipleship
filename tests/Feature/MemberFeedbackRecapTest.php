@@ -29,6 +29,28 @@ class MemberFeedbackRecapTest extends TestCase
         $response->assertSee('member-feedback-recap-score-card', false);
         $response->assertSee('data-filter-role="member-feedback-session"', false);
         $response->assertSee('data-member-feedback-progress="dg1"', false);
+        $response->assertSee('data-member-feedback-detail-open', false);
+        $response->assertSee('data-member-feedback-detail-modal', false);
+    }
+
+    public function test_feedback_detail_modal_template_contains_full_feedback_contents(): void
+    {
+        $this->createTables();
+        $ids = $this->seedFeedbackFixture();
+        $this->seedFeedback($ids, respondentName: 'Anggota Detail', noteContent: 'Catatan lengkap di modal feedback.');
+
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/umpan-balik-anggota')
+            ->assertOk()
+            ->assertSee('data-member-feedback-detail-template', false)
+            ->assertSee('Feedback Anggota Detail')
+            ->assertSee('Skor Pertanyaan')
+            ->assertSee('Apakah pemimpin DG dapat menjadi fasilitator yang baik?')
+            ->assertSee('10 / 10')
+            ->assertSee('3 / 5')
+            ->assertSee('Catatan Tertulis')
+            ->assertSee('Catatan lengkap di modal feedback.');
     }
 
     public function test_central_user_can_view_all_branches_and_filter_to_one_branch(): void

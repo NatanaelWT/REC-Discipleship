@@ -42,6 +42,7 @@
       };
       $percentLabel = fn ($value): string => (string) max(0, min(100, (int) round((float) $value))).'%';
       $progressKey = fn (string $value): string => strtolower(str_replace(' ', '', normalize_dg_progress_value($value) ?: $value));
+      $feedbackRowKey = fn (array $row): string => (string) ($row['id'] ?? md5(json_encode($row) ?: 'feedback'));
       $sectionShortLabels = [
           'leadership' => 'Kepemimpinan',
           'meeting' => 'Teknis',
@@ -252,6 +253,7 @@
           <col class="member-feedback-recap-col-respondent">
           <col class="member-feedback-recap-col-score">
           <col class="member-feedback-recap-col-note">
+          <col class="member-feedback-recap-col-action">
         </colgroup>
         <thead>
           <tr>
@@ -263,10 +265,12 @@
             <th>Pengisi</th>
             <th>Skor</th>
             <th>Catatan</th>
+            <th>Aksi</th>
           </tr>
         </thead>
         <tbody>
           @forelse ($detailPageRows as $row)
+            @php $detailKey = $feedbackRowKey($row); @endphp
             <tr data-member-feedback-progress="{{ $progressKey((string) ($row['group_progress'] ?? '')) }}" data-member-feedback-session="{{ (string) ($row['feedback_session'] ?? '') }}">
               <td>{{ format_datetime_id((string) ($row['submitted_at'] ?? '')) }}</td>
               <td>{{ (string) ($row['branch_label'] ?? '-') }}</td>
@@ -281,13 +285,84 @@
               <td>{{ (string) ($row['respondent_name'] ?? '-') }}</td>
               <td><span class="member-feedback-recap-score-pill">{{ $row['score'] !== null ? $scoreLabel($row['score']) : '-' }}</span></td>
               <td><span class="member-feedback-recap-note-cell">{{ (string) ($row['note_summary'] ?? '-') }}</span></td>
+              <td>
+                <button class="btn tiny ghost member-feedback-recap-detail-button" type="button" data-member-feedback-detail-open="{{ $detailKey }}">
+                  Detail
+                </button>
+              </td>
             </tr>
           @empty
-            <tr><td colspan="8">Belum ada jurnal umpan balik anggota pada scope ini.</td></tr>
+            <tr><td colspan="9">Belum ada jurnal umpan balik anggota pada scope ini.</td></tr>
           @endforelse
         </tbody>
       </table>
     </div>
+
+    @foreach ($detailPageRows as $row)
+      @php
+          $detailKey = $feedbackRowKey($row);
+          $ratingRows = is_array($row['rating_rows'] ?? null) ? $row['rating_rows'] : [];
+          $noteDetailRows = is_array($row['note_rows'] ?? null) ? $row['note_rows'] : [];
+      @endphp
+      <template data-member-feedback-detail-template="{{ $detailKey }}" data-member-feedback-detail-template-title="Feedback {{ (string) ($row['respondent_name'] ?? '-') }}">
+        <div class="member-feedback-recap-modal-summary">
+          <div><span>Tanggal</span><strong>{{ format_datetime_id((string) ($row['submitted_at'] ?? '')) }}</strong></div>
+          <div><span>Cabang</span><strong>{{ (string) ($row['branch_label'] ?? '-') }}</strong></div>
+          <div><span>Sesi</span><strong>{{ (string) ($row['session_label'] ?? '-') }}</strong></div>
+          <div><span>Progress</span><strong>{{ (string) ($row['group_progress'] ?? '-') }}</strong></div>
+          <div><span>Pemimpin</span><strong>{{ (string) ($row['leader_name'] ?? '-') }}</strong></div>
+          <div><span>Kelompok</span><strong>{{ (string) ($row['group_name'] ?? '-') }}</strong></div>
+          <div><span>Pengisi</span><strong>{{ (string) ($row['respondent_name'] ?? '-') }}</strong></div>
+          <div><span>Skor</span><strong>{{ $row['score'] !== null ? $scoreLabel($row['score']).'/10' : '-' }}</strong></div>
+        </div>
+
+        <section class="member-feedback-recap-modal-section">
+          <div class="member-feedback-recap-modal-section-head">
+            <h3>Skor Pertanyaan</h3>
+            <span>{{ (string) count($ratingRows) }} rating</span>
+          </div>
+          <div class="member-feedback-recap-modal-rating-list">
+            @forelse ($ratingRows as $rating)
+              @php
+                  $normalizedScore = is_numeric($rating['normalized_score'] ?? null) ? (float) $rating['normalized_score'] : 0.0;
+                  $normalizedPercent = max(0, min(100, $normalizedScore * 10));
+              @endphp
+              <article class="member-feedback-recap-modal-rating">
+                <div>
+                  <span>{{ (string) ($rating['section_label'] ?? '-') }} - {{ (string) ($rating['type_label'] ?? 'Skor') }}</span>
+                  <strong>{{ (string) ($rating['label'] ?? '-') }}</strong>
+                </div>
+                <div class="member-feedback-recap-modal-rating-score">
+                  <strong>{{ (string) ($rating['score'] ?? '-') }} / {{ (string) ($rating['scale'] ?? '-') }}</strong>
+                  <span>{{ $scoreLabel($normalizedScore) }}/10</span>
+                  <div class="member-feedback-recap-modal-rating-bar"><i style="width: {{ $normalizedPercent }}%"></i></div>
+                </div>
+              </article>
+            @empty
+              <p class="panel-note">Belum ada rating yang tersimpan untuk jurnal ini.</p>
+            @endforelse
+          </div>
+        </section>
+
+        <section class="member-feedback-recap-modal-section">
+          <div class="member-feedback-recap-modal-section-head">
+            <h3>Catatan Tertulis</h3>
+            <span>{{ (string) count($noteDetailRows) }} catatan</span>
+          </div>
+          <div class="member-feedback-recap-modal-note-list">
+            @forelse ($noteDetailRows as $note)
+              <article class="member-feedback-recap-modal-note">
+                <span>{{ (string) ($note['section_label'] ?? 'Catatan') }}</span>
+                <strong>{{ (string) ($note['label'] ?? 'Catatan') }}</strong>
+                <p>{{ (string) ($note['content'] ?? '') }}</p>
+              </article>
+            @empty
+              <p class="panel-note">Tidak ada catatan tertulis pada jurnal ini.</p>
+            @endforelse
+          </div>
+        </section>
+      </template>
+    @endforeach
 
     @if ($totalPages > 1)
       <div class="member-feedback-recap-pagination">
@@ -297,4 +372,16 @@
       </div>
     @endif
   </section>
+
+  <div class="modal" id="member-feedback-detail-modal" data-member-feedback-detail-modal aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-card member-feedback-recap-modal-card">
+      <div class="modal-head">
+        <div class="modal-title" data-member-feedback-detail-title>Detail Feedback</div>
+        <button class="btn tiny ghost" type="button" data-member-feedback-detail-close>Tutup</button>
+      </div>
+      <div class="modal-body member-feedback-recap-modal-body" data-member-feedback-detail-body>
+        <p class="panel-note">Pilih tombol Detail pada tabel untuk melihat isi feedback.</p>
+      </div>
+    </div>
+  </div>
 @endsection

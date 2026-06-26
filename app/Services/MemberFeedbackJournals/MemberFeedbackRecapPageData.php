@@ -69,6 +69,7 @@ class MemberFeedbackRecapPageData
         $branchLabels = $this->branchLabels();
         $questions = $this->questionMeta();
         $sections = $this->sectionMeta();
+        $notes = $this->noteMeta($sections);
         $activeMemberships = $this->activeMemberships($branchIds, $branchLabels);
 
         $sectionScores = $this->emptySectionScores($sections);
@@ -109,6 +110,7 @@ class MemberFeedbackRecapPageData
             $rowDisplayScore = 0.0;
             $rowDisplayCount = 0;
             $ratingItems = $this->ratingItems($feedback->ratings);
+            $ratingDetailRows = [];
 
             foreach ($ratingItems as $rating) {
                 $questionKey = trim((string) ($rating['question_key'] ?? ''));
@@ -128,6 +130,16 @@ class MemberFeedbackRecapPageData
                     ? $this->balanceScore($score, $scale, self::BALANCE_QUESTION_KEYS[$questionKey])
                     : $this->directionalScore($score, $scale);
 
+                $ratingDetailRows[] = [
+                    'section_key' => $sectionKey,
+                    'section_label' => (string) ($questions[$questionKey]['section_title'] ?? 'Pertanyaan'),
+                    'question_key' => $questionKey,
+                    'label' => (string) ($questions[$questionKey]['label'] ?? $questionKey),
+                    'score' => $score,
+                    'scale' => $scale,
+                    'normalized_score' => round($normalized, 1),
+                    'type_label' => $isBalance ? 'Keseimbangan' : 'Kepuasan',
+                ];
                 $rowDisplayScore += $normalized;
                 $rowDisplayCount++;
                 $sectionScores[$sectionKey]['sum'] += $normalized;
@@ -158,6 +170,7 @@ class MemberFeedbackRecapPageData
 
             $noteItems = $this->noteItems($feedback->notes);
             $noteSummaryParts = [];
+            $noteDetailRows = [];
             foreach ($noteItems as $note) {
                 $content = trim((string) ($note['content'] ?? ''));
                 if ($content === '') {
@@ -165,11 +178,21 @@ class MemberFeedbackRecapPageData
                 }
 
                 $sectionKey = trim((string) ($note['section_key'] ?? ''));
+                $noteKey = trim((string) ($note['note_key'] ?? ''));
                 if ($sectionKey === '') {
-                    $sectionKey = $this->noteSectionKey((string) ($note['note_key'] ?? ''));
+                    $sectionKey = $this->noteSectionKey($noteKey);
                 }
-                $sectionLabel = (string) ($sections[$sectionKey]['title'] ?? 'Catatan');
+                $noteMeta = $notes[$noteKey] ?? [];
+                $sectionLabel = (string) ($noteMeta['section_label'] ?? ($sections[$sectionKey]['title'] ?? 'Catatan'));
+                $noteLabel = (string) ($noteMeta['label'] ?? 'Catatan');
                 $noteSummaryParts[] = $content;
+                $noteDetailRows[] = [
+                    'section_key' => $sectionKey,
+                    'section_label' => $sectionLabel,
+                    'note_key' => $noteKey,
+                    'label' => $noteLabel,
+                    'content' => $content,
+                ];
                 $noteRows[] = [
                     'section_key' => $sectionKey,
                     'section_label' => $sectionLabel,
@@ -238,6 +261,8 @@ class MemberFeedbackRecapPageData
                 'score' => $rowScore,
                 'display_score' => $rowDisplayScore,
                 'note_summary' => $this->compactNotes($noteSummaryParts),
+                'rating_rows' => $ratingDetailRows,
+                'note_rows' => $noteDetailRows,
                 'submitted_at' => $submittedAt,
                 'search_text' => implode(' ', [
                     $branchLabel,
@@ -358,6 +383,33 @@ class MemberFeedbackRecapPageData
         }
 
         return $questions;
+    }
+
+    /**
+     * @param  array<string, array{title:string}>  $sections
+     * @return array<string, array<string, string>>
+     */
+    private function noteMeta(array $sections): array
+    {
+        $notes = [];
+        foreach ($this->questionCatalog->sections() as $sectionKey => $section) {
+            if (! is_array($section)) {
+                continue;
+            }
+
+            $key = trim((string) ($section['note_key'] ?? ''));
+            if ($key === '') {
+                continue;
+            }
+
+            $notes[$key] = [
+                'section_key' => (string) $sectionKey,
+                'section_label' => (string) ($sections[$sectionKey]['title'] ?? ($section['title'] ?? $sectionKey)),
+                'label' => trim((string) ($section['note_label'] ?? 'Catatan')) ?: 'Catatan',
+            ];
+        }
+
+        return $notes;
     }
 
     /**
