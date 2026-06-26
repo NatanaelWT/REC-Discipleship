@@ -363,6 +363,7 @@ class DiscipleshipDashboardTest extends TestCase
     {
         Schema::dropIfExists('msk_participants');
         Schema::dropIfExists('discipleship_meeting_reports');
+        Schema::dropIfExists('discipleship_manual_journey_records');
         Schema::dropIfExists('discipleship_group_people');
         Schema::dropIfExists('discipleship_relationships');
         Schema::dropIfExists('discipleship_groups');
@@ -437,6 +438,16 @@ class DiscipleshipDashboardTest extends TestCase
             $table->date('started_on')->nullable();
             $table->date('ended_on')->nullable();
             $table->string('end_reason')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('discipleship_manual_journey_records', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->unsignedBigInteger('person_id');
+            $table->string('stage');
+            $table->date('completed_on')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
 

@@ -13,6 +13,7 @@ use App\Services\MskParticipants\MskParticipantHistoryData;
 use App\Services\MskParticipants\MskParticipantProfileData;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class SpiritualJourneyPageData
@@ -88,7 +89,10 @@ class SpiritualJourneyPageData
             return;
         }
 
-        if (! Schema::hasTable('discipleship_group_people')) {
+        $hasGroupPeople = Schema::hasTable('discipleship_group_people');
+        $hasManualJourney = Schema::hasTable('discipleship_manual_journey_records');
+
+        if (! $hasGroupPeople && ! $hasManualJourney) {
             $query->whereRaw('1 = 0');
 
             return;
@@ -99,13 +103,27 @@ class SpiritualJourneyPageData
                 ->orWhereNotIn('msk_participants.journey_bridge_status', ['sudah_kgap', 'ikut_keduanya']);
         });
         $query->whereNotNull('msk_participants.discipleship_person_id');
-        $query->whereExists(static function ($subquery): void {
-            $subquery->selectRaw('1')
-                ->from('discipleship_group_people as filter_gp')
-                ->whereColumn('filter_gp.person_id', 'msk_participants.discipleship_person_id')
-                ->whereColumn('filter_gp.branch_id', 'msk_participants.branch_id')
-                ->where('filter_gp.role', 'member')
-                ->whereIn('filter_gp.stage', ['DG 1', 'DG 2', 'DG 3']);
+        $query->where(static function (Builder $condition) use ($hasGroupPeople, $hasManualJourney): void {
+            if ($hasGroupPeople) {
+                $condition->whereExists(static function ($subquery): void {
+                    $subquery->selectRaw('1')
+                        ->from('discipleship_group_people as filter_gp')
+                        ->whereColumn('filter_gp.person_id', 'msk_participants.discipleship_person_id')
+                        ->whereColumn('filter_gp.branch_id', 'msk_participants.branch_id')
+                        ->where('filter_gp.role', 'member')
+                        ->whereIn('filter_gp.stage', ['DG 1', 'DG 2', 'DG 3']);
+                });
+            }
+            if ($hasManualJourney) {
+                $method = $hasGroupPeople ? 'orWhereExists' : 'whereExists';
+                $condition->{$method}(static function ($subquery): void {
+                    $subquery->selectRaw('1')
+                        ->from('discipleship_manual_journey_records as manual_journey')
+                        ->whereColumn('manual_journey.person_id', 'msk_participants.discipleship_person_id')
+                        ->whereColumn('manual_journey.branch_id', 'msk_participants.branch_id')
+                        ->whereIn('manual_journey.stage', ['DG 1', 'DG 2', 'DG 3']);
+                });
+            }
         });
     }
 
@@ -144,9 +162,11 @@ class SpiritualJourneyPageData
             return collect();
         }
 
-        return DiscipleshipGroupPerson::query()->whereIn('person_id', $personIds)->get([
+        $rows = DiscipleshipGroupPerson::query()->whereIn('person_id', $personIds)->get([
             'id', 'branch_id', 'discipleship_group_id', 'person_id', 'role', 'stage', 'status', 'started_on', 'ended_on', 'end_reason', 'created_at', 'updated_at',
         ]);
+
+        return $rows->merge($this->manualGroupPeople($personIds));
     }
 
     private function groups(array $groupIds): array
@@ -198,14 +218,50 @@ class SpiritualJourneyPageData
 
     private function groupPersonRow(DiscipleshipGroupPerson $row): array
     {
+        $source = (string) ($row->source ?? '');
+
         return [
             'id' => (string) $row->id, 'group_id' => (string) $row->discipleship_group_id,
-            'person_id' => (string) $row->person_id, 'leader_person_id' => (string) $row->person_id,
+            'person_id' => (string) $row->person_id, 'leader_person_id' => $source === 'manual' ? '' : (string) $row->person_id,
             'role' => strtolower((string) $row->role), 'stage' => normalize_dg_progress_value((string) $row->stage),
             'status' => (string) $row->status, 'start_date' => (string) $row->started_on,
             'end_date' => (string) $row->ended_on, 'reason_end' => (string) $row->end_reason,
             'reason_change' => (string) $row->end_reason, 'created_at' => (string) $row->created_at, 'updated_at' => (string) $row->updated_at,
+            'source' => $source, 'notes' => (string) ($row->notes ?? ''),
         ];
+    }
+
+    private function manualGroupPeople(array $personIds)
+    {
+        if (! Schema::hasTable('discipleship_manual_journey_records')) {
+            return collect();
+        }
+
+        return DB::table('discipleship_manual_journey_records')
+            ->whereIn('person_id', $personIds)
+            ->orderBy('id')
+            ->get()
+            ->map(static function (object $row): DiscipleshipGroupPerson {
+                $model = new DiscipleshipGroupPerson;
+                $model->forceFill([
+                    'id' => -1 * (int) $row->id,
+                    'branch_id' => (int) $row->branch_id,
+                    'discipleship_group_id' => null,
+                    'person_id' => (int) $row->person_id,
+                    'role' => 'member',
+                    'stage' => normalize_dg_progress_value((string) $row->stage),
+                    'status' => 'completed',
+                    'started_on' => $row->completed_on,
+                    'ended_on' => $row->completed_on,
+                    'end_reason' => 'manual_completion',
+                    'created_at' => $row->created_at,
+                    'updated_at' => $row->updated_at,
+                    'source' => 'manual',
+                    'notes' => trim((string) ($row->notes ?? '')),
+                ]);
+
+                return $model;
+            });
     }
 
     private function targets(): array

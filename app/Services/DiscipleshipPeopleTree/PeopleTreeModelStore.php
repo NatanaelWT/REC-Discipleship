@@ -10,6 +10,7 @@ use App\Models\DiscipleshipRelationship;
 use App\Models\MskParticipant;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class PeopleTreeModelStore
@@ -62,6 +63,7 @@ class PeopleTreeModelStore
                 $leaderships[] = $row;
             }
         }
+        $memberships = array_merge($memberships, $this->manualJourneyRows($branchIds));
 
         return dgv2_normalize_model([
             'discipleship_persons' => $this->peopleRows($branchIds),
@@ -399,6 +401,54 @@ class PeopleTreeModelStore
                 'reason_change' => trim((string) $row->end_reason),
                 'created_at' => optional($row->created_at)->toIso8601String(),
                 'updated_at' => optional($row->updated_at)->toIso8601String(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function manualJourneyRows(array $branchIds): array
+    {
+        if (! Schema::hasTable('discipleship_manual_journey_records')) {
+            return [];
+        }
+
+        return DB::table('discipleship_manual_journey_records as manual')
+            ->join('discipleship_people as person', function ($join): void {
+                $join->on('person.id', '=', 'manual.person_id')
+                    ->on('person.branch_id', '=', 'manual.branch_id');
+            })
+            ->select([
+                'manual.id',
+                'manual.branch_id',
+                'manual.person_id',
+                'manual.stage',
+                'manual.completed_on',
+                'manual.notes',
+                'manual.created_at',
+                'manual.updated_at',
+            ])
+            ->whereIn('manual.branch_id', $branchIds)
+            ->where('person.status', 'active')
+            ->orderBy('manual.id')
+            ->get()
+            ->map(static fn (object $row): array => [
+                'id' => 'manual-'.$row->id,
+                'branch_code' => branch_slug_from_id((int) $row->branch_id),
+                'group_id' => '',
+                'person_id' => (string) $row->person_id,
+                'leader_person_id' => '',
+                'role' => 'member',
+                'stage' => normalize_dg_progress_value((string) $row->stage),
+                'status' => 'completed',
+                'start_date' => $row->completed_on !== null ? (string) $row->completed_on : '',
+                'end_date' => $row->completed_on !== null ? (string) $row->completed_on : '',
+                'reason_end' => 'manual_completion',
+                'reason_change' => 'manual_completion',
+                'source' => 'manual',
+                'notes' => trim((string) ($row->notes ?? '')),
+                'created_at' => $row->created_at !== null ? (string) $row->created_at : '',
+                'updated_at' => $row->updated_at !== null ? (string) $row->updated_at : '',
             ])
             ->values()
             ->all();

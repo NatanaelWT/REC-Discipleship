@@ -8,6 +8,8 @@ use App\Models\DiscipleshipRelationship;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DiscipleshipPeopleListData
 {
@@ -21,12 +23,22 @@ class DiscipleshipPeopleListData
         $base = DiscipleshipPerson::query()
             ->whereIn('branch_id', $this->scope->branchIds())
             ->where('status', 'active')
-            ->whereExists(static function ($subquery): void {
-                $subquery->selectRaw('1')
-                    ->from('discipleship_group_people as participant_history')
-                    ->whereColumn('participant_history.person_id', 'discipleship_people.id')
-                    ->whereColumn('participant_history.branch_id', 'discipleship_people.branch_id')
-                    ->where('participant_history.role', 'member');
+            ->where(function (Builder $condition): void {
+                $condition->whereExists(static function ($subquery): void {
+                    $subquery->selectRaw('1')
+                        ->from('discipleship_group_people as participant_history')
+                        ->whereColumn('participant_history.person_id', 'discipleship_people.id')
+                        ->whereColumn('participant_history.branch_id', 'discipleship_people.branch_id')
+                        ->where('participant_history.role', 'member');
+                });
+                if (Schema::hasTable('discipleship_manual_journey_records')) {
+                    $condition->orWhereExists(static function ($subquery): void {
+                        $subquery->selectRaw('1')
+                            ->from('discipleship_manual_journey_records as manual_journey')
+                            ->whereColumn('manual_journey.person_id', 'discipleship_people.id')
+                            ->whereColumn('manual_journey.branch_id', 'discipleship_people.branch_id');
+                    });
+                }
             });
         $query = (clone $base)->select(['id', 'branch_id', 'full_name', 'status']);
 
@@ -110,20 +122,31 @@ class DiscipleshipPeopleListData
         $completedStages = ['complete_dg1' => 1, 'complete_dg2' => 2, 'complete_dg3' => 3];
         if (isset($completedStages[$progress])) {
             $rank = $completedStages[$progress];
-            $query->whereExists(static function ($subquery) use ($rank): void {
-                $subquery->selectRaw('1')->from('discipleship_group_people as filter_gp')
-                    ->whereColumn('filter_gp.person_id', 'discipleship_people.id')->where('filter_gp.role', 'member')
-                    ->where(function ($condition) use ($rank): void {
-                        if ($rank === 1) {
-                            $condition->whereIn('filter_gp.stage', ['DG 2', 'DG 3'])
-                                ->orWhere(fn ($q) => $q->where('filter_gp.stage', 'DG 1')->whereIn('filter_gp.end_reason', ['continued_to_child_group', 'group_completed', 'stage_transition']));
-                        } elseif ($rank === 2) {
-                            $condition->where('filter_gp.stage', 'DG 3')
-                                ->orWhere(fn ($q) => $q->where('filter_gp.stage', 'DG 2')->whereIn('filter_gp.end_reason', ['continued_to_child_group', 'group_completed', 'stage_transition']));
-                        } else {
-                            $condition->where('filter_gp.stage', 'DG 3')->whereIn('filter_gp.end_reason', ['continued_to_child_group', 'group_completed', 'stage_transition']);
-                        }
+            $query->where(static function (Builder $completion) use ($rank): void {
+                $completion->whereExists(static function ($subquery) use ($rank): void {
+                    $subquery->selectRaw('1')->from('discipleship_group_people as filter_gp')
+                        ->whereColumn('filter_gp.person_id', 'discipleship_people.id')->where('filter_gp.role', 'member')
+                        ->where(function ($condition) use ($rank): void {
+                            if ($rank === 1) {
+                                $condition->whereIn('filter_gp.stage', ['DG 2', 'DG 3'])
+                                    ->orWhere(fn ($q) => $q->where('filter_gp.stage', 'DG 1')->whereIn('filter_gp.end_reason', ['continued_to_child_group', 'group_completed', 'stage_transition']));
+                            } elseif ($rank === 2) {
+                                $condition->where('filter_gp.stage', 'DG 3')
+                                    ->orWhere(fn ($q) => $q->where('filter_gp.stage', 'DG 2')->whereIn('filter_gp.end_reason', ['continued_to_child_group', 'group_completed', 'stage_transition']));
+                            } else {
+                                $condition->where('filter_gp.stage', 'DG 3')->whereIn('filter_gp.end_reason', ['continued_to_child_group', 'group_completed', 'stage_transition']);
+                            }
+                        });
+                });
+                if (Schema::hasTable('discipleship_manual_journey_records')) {
+                    $stages = $rank === 1 ? ['DG 1', 'DG 2', 'DG 3'] : ($rank === 2 ? ['DG 2', 'DG 3'] : ['DG 3']);
+                    $completion->orWhereExists(static function ($subquery) use ($stages): void {
+                        $subquery->selectRaw('1')->from('discipleship_manual_journey_records as manual_journey')
+                            ->whereColumn('manual_journey.person_id', 'discipleship_people.id')
+                            ->whereColumn('manual_journey.branch_id', 'discipleship_people.branch_id')
+                            ->whereIn('manual_journey.stage', $stages);
                     });
+                }
             });
 
             return;
@@ -152,8 +175,10 @@ class DiscipleshipPeopleListData
             return collect();
         }
 
-        return DiscipleshipGroupPerson::query()->whereIn('person_id', $personIds)
+        $rows = DiscipleshipGroupPerson::query()->whereIn('person_id', $personIds)
             ->get(['id', 'person_id', 'role', 'stage', 'status', 'ended_on', 'end_reason', 'started_on']);
+
+        return $rows->merge($this->manualGroupPeople($personIds));
     }
 
     /**
@@ -217,7 +242,7 @@ class DiscipleshipPeopleListData
 
     private function completedStage($links, int $rank): bool
     {
-        $reasons = ['continued_to_child_group', 'group_completed', 'stage_transition'];
+        $reasons = ['continued_to_child_group', 'group_completed', 'stage_transition', 'manual_completion'];
 
         return $links->contains(static function (DiscipleshipGroupPerson $row) use ($rank, $reasons): bool {
             $stageRank = match ($row->stage) {
@@ -245,8 +270,7 @@ class DiscipleshipPeopleListData
     /** @return array{total:int,dg1:int,dg2:int,dg3:int} */
     private function progressStats(): array
     {
-        $participantStages = DiscipleshipGroupPerson::query()
-            ->from('discipleship_group_people as gp')
+        $journeyRows = DB::table('discipleship_group_people as gp')
             ->join('discipleship_people as p', function ($join): void {
                 $join->on('p.id', '=', 'gp.person_id')
                     ->on('p.branch_id', '=', 'gp.branch_id');
@@ -255,13 +279,35 @@ class DiscipleshipPeopleListData
             ->where('p.status', 'active')
             ->where('gp.role', 'member')
             ->selectRaw("gp.person_id,
-                MAX(CASE gp.stage
+                CASE gp.stage
                     WHEN 'DG 3' THEN 3
                     WHEN 'DG 2' THEN 2
                     WHEN 'DG 1' THEN 1
                     ELSE 0
-                END) AS last_stage_rank")
-            ->groupBy('gp.person_id');
+                END AS stage_rank");
+
+        if (Schema::hasTable('discipleship_manual_journey_records')) {
+            $manualRows = DB::table('discipleship_manual_journey_records as manual_journey')
+                ->join('discipleship_people as p', function ($join): void {
+                    $join->on('p.id', '=', 'manual_journey.person_id')
+                        ->on('p.branch_id', '=', 'manual_journey.branch_id');
+                })
+                ->whereIn('manual_journey.branch_id', $this->scope->branchIds())
+                ->where('p.status', 'active')
+                ->selectRaw("manual_journey.person_id,
+                    CASE manual_journey.stage
+                        WHEN 'DG 3' THEN 3
+                        WHEN 'DG 2' THEN 2
+                        WHEN 'DG 1' THEN 1
+                        ELSE 0
+                    END AS stage_rank");
+            $journeyRows->unionAll($manualRows);
+        }
+
+        $participantStages = DB::query()
+            ->fromSub($journeyRows, 'journey_rows')
+            ->selectRaw('person_id, MAX(stage_rank) AS last_stage_rank')
+            ->groupBy('person_id');
 
         $row = DiscipleshipGroupPerson::query()
             ->fromSub($participantStages, 'participant_stages')
@@ -272,5 +318,32 @@ class DiscipleshipPeopleListData
             ->first();
 
         return ['total' => (int) ($row->total ?? 0), 'dg1' => (int) ($row->dg1 ?? 0), 'dg2' => (int) ($row->dg2 ?? 0), 'dg3' => (int) ($row->dg3 ?? 0)];
+    }
+
+    private function manualGroupPeople(array $personIds)
+    {
+        if (! Schema::hasTable('discipleship_manual_journey_records')) {
+            return collect();
+        }
+
+        return DB::table('discipleship_manual_journey_records')
+            ->whereIn('person_id', $personIds)
+            ->orderBy('id')
+            ->get()
+            ->map(static function (object $row): DiscipleshipGroupPerson {
+                $model = new DiscipleshipGroupPerson;
+                $model->forceFill([
+                    'id' => -1 * (int) $row->id,
+                    'person_id' => (int) $row->person_id,
+                    'role' => 'member',
+                    'stage' => normalize_dg_progress_value((string) $row->stage),
+                    'status' => 'completed',
+                    'started_on' => $row->completed_on,
+                    'ended_on' => $row->completed_on,
+                    'end_reason' => 'manual_completion',
+                ]);
+
+                return $model;
+            });
     }
 }

@@ -7,6 +7,7 @@ use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipPerson;
 use App\Models\DiscipleshipRelationship;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class MskParticipantHistoryData
@@ -60,6 +61,7 @@ class MskParticipantHistoryData
                 'id', 'discipleship_group_id', 'person_id', 'role', 'stage', 'status',
                 'started_on', 'ended_on', 'end_reason', 'created_at', 'updated_at',
             ]);
+        $targetLinks = $targetLinks->merge($this->manualLinks($validPersonIds, $branchIds));
         $groupIds = $targetLinks->pluck('discipleship_group_id')->map(static fn ($id): int => (int) $id)->unique()->all();
         $groups = DiscipleshipGroup::query()
             ->whereIn('branch_id', $branchIds)
@@ -155,9 +157,10 @@ class MskParticipantHistoryData
         $leaderItems = [];
 
         foreach ($personLinks as $link) {
+            $isManual = trim((string) ($link->source ?? '')) === 'manual';
             $groupId = (int) $link->discipleship_group_id;
             $group = $groups->get($groupId);
-            $groupName = trim((string) ($group?->name ?? '')) ?: 'Kelompok';
+            $groupName = $isManual ? 'Riwayat manual DG' : (trim((string) ($group?->name ?? '')) ?: 'Kelompok');
             $stage = normalize_dg_progress_value((string) ($link->stage ?? $group?->current_stage ?? $group?->start_stage));
             $active = $this->isActive($link->status, $link->ended_on);
             $role = strtolower(trim((string) $link->role));
@@ -169,15 +172,19 @@ class MskParticipantHistoryData
                     if ($this->stageRank($stage) > $this->stageRank($currentStage)) {
                         $currentStage = $stage;
                     }
+                } elseif ($isManual && $this->stageRank($stage) > $this->stageRank($currentStage)) {
+                    $currentStage = $stage;
                 }
-                $leader = $groupLinks
-                    ->filter(static fn (DiscipleshipGroupPerson $row): bool => strtolower((string) $row->role) !== 'member')
-                    ->sortByDesc(fn (DiscipleshipGroupPerson $row): string => ($this->isActive($row->status, $row->ended_on) ? '1' : '0').(string) ($row->updated_at ?? ''))
-                    ->first();
+                $leader = $isManual
+                    ? null
+                    : $groupLinks
+                        ->filter(static fn (DiscipleshipGroupPerson $row): bool => strtolower((string) $row->role) !== 'member')
+                        ->sortByDesc(fn (DiscipleshipGroupPerson $row): string => ($this->isActive($row->status, $row->ended_on) ? '1' : '0').(string) ($row->updated_at ?? ''))
+                        ->first();
                 $memberItems[] = [
-                    'title' => $groupName,
+                    'title' => $isManual ? ('Selesai '.($stage !== '' ? $stage : 'DG').' manual') : $groupName,
                     'stage' => $stage,
-                    'role' => 'Anggota',
+                    'role' => $isManual ? 'Manual' : 'Anggota',
                     'mentor' => $leader ? ($names[(int) $leader->person_id] ?? '') : '',
                     'active' => $active,
                     'date' => $this->dateLabel($link->started_on, $link->ended_on),
@@ -256,6 +263,7 @@ class MskParticipantHistoryData
         return match (trim($reason)) {
             'continued_to_child_group', 'group_completed' => 'Kelompok selesai',
             'stage_transition' => 'Transisi tahap',
+            'manual_completion' => 'Ditandai selesai tanpa kelompok/pemimpin',
             'group_archived' => 'Kelompok diarsipkan',
             'left_group' => 'Keluar dari kelompok',
             'removed_from_group' => 'Dikeluarkan dari kelompok',
@@ -263,5 +271,38 @@ class MskParticipantHistoryData
             'moved_group' => 'Pindah kelompok',
             default => trim($reason),
         };
+    }
+
+    /** @param array<int, int> $personIds */
+    private function manualLinks(array $personIds, array $branchIds): Collection
+    {
+        if (! Schema::hasTable('discipleship_manual_journey_records')) {
+            return collect();
+        }
+
+        return DB::table('discipleship_manual_journey_records')
+            ->whereIn('branch_id', $branchIds)
+            ->whereIn('person_id', $personIds)
+            ->orderBy('id')
+            ->get()
+            ->map(static function (object $row): DiscipleshipGroupPerson {
+                $model = new DiscipleshipGroupPerson;
+                $model->forceFill([
+                    'id' => -1 * (int) $row->id,
+                    'discipleship_group_id' => null,
+                    'person_id' => (int) $row->person_id,
+                    'role' => 'member',
+                    'stage' => normalize_dg_progress_value((string) $row->stage),
+                    'status' => 'completed',
+                    'started_on' => $row->completed_on,
+                    'ended_on' => $row->completed_on,
+                    'end_reason' => 'manual_completion',
+                    'created_at' => $row->created_at,
+                    'updated_at' => $row->updated_at,
+                    'source' => 'manual',
+                ]);
+
+                return $model;
+            });
     }
 }

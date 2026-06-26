@@ -337,6 +337,7 @@ if ($page === 'people_tree') {
             'continued_to_child' => 'Naik ke kelompok lanjutan',
             'group_completed.' => 'Kelompok selesai',
             'group_completed_' => 'Kelompok selesai',
+            'manual_completion' => 'Ditandai selesai manual',
         ];
         if (isset($labelMap[$normalized])) {
             return $labelMap[$normalized];
@@ -363,6 +364,9 @@ if ($page === 'people_tree') {
         }
         if ($reason === 'stage_transition') {
             return 'Transisi tahap';
+        }
+        if ($reason === 'manual_completion') {
+            return 'Ditandai selesai tanpa kelompok/pemimpin';
         }
         return $reason;
     };
@@ -477,6 +481,7 @@ if ($page === 'people_tree') {
         $membershipTimelineItems = [];
         $currentGroupNames = [];
         foreach (($membershipsByPersonId[$personId] ?? []) as $membership) {
+            $isManual = trim((string) ($membership['source'] ?? '')) === 'manual';
             $groupId = trim((string) ($membership['group_id'] ?? ''));
             if ($groupId === 'virtual_root_group') {
                 continue;
@@ -488,17 +493,17 @@ if ($page === 'people_tree') {
             $stage = normalize_dg_progress_value((string) ($membership['stage'] ?? ''));
             $role = trim((string) ($membership['role'] ?? 'anggota'));
             $isActive = dgv2_is_current_period($membership);
-            if ($isActive && !in_array($groupName, $currentGroupNames, true)) {
+            if (!$isManual && $isActive && !in_array($groupName, $currentGroupNames, true)) {
                 $currentGroupNames[] = $groupName;
             }
             $meta = [];
             if ($stage !== '') {
                 $meta[] = $journeyStageBadgeHtml($stage);
             }
-            $meta[] = "<span class=\"journey-history-chip\">" . h($journeyHistoryTextLabel($role)) . "</span>";
+            $meta[] = "<span class=\"journey-history-chip\">" . h($isManual ? 'Manual' : $journeyHistoryTextLabel($role)) . "</span>";
 
             $groupLeaderName = '';
-            if (isset($leadershipsByGroupId[$groupId])) {
+            if (!$isManual && isset($leadershipsByGroupId[$groupId])) {
                 $groupLeaderships = $leadershipsByGroupId[$groupId];
                 usort($groupLeaderships, static function (array $a, array $b): int {
                     $aActive = dgv2_is_current_period($a) ? 1 : 0;
@@ -525,7 +530,7 @@ if ($page === 'people_tree') {
                 'is_active' => $isActive ? 1 : 0,
                 'stage_rank' => $stageRank($stage),
                 'sort_date' => trim((string) ($membership['end_date'] ?? $membership['start_date'] ?? $membership['created_at'] ?? '')),
-                'title' => 'Masuk Kelompok' . ($stage !== '' ? ' ' . $stage : ''),
+                'title' => $isManual ? ('Selesai' . ($stage !== '' ? ' ' . $stage : ' DG') . ' manual') : ('Masuk Kelompok' . ($stage !== '' ? ' ' . $stage : '')),
                 'date' => $journeyHistoryDateLabel((string) ($membership['start_date'] ?? ''), (string) ($membership['end_date'] ?? '')),
                 'meta' => implode('', $meta),
                 'description' => $journeyHistoryUpgradeNoteLabel((string) ($membership['reason_end'] ?? ''), $stage),

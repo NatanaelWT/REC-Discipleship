@@ -195,16 +195,25 @@ class DiscipleshipDashboardSummaryQuery
     /** @param array<int, int> $branchIds */
     private function groupPeopleRows(array $branchIds): Collection
     {
-        return $this->query(static fn () => DB::table('discipleship_group_people as gp')
-            ->join('discipleship_people as p', function ($join): void {
-                $join->on('p.id', '=', 'gp.person_id')
-                    ->on('p.branch_id', '=', 'gp.branch_id');
+        return $this->query(static fn () => DB::table('discipleship_people as p')
+            ->leftJoin('discipleship_group_people as gp', function ($join): void {
+                $join->on('gp.person_id', '=', 'p.id')
+                    ->on('gp.branch_id', '=', 'p.branch_id')
+                    ->where('gp.role', '=', 'member');
             })
-            ->whereIn('gp.branch_id', $branchIds)
+            ->leftJoin('discipleship_manual_journey_records as manual_journey', function ($join): void {
+                $join->on('manual_journey.person_id', '=', 'p.id')
+                    ->on('manual_journey.branch_id', '=', 'p.branch_id');
+            })
+            ->whereIn('p.branch_id', $branchIds)
             ->where('p.status', 'active')
-            ->selectRaw("gp.branch_id,
-                COUNT(DISTINCT CASE WHEN gp.role = 'member' THEN gp.person_id END) AS historical_people_count")
-            ->groupBy('gp.branch_id')->get());
+            ->where(function ($query): void {
+                $query->whereNotNull('gp.id')
+                    ->orWhereNotNull('manual_journey.id');
+            })
+            ->selectRaw('p.branch_id, COUNT(DISTINCT p.id) AS historical_people_count')
+            ->groupBy('p.branch_id')
+            ->get());
     }
 
     /** @param array<int, int> $branchIds */
@@ -262,18 +271,23 @@ class DiscipleshipDashboardSummaryQuery
     {
         $reasons = "'continued_to_child_group', 'group_completed', 'stage_transition'";
 
-        return $this->query(static fn () => DB::table('discipleship_group_people as gp')
-            ->join('msk_participants as mp', function ($join): void {
-                $join->on('mp.discipleship_person_id', '=', 'gp.person_id')
-                    ->on('mp.branch_id', '=', 'gp.branch_id');
+        return $this->query(static fn () => DB::table('msk_participants as mp')
+            ->leftJoin('discipleship_group_people as gp', function ($join): void {
+                $join->on('gp.person_id', '=', 'mp.discipleship_person_id')
+                    ->on('gp.branch_id', '=', 'mp.branch_id')
+                    ->where('gp.role', '=', 'member');
             })
-            ->whereIn('gp.branch_id', $branchIds)
-            ->where('gp.role', 'member')
-            ->selectRaw("gp.branch_id,
-                COUNT(DISTINCT CASE WHEN gp.stage IN ('DG 2', 'DG 3') OR (gp.stage = 'DG 1' AND gp.end_reason IN ({$reasons})) THEN mp.id END) AS completed_dg1_count,
-                COUNT(DISTINCT CASE WHEN gp.stage = 'DG 3' OR (gp.stage = 'DG 2' AND gp.end_reason IN ({$reasons})) THEN mp.id END) AS completed_dg2_count,
-                COUNT(DISTINCT CASE WHEN gp.stage = 'DG 3' AND gp.end_reason IN ({$reasons}) THEN mp.id END) AS completed_dg3_count")
-            ->groupBy('gp.branch_id')->get());
+            ->leftJoin('discipleship_manual_journey_records as manual_journey', function ($join): void {
+                $join->on('manual_journey.person_id', '=', 'mp.discipleship_person_id')
+                    ->on('manual_journey.branch_id', '=', 'mp.branch_id');
+            })
+            ->whereIn('mp.branch_id', $branchIds)
+            ->selectRaw("mp.branch_id,
+                COUNT(DISTINCT CASE WHEN gp.stage IN ('DG 2', 'DG 3') OR (gp.stage = 'DG 1' AND gp.end_reason IN ({$reasons})) OR manual_journey.stage IN ('DG 1', 'DG 2', 'DG 3') THEN mp.id END) AS completed_dg1_count,
+                COUNT(DISTINCT CASE WHEN gp.stage = 'DG 3' OR (gp.stage = 'DG 2' AND gp.end_reason IN ({$reasons})) OR manual_journey.stage IN ('DG 2', 'DG 3') THEN mp.id END) AS completed_dg2_count,
+                COUNT(DISTINCT CASE WHEN (gp.stage = 'DG 3' AND gp.end_reason IN ({$reasons})) OR manual_journey.stage = 'DG 3' THEN mp.id END) AS completed_dg3_count")
+            ->groupBy('mp.branch_id')
+            ->get());
     }
 
     /** @param array<int, int> $branchIds */

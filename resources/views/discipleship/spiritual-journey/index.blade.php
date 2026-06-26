@@ -115,6 +115,7 @@ if ($page === 'spiritual_journey') {
             'continued_to_child' => 'Naik ke kelompok lanjutan',
             'group_completed.' => 'Kelompok selesai',
             'group_completed_' => 'Kelompok selesai',
+            'manual_completion' => 'Ditandai selesai manual',
         ];
         if (isset($labelMap[$normalized])) {
             return $labelMap[$normalized];
@@ -142,6 +143,9 @@ if ($page === 'spiritual_journey') {
         }
         if ($reason === 'stage_transition') {
             return 'Transisi tahap';
+        }
+        if ($reason === 'manual_completion') {
+            return 'Ditandai selesai tanpa kelompok/pemimpin';
         }
 
         return $reason;
@@ -258,6 +262,7 @@ if ($page === 'spiritual_journey') {
             }
 
             foreach (($membershipsByPersonId[$resolvedPersonId] ?? []) as $membership) {
+                $isManual = trim((string) ($membership['source'] ?? '')) === 'manual';
                 $groupId = trim((string) ($membership['group_id'] ?? ''));
                 if ($groupId === 'virtual_root_group') {
                     continue;
@@ -269,17 +274,17 @@ if ($page === 'spiritual_journey') {
                 $stage = normalize_dg_progress_value((string) ($membership['stage'] ?? ''));
                 $role = trim((string) ($membership['role'] ?? 'anggota'));
                 $isActive = dgv2_is_current_period($membership);
-                if ($isActive && ! in_array($groupName, $currentGroupNames, true)) {
+                if (! $isManual && $isActive && ! in_array($groupName, $currentGroupNames, true)) {
                     $currentGroupNames[] = $groupName;
                 }
                 $meta = [];
                 if ($stage !== '') {
                     $meta[] = $journeyStageBadgeHtml($stage);
                 }
-                $meta[] = '<span class="journey-history-chip">'.h($historyTextLabel($role)).'</span>';
+                $meta[] = '<span class="journey-history-chip">'.h($isManual ? 'Manual' : $historyTextLabel($role)).'</span>';
 
                 $groupLeaderName = '';
-                if (isset($leadershipsByGroupId[$groupId])) {
+                if (! $isManual && isset($leadershipsByGroupId[$groupId])) {
                     $groupLeaderships = $leadershipsByGroupId[$groupId];
                     usort($groupLeaderships, static function (array $a, array $b): int {
                         $aActive = dgv2_is_current_period($a) ? 1 : 0;
@@ -307,7 +312,7 @@ if ($page === 'spiritual_journey') {
                     'is_active' => $isActive ? 1 : 0,
                     'stage_rank' => $stageRank($stage),
                     'sort_date' => trim((string) ($membership['end_date'] ?? $membership['start_date'] ?? $membership['created_at'] ?? '')),
-                    'title' => 'Masuk Kelompok'.($stage !== '' ? ' '.$stage : ''),
+                    'title' => $isManual ? ('Selesai'.($stage !== '' ? ' '.$stage : ' DG').' manual') : ('Masuk Kelompok'.($stage !== '' ? ' '.$stage : '')),
                     'date' => $historyDateLabel((string) ($membership['start_date'] ?? ''), (string) ($membership['end_date'] ?? '')),
                     'meta' => implode('', $meta),
                     'description' => $historyUpgradeNoteLabel((string) ($membership['reason_end'] ?? ''), $stage),
@@ -521,19 +526,19 @@ if ($page === 'spiritual_journey') {
         $reasonEnd = trim((string) ($membershipRecord['reason_end'] ?? ''));
         if (
             $stageRank >= 2
-            || ($stage === 'DG 1' && in_array($reasonEnd, ['continued_to_child_group', 'group_completed', 'stage_transition'], true))
+            || ($stage === 'DG 1' && in_array($reasonEnd, ['continued_to_child_group', 'group_completed', 'stage_transition', 'manual_completion'], true))
         ) {
             $personCompletedDg1Map[$personId] = true;
         }
         if (
             $stageRank >= 3
-            || ($stage === 'DG 2' && in_array($reasonEnd, ['continued_to_child_group', 'group_completed', 'stage_transition'], true))
+            || ($stage === 'DG 2' && in_array($reasonEnd, ['continued_to_child_group', 'group_completed', 'stage_transition', 'manual_completion'], true))
         ) {
             $personCompletedDg2Map[$personId] = true;
         }
         if (
             $stage === 'DG 3'
-            && in_array($reasonEnd, ['group_completed', 'continued_to_child_group', 'stage_transition'], true)
+            && in_array($reasonEnd, ['group_completed', 'continued_to_child_group', 'stage_transition', 'manual_completion'], true)
         ) {
             $personCompletedDg3Map[$personId] = true;
         }
