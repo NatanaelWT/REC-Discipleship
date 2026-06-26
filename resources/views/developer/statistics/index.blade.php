@@ -75,7 +75,6 @@
       ['label' => 'Sesi', 'value' => $summary['sessions'], 'compare' => $comparison['sessions'], 'has_compare' => true],
       ['label' => 'Halaman / sesi', 'value' => number_format($summary['pages_per_session'], 2, ',', '.'), 'compare' => null, 'has_compare' => false],
       ['label' => 'Aktif 5 menit', 'value' => $summary['active_now'], 'compare' => null, 'has_compare' => false],
-      ['label' => 'Trafik bot', 'value' => $summary['bot_views'], 'compare' => null, 'has_compare' => false],
     ] as $metric)
       <article class="analytics-metric">
         <span>{{ $metric['label'] }}</span><strong>{{ is_numeric($metric['value']) ? number_format((float) $metric['value'], is_float($metric['value']) ? 2 : 0, ',', '.') : $metric['value'] }}</strong>
