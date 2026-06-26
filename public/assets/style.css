@@ -1243,9 +1243,33 @@ button.nav-item {
 }
 
 .public-material-text-header {
-  padding: 0 0 16px;
+  position: relative;
+  padding: 0 124px 16px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.32);
   text-align: center;
+}
+
+.public-material-text-back-btn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  min-width: 0;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.public-material-text-back-btn svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
 }
 
 .public-material-text-kicker {
@@ -1335,6 +1359,15 @@ button.nav-item {
   .public-material-text-main {
     width: min(100% - 24px, 900px);
     padding-top: 18px;
+  }
+
+  .public-material-text-header {
+    padding: 0 0 16px;
+  }
+
+  .public-material-text-back-btn {
+    position: static;
+    margin: 0 auto 14px 0;
   }
 
   .public-material-text-header h1 {

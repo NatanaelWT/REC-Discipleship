@@ -8,6 +8,10 @@
     <section class="public-material-text-shell" aria-label="Teks materi DG">
       <div class="public-material-text-main">
         <header class="public-material-text-header">
+          <a class="btn ghost public-material-text-back-btn" href="{{ $backUrl }}">
+            @include('developer._icon', ['name' => 'arrow-left'])
+            <span>Kembali</span>
+          </a>
           <div class="public-material-text-kicker">{{ $textKicker }}</div>
           <h1>{{ $previewTitle }}</h1>
         </header>
@@ -29,7 +33,6 @@
       </div>
 
       <div class="public-material-preview-actions public-material-text-actions">
-        <a class="btn ghost public-material-back-btn" href="{{ $backUrl }}">Kembali</a>
         <a class="btn secondary public-material-download-btn" href="{{ $downloadUrl }}">Unduh PDF</a>
         <a class="btn public-material-journal-btn" href="{{ route('public.dg.branch') }}">Isi Jurnal Temu DG</a>
         @if ($showFeedbackButton)
