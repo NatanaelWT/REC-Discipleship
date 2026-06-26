@@ -105,7 +105,7 @@
 
   <section class="card table-card-plain developer-panel">
     <div class="activity-list-head"><div><span>Request terbaru</span><strong>Aktivitas</strong></div><small>Maksimal 100 per halaman</small></div>
-    @include('developer._cursor-pagination', ['paginator' => $activities, 'itemLabel' => 'aktivitas'])
+    @include('developer._cursor-pagination', ['pagination' => $activityPagination, 'itemLabel' => 'aktivitas'])
     <div class="table-wrap activity-table-wrap">
       <table class="table activity-table">
         <thead><tr><th>Waktu</th><th>Actor</th><th>Aktivitas</th><th>Hasil</th><th>Detail</th></tr></thead>
