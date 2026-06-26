@@ -53,6 +53,31 @@ class MemberFeedbackRecapTest extends TestCase
             ->assertSee('Catatan lengkap di modal feedback.');
     }
 
+    public function test_group_section_lists_all_active_groups_with_unique_session_counts(): void
+    {
+        $this->createTables();
+        $withFeedback = $this->seedFeedbackFixture(groupName: 'Kelompok Terisi');
+        $this->seedFeedbackFixture(
+            leaderName: 'Pemimpin Tanpa Feedback',
+            memberName: 'Anggota Tanpa Feedback',
+            groupName: 'Kelompok Tanpa Feedback',
+        );
+        $this->seedFeedback($withFeedback, respondentName: 'Anggota Satu', feedbackSession: 3);
+        $this->seedFeedback($withFeedback, respondentName: 'Anggota Satu Duplikat', feedbackSession: 3);
+        $this->seedFeedback($withFeedback, respondentName: 'Anggota Satu', feedbackSession: 12);
+
+        $this->actingAsRecUser();
+
+        $content = $this->get('/pemuridan/umpan-balik-anggota')->assertOk()->getContent();
+
+        $this->assertStringContainsString('Pengisi Feedback per Kelompok', $content);
+        $this->assertStringContainsString('Kelompok Terisi', $content);
+        $this->assertStringContainsString('Kelompok Tanpa Feedback', $content);
+        $this->assertMatchesRegularExpression('/Kelompok Terisi.*?1 orang.*?1 orang.*?1 orang/s', $content);
+        $this->assertMatchesRegularExpression('/Kelompok Tanpa Feedback.*?1 orang.*?0 orang.*?0 orang/s', $content);
+        $this->assertStringNotContainsString('2 orang', $content);
+    }
+
     public function test_central_user_can_view_all_branches_and_filter_to_one_branch(): void
     {
         $this->createTables();
@@ -214,9 +239,14 @@ class MemberFeedbackRecapTest extends TestCase
     }
 
     /**
-     * @return array{leader_id:int,member_id:int,group_id:int,branch_id:int,leader_name:string,member_name:string}
+     * @return array{leader_id:int,member_id:int,group_id:int,branch_id:int,leader_name:string,member_name:string,group_name:string}
      */
-    private function seedFeedbackFixture(int $branchId = 1, string $leaderName = 'Pemimpin Test', string $memberName = 'Anggota Test'): array
+    private function seedFeedbackFixture(
+        int $branchId = 1,
+        string $leaderName = 'Pemimpin Test',
+        string $memberName = 'Anggota Test',
+        string $groupName = 'Kelompok Test',
+    ): array
     {
         $leaderId = DB::table('discipleship_people')->insertGetId([
             'branch_id' => $branchId,
@@ -236,7 +266,7 @@ class MemberFeedbackRecapTest extends TestCase
 
         $groupId = DB::table('discipleship_groups')->insertGetId([
             'branch_id' => $branchId,
-            'name' => 'Kelompok Test',
+            'name' => $groupName,
             'status' => 'active',
             'start_stage' => 'DG 1',
             'current_stage' => 'DG 1',
@@ -276,23 +306,30 @@ class MemberFeedbackRecapTest extends TestCase
             'branch_id' => $branchId,
             'leader_name' => $leaderName,
             'member_name' => $memberName,
+            'group_name' => $groupName,
         ];
     }
 
     /**
-     * @param  array{leader_id:int,member_id:int,group_id:int,branch_id:int,leader_name:string,member_name:string}  $ids
+     * @param  array{leader_id:int,member_id:int,group_id:int,branch_id:int,leader_name:string,member_name:string,group_name:string}  $ids
      */
-    private function seedFeedback(array $ids, string $respondentName = 'Anggota Test', string $noteContent = 'Catatan feedback.', int $balanceScore = 3): void
+    private function seedFeedback(
+        array $ids,
+        string $respondentName = 'Anggota Test',
+        string $noteContent = 'Catatan feedback.',
+        int $balanceScore = 3,
+        int $feedbackSession = 3,
+    ): void
     {
         DB::table('discipleship_feedbacks')->insert([
             'branch_id' => $ids['branch_id'],
-            'feedback_session' => 3,
+            'feedback_session' => $feedbackSession,
             'discipleship_group_id' => $ids['group_id'],
             'leader_person_id' => $ids['leader_id'],
             'respondent_person_id' => $ids['member_id'],
             'respondent_name_snapshot' => $respondentName,
             'leader_name_snapshot' => $ids['leader_name'],
-            'group_name_snapshot' => 'Kelompok Test',
+            'group_name_snapshot' => $ids['group_name'],
             'group_label_snapshot' => 'DG 1 ('.$ids['leader_name'].') - '.$respondentName,
             'group_progress_snapshot' => 'DG 1',
             'ratings' => json_encode($this->ratingRows($balanceScore)),

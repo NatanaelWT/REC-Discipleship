@@ -181,27 +181,48 @@
     <div class="member-feedback-recap-panel-head">
       <div>
         <span class="member-feedback-recap-kicker">Kelompok</span>
-        <h2>Kelompok yang Sudah Memiliki Feedback</h2>
+        <h2>Pengisi Feedback per Kelompok</h2>
       </div>
-      <span class="member-feedback-recap-muted">{{ (string) count($groupRows) }} kelompok</span>
+      <span class="member-feedback-recap-muted">{{ (string) count($groupRows) }} kelompok aktif</span>
     </div>
-    <div class="member-feedback-recap-group-grid">
-      @forelse (array_slice($groupRows, 0, 8) as $group)
-        @php $groupScore = (float) ($group['score'] ?? 0); @endphp
-        <article class="member-feedback-recap-group-item">
-          <div>
-            <span>{{ (string) ($group['branch_label'] ?? '-') }} - {{ (string) ($group['group_progress'] ?? '-') }}</span>
-            <strong>{{ (string) ($group['leader_name'] ?? '-') }}</strong>
-            <small>{{ (string) ($group['group_name'] ?? 'Kelompok') }}</small>
-          </div>
-          <div class="member-feedback-recap-group-side">
-            <strong>{{ $scoreLabel($groupScore) }}</strong>
-            <span>P3 {{ (string) ($group['session_3_count'] ?? 0) }} - P12 {{ (string) ($group['session_12_count'] ?? 0) }}</span>
-          </div>
-        </article>
-      @empty
-        <p class="panel-note">Belum ada kelompok dengan feedback pada scope ini.</p>
-      @endforelse
+    <div class="table-wrap member-feedback-recap-group-table-wrap">
+      <table class="table member-feedback-recap-group-table">
+        <thead>
+          <tr>
+            <th>Cabang</th>
+            <th>Progress</th>
+            <th>Pemimpin / Kelompok</th>
+            <th>Anggota Aktif</th>
+            <th>Sesi 3</th>
+            <th>Sesi 12</th>
+            <th>Terakhir</th>
+          </tr>
+        </thead>
+        <tbody>
+          @forelse ($groupRows as $group)
+            @php
+                $session3Count = (int) ($group['session_3_count'] ?? 0);
+                $session12Count = (int) ($group['session_12_count'] ?? 0);
+            @endphp
+            <tr>
+              <td>{{ (string) ($group['branch_label'] ?? '-') }}</td>
+              <td><span class="group-progress-badge is-{{ $progressKey((string) ($group['group_progress'] ?? '')) }}">{{ (string) ($group['group_progress'] ?? '-') }}</span></td>
+              <td>
+                <div class="member-feedback-recap-main-cell">
+                  <strong>{{ (string) ($group['leader_name'] ?? '-') }}</strong>
+                  <span>{{ (string) ($group['group_name'] ?? 'Kelompok') }}</span>
+                </div>
+              </td>
+              <td>{{ (string) ((int) ($group['active_member_count'] ?? 0)) }} orang</td>
+              <td><span class="member-feedback-recap-count-pill @if ($session3Count === 0) is-empty @endif">{{ (string) $session3Count }} orang</span></td>
+              <td><span class="member-feedback-recap-count-pill @if ($session12Count === 0) is-empty @endif">{{ (string) $session12Count }} orang</span></td>
+              <td>{{ (string) ($group['latest_submitted_at'] ?? '') !== '' ? format_datetime_id((string) ($group['latest_submitted_at'] ?? '')) : '-' }}</td>
+            </tr>
+          @empty
+            <tr><td colspan="7">Belum ada kelompok aktif pada scope ini.</td></tr>
+          @endforelse
+        </tbody>
+      </table>
     </div>
   </section>
 

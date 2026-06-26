@@ -5,6 +5,7 @@ namespace App\Services\MemberFeedbackJournals;
 use App\Models\DiscipleshipFeedback;
 use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
+use App\Models\DiscipleshipPerson;
 use App\Services\Discipleship\DiscipleshipReadCache;
 use DateTimeInterface;
 use Illuminate\Http\Request;
@@ -34,7 +35,7 @@ class MemberFeedbackRecapPageData
 
         $branchCodes = $this->branchCodes($selectedBranch, $centralReadOnly);
         $data = $this->cache->remember(
-            'member-feedback-recap-v2',
+            'member-feedback-recap-v3',
             [...$branchCodes, $centralReadOnly ? 'central' : 'branch'],
             fn (): array => $this->build($branchCodes, $centralReadOnly),
         );
@@ -221,20 +222,20 @@ class MemberFeedbackRecapPageData
                     'leader_name' => $leaderName,
                     'group_name' => $groupName,
                     'group_progress' => $groupProgress,
-                    'session_3_count' => 0,
-                    'session_12_count' => 0,
+                    'session_3_respondent_ids' => [],
+                    'session_12_respondent_ids' => [],
                     'respondent_ids' => [],
                     'score_sum' => 0.0,
                     'score_count' => 0,
                     'latest_submitted_at' => '',
                 ];
-                if ($feedbackSession === 3) {
-                    $groupAggregates[$groupId]['session_3_count']++;
-                } elseif ($feedbackSession === 12) {
-                    $groupAggregates[$groupId]['session_12_count']++;
-                }
                 if ($respondentId > 0) {
                     $groupAggregates[$groupId]['respondent_ids'][$respondentId] = true;
+                    if ($feedbackSession === 3) {
+                        $groupAggregates[$groupId]['session_3_respondent_ids'][$respondentId] = true;
+                    } elseif ($feedbackSession === 12) {
+                        $groupAggregates[$groupId]['session_12_respondent_ids'][$respondentId] = true;
+                    }
                 }
                 if ($rowScore !== null) {
                     $groupAggregates[$groupId]['score_sum'] += $rowScore;
@@ -278,11 +279,15 @@ class MemberFeedbackRecapPageData
         usort($detailRows, static fn (array $a, array $b): int => strcmp((string) ($b['submitted_at'] ?? ''), (string) ($a['submitted_at'] ?? '')));
         usort($noteRows, static fn (array $a, array $b): int => strcmp((string) ($b['sort_key'] ?? ''), (string) ($a['sort_key'] ?? '')));
 
-        $groupRows = $this->groupRows($groupAggregates);
+        $groupRows = $this->groupRows($activeMemberships['groups'], $groupAggregates);
         $sectionRows = $this->sectionRows($sectionScores);
         $questionRows = $this->questionRows($questionScores);
         $coverageRows = $this->coverageRows($coverage);
         $totalJournals = count($detailRows);
+        $feedbackGroupCount = count(array_filter(
+            $groupRows,
+            static fn (array $row): bool => ((int) ($row['session_3_count'] ?? 0) + (int) ($row['session_12_count'] ?? 0)) > 0,
+        ));
         $overallScore = $totalDirectionalCount > 0 ? round($totalDirectionalScore / $totalDirectionalCount, 1) : 0.0;
         $submittedCoverageTotal = array_sum(array_map(
             static fn (array $row): int => (int) ($row['submitted'] ?? 0),
@@ -294,7 +299,7 @@ class MemberFeedbackRecapPageData
             'summary' => [
                 'total_journals' => $totalJournals,
                 'overall_score' => $overallScore,
-                'feedback_group_count' => count($groupRows),
+                'feedback_group_count' => $feedbackGroupCount,
                 'active_member_count' => $activeMemberships['total'],
                 'coverage_percent' => $activeMemberships['total'] > 0
                     ? round($submittedCoverageTotal / ($activeMemberships['total'] * 2) * 100)
@@ -488,8 +493,11 @@ class MemberFeedbackRecapPageData
             $groupRows[$groupId] = [
                 'id' => $groupId,
                 'branch_label' => $branchLabels[$branchCode] ?? public_branch_label($branchCode),
+                'leader_name' => '-',
                 'name' => trim((string) ($group->name ?? 'Kelompok')) ?: 'Kelompok',
                 'progress' => $progress,
+                'active_member_count' => 0,
+                'member_keys' => [],
             ];
         }
 
@@ -502,20 +510,65 @@ class MemberFeedbackRecapPageData
             $memberships = DiscipleshipGroupPerson::query()
                 ->whereIn('branch_id', $branchIds)
                 ->whereIn('discipleship_group_id', array_keys($groupRows))
-                ->where('role', 'member')
                 ->where('status', 'active')
                 ->orderBy('id')
-                ->get(['discipleship_group_id', 'person_id']);
+                ->get(['discipleship_group_id', 'person_id', 'role']);
         } catch (Throwable) {
             return ['total' => 0, 'keys' => [], 'groups' => $groupRows];
         }
 
-        foreach ($memberships as $membership) {
-            $key = $this->membershipKey((int) $membership->discipleship_group_id, (int) $membership->person_id);
-            if ($key !== '') {
-                $keys[$key] = true;
+        $personIds = $memberships
+            ->pluck('person_id')
+            ->filter(static fn ($personId): bool => (int) $personId > 0)
+            ->map(static fn ($personId): int => (int) $personId)
+            ->unique()
+            ->values()
+            ->all();
+        $personNames = [];
+        if ($personIds !== []) {
+            try {
+                $personNames = DiscipleshipPerson::query()
+                    ->whereIn('id', $personIds)
+                    ->pluck('full_name', 'id')
+                    ->map(static fn ($name): string => trim((string) $name))
+                    ->all();
+            } catch (Throwable) {
+                $personNames = [];
             }
         }
+
+        foreach ($memberships as $membership) {
+            $groupId = (int) $membership->discipleship_group_id;
+            $personId = (int) $membership->person_id;
+            $role = strtolower(trim((string) ($membership->role ?? '')));
+            if (! isset($groupRows[$groupId]) || $personId <= 0) {
+                continue;
+            }
+
+            if ($role === 'member') {
+                $key = $this->membershipKey($groupId, $personId);
+                if ($key === '') {
+                    continue;
+                }
+
+                $keys[$key] = true;
+                $groupRows[$groupId]['member_keys'][$key] = true;
+                $groupRows[$groupId]['active_member_count'] = count($groupRows[$groupId]['member_keys']);
+                continue;
+            }
+
+            if ((string) ($groupRows[$groupId]['leader_name'] ?? '-') === '-') {
+                $leaderName = trim((string) ($personNames[$personId] ?? ''));
+                if ($leaderName !== '') {
+                    $groupRows[$groupId]['leader_name'] = $leaderName;
+                }
+            }
+        }
+
+        foreach ($groupRows as &$groupRow) {
+            unset($groupRow['member_keys']);
+        }
+        unset($groupRow);
 
         return ['total' => count($keys), 'keys' => $keys, 'groups' => $groupRows];
     }
@@ -622,29 +675,43 @@ class MemberFeedbackRecapPageData
     }
 
     /**
+     * @param  array<int, array<string, mixed>>  $activeGroups
      * @param  array<int, array<string, mixed>>  $groupAggregates
      * @return array<int, array<string, mixed>>
      */
-    private function groupRows(array $groupAggregates): array
+    private function groupRows(array $activeGroups, array $groupAggregates): array
     {
         $rows = [];
-        foreach ($groupAggregates as $groupId => $row) {
+        foreach ($activeGroups as $groupId => $group) {
+            $row = $groupAggregates[$groupId] ?? [];
             $scoreCount = (int) ($row['score_count'] ?? 0);
+            $session3Count = count($row['session_3_respondent_ids'] ?? []);
+            $session12Count = count($row['session_12_respondent_ids'] ?? []);
             $rows[] = [
                 'group_id' => $groupId,
-                'branch_label' => $row['branch_label'] ?? '-',
-                'leader_name' => $row['leader_name'] ?? '-',
-                'group_name' => $row['group_name'] ?? 'Kelompok',
-                'group_progress' => $row['group_progress'] ?? 'DG 1',
-                'session_3_count' => (int) ($row['session_3_count'] ?? 0),
-                'session_12_count' => (int) ($row['session_12_count'] ?? 0),
+                'branch_label' => $group['branch_label'] ?? ($row['branch_label'] ?? '-'),
+                'leader_name' => $group['leader_name'] ?? ($row['leader_name'] ?? '-'),
+                'group_name' => $group['name'] ?? ($row['group_name'] ?? 'Kelompok'),
+                'group_progress' => $group['progress'] ?? ($row['group_progress'] ?? 'DG 1'),
+                'active_member_count' => (int) ($group['active_member_count'] ?? 0),
+                'session_3_count' => $session3Count,
+                'session_12_count' => $session12Count,
                 'respondent_count' => count($row['respondent_ids'] ?? []),
                 'score' => $scoreCount > 0 ? round(((float) $row['score_sum']) / $scoreCount, 1) : 0.0,
                 'latest_submitted_at' => (string) ($row['latest_submitted_at'] ?? ''),
             ];
         }
 
-        usort($rows, static fn (array $a, array $b): int => strcmp((string) ($b['latest_submitted_at'] ?? ''), (string) ($a['latest_submitted_at'] ?? '')));
+        usort($rows, static function (array $a, array $b): int {
+            foreach (['branch_label', 'group_progress', 'leader_name', 'group_name'] as $key) {
+                $compare = strcmp((string) ($a[$key] ?? ''), (string) ($b[$key] ?? ''));
+                if ($compare !== 0) {
+                    return $compare;
+                }
+            }
+
+            return 0;
+        });
 
         return $rows;
     }
