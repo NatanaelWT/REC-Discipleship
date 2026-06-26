@@ -9,9 +9,6 @@
 @section('content')
   @php
       $summary = is_array($summary ?? null) ? $summary : [];
-      $sectionScores = is_array($section_scores ?? null) ? $section_scores : [];
-      $questionScores = is_array($question_scores ?? null) ? $question_scores : [];
-      $coverageRows = is_array($coverage ?? null) ? $coverage : [];
       $groupRows = is_array($group_rows ?? null) ? $group_rows : [];
       $detailRows = is_array($detail_rows ?? null) ? $detail_rows : [];
       $filters = is_array($filters ?? null) ? $filters : [];
@@ -33,13 +30,6 @@
       $progressKey = fn (string $value): string => strtolower(str_replace(' ', '', normalize_dg_progress_value($value) ?: $value));
       $feedbackRowKey = fn (array $row): string => (string) ($row['id'] ?? md5(json_encode($row) ?: 'feedback'));
       $groupSessionKey = fn ($groupId, int $session): string => (string) ((int) $groupId).'-'.(string) $session;
-      $sectionShortLabels = [
-          'leadership' => 'Kepemimpinan',
-          'meeting' => 'Teknis',
-          'teaching' => 'Pengajaran',
-          'personal_growth' => 'Pertumbuhan',
-          'relationships' => 'Relasi',
-      ];
   @endphp
 
   @include('discipleship.partials.page-header', [
@@ -73,99 +63,6 @@
       <a class="btn secondary" href="{{ route('public.member-feedback.branch') }}">Buka Form Publik</a>
     </section>
   @endif
-
-  <section class="member-feedback-recap-score-grid" aria-label="Skor dimensi feedback anggota">
-    @foreach ($sectionScores as $section)
-      @php
-          $score = (float) ($section['score'] ?? 0);
-          $scorePercent = max(0, min(100, $score * 10));
-          $directionalScore = $section['directional_score'] ?? null;
-          $balanceScore = $section['balance_score'] ?? null;
-          $sectionKey = (string) ($section['section_key'] ?? '');
-          $sectionLabel = (string) ($section['label'] ?? '-');
-          $sectionShortLabel = $sectionShortLabels[$sectionKey] ?? $sectionLabel;
-      @endphp
-      <article class="card member-feedback-recap-score-card">
-        <div class="member-feedback-recap-score-title">
-          <span class="member-feedback-recap-kicker" title="{{ $sectionLabel }}">{{ $sectionShortLabel }}</span>
-          <h2>{{ $scoreLabel($score) }}/10</h2>
-        </div>
-        <div class="member-feedback-recap-score-ring" style="--score-percent: {{ $scorePercent }}%;">
-          <strong>{{ $scoreLabel($score) }}</strong>
-          <span>/10</span>
-        </div>
-        <div class="member-feedback-recap-score-copy">
-          <div class="member-feedback-recap-score-meta">
-            <span>{{ (string) ($section['rating_count'] ?? 0) }} rating</span>
-            <span>{{ (string) ($section['note_count'] ?? 0) }} catatan</span>
-          </div>
-          @if ($directionalScore !== null || $balanceScore !== null)
-            <div class="member-feedback-recap-score-sub">
-              @if ($directionalScore !== null)<span>Puas {{ $scoreLabel($directionalScore) }}</span>@endif
-              @if ($balanceScore !== null)<span>Seimbang {{ $scoreLabel($balanceScore) }}</span>@endif
-            </div>
-          @endif
-        </div>
-      </article>
-    @endforeach
-  </section>
-
-  <section class="member-feedback-recap-panel-grid">
-    <article class="card member-feedback-recap-panel">
-      <div class="member-feedback-recap-panel-head">
-        <div>
-          <span class="member-feedback-recap-kicker">Coverage</span>
-          <h2>Pengisian per Pertemuan</h2>
-        </div>
-        <span class="member-feedback-recap-muted">{{ (string) ($summary['active_member_count'] ?? 0) }} anggota aktif</span>
-      </div>
-      <div class="member-feedback-recap-coverage-list">
-        @foreach ($coverageRows as $coverageRow)
-          @php $coveragePercent = max(0, min(100, (int) ($coverageRow['percent'] ?? 0))); @endphp
-          <div class="member-feedback-recap-coverage-row">
-            <div class="member-feedback-recap-coverage-copy">
-              <strong>{{ (string) ($coverageRow['label'] ?? '-') }}</strong>
-              <span>{{ (string) ($coverageRow['submitted'] ?? 0) }} dari {{ (string) ($coverageRow['total'] ?? 0) }} anggota aktif</span>
-            </div>
-            <div class="member-feedback-recap-coverage-track" aria-label="{{ $coveragePercent }} persen">
-              <span style="width: {{ $coveragePercent }}%"></span>
-            </div>
-            <strong class="member-feedback-recap-coverage-percent">{{ $coveragePercent }}%</strong>
-          </div>
-        @endforeach
-      </div>
-    </article>
-
-    <article class="card member-feedback-recap-panel">
-      <div class="member-feedback-recap-panel-head">
-        <div>
-          <span class="member-feedback-recap-kicker">Prioritas</span>
-          <h2>Skor Pertanyaan Terendah</h2>
-        </div>
-        <span class="member-feedback-recap-muted">Top {{ (string) min(6, count($questionScores)) }}</span>
-      </div>
-      <div class="member-feedback-recap-question-list">
-        @forelse (array_slice($questionScores, 0, 6) as $question)
-          @php
-              $questionScore = (float) ($question['score'] ?? 0);
-              $questionPercent = max(0, min(100, $questionScore * 10));
-          @endphp
-          <div class="member-feedback-recap-question-row">
-            <div>
-              <span>{{ (string) ($question['section_label'] ?? '-') }}{{ ! empty($question['is_balance']) ? ' - Keseimbangan' : '' }}</span>
-              <strong>{{ (string) ($question['label'] ?? '-') }}</strong>
-            </div>
-            <div class="member-feedback-recap-question-score">
-              <span style="width: {{ $questionPercent }}%"></span>
-            </div>
-            <strong>{{ $scoreLabel($questionScore) }}</strong>
-          </div>
-        @empty
-          <p class="panel-note">Belum ada skor pertanyaan yang bisa dihitung.</p>
-        @endforelse
-      </div>
-    </article>
-  </section>
 
   <section class="card member-feedback-recap-group-card">
     <div class="member-feedback-recap-panel-head">

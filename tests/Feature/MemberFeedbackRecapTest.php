@@ -26,7 +26,10 @@ class MemberFeedbackRecapTest extends TestCase
         $response->assertSee('Pemimpin Test');
         $response->assertSee('Anggota Test');
         $response->assertSee('card discipleship-page-header', false);
-        $response->assertSee('member-feedback-recap-score-card', false);
+        $response->assertDontSee('member-feedback-recap-score-card', false);
+        $response->assertDontSee('member-feedback-recap-panel-grid', false);
+        $response->assertDontSee('Pengisian per Pertemuan');
+        $response->assertDontSee('Skor Pertanyaan Terendah');
         $response->assertDontSee('data-filter-role="member-feedback-session"', false);
         $response->assertDontSee('Semua Pertemuan');
         $response->assertDontSee('Update Terakhir');
