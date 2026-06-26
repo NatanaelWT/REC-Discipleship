@@ -970,12 +970,20 @@ button.nav-item {
   margin-top: 2px;
   padding-top: 16px;
   border-top: 1px solid rgba(203, 213, 225, 0.62);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
 .public-question-actions .btn {
   min-height: 42px;
   justify-content: center;
   font-weight: 700;
+}
+
+.public-question-back-action {
+  margin-right: auto;
 }
 
 .public-answer-results-head {
@@ -1060,10 +1068,15 @@ button.nav-item {
 
   .public-question-actions {
     align-items: stretch;
+    flex-direction: column-reverse;
   }
 
   .public-question-actions .btn {
     width: 100%;
+  }
+
+  .public-question-back-action {
+    margin-right: 0;
   }
 
   .public-answer-item-head {

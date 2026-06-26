@@ -43,9 +43,8 @@
           </div>
         </div>
         <div class="form-actions public-question-actions">
+          <a class="btn ghost public-question-back-action" href="{{ url('/') }}">Kembali</a>
           <button class="btn" type="submit">Kirim Pertanyaan</button>
-          <a class="btn ghost" href="{{ route('public.difficult-question.answer') }}">Lihat Jawaban</a>
-          <a class="btn ghost" href="{{ url('/') }}">Kembali</a>
         </div>
       </form>
     </section>

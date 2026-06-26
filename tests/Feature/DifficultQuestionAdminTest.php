@@ -51,7 +51,8 @@ class DifficultQuestionAdminTest extends TestCase
         $this->get('/publik/pertanyaan-sulit/kirim')
             ->assertOk()
             ->assertSee('Nomor WhatsApp (opsional)')
-            ->assertSee('name="asker_whatsapp"', false);
+            ->assertSee('name="asker_whatsapp"', false)
+            ->assertDontSee('Lihat Jawaban');
 
         $response = $this->post('/publik/pertanyaan-sulit/kirim', [
             'asker_name' => 'Tester',
@@ -104,6 +105,11 @@ class DifficultQuestionAdminTest extends TestCase
     public function test_public_answer_lookup_renders_matched_question(): void
     {
         $this->createDifficultQuestionsTable();
+
+        $this->get('/publik/pertanyaan-sulit/jawaban')
+            ->assertOk()
+            ->assertSee('Buka Jawaban')
+            ->assertDontSee('Kirim Pertanyaan Baru');
 
         session()->put('difficult_answer_lookup_hash', 'lookup-public');
 

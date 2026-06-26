@@ -23,9 +23,8 @@
           <label class="public-question-field">Password <span class="required-mark">*</span><input type="password" name="question_password" minlength="4" required autocomplete="current-password"></label>
         </div>
         <div class="form-actions public-question-actions">
+          <a class="btn ghost public-question-back-action" href="{{ url('/') }}">Kembali</a>
           <button class="btn" type="submit">Buka Jawaban</button>
-          <a class="btn ghost" href="{{ route('public.difficult-question.submit') }}">Kirim Pertanyaan Baru</a>
-          <a class="btn ghost" href="{{ url('/') }}">Kembali</a>
         </div>
       </form>
     </section>
