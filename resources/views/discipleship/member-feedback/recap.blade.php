@@ -13,7 +13,6 @@
       $questionScores = is_array($question_scores ?? null) ? $question_scores : [];
       $coverageRows = is_array($coverage ?? null) ? $coverage : [];
       $groupRows = is_array($group_rows ?? null) ? $group_rows : [];
-      $noteRows = is_array($note_rows ?? null) ? $note_rows : [];
       $detailRows = is_array($detail_rows ?? null) ? $detail_rows : [];
       $filters = is_array($filters ?? null) ? $filters : [];
       $totalRows = count($detailRows);
@@ -176,34 +175,6 @@
         @endforelse
       </div>
     </article>
-  </section>
-
-  <section class="card member-feedback-recap-notes-card">
-    <div class="member-feedback-recap-panel-head">
-      <div>
-        <span class="member-feedback-recap-kicker">Catatan Tematik</span>
-        <h2>Masukan Anggota per Dimensi</h2>
-      </div>
-      <span class="member-feedback-recap-muted">Nama pengisi disembunyikan di bagian ini</span>
-    </div>
-    <div class="member-feedback-recap-note-grid">
-      @forelse ($noteRows as $note)
-        <article class="member-feedback-recap-note">
-          <div class="member-feedback-recap-note-head">
-            <span>{{ (string) ($note['section_label'] ?? 'Catatan') }}</span>
-            <strong>{{ (string) ($note['branch_label'] ?? '-') }}</strong>
-          </div>
-          <p>{{ (string) ($note['content'] ?? '') }}</p>
-          <div class="member-feedback-recap-note-meta">
-            <span>{{ (string) ($note['group_progress'] ?? '-') }}</span>
-            <span>{{ (string) ($note['leader_name'] ?? '-') }}</span>
-            <span>{{ format_datetime_id((string) ($note['submitted_at'] ?? '')) }}</span>
-          </div>
-        </article>
-      @empty
-        <p class="panel-note">Belum ada catatan tertulis dari anggota pada scope ini.</p>
-      @endforelse
-    </div>
   </section>
 
   <section class="card member-feedback-recap-group-card">

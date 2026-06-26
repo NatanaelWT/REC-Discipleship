@@ -75,23 +75,18 @@ class MemberFeedbackRecapTest extends TestCase
             ->assertSee('Pemimpin GM');
     }
 
-    public function test_note_board_hides_respondent_name_but_detail_table_shows_it(): void
+    public function test_thematic_note_board_is_removed_but_detail_keeps_feedback_notes(): void
     {
         $this->createTables();
         $ids = $this->seedFeedbackFixture();
-        $this->seedFeedback($ids, respondentName: 'Nama Pengisi Rahasia', noteContent: 'Masukan tanpa nama pengisi di board.');
+        $this->seedFeedback($ids, respondentName: 'Nama Pengisi Rahasia', noteContent: 'Masukan lengkap di modal detail.');
 
         $this->actingAsRecUser();
 
         $content = $this->get('/pemuridan/umpan-balik-anggota')->assertOk()->getContent();
-        $notesStart = strpos($content, 'Catatan Tematik');
-        $notesEnd = strpos($content, 'Kelompok yang Sudah Memiliki Feedback');
-        $this->assertIsInt($notesStart);
-        $this->assertIsInt($notesEnd);
-        $notesSegment = substr($content, $notesStart, $notesEnd - $notesStart);
-
-        $this->assertStringContainsString('Masukan tanpa nama pengisi di board.', $notesSegment);
-        $this->assertStringNotContainsString('Nama Pengisi Rahasia', $notesSegment);
+        $this->assertStringNotContainsString('Catatan Tematik', $content);
+        $this->assertStringNotContainsString('Masukan Anggota per Dimensi', $content);
+        $this->assertStringContainsString('Masukan lengkap di modal detail.', $content);
         $this->assertStringContainsString('Nama Pengisi Rahasia', $content);
     }
 
