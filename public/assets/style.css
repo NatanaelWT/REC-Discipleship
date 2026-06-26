@@ -1096,6 +1096,12 @@ button.nav-item {
 
 .difficult-question-answer-form {
   gap: 10px;
+  grid-template-columns: 1fr;
+}
+
+.difficult-question-answer-field,
+.difficult-question-answer-form .form-actions {
+  grid-column: 1 / -1;
 }
 
 .difficult-question-answer-form textarea {

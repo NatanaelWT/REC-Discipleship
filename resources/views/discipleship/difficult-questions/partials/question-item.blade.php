@@ -21,7 +21,7 @@
       @csrf
       <input type="hidden" name="action" value="save_difficult_question_answer">
       <input type="hidden" name="id" value="{{ $questionItem['id'] }}">
-      <label>Jawaban<textarea name="answer_text" rows="5" maxlength="8000" required placeholder="Tulis jawaban untuk pertanyaan ini...">{{ $questionItem['answerText'] }}</textarea></label>
+      <label class="difficult-question-answer-field">Jawaban<textarea name="answer_text" rows="5" maxlength="8000" required placeholder="Tulis jawaban untuk pertanyaan ini...">{{ $questionItem['answerText'] }}</textarea></label>
       <div class="form-actions member-form-actions is-right">
         <button class="btn" type="submit">{{ $questionItem['answerButtonLabel'] }}</button>
       </div>
