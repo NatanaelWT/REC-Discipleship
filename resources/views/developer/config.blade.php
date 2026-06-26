@@ -61,7 +61,7 @@
       </form>
     </section>
 
-    <section class="card developer-panel developer-section-card">
+    <section class="card developer-panel developer-section-card developer-runtime-section">
       <div class="developer-section-head">
         <span class="developer-section-icon is-slate">@include('developer._icon', ['name' => 'config'])</span>
         <div><span class="developer-section-kicker">Environment</span><h2>Runtime</h2><p>Informasi lingkungan aplikasi yang sedang digunakan.</p></div>

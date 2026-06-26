@@ -13234,6 +13234,44 @@ details[open] > summary .activity-disclosure-icon::after {
   background: #f8fafc;
 }
 
+.page-developer .developer-runtime-section .developer-section-head {
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid rgba(148, 163, 184, .22);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.page-developer .developer-runtime-section .developer-section-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 12px;
+  background: #fff;
+  color: #475569;
+}
+
+.page-developer .developer-runtime-section .developer-section-head h2 {
+  margin-top: 3px;
+  font-size: 21px;
+  line-height: 1.15;
+}
+
+.page-developer .developer-runtime-section .developer-section-head p {
+  margin-top: 5px;
+  max-width: 520px;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .page-developer .developer-runtime-section .developer-section-head {
+    align-items: flex-start;
+    padding: 14px;
+  }
+}
+
 .developer-runtime-table {
   border-collapse: separate;
   border-spacing: 0;
