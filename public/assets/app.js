@@ -2709,6 +2709,12 @@
       const titleEl = treeV2ActionModal.querySelector('[data-tree-v2-action-title]');
       const closeButtons = treeV2ActionModal.querySelectorAll('[data-tree-v2-action-close]');
       const actionButtons = treeV2ActionModal.querySelectorAll('[data-tree-v2-action-do]');
+      const personProfileModal = document.querySelector('[data-tree-v2-person-profile-modal]');
+      const personProfileTitleEl = personProfileModal ? personProfileModal.querySelector('[data-tree-v2-person-profile-title]') : null;
+      const personProfileBodyEl = personProfileModal ? personProfileModal.querySelector('[data-tree-v2-person-profile-body]') : null;
+      const personProfileCloseButtons = personProfileModal ? personProfileModal.querySelectorAll('[data-tree-v2-person-profile-close]') : [];
+      const personProfileActionButtons = personProfileModal ? personProfileModal.querySelectorAll('[data-tree-v2-profile-action]') : [];
+      const personProfileTemplates = new Map();
       const addMemberProxy = document.querySelector('[data-tree-v2-proxy="add-member"]');
       const editPersonProxy = document.querySelector('[data-tree-v2-proxy="edit-person"]');
       const addGroupProxy = document.querySelector('[data-tree-v2-proxy="add-group"]');
@@ -2722,6 +2728,12 @@
         const action = button.getAttribute('data-tree-v2-action-do') || '';
         if (action !== '') {
           buttonsByAction[action] = button;
+        }
+      });
+      document.querySelectorAll('template[data-tree-v2-person-profile-template]').forEach(templateEl => {
+        const personKey = templateEl.getAttribute('data-tree-v2-person-profile-template') || '';
+        if (personKey !== '') {
+          personProfileTemplates.set(personKey, templateEl);
         }
       });
 
@@ -2743,6 +2755,10 @@
       const closeActionModal = () => {
         treeV2ActionModal.classList.remove('is-open');
         treeV2ActionModal.setAttribute('aria-hidden', 'true');
+        if (personProfileModal) {
+          personProfileModal.classList.remove('is-open');
+          personProfileModal.setAttribute('aria-hidden', 'true');
+        }
         document.body.classList.remove('modal-open');
         activeNode = null;
         activeNodeData = null;
@@ -2782,25 +2798,83 @@
         };
       };
 
+      const setProfileActionVisible = (action, visible) => {
+        if (!personProfileModal) return;
+        const button = personProfileModal.querySelector('[data-tree-v2-profile-action="' + action + '"]');
+        if (!button) return;
+        if (visible) {
+          button.classList.remove('is-hidden');
+          button.disabled = false;
+        } else {
+          button.classList.add('is-hidden');
+          button.disabled = true;
+        }
+      };
+
+      const currentPersonGroupContext = () => {
+        const parentGroupItem = activeNode && activeNode.parentElement
+          ? activeNode.parentElement.closest('.tree-v2-item-group')
+          : null;
+        const parentGroupNode = parentGroupItem ? parentGroupItem.firstElementChild : null;
+        return {
+          id: parentGroupNode && parentGroupNode.dataset
+            ? String(parentGroupNode.dataset.groupId || '').trim()
+            : '',
+          status: parentGroupNode && parentGroupNode.dataset
+            ? String(parentGroupNode.dataset.status || '').trim().toLowerCase()
+            : '',
+        };
+      };
+
+      const openPersonProfileModal = (node, nodeData) => {
+        if (!personProfileModal || !personProfileBodyEl) return false;
+        const personId = String(nodeData.personId || '').trim();
+        if (!personId || nodeData.isRoot) return false;
+        let templateEl = personProfileTemplates.get(personId);
+        if (!templateEl) {
+          templateEl = queryTemplateByAttribute('data-tree-v2-person-profile-template', personId);
+          if (templateEl) {
+            personProfileTemplates.set(personId, templateEl);
+          }
+        }
+        if (!templateEl) return false;
+
+        activeNode = node;
+        activeNodeData = nodeData;
+
+        if (personProfileTitleEl) {
+          personProfileTitleEl.textContent = templateEl.getAttribute('data-tree-v2-person-profile-template-title') || nodeData.name || 'Profil Orang';
+        }
+        personProfileBodyEl.innerHTML = templateEl.innerHTML;
+
+        const groupContext = currentPersonGroupContext();
+        setProfileActionVisible('add_group', !nodeData.isRoot && personId !== '');
+        setProfileActionVisible('edit_person', !nodeData.isRoot && personId !== '');
+        setProfileActionVisible('delete_person', !nodeData.isRoot && personId !== '');
+        setProfileActionVisible('leave_group', !nodeData.isRoot && groupContext.id !== '' && groupContext.status === 'active');
+
+        personProfileModal.classList.add('is-open');
+        personProfileModal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+        return true;
+      };
+
       const openActionModal = node => {
         if (!node) return;
         const nodeData = buildNodeData(node);
         if (nodeData.kind !== 'person' && nodeData.kind !== 'group') return;
 
+        if (nodeData.kind === 'person' && !nodeData.isRoot && openPersonProfileModal(node, nodeData)) {
+          return;
+        }
+
         activeNode = node;
         activeNodeData = nodeData;
 
         const isPerson = nodeData.kind === 'person';
-        const parentGroupItem = isPerson && activeNode && activeNode.parentElement
-          ? activeNode.parentElement.closest('.tree-v2-item-group')
-          : null;
-        const parentGroupNode = parentGroupItem ? parentGroupItem.firstElementChild : null;
-        const currentGroupId = parentGroupNode && parentGroupNode.dataset
-          ? String(parentGroupNode.dataset.groupId || '').trim()
-          : '';
-        const currentGroupStatus = parentGroupNode && parentGroupNode.dataset
-          ? String(parentGroupNode.dataset.status || '').trim().toLowerCase()
-          : '';
+        const currentGroupContext = isPerson ? currentPersonGroupContext() : { id: '', status: '' };
+        const currentGroupId = currentGroupContext.id;
+        const currentGroupStatus = currentGroupContext.status;
         const canAddGroup = isPerson && !nodeData.isRoot;
         const canEditPerson = isPerson && !nodeData.isRoot;
         const canDeletePerson = isPerson && !nodeData.isRoot && nodeData.personId !== '';
@@ -2868,15 +2942,33 @@
           closeActionModal();
         });
       });
+      personProfileCloseButtons.forEach(button => {
+        button.addEventListener('click', function () {
+          closeActionModal();
+        });
+      });
 
       treeV2ActionModal.addEventListener('click', function (event) {
         if (event.target === treeV2ActionModal) {
           closeActionModal();
         }
       });
+      if (personProfileModal) {
+        personProfileModal.addEventListener('click', function (event) {
+          if (event.target === personProfileModal) {
+            closeActionModal();
+          }
+        });
+      }
 
       document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && treeV2ActionModal.classList.contains('is-open')) {
+        if (
+          event.key === 'Escape'
+          && (
+            treeV2ActionModal.classList.contains('is-open')
+            || (personProfileModal && personProfileModal.classList.contains('is-open'))
+          )
+        ) {
           closeActionModal();
         }
       });
@@ -3001,6 +3093,14 @@
       actionButtons.forEach(button => {
         button.addEventListener('click', function () {
           const actionName = button.getAttribute('data-tree-v2-action-do') || '';
+          if (actionName !== '') {
+            submitAction(actionName);
+          }
+        });
+      });
+      personProfileActionButtons.forEach(button => {
+        button.addEventListener('click', function () {
+          const actionName = button.getAttribute('data-tree-v2-profile-action') || '';
           if (actionName !== '') {
             submitAction(actionName);
           }

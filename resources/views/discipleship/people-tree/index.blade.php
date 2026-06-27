@@ -216,508 +216,27 @@ if ($page === 'people_tree') {
         $childrenMap[$primaryParent][] = $personRow;
     }
     $treeGroupHistoryViews = build_people_tree_group_history_views($discipleshipV2Model, $peopleById, $dgMeetingReports);
-    $peopleByMemberId = [];
-    $peopleByName = [];
-    foreach ($people as $personRow) {
-        if (!is_array($personRow)) {
-            continue;
-        }
-        $personRowId = trim((string) ($personRow['id'] ?? ''));
-        if ($personRowId === '') {
-            continue;
-        }
-        $personMemberId = trim((string) ($personRow['member_id'] ?? ''));
-        if ($personMemberId !== '' && !isset($peopleByMemberId[$personMemberId])) {
-            $peopleByMemberId[$personMemberId] = $personRowId;
-        }
-        $personNameKey = strtolower(trim((string) ($personRow['name'] ?? '')));
-        if ($personNameKey !== '' && !isset($peopleByName[$personNameKey])) {
-            $peopleByName[$personNameKey] = $personRowId;
-        }
-    }
-    $discipleshipPersonsById = [];
-    foreach (($discipleshipV2Model['discipleship_persons'] ?? []) as $personRecord) {
-        if (!is_array($personRecord)) {
-            continue;
-        }
-        $personId = trim((string) ($personRecord['id'] ?? ''));
-        if ($personId === '') {
-            continue;
-        }
-        $discipleshipPersonsById[$personId] = $personRecord;
-    }
-    $allGroupsById = [];
-    foreach (($discipleshipV2Model['discipleship_groups'] ?? []) as $groupRecord) {
-        if (!is_array($groupRecord)) {
-            continue;
-        }
-        $groupId = trim((string) ($groupRecord['id'] ?? ''));
-        if ($groupId === '') {
-            continue;
-        }
-        $allGroupsById[$groupId] = $groupRecord;
-    }
-    $membershipsByPersonId = [];
     $membershipsByGroupId = [];
     foreach (($discipleshipV2Model['group_memberships'] ?? []) as $membershipRecord) {
         if (!is_array($membershipRecord)) {
             continue;
         }
-        $personId = trim((string) ($membershipRecord['person_id'] ?? ''));
         $groupId = trim((string) ($membershipRecord['group_id'] ?? ''));
-        if ($personId !== '') {
-            $membershipsByPersonId[$personId][] = $membershipRecord;
-        }
         if ($groupId !== '') {
             $membershipsByGroupId[$groupId][] = $membershipRecord;
         }
     }
-    $leadershipsByPersonId = [];
     $leadershipsByGroupId = [];
     foreach (($discipleshipV2Model['group_leaderships'] ?? []) as $leadershipRecord) {
         if (!is_array($leadershipRecord)) {
             continue;
         }
-        $personId = trim((string) ($leadershipRecord['leader_person_id'] ?? ''));
         $groupId = trim((string) ($leadershipRecord['group_id'] ?? ''));
-        if ($personId !== '') {
-            $leadershipsByPersonId[$personId][] = $leadershipRecord;
-        }
         if ($groupId !== '') {
             $leadershipsByGroupId[$groupId][] = $leadershipRecord;
         }
     }
-    $relationsByDiscipleId = [];
-    foreach (($discipleshipV2Model['discipleship_relations'] ?? []) as $relationRecord) {
-        if (!is_array($relationRecord)) {
-            continue;
-        }
-        $discipleId = trim((string) ($relationRecord['disciple_person_id'] ?? ''));
-        if ($discipleId !== '') {
-            $relationsByDiscipleId[$discipleId][] = $relationRecord;
-        }
-    }
-    $mskParticipantByPersonId = [];
-    foreach ($mskClasses as $participant) {
-        if (!is_array($participant)) {
-            continue;
-        }
-        $participantPersonId = '';
-        $participantMemberId = trim((string) ($participant['member_id'] ?? ''));
-        if ($participantMemberId !== '' && isset($peopleByMemberId[$participantMemberId])) {
-            $participantPersonId = (string) $peopleByMemberId[$participantMemberId];
-        } else {
-            $participantNameKey = strtolower(trim((string) ($participant['full_name'] ?? '')));
-            if ($participantNameKey !== '' && isset($peopleByName[$participantNameKey])) {
-                $participantPersonId = (string) $peopleByName[$participantNameKey];
-            }
-        }
-        if ($participantPersonId !== '' && !isset($mskParticipantByPersonId[$participantPersonId])) {
-            $mskParticipantByPersonId[$participantPersonId] = $participant;
-        }
-    }
-    $journeyHistoryTextLabel = static function (string $value, string $fallback = '-'): string {
-        $value = trim($value);
-        if ($value === '') {
-            return $fallback;
-        }
-        $normalized = strtolower(str_replace(['-', ' '], '_', $value));
-        $labelMap = [
-            'member' => 'Anggota',
-            'anggota' => 'Anggota',
-            'leader' => 'Pemimpin',
-            'co_leader' => 'Pendamping',
-            'pendamping' => 'Pendamping',
-            'continued_to_child_group' => 'Naik ke kelompok lanjutan',
-            'group_completed' => 'Kelompok selesai',
-            'group_archived' => 'Kelompok diarsipkan',
-            'stage_transition' => 'Transisi tahap',
-            'removed_from_group' => 'Dikeluarkan dari kelompok',
-            'left_group' => 'Keluar dari kelompok',
-            'continued_to_child' => 'Naik ke kelompok lanjutan',
-            'group_completed.' => 'Kelompok selesai',
-            'group_completed_' => 'Kelompok selesai',
-            'manual_completion' => 'Ditandai selesai manual',
-        ];
-        if (isset($labelMap[$normalized])) {
-            return $labelMap[$normalized];
-        }
-        return ucwords(str_replace('_', ' ', $value));
-    };
-    $journeyHistoryUpgradeNoteLabel = static function (string $reason, string $stage): string {
-        $reason = trim($reason);
-        $stage = normalize_dg_progress_value($stage);
-        if ($reason === 'continued_to_child_group') {
-            return 'Kelompok selesai';
-        }
-        if ($reason === 'group_completed') {
-            return 'Kelompok selesai';
-        }
-        if ($reason === 'group_archived') {
-            return 'Kelompok diarsipkan';
-        }
-        if ($reason === 'left_group') {
-            return 'Keluar dari kelompok';
-        }
-        if ($reason === 'removed_from_group') {
-            return 'Dikeluarkan dari kelompok';
-        }
-        if ($reason === 'stage_transition') {
-            return 'Transisi tahap';
-        }
-        if ($reason === 'manual_completion') {
-            return 'Ditandai selesai tanpa kelompok/pemimpin';
-        }
-        return $reason;
-    };
-    $journeyHistoryDateLabel = static function (string $startDate, string $endDate): string {
-        $startDate = normalize_ymd_date($startDate);
-        $endDate = normalize_ymd_date($endDate);
-        if ($startDate === '' && $endDate === '') {
-            return '-';
-        }
-        $startLabel = $startDate !== '' ? format_indo_date($startDate) : '-';
-        $endLabel = $endDate !== '' ? format_indo_date($endDate) : 'Sekarang';
-        if ($startDate !== '' && $endDate !== '' && $startDate === $endDate) {
-            return $startLabel;
-        }
-        return $startLabel . ' - ' . $endLabel;
-    };
-    $journeyStageBadgeHtml = static function (string $stage): string {
-        $stage = normalize_dg_progress_value($stage);
-        if ($stage === '') {
-            return '';
-        }
-        $badgeClass = 'journey-track-badge is-muted';
-        if ($stage === 'DG 1') {
-            $badgeClass = 'journey-track-badge is-dg1';
-        } elseif ($stage === 'DG 2') {
-            $badgeClass = 'journey-track-badge is-dg2';
-        } elseif ($stage === 'DG 3') {
-            $badgeClass = 'journey-track-badge is-dg3';
-        }
-        return "<span class=\"" . h($badgeClass) . "\">" . h($stage) . "</span>";
-    };
-    $renderPeopleTreeJourneyHistoryHtml = static function (string $personId) use (
-        $peopleById,
-        $discipleshipPersonsById,
-        $allGroupsById,
-        $membershipsByPersonId,
-        $membershipsByGroupId,
-        $leadershipsByPersonId,
-        $leadershipsByGroupId,
-        $relationsByDiscipleId,
-        $mskParticipantByPersonId,
-        $journeyHistoryTextLabel,
-        $journeyHistoryUpgradeNoteLabel,
-        $journeyHistoryDateLabel,
-        $journeyStageBadgeHtml
-    ): string {
-        $personName = trim((string) ($peopleById[$personId]['name'] ?? ($discipleshipPersonsById[$personId]['full_name'] ?? '-')));
-        if ($personName === '') {
-            $personName = '-';
-        }
-        $memberId = trim((string) ($peopleById[$personId]['member_id'] ?? ($discipleshipPersonsById[$personId]['member_id'] ?? '')));
-        $participant = $mskParticipantByPersonId[$personId] ?? null;
-        $participantName = is_array($participant) ? trim((string) ($participant['full_name'] ?? '')) : '';
-        if ($participantName === '') {
-            $participantName = $personName;
-        }
-        $participantMemberId = is_array($participant) ? trim((string) ($participant['member_id'] ?? '')) : '';
-        if ($participantMemberId === '') {
-            $participantMemberId = $memberId;
-        }
-        $sessionNumbers = is_array($participant) ? normalize_msk_session_numbers($participant['session_numbers'] ?? []) : [];
-        $sessionCount = count($sessionNumbers);
-        if ($sessionCount > 12) {
-            $sessionCount = 12;
-        }
-        $mskProgress = $sessionCount > 0 ? ((string) $sessionCount . '/12') : '-';
-        $mskBadgeClass = $sessionCount >= 12
-            ? 'journey-track-badge is-msk is-msk-done'
-            : 'journey-track-badge is-msk is-msk-progress';
-        $journeyBridgeStatus = normalize_journey_bridge_status(is_array($participant) ? (string) ($participant['journey_bridge_status'] ?? 'belum') : 'belum');
-        $bridgeLabels = [
-            'belum' => 'Belum RG/KGAP',
-            'sudah_rg' => 'Sudah RG',
-            'sudah_kgap' => 'Sudah KGAP',
-            'ikut_keduanya' => 'Sudah RG + KGAP',
-        ];
-        $bridgeBadgeClass = 'journey-track-badge is-muted';
-        if ($journeyBridgeStatus === 'sudah_rg') {
-            $bridgeBadgeClass = 'journey-track-badge is-dg1';
-        } elseif (in_array($journeyBridgeStatus, ['sudah_kgap', 'ikut_keduanya'], true)) {
-            $bridgeBadgeClass = 'journey-track-badge is-kgap';
-        }
-
-        $summaryBadges = [];
-        $summaryBadges[] = "<span class=\"" . h($mskBadgeClass) . "\">MSK " . h($mskProgress) . "</span>";
-        $summaryBadges[] = "<span class=\"" . h($bridgeBadgeClass) . "\">" . h((string) ($bridgeLabels[$journeyBridgeStatus] ?? 'Belum RG/KGAP')) . "</span>";
-
-        $currentMentorNames = [];
-        foreach (($relationsByDiscipleId[$personId] ?? []) as $relation) {
-            $mentorId = trim((string) ($relation['mentor_person_id'] ?? ''));
-            $mentorName = person_label($peopleById, $mentorId, trim((string) ($discipleshipPersonsById[$mentorId]['full_name'] ?? '')));
-            $isActive = dgv2_is_current_period($relation);
-            if ($isActive && $mentorName !== '-') {
-                $currentMentorNames[] = $mentorName;
-            }
-        }
-
-        $stageRank = static function (string $stage): int {
-            $stage = normalize_dg_progress_value($stage);
-            if ($stage === 'DG 3') {
-                return 3;
-            }
-            if ($stage === 'DG 2') {
-                return 2;
-            }
-            if ($stage === 'DG 1') {
-                return 1;
-            }
-            return 0;
-        };
-
-        $membershipTimelineItems = [];
-        $currentGroupNames = [];
-        foreach (($membershipsByPersonId[$personId] ?? []) as $membership) {
-            $isManual = trim((string) ($membership['source'] ?? '')) === 'manual';
-            $groupId = trim((string) ($membership['group_id'] ?? ''));
-            if ($groupId === 'virtual_root_group') {
-                continue;
-            }
-            $groupName = trim((string) ($allGroupsById[$groupId]['name'] ?? ''));
-            if ($groupName === '') {
-                $groupName = 'Kelompok';
-            }
-            $stage = normalize_dg_progress_value((string) ($membership['stage'] ?? ''));
-            $role = trim((string) ($membership['role'] ?? 'anggota'));
-            $isActive = dgv2_is_current_period($membership);
-            if (!$isManual && $isActive && !in_array($groupName, $currentGroupNames, true)) {
-                $currentGroupNames[] = $groupName;
-            }
-            $meta = [];
-            if ($stage !== '') {
-                $meta[] = $journeyStageBadgeHtml($stage);
-            }
-            $meta[] = "<span class=\"journey-history-chip\">" . h($isManual ? 'Manual' : $journeyHistoryTextLabel($role)) . "</span>";
-
-            $groupLeaderName = '';
-            if (!$isManual && isset($leadershipsByGroupId[$groupId])) {
-                $groupLeaderships = $leadershipsByGroupId[$groupId];
-                usort($groupLeaderships, static function (array $a, array $b): int {
-                    $aActive = dgv2_is_current_period($a) ? 1 : 0;
-                    $bActive = dgv2_is_current_period($b) ? 1 : 0;
-                    if ($aActive !== $bActive) {
-                        return $bActive <=> $aActive;
-                    }
-                    return strcmp(trim((string) ($b['updated_at'] ?? '')), trim((string) ($a['updated_at'] ?? '')));
-                });
-                $leaderPersonId = trim((string) ($groupLeaderships[0]['leader_person_id'] ?? ''));
-                if ($leaderPersonId !== '') {
-                    $groupLeaderName = person_label($peopleById, $leaderPersonId, trim((string) ($discipleshipPersonsById[$leaderPersonId]['full_name'] ?? '')));
-                }
-            }
-            if ($groupLeaderName !== '' && $groupLeaderName !== '-') {
-                $meta[] = "<span class=\"journey-history-chip\">Pembina: " . h($groupLeaderName) . "</span>";
-            }
-
-            if ($isActive) {
-                $meta[] = "<span class=\"journey-history-chip is-active\">Aktif</span>";
-            }
-            $membershipTimelineItems[] = [
-                'type' => 'membership',
-                'is_active' => $isActive ? 1 : 0,
-                'stage_rank' => $stageRank($stage),
-                'sort_date' => trim((string) ($membership['end_date'] ?? $membership['start_date'] ?? $membership['created_at'] ?? '')),
-                'title' => $isManual ? ('Selesai' . ($stage !== '' ? ' ' . $stage : ' DG') . ' manual') : ('Masuk Kelompok' . ($stage !== '' ? ' ' . $stage : '')),
-                'date' => $journeyHistoryDateLabel((string) ($membership['start_date'] ?? ''), (string) ($membership['end_date'] ?? '')),
-                'meta' => implode('', $meta),
-                'description' => $journeyHistoryUpgradeNoteLabel((string) ($membership['reason_end'] ?? ''), $stage),
-            ];
-        }
-
-        $leadershipTimelineItems = [];
-        foreach (($leadershipsByPersonId[$personId] ?? []) as $leadership) {
-            $groupId = trim((string) ($leadership['group_id'] ?? ''));
-            $groupName = trim((string) ($allGroupsById[$groupId]['name'] ?? ''));
-            if ($groupName === '') {
-                $groupName = 'Kelompok';
-            }
-            $groupStage = normalize_dg_progress_value((string) ($allGroupsById[$groupId]['current_stage'] ?? $allGroupsById[$groupId]['start_stage'] ?? ''));
-            if ($groupStage === '') {
-                $groupStage = normalize_dg_progress_value((string) ($allGroupsById[$groupId]['progress'] ?? ''));
-            }
-            if ($groupStage === '') {
-                $groupStage = 'Kelompok';
-            }
-            $role = trim((string) ($leadership['role'] ?? 'leader'));
-            $isActive = dgv2_is_current_period($leadership);
-            $leadershipStart = normalize_ymd_date((string) ($leadership['start_date'] ?? ''));
-            $leadershipEnd = normalize_ymd_date((string) ($leadership['end_date'] ?? ''));
-            $memberLabels = [];
-            foreach (($membershipsByGroupId[$groupId] ?? []) as $membership) {
-                $memberPersonId = trim((string) ($membership['person_id'] ?? ''));
-                if ($memberPersonId === '' || $memberPersonId === $personId) {
-                    continue;
-                }
-                $membershipStart = normalize_ymd_date((string) ($membership['start_date'] ?? ''));
-                $membershipEnd = normalize_ymd_date((string) ($membership['end_date'] ?? ''));
-                $overlapsLeadership = true;
-                if ($leadershipEnd !== '' && $membershipStart !== '' && strcmp($membershipStart, $leadershipEnd) > 0) {
-                    $overlapsLeadership = false;
-                }
-                if ($leadershipStart !== '' && $membershipEnd !== '' && strcmp($membershipEnd, $leadershipStart) < 0) {
-                    $overlapsLeadership = false;
-                }
-                if (!$overlapsLeadership) {
-                    continue;
-                }
-                $memberLabel = person_label($peopleById, $memberPersonId, trim((string) ($discipleshipPersonsById[$memberPersonId]['full_name'] ?? '')));
-                if ($memberLabel === '' || $memberLabel === '-') {
-                    continue;
-                }
-                $memberLabels[] = $memberLabel;
-            }
-            $memberLabels = array_values(array_unique($memberLabels));
-            $meta = [
-                "<span class=\"journey-history-chip\">" . h($journeyHistoryTextLabel($role)) . "</span>",
-            ];
-            if ($isActive) {
-                $meta[] = "<span class=\"journey-history-chip is-active\">Aktif</span>";
-            }
-            $leadershipTimelineItems[] = [
-                'type' => 'leadership',
-                'is_active' => $isActive ? 1 : 0,
-                'stage_rank' => $stageRank($groupStage),
-                'sort_date' => trim((string) ($leadership['end_date'] ?? $leadership['start_date'] ?? $leadership['created_at'] ?? '')),
-                'title' => 'Memimpin kelompok ' . $groupStage,
-                'date' => $journeyHistoryDateLabel((string) ($leadership['start_date'] ?? ''), (string) ($leadership['end_date'] ?? '')),
-                'meta' => implode('', $meta),
-                'description' => $journeyHistoryUpgradeNoteLabel((string) ($leadership['reason_change'] ?? ''), $groupStage),
-                'members' => count($memberLabels) > 0 ? ('Anggota: ' . implode(', ', $memberLabels)) : '',
-            ];
-        }
-
-        $currentMentorNames = array_values(array_unique(array_filter($currentMentorNames, static fn ($value) => trim((string) $value) !== '')));
-        $currentGroupNames = array_values(array_unique(array_filter($currentGroupNames, static fn ($value) => trim((string) $value) !== '')));
-
-        usort($membershipTimelineItems, static function (array $a, array $b): int {
-            $stageCompare = ((int) ($b['stage_rank'] ?? 0)) <=> ((int) ($a['stage_rank'] ?? 0));
-            if ($stageCompare !== 0) {
-                return $stageCompare;
-            }
-            $activeCompare = ((int) ($b['is_active'] ?? 0)) <=> ((int) ($a['is_active'] ?? 0));
-            if ($activeCompare !== 0) {
-                return $activeCompare;
-            }
-            $dateA = trim((string) ($a['sort_date'] ?? ''));
-            $dateB = trim((string) ($b['sort_date'] ?? ''));
-            if ($dateA !== $dateB) {
-                return strcmp($dateB, $dateA);
-            }
-            return strcasecmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
-        });
-        usort($leadershipTimelineItems, static function (array $a, array $b): int {
-            $stageCompare = ((int) ($b['stage_rank'] ?? 0)) <=> ((int) ($a['stage_rank'] ?? 0));
-            if ($stageCompare !== 0) {
-                return $stageCompare;
-            }
-            $activeCompare = ((int) ($b['is_active'] ?? 0)) <=> ((int) ($a['is_active'] ?? 0));
-            if ($activeCompare !== 0) {
-                return $activeCompare;
-            }
-            $dateA = trim((string) ($a['sort_date'] ?? ''));
-            $dateB = trim((string) ($b['sort_date'] ?? ''));
-            if ($dateA !== $dateB) {
-                return strcmp($dateB, $dateA);
-            }
-            return strcasecmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
-        });
-
-        $renderTimelineItems = static function (array $items, Closure $journeyHistoryTextLabel): string {
-            if (count($items) === 0) {
-                return '';
-            }
-            ob_start();
-            echo "<div class=\"journey-history-timeline\">";
-            foreach ($items as $item) {
-                $description = trim((string) ($item['description'] ?? ''));
-                $membersNote = trim((string) ($item['members'] ?? ''));
-                echo "<article class=\"journey-history-item\">";
-                echo "<div class=\"journey-history-item-head\"><div class=\"journey-history-item-title\">" . h((string) ($item['title'] ?? '-')) . "</div><div class=\"journey-history-item-date\">" . h((string) ($item['date'] ?? '-')) . "</div></div>";
-                if (trim((string) ($item['meta'] ?? '')) !== '') {
-                    echo "<div class=\"journey-history-item-meta\">" . (string) ($item['meta'] ?? '') . "</div>";
-                }
-                if ($membersNote !== '') {
-                    echo "<div class=\"journey-history-item-members\">" . h($membersNote) . "</div>";
-                }
-                if ($description !== '') {
-                    echo "<div class=\"journey-history-item-note\">Catatan: " . h($journeyHistoryTextLabel($description)) . "</div>";
-                }
-                echo "</article>";
-            }
-            echo "</div>";
-            return (string) ob_get_clean();
-        };
-
-        ob_start();
-        echo "<div class=\"journey-history-view\">";
-        echo "<div class=\"journey-history-summary\">";
-        echo "<div class=\"journey-history-summary-main\">";
-        echo "<div class=\"journey-history-summary-name\">" . h($participantName) . "</div>";
-        echo "<div class=\"journey-history-summary-sub\">Member ID: " . h($participantMemberId !== '' ? $participantMemberId : '-') . "</div>";
-        echo "</div>";
-        echo "<div class=\"journey-history-summary-badges\">" . implode('', $summaryBadges) . "</div>";
-        echo "</div>";
-        echo "<div class=\"journey-history-facts\">";
-        echo "<div class=\"journey-history-fact\"><span class=\"journey-history-fact-label\">Sesi MSK</span><strong>" . h($sessionCount > 0 ? implode(', ', array_map('strval', $sessionNumbers)) : 'Belum ada sesi') . "</strong></div>";
-        echo "<div class=\"journey-history-fact\"><span class=\"journey-history-fact-label\">Mentor Aktif</span><strong>" . h(count($currentMentorNames) > 0 ? implode(', ', $currentMentorNames) : '-') . "</strong></div>";
-        echo "<div class=\"journey-history-fact\"><span class=\"journey-history-fact-label\">Kelompok Aktif</span><strong>" . h(count($currentGroupNames) > 0 ? implode(', ', $currentGroupNames) : '-') . "</strong></div>";
-        echo "</div>";
-        echo "<div class=\"journey-history-section-title\">Riwayat Pemuridan</div>";
-        if (count($membershipTimelineItems) === 0 && count($leadershipTimelineItems) === 0) {
-            echo "<div class=\"journey-history-empty\">Belum ada histori kelompok atau relasi pemuridan yang tercatat untuk orang ini.</div>";
-        } else {
-            echo "<div class=\"journey-history-split-section\">";
-            echo "<div class=\"journey-history-split-header\">Riwayat Sebagai Anggota</div>";
-            if (count($membershipTimelineItems) === 0) {
-                echo "<div class=\"journey-history-empty\">Belum ada riwayat sebagai anggota.</div>";
-            } else {
-                echo $renderTimelineItems($membershipTimelineItems, $journeyHistoryTextLabel);
-            }
-            echo "</div>";
-            echo "<div class=\"journey-history-split-divider\"></div>";
-            echo "<div class=\"journey-history-split-section\">";
-            echo "<div class=\"journey-history-split-header\">Riwayat Memimpin</div>";
-            if (count($leadershipTimelineItems) === 0) {
-                echo "<div class=\"journey-history-empty\">Belum ada riwayat memimpin kelompok.</div>";
-            } else {
-                echo $renderTimelineItems($leadershipTimelineItems, $journeyHistoryTextLabel);
-            }
-            echo "</div>";
-        }
-        echo "</div>";
-        return (string) ob_get_clean();
-    };
-    $treePersonJourneyViews = [];
-    foreach ($people as $personRow) {
-        if (!is_array($personRow)) {
-            continue;
-        }
-        $personId = trim((string) ($personRow['id'] ?? ''));
-        if ($personId === '') {
-            continue;
-        }
-        $personName = trim((string) ($personRow['name'] ?? ($discipleshipPersonsById[$personId]['full_name'] ?? 'Orang')));
-        if ($personName === '') {
-            $personName = 'Orang';
-        }
-        $treePersonJourneyViews[$personId] = [
-            'title' => 'Riwayat Pemuridan ' . $personName,
-            'content' => $renderPeopleTreeJourneyHistoryHtml($personId),
-        ];
-    }
+    $treePersonProfiles = is_array($treePersonProfiles ?? null) ? $treePersonProfiles : [];
     $groupsByLeader = [];
     foreach ($treeGroups as $groupRow) {
         if (!is_array($groupRow)) {
@@ -863,6 +382,43 @@ if ($page === 'people_tree') {
         'bodyAttrs' => ['data-tree-v2-history-body' => true],
         'bodyHtml' => '<div class="journey-history-empty">Riwayat kelompok belum tersedia.</div>',
     ])->render();
+
+    echo "<div class=\"is-hidden\" data-tree-v2-person-profile-templates>\n";
+    foreach ($treePersonProfiles as $profilePersonId => $profile) {
+        $templateId = trim((string) $profilePersonId);
+        if ($templateId === '' || !is_array($profile)) {
+            continue;
+        }
+        $templateTitle = trim((string) ($profile['full_name'] ?? 'Profil Orang'));
+        if ($templateTitle === '') {
+            $templateTitle = 'Profil Orang';
+        }
+        $templateContent = view('discipleship.msk-participants.profile', ['profile' => $profile])->render();
+        echo "<template data-tree-v2-person-profile-template=\"" . h($templateId) . "\" data-tree-v2-person-profile-template-title=\"" . h($templateTitle) . "\">" . $templateContent . "</template>\n";
+    }
+    echo "</div>\n";
+
+    $treePersonProfileFooterHtml = '';
+    if (!$centralReadOnly) {
+        $treePersonProfileFooterHtml .= '<button class="btn tiny secondary" type="button" data-tree-v2-profile-action="add_group">Tambah Kelompok</button>';
+        $treePersonProfileFooterHtml .= '<button class="btn tiny" type="button" data-tree-v2-profile-action="edit_person">Edit Orang</button>';
+        $treePersonProfileFooterHtml .= '<button class="btn tiny danger" type="button" data-tree-v2-profile-action="leave_group">Keluar DG</button>';
+        $treePersonProfileFooterHtml .= '<button class="btn tiny danger" type="button" data-tree-v2-profile-action="delete_person">Hapus Anggota</button>';
+    }
+    $treePersonProfileFooterHtml .= '<button class="btn tiny ghost" type="button" data-tree-v2-person-profile-close>Tutup</button>';
+    echo view('partials.modal', [
+        'id' => 'tree-v2-person-profile-modal',
+        'size' => 'standard',
+        'modalAttrs' => ['data-tree-v2-person-profile-modal' => true],
+        'cardClass' => 'member-view-modal-card msk-view-modal-card',
+        'title' => 'Profil Orang',
+        'titleAttrs' => ['data-tree-v2-person-profile-title' => true],
+        'closeAttrs' => ['data-tree-v2-person-profile-close' => true],
+        'bodyAttrs' => ['data-tree-v2-person-profile-body' => true],
+        'bodyHtml' => '<div class="panel-note">Klik orang pada pohon untuk melihat profil.</div>',
+        'footerHtml' => $treePersonProfileFooterHtml,
+    ])->render();
+
     if (!$centralReadOnly) {
         ob_start();
         echo "      <form method=\"post\" action=\"" . h($peopleTreeSavePersonUrl) . "\" class=\"modal-form\" data-modal-form=\"add\">\n";

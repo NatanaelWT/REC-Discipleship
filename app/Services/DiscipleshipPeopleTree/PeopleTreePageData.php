@@ -3,6 +3,8 @@
 namespace App\Services\DiscipleshipPeopleTree;
 
 use App\Services\Discipleship\DiscipleshipReadCache;
+use App\Services\MskParticipants\MskParticipantHistoryData;
+use App\Services\MskParticipants\MskParticipantProfileData;
 use Illuminate\Http\Request;
 
 class PeopleTreePageData
@@ -10,6 +12,8 @@ class PeopleTreePageData
     public function __construct(
         private readonly PeopleTreeModelStore $modelStore,
         private readonly DiscipleshipReadCache $cache,
+        private readonly MskParticipantHistoryData $historyData,
+        private readonly MskParticipantProfileData $profileData,
     ) {}
 
     /**
@@ -28,6 +32,21 @@ class PeopleTreePageData
             $mskClasses = $this->modelStore->participantsForBranches($branchCodes, $centralReadOnly);
             $discipleshipV2Model = $this->modelStore->modelForContext($branchCodes, $centralReadOnly);
             $people = $this->modelStore->peopleForModel($discipleshipV2Model, $members, $mskClasses, $centralReadOnly);
+            $branchIds = branch_ids_from_slugs($branchCodes);
+            $treeProfileRows = $this->treeProfileRows($people, $mskClasses);
+            $treeProfileHistories = $this->historyData->forParticipants($treeProfileRows, $branchIds);
+            $treePersonProfiles = $this->profileData->forParticipants($treeProfileRows, $treeProfileHistories);
+            foreach ($treePersonProfiles as &$profile) {
+                $profile['subtitle'] = 'Anggota Pohon Pemuridan';
+                if (($profile['batch'] ?? '-') === '-') {
+                    $profile['batch_badge_label'] = 'Pohon Pemuridan';
+                }
+                if (($profile['status_label'] ?? '') === 'Belum' && (int) ($profile['session_count'] ?? 0) === 0) {
+                    $profile['status_label'] = 'Aktif';
+                    $profile['status_class'] = 'is-progress';
+                }
+            }
+            unset($profile);
 
             return [
                 'page' => 'people_tree',
@@ -36,6 +55,7 @@ class PeopleTreePageData
                 'members' => $members,
                 'mskClasses' => $mskClasses,
                 'people' => $people,
+                'treePersonProfiles' => $treePersonProfiles,
                 'groups' => $this->modelStore->groupsForModel($discipleshipV2Model, $people, $centralReadOnly),
                 'dgMeetingReports' => $this->modelStore->meetingReportsForBranches($branchCodes, $centralReadOnly),
                 'discipleshipV2Enabled' => true,
@@ -58,5 +78,55 @@ class PeopleTreePageData
         ];
 
         return $data;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $people
+     * @param  array<int, array<string, mixed>>  $mskClasses
+     * @return array<int, array<string, mixed>>
+     */
+    private function treeProfileRows(array $people, array $mskClasses): array
+    {
+        $participantsByPersonId = [];
+        foreach ($mskClasses as $participant) {
+            $personId = trim((string) ($participant['member_id'] ?? ''));
+            if ($personId !== '' && ! isset($participantsByPersonId[$personId])) {
+                $participantsByPersonId[$personId] = $participant;
+            }
+        }
+
+        $rows = [];
+        foreach ($people as $person) {
+            $personId = trim((string) ($person['id'] ?? ''));
+            if ($personId === '' || $personId === 'virtual_injil') {
+                continue;
+            }
+
+            $row = is_array($participantsByPersonId[$personId] ?? null)
+                ? $participantsByPersonId[$personId]
+                : [
+                    'full_name' => trim((string) ($person['name'] ?? '')) ?: '-',
+                    'gender' => (string) ($person['gender'] ?? ''),
+                    'whatsapp' => (string) ($person['phone'] ?? ''),
+                    'notes' => (string) ($person['notes'] ?? ''),
+                    'msk_month' => '',
+                    'session_numbers' => [],
+                    'status' => 'active',
+                ];
+
+            $row['id'] = $personId;
+            $row['member_id'] = $personId;
+            $row['full_name'] = trim((string) ($row['full_name'] ?? '')) ?: (trim((string) ($person['name'] ?? '')) ?: '-');
+            if (trim((string) ($row['whatsapp'] ?? '')) === '') {
+                $row['whatsapp'] = (string) ($person['phone'] ?? '');
+            }
+            if (trim((string) ($row['notes'] ?? '')) === '') {
+                $row['notes'] = (string) ($person['notes'] ?? '');
+            }
+
+            $rows[] = $row;
+        }
+
+        return $rows;
     }
 }

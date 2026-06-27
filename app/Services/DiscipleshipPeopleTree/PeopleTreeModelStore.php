@@ -100,10 +100,7 @@ class PeopleTreeModelStore
 
         try {
             return MskParticipant::query()
-                ->select([
-                    'id', 'branch_id', 'discipleship_person_id', 'full_name', 'gender', 'whatsapp', 'batch_month',
-                    'completed_at', 'journey_bridge_status', 'status', 'session_numbers', 'created_at', 'updated_at',
-                ])
+                ->select(MskParticipant::VIEW_COLUMNS)
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
                 ->orderBy('full_name')
                 ->orderBy('id')

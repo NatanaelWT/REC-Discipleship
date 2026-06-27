@@ -1,6 +1,14 @@
 @php
     $stage = (string) ($profile['current_stage'] ?? '');
     $stageClass = $stage !== '' ? 'is-'.strtolower(str_replace(' ', '', $stage)) : 'is-muted';
+    $subtitle = trim((string) ($profile['subtitle'] ?? ''));
+    if ($subtitle === '') {
+        $subtitle = 'Peserta Kelas MSK';
+    }
+    $batchBadgeLabel = trim((string) ($profile['batch_badge_label'] ?? ''));
+    if ($batchBadgeLabel === '') {
+        $batchBadgeLabel = 'Batch '.(string) ($profile['batch'] ?? '-');
+    }
     $renderHistory = static function (array $items): string {
         if ($items === []) {
             return '';
@@ -43,7 +51,7 @@
     <div class="msk-view-person-copy">
       <div class="msk-view-person-name">{{ $profile['full_name'] }}</div>
       <div class="msk-view-person-sub">
-        Peserta Kelas MSK
+        {{ $subtitle }}
         @if($profile['person_id'] !== '')
           | ID Pemuridan {{ $profile['person_id'] }}
         @endif
@@ -51,7 +59,7 @@
     </div>
     <div class="msk-view-person-badges">
       <span class="msk-status-badge {{ $profile['status_class'] }}">{{ $profile['status_label'] }}</span>
-      <span class="journey-track-badge is-msk">Batch {{ $profile['batch'] }}</span>
+      <span class="journey-track-badge is-msk">{{ $batchBadgeLabel }}</span>
       <span class="journey-track-badge {{ $stageClass }}">{{ $stage !== '' ? $stage : 'Belum DG' }}</span>
     </div>
   </section>

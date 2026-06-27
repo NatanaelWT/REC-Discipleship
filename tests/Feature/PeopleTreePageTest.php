@@ -40,6 +40,11 @@ class PeopleTreePageTest extends TestCase
         $response->assertSee('Leader Test');
         $response->assertSee('Anggota Test');
         $response->assertDontSee('?page=people_tree', false);
+        $response->assertSee('tree-v2-person-profile-modal', false);
+        $response->assertSee('data-tree-v2-profile-action="add_group"', false);
+        $response->assertSee('data-tree-v2-profile-action="edit_person"', false);
+        $response->assertSee('data-tree-v2-profile-action="leave_group"', false);
+        $response->assertSee('data-tree-v2-profile-action="delete_person"', false);
         $response->assertDontSee('Lihat Riwayat Pemuridan');
         $response->assertDontSee('spiritual-journey-view-modal', false);
         $response->assertDontSee('data-tree-v2-proxy="view-person-journey"', false);
