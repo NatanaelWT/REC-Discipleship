@@ -22,7 +22,7 @@ class MemberFeedbackRecapTest extends TestCase
         $response = $this->get('/pemuridan/umpan-balik-anggota');
 
         $response->assertOk();
-        $response->assertSee('Rekap Feedback Anggota');
+        $response->assertSee('Jurnal Umpan Balik');
         $response->assertSee('Pemimpin Test');
         $response->assertSee('Anggota Test');
         $response->assertSee('card discipleship-page-header', false);

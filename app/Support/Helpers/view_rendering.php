@@ -325,8 +325,8 @@ function render_sidebar_navigation(string $currentPage, string $currentBranch, b
         ['label' => 'Anggota DG', 'page' => 'people_list', 'href' => route('discipleship.people-list')],
         ['label' => 'Pohon Pemuridan', 'page' => 'people_tree', 'href' => route('discipleship.tree')],
         ['label' => 'Spiritual Journey', 'page' => 'spiritual_journey', 'href' => route('discipleship.spiritual-journey')],
-        ['label' => 'Rekap Laporan DG', 'page' => 'dg_reports_recap', 'href' => route('discipleship.reports-recap')],
-        ['label' => 'Rekap Feedback Anggota', 'page' => 'member_feedback_recap', 'href' => route('discipleship.member-feedback-recap')],
+        ['label' => 'Jurnal Temu DG', 'page' => 'dg_reports_recap', 'href' => route('discipleship.reports-recap')],
+        ['label' => 'Jurnal Umpan Balik', 'page' => 'member_feedback_recap', 'href' => route('discipleship.member-feedback-recap')],
         ['label' => 'Kelas MSK', 'page' => 'msk_classes', 'href' => route('discipleship.msk-classes')],
         ['label' => 'Target DG & MSK', 'page' => 'discipleship_targets', 'href' => route('discipleship.targets')],
     ];

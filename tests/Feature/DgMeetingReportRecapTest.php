@@ -28,7 +28,7 @@ class DgMeetingReportRecapTest extends TestCase
         $response = $this->get('/pemuridan/laporan-dg');
 
         $response->assertStatus(200);
-        $response->assertSee('Rekap Laporan DG');
+        $response->assertSee('Jurnal Temu DG');
         $response->assertSee('Pemimpin Test');
         $response->assertSee('Materi Test');
         $response->assertSee('card discipleship-page-header', false);
