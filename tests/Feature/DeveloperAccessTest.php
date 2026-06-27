@@ -9,6 +9,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class DeveloperAccessTest extends TestCase
@@ -233,10 +234,13 @@ class DeveloperAccessTest extends TestCase
         $this->assertSame(3, $summary['counts']['branches']);
     }
 
-    public function test_developer_dashboard_omits_storage_and_material_audit(): void
+    public function test_developer_dashboard_shows_operational_overview_and_omits_diagnostics(): void
     {
         $this->createCoreTables();
         $this->seedDeveloper();
+        $branchUserId = $this->seedUser('branch_user', 'pemuridan_cabang');
+        $this->createDashboardTelemetryTables();
+        $this->seedDashboardTelemetry($branchUserId);
         $this->loginAs('developer');
 
         $summary = app(DeveloperDiagnosticsService::class)->summary();
@@ -249,8 +253,20 @@ class DeveloperAccessTest extends TestCase
             ->assertSee('data-developer-header', false)
             ->assertSee('discipleship-page-header__stats', false)
             ->assertDontSee('developer-hub-nav', false)
-            ->assertSee('Diagnostics')
-            ->assertSee('Runtime')
+            ->assertSee('Kondisi Aplikasi')
+            ->assertSee('Kunjungan Publik')
+            ->assertSee('Aktivitas Terbaru')
+            ->assertSee('Perlu Dicek')
+            ->assertSee('Akses Cepat')
+            ->assertSee('Total Request')
+            ->assertSee('Error 5xx')
+            ->assertSee('/pemuridan/anggota', false)
+            ->assertSee('/pemuridan/gagal', false)
+            ->assertSee('/publik/materi', false)
+            ->assertDontSee('Diagnostics')
+            ->assertDontSee('Runtime')
+            ->assertDontSee('<small>/developer/config</small>', false)
+            ->assertDontSee('/publik/bot', false)
             ->assertDontSee('Material Audit')
             ->assertDontSee('Public storage')
             ->assertDontSee('Path target');
@@ -289,6 +305,9 @@ class DeveloperAccessTest extends TestCase
 
     private function createCoreTables(): void
     {
+        Schema::dropIfExists('website_page_views');
+        Schema::dropIfExists('activity_events');
+        Schema::dropIfExists('activity_requests');
         Schema::dropIfExists('app_configs');
         Schema::dropIfExists('login_attempts');
         Schema::dropIfExists('branches');
@@ -339,6 +358,185 @@ class DeveloperAccessTest extends TestCase
                 'updated_at' => '2026-06-19 08:00:00',
             ]);
         }
+    }
+
+    private function createDashboardTelemetryTables(): void
+    {
+        Schema::dropIfExists('website_page_views');
+        Schema::dropIfExists('activity_events');
+        Schema::dropIfExists('activity_requests');
+
+        Schema::create('activity_requests', function (Blueprint $table): void {
+            $table->ulid('id')->primary();
+            $table->string('actor_type', 20)->default('anonymous');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('username', 120)->nullable();
+            $table->string('role', 80)->nullable();
+            $table->unsignedBigInteger('branch_id')->nullable();
+            $table->string('branch_label', 160)->nullable();
+            $table->char('visitor_hash', 64)->nullable();
+            $table->string('ip_address', 45)->nullable();
+            $table->string('method', 12);
+            $table->string('route_name', 180)->nullable();
+            $table->text('path');
+            $table->string('category', 60)->default('request');
+            $table->string('action', 180)->default('request');
+            $table->string('subject_type', 160)->nullable();
+            $table->string('subject_id', 191)->nullable();
+            $table->json('query_data')->nullable();
+            $table->json('input_data')->nullable();
+            $table->unsignedSmallInteger('http_status')->nullable();
+            $table->string('outcome', 30)->default('success');
+            $table->text('redirect_to')->nullable();
+            $table->string('response_content_type', 180)->nullable();
+            $table->unsignedBigInteger('response_size')->nullable();
+            $table->decimal('duration_ms', 14, 3)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->text('referer')->nullable();
+            $table->string('error_type', 191)->nullable();
+            $table->text('error_message')->nullable();
+            $table->dateTime('started_at', 6)->index();
+            $table->dateTime('completed_at', 6)->nullable();
+        });
+
+        Schema::create('activity_events', function (Blueprint $table): void {
+            $table->id();
+            $table->ulid('request_id');
+            $table->string('category', 60);
+            $table->string('action', 180);
+            $table->string('subject_label', 255)->nullable();
+            $table->text('description')->nullable();
+            $table->json('before_values')->nullable();
+            $table->json('after_values')->nullable();
+            $table->json('changed_values')->nullable();
+            $table->json('metadata')->nullable();
+            $table->dateTime('occurred_at', 6);
+            $table->index(['request_id', 'id']);
+        });
+
+        Schema::create('website_page_views', function (Blueprint $table): void {
+            $table->ulid('request_id')->primary();
+            $table->ulid('session_id')->index();
+            $table->char('visitor_hash', 64)->index();
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('segment', 30)->index();
+            $table->string('route_name', 180)->nullable();
+            $table->text('path');
+            $table->boolean('is_bot')->default(false);
+            $table->boolean('is_prefetch')->default(false);
+            $table->decimal('response_ms', 14, 3)->nullable();
+            $table->dateTime('occurred_at', 6)->index();
+        });
+    }
+
+    private function seedDashboardTelemetry(int $branchUserId): void
+    {
+        $recentId = (string) Str::ulid();
+        $developerId = (string) Str::ulid();
+        $errorId = (string) Str::ulid();
+        $now = now('UTC');
+
+        DB::table('activity_requests')->insert([
+            [
+                'id' => $recentId,
+                'actor_type' => 'user',
+                'user_id' => $branchUserId,
+                'username' => 'branch_user',
+                'role' => 'pemuridan_cabang',
+                'method' => 'POST',
+                'route_name' => 'discipleship.people-list',
+                'path' => '/pemuridan/anggota',
+                'category' => 'data',
+                'action' => 'people.update',
+                'http_status' => 200,
+                'outcome' => 'success',
+                'duration_ms' => 84.5,
+                'started_at' => $now->copy()->subMinutes(20)->format('Y-m-d H:i:s.u'),
+                'completed_at' => $now->copy()->subMinutes(20)->addMilliseconds(85)->format('Y-m-d H:i:s.u'),
+            ],
+            [
+                'id' => $developerId,
+                'actor_type' => 'user',
+                'user_id' => 1,
+                'username' => 'developer',
+                'role' => 'developer',
+                'method' => 'GET',
+                'route_name' => 'developer.config',
+                'path' => '/developer/config',
+                'category' => 'developer',
+                'action' => 'config.open',
+                'http_status' => 200,
+                'outcome' => 'success',
+                'duration_ms' => 33.1,
+                'started_at' => $now->copy()->subMinutes(10)->format('Y-m-d H:i:s.u'),
+                'completed_at' => $now->copy()->subMinutes(10)->addMilliseconds(34)->format('Y-m-d H:i:s.u'),
+            ],
+            [
+                'id' => $errorId,
+                'actor_type' => 'user',
+                'user_id' => $branchUserId,
+                'username' => 'branch_user',
+                'role' => 'pemuridan_cabang',
+                'method' => 'GET',
+                'route_name' => 'discipleship.error',
+                'path' => '/pemuridan/gagal',
+                'category' => 'request',
+                'action' => 'request.failed',
+                'http_status' => 500,
+                'outcome' => 'error',
+                'duration_ms' => 140.2,
+                'started_at' => $now->copy()->subMinutes(5)->format('Y-m-d H:i:s.u'),
+                'completed_at' => $now->copy()->subMinutes(5)->addMilliseconds(141)->format('Y-m-d H:i:s.u'),
+            ],
+        ]);
+
+        DB::table('activity_events')->insert([
+            ['request_id' => $recentId, 'category' => 'data', 'action' => 'people.updated', 'subject_label' => 'Peserta Test', 'description' => 'Updated person', 'occurred_at' => $now->copy()->subMinutes(20)->format('Y-m-d H:i:s.u')],
+            ['request_id' => $recentId, 'category' => 'data', 'action' => 'audit.logged', 'subject_label' => 'Peserta Test', 'description' => 'Audit logged', 'occurred_at' => $now->copy()->subMinutes(20)->format('Y-m-d H:i:s.u')],
+            ['request_id' => $errorId, 'category' => 'request', 'action' => 'request.failed', 'subject_label' => 'Error Test', 'description' => 'Failure logged', 'occurred_at' => $now->copy()->subMinutes(5)->format('Y-m-d H:i:s.u')],
+        ]);
+
+        DB::table('website_page_views')->insert([
+            [
+                'request_id' => (string) Str::ulid(),
+                'session_id' => (string) Str::ulid(),
+                'visitor_hash' => str_repeat('a', 64),
+                'user_id' => null,
+                'segment' => 'publik',
+                'route_name' => 'public.materials',
+                'path' => '/publik/materi',
+                'is_bot' => false,
+                'is_prefetch' => false,
+                'response_ms' => 52.4,
+                'occurred_at' => $now->copy()->subDay()->format('Y-m-d H:i:s.u'),
+            ],
+            [
+                'request_id' => (string) Str::ulid(),
+                'session_id' => (string) Str::ulid(),
+                'visitor_hash' => str_repeat('b', 64),
+                'user_id' => null,
+                'segment' => 'publik',
+                'route_name' => 'public.bot',
+                'path' => '/publik/bot',
+                'is_bot' => true,
+                'is_prefetch' => false,
+                'response_ms' => 20.0,
+                'occurred_at' => $now->copy()->subDay()->format('Y-m-d H:i:s.u'),
+            ],
+            [
+                'request_id' => (string) Str::ulid(),
+                'session_id' => (string) Str::ulid(),
+                'visitor_hash' => str_repeat('c', 64),
+                'user_id' => null,
+                'segment' => 'publik',
+                'route_name' => 'public.prefetch',
+                'path' => '/publik/prefetch',
+                'is_bot' => false,
+                'is_prefetch' => true,
+                'response_ms' => 19.0,
+                'occurred_at' => $now->copy()->subDay()->format('Y-m-d H:i:s.u'),
+            ],
+        ]);
     }
 
     private function seedDeveloper(): int

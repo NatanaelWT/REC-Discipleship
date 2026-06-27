@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Developer;
 
 use App\Http\Controllers\Controller;
-use App\Services\Developer\DeveloperDiagnosticsService;
+use App\Services\Developer\DeveloperDashboardOverviewService;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,7 +13,7 @@ class DeveloperController extends Controller
 {
     public function index(
         Request $request,
-        DeveloperDiagnosticsService $diagnostics,
+        DeveloperDashboardOverviewService $overview,
     ): RedirectResponse|View {
         $guard = $this->guard($request);
         if ($guard instanceof RedirectResponse) {
@@ -25,7 +25,7 @@ class DeveloperController extends Controller
         return view('developer.dashboard', [
             'settings' => ['church_name' => app_church_name()],
             'currentPage' => 'developer_dashboard',
-            'diagnostics' => $diagnostics->summary(),
+            'overview' => $overview->overview(),
         ]);
     }
 
