@@ -749,19 +749,17 @@ if ($page === 'spiritual_journey') {
     echo view('discipleship.spiritual-journey.partials.view-templates', compact('participantProfiles', 'mskClasses'))->render();
     echo "</div>\n";
 
-    echo "<div class=\"modal\" id=\"spiritual-journey-view-modal\" data-spiritual-journey-view-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-    echo "  <div class=\"modal-card member-view-modal-card msk-view-modal-card\">\n";
-    echo "    <div class=\"modal-head\">\n";
-    echo "      <div class=\"modal-title\" data-spiritual-journey-view-title>Profil Peserta</div>\n";
-    echo "      <button class=\"btn tiny ghost\" type=\"button\" data-spiritual-journey-view-close>&times;</button>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"modal-body\" data-spiritual-journey-view-body>\n";
-    echo "      <div class=\"panel-note\">Klik Lihat profil pada tabel untuk membuka profil peserta.</div>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"modal-actions\">\n";
-    echo "      <button class=\"btn ghost\" type=\"button\" data-spiritual-journey-view-close>Tutup</button>\n";
-    echo "    </div>\n";
-    echo "  </div>\n";
-    echo "</div>\n";
+    echo view('partials.modal', [
+        'id' => 'spiritual-journey-view-modal',
+        'size' => 'standard',
+        'modalAttrs' => ['data-spiritual-journey-view-modal' => true],
+        'cardClass' => 'member-view-modal-card msk-view-modal-card',
+        'title' => 'Profil Peserta',
+        'titleAttrs' => ['data-spiritual-journey-view-title' => true],
+        'closeAttrs' => ['data-spiritual-journey-view-close' => true],
+        'bodyAttrs' => ['data-spiritual-journey-view-body' => true],
+        'bodyHtml' => '<div class="panel-note">Klik Lihat profil pada tabel untuk membuka profil peserta.</div>',
+        'footerHtml' => '<button class="btn ghost" type="button" data-spiritual-journey-view-close>Tutup</button>',
+    ])->render();
     page_footer();
 }

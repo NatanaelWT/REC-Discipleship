@@ -232,27 +232,29 @@
       </template>
   @endforeach
 
-  <div class="modal" id="member-feedback-group-modal" data-member-feedback-group-modal aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="modal-card member-feedback-recap-session-modal-card">
-      <div class="modal-head">
-        <div class="modal-title" data-member-feedback-group-title>Feedback Kelompok</div>
-        <button class="btn tiny ghost" type="button" data-member-feedback-group-close>Tutup</button>
-      </div>
-      <div class="modal-body member-feedback-recap-session-modal-body" data-member-feedback-group-body>
-        <p class="panel-note">Klik jumlah pengisi pada sesi 3 atau sesi 12 untuk melihat feedback kelompok.</p>
-      </div>
-    </div>
-  </div>
+  @include('partials.modal', [
+      'id' => 'member-feedback-group-modal',
+      'size' => 'standard',
+      'modalAttrs' => ['data-member-feedback-group-modal' => true],
+      'title' => 'Feedback Kelompok',
+      'titleAttrs' => ['data-member-feedback-group-title' => true],
+      'closeAttrs' => ['data-member-feedback-group-close' => true],
+      'closeLabel' => 'Tutup',
+      'bodyClass' => 'member-feedback-recap-session-modal-body',
+      'bodyAttrs' => ['data-member-feedback-group-body' => true],
+      'bodyHtml' => '<p class="panel-note">Klik jumlah pengisi pada sesi 3 atau sesi 12 untuk melihat feedback kelompok.</p>',
+  ])
 
-  <div class="modal" id="member-feedback-detail-modal" data-member-feedback-detail-modal aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="modal-card member-feedback-recap-modal-card">
-      <div class="modal-head">
-        <div class="modal-title" data-member-feedback-detail-title>Detail Feedback</div>
-        <button class="btn tiny ghost" type="button" data-member-feedback-detail-close>Tutup</button>
-      </div>
-      <div class="modal-body member-feedback-recap-modal-body" data-member-feedback-detail-body>
-        <p class="panel-note">Pilih tombol Detail pada daftar feedback untuk melihat isi lengkapnya.</p>
-      </div>
-    </div>
-  </div>
+  @include('partials.modal', [
+      'id' => 'member-feedback-detail-modal',
+      'size' => 'standard',
+      'modalAttrs' => ['data-member-feedback-detail-modal' => true],
+      'title' => 'Detail Feedback',
+      'titleAttrs' => ['data-member-feedback-detail-title' => true],
+      'closeAttrs' => ['data-member-feedback-detail-close' => true],
+      'closeLabel' => 'Tutup',
+      'bodyClass' => 'member-feedback-recap-modal-body',
+      'bodyAttrs' => ['data-member-feedback-detail-body' => true],
+      'bodyHtml' => '<p class="panel-note">Pilih tombol Detail pada daftar feedback untuk melihat isi lengkapnya.</p>',
+  ])
 @endsection

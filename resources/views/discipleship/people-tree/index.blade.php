@@ -853,17 +853,16 @@ if ($page === 'people_tree') {
     }
     echo "</div>\n";
 
-    echo "<div class=\"modal\" id=\"tree-v2-history-modal\" data-tree-v2-history-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-    echo "  <div class=\"modal-card\">\n";
-    echo "    <div class=\"modal-head\">\n";
-    echo "      <div class=\"modal-title\" data-tree-v2-history-title>Riwayat Kelompok</div>\n";
-    echo "      <button class=\"btn tiny ghost\" type=\"button\" data-tree-v2-history-close>&times;</button>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"modal-body\" data-tree-v2-history-body>\n";
-    echo "      <div class=\"journey-history-empty\">Riwayat kelompok belum tersedia.</div>\n";
-    echo "    </div>\n";
-    echo "  </div>\n";
-    echo "</div>\n";
+    echo view('partials.modal', [
+        'id' => 'tree-v2-history-modal',
+        'size' => 'standard',
+        'modalAttrs' => ['data-tree-v2-history-modal' => true],
+        'title' => 'Riwayat Kelompok',
+        'titleAttrs' => ['data-tree-v2-history-title' => true],
+        'closeAttrs' => ['data-tree-v2-history-close' => true],
+        'bodyAttrs' => ['data-tree-v2-history-body' => true],
+        'bodyHtml' => '<div class="journey-history-empty">Riwayat kelompok belum tersedia.</div>',
+    ])->render();
     echo "<div class=\"is-hidden\" data-spiritual-journey-view-templates>\n";
     foreach ($treePersonJourneyViews as $templateId => $templateData) {
         $templateTitle = trim((string) ($templateData['title'] ?? 'Riwayat Pemuridan'));
@@ -874,29 +873,21 @@ if ($page === 'people_tree') {
         echo "<template data-spiritual-journey-view-template=\"" . h($templateId) . "\" data-spiritual-journey-view-template-title=\"" . h($templateTitle) . "\">" . $templateContent . "</template>\n";
     }
     echo "</div>\n";
-    echo "<div class=\"modal\" id=\"spiritual-journey-view-modal\" data-spiritual-journey-view-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-    echo "  <div class=\"modal-card member-view-modal-card msk-view-modal-card\">\n";
-    echo "    <div class=\"modal-head\">\n";
-    echo "      <div class=\"modal-title\" data-spiritual-journey-view-title>Riwayat Pemuridan</div>\n";
-    echo "      <button class=\"btn tiny ghost\" type=\"button\" data-spiritual-journey-view-close>&times;</button>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"modal-body\" data-spiritual-journey-view-body>\n";
-    echo "      <div class=\"panel-note\">Klik tombol riwayat pemuridan untuk membuka detail perjalanan orang ini.</div>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"modal-actions\">\n";
-    echo "      <button class=\"btn ghost\" type=\"button\" data-spiritual-journey-view-close>Tutup</button>\n";
-    echo "    </div>\n";
-    echo "  </div>\n";
-    echo "</div>\n";
+    echo view('partials.modal', [
+        'id' => 'spiritual-journey-view-modal',
+        'size' => 'standard',
+        'modalAttrs' => ['data-spiritual-journey-view-modal' => true],
+        'cardClass' => 'member-view-modal-card msk-view-modal-card',
+        'title' => 'Riwayat Pemuridan',
+        'titleAttrs' => ['data-spiritual-journey-view-title' => true],
+        'closeAttrs' => ['data-spiritual-journey-view-close' => true],
+        'bodyAttrs' => ['data-spiritual-journey-view-body' => true],
+        'bodyHtml' => '<div class="panel-note">Klik tombol riwayat pemuridan untuk membuka detail perjalanan orang ini.</div>',
+        'footerHtml' => '<button class="btn ghost" type="button" data-spiritual-journey-view-close>Tutup</button>',
+    ])->render();
 
     if (!$centralReadOnly) {
-        echo "<div class=\"modal\" id=\"people-modal\" data-modal data-edit-id=\"" . h($editId) . "\" aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-        echo "  <div class=\"modal-card\">\n";
-        echo "    <div class=\"modal-head\">\n";
-        echo "      <div class=\"modal-title\" data-modal-title>Modal</div>\n";
-        echo "      <button class=\"btn tiny ghost\" type=\"button\" data-modal-close>&times;</button>\n";
-        echo "    </div>\n";
-        echo "    <div class=\"modal-body\">\n";
+        ob_start();
         echo "      <form method=\"post\" action=\"" . h($peopleTreeSavePersonUrl) . "\" class=\"modal-form\" data-modal-form=\"add\">\n";
         echo "        " . csrf_field() . "\n";
         echo "        <input type=\"hidden\" name=\"action\" value=\"save_person\">\n";
@@ -979,9 +970,19 @@ if ($page === 'people_tree') {
         echo "          <button class=\"btn ghost\" type=\"button\" data-modal-close>Batal</button>\n";
         echo "        </div>\n";
         echo "      </form>\n";
-        echo "    </div>\n";
-        echo "  </div>\n";
-        echo "</div>\n";
+        $peopleModalBodyHtml = ob_get_clean();
+        echo view('partials.modal', [
+            'id' => 'people-modal',
+            'size' => 'standard',
+            'modalAttrs' => [
+                'data-modal' => true,
+                'data-edit-id' => $editId,
+            ],
+            'title' => 'Modal',
+            'titleAttrs' => ['data-modal-title' => true],
+            'closeAttrs' => ['data-modal-close' => true],
+            'bodyHtml' => $peopleModalBodyHtml,
+        ])->render();
 
         $groupUpgradeSources = [];
         foreach (($discipleshipV2Model['discipleship_groups'] ?? []) as $groupRecord) {
@@ -1067,13 +1068,7 @@ if ($page === 'people_tree') {
             return strcasecmp((string) ($left['leader_name'] ?? ''), (string) ($right['leader_name'] ?? ''));
         });
 
-        echo "<div class=\"modal\" id=\"group-modal\" data-group-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-        echo "  <div class=\"modal-card\">\n";
-        echo "    <div class=\"modal-head\">\n";
-        echo "      <div class=\"modal-title\" data-group-title>Kelompok</div>\n";
-        echo "      <button class=\"btn tiny ghost\" type=\"button\" data-group-close>&times;</button>\n";
-        echo "    </div>\n";
-        echo "    <div class=\"modal-body\">\n";
+        ob_start();
         echo "      <form method=\"post\" action=\"" . h($peopleTreeSaveGroupUrl) . "\" class=\"modal-form\" data-group-form=\"add\">\n";
         echo "        " . csrf_field() . "\n";
         echo "        <input type=\"hidden\" name=\"action\" value=\"save_group\">\n";
@@ -1156,9 +1151,16 @@ if ($page === 'people_tree') {
         echo "          <button class=\"btn ghost\" type=\"button\" data-group-close>Batal</button>\n";
         echo "        </div>\n";
         echo "      </form>\n";
-        echo "    </div>\n";
-        echo "  </div>\n";
-        echo "</div>\n";
+        $groupModalBodyHtml = ob_get_clean();
+        echo view('partials.modal', [
+            'id' => 'group-modal',
+            'size' => 'standard',
+            'modalAttrs' => ['data-group-modal' => true],
+            'title' => 'Kelompok',
+            'titleAttrs' => ['data-group-title' => true],
+            'closeAttrs' => ['data-group-close' => true],
+            'bodyHtml' => $groupModalBodyHtml,
+        ])->render();
 
         echo "<div class=\"is-hidden\" data-group-member-sources>\n";
         foreach ($groupUpgradeSources as $existingGroup) {
@@ -1180,28 +1182,27 @@ if ($page === 'people_tree') {
         }
         echo "</div>\n";
 
-        echo "<div class=\"modal\" id=\"tree-v2-action-modal\" data-tree-v2-action-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-        echo "  <div class=\"modal-card tree-v2-action-modal-card\">\n";
-        echo "    <div class=\"modal-head\">\n";
-        echo "      <div class=\"modal-title\" data-tree-v2-action-title>Aksi</div>\n";
-        echo "      <button class=\"btn tiny ghost\" type=\"button\" data-tree-v2-action-close>&times;</button>\n";
-        echo "    </div>\n";
-        echo "    <div class=\"modal-body\">\n";
-        echo "      <div class=\"modal-actions tree-v2-action-buttons\">\n";
-        echo "        <button class=\"btn ghost\" type=\"button\" data-tree-v2-action-do=\"view_history\">Lihat History</button>\n";
-        echo "        <button class=\"btn\" type=\"button\" data-tree-v2-action-do=\"add_group\">Tambah Kelompok</button>\n";
-        echo "        <button class=\"btn\" type=\"button\" data-tree-v2-action-do=\"add_member\">Tambah Anggota</button>\n";
-        echo "        <button class=\"btn\" type=\"button\" data-tree-v2-action-do=\"edit_person\">Edit Orang</button>\n";
-        echo "        <button class=\"btn ghost\" type=\"button\" data-tree-v2-action-do=\"view_person_journey\">Lihat Riwayat Pemuridan</button>\n";
-        echo "        <button class=\"btn danger\" type=\"button\" data-tree-v2-action-do=\"leave_group\">Keluar dari DG Ini</button>\n";
-        echo "        <button class=\"btn danger\" type=\"button\" data-tree-v2-action-do=\"delete_person\">Hapus Data Anggota</button>\n";
-        echo "        <button class=\"btn secondary\" type=\"button\" data-tree-v2-action-do=\"complete_group\">Tandai DG Selesai</button>\n";
-        echo "        <button class=\"btn secondary\" type=\"button\" data-tree-v2-action-do=\"reactivate_group\">Aktifkan Kembali DG</button>\n";
-        echo "        <button class=\"btn\" type=\"button\" data-tree-v2-action-do=\"upgrade_group\">Upgrade DG</button>\n";
-        echo "      </div>\n";
-        echo "    </div>\n";
-        echo "  </div>\n";
-        echo "</div>\n";
+        echo view('partials.modal', [
+            'id' => 'tree-v2-action-modal',
+            'size' => 'compact',
+            'modalAttrs' => ['data-tree-v2-action-modal' => true],
+            'cardClass' => 'tree-v2-action-modal-card',
+            'title' => 'Aksi',
+            'titleAttrs' => ['data-tree-v2-action-title' => true],
+            'closeAttrs' => ['data-tree-v2-action-close' => true],
+            'bodyHtml' => '<div class="modal-actions tree-v2-action-buttons">'
+                .'<button class="btn ghost" type="button" data-tree-v2-action-do="view_history">Lihat History</button>'
+                .'<button class="btn" type="button" data-tree-v2-action-do="add_group">Tambah Kelompok</button>'
+                .'<button class="btn" type="button" data-tree-v2-action-do="add_member">Tambah Anggota</button>'
+                .'<button class="btn" type="button" data-tree-v2-action-do="edit_person">Edit Orang</button>'
+                .'<button class="btn ghost" type="button" data-tree-v2-action-do="view_person_journey">Lihat Riwayat Pemuridan</button>'
+                .'<button class="btn danger" type="button" data-tree-v2-action-do="leave_group">Keluar dari DG Ini</button>'
+                .'<button class="btn danger" type="button" data-tree-v2-action-do="delete_person">Hapus Data Anggota</button>'
+                .'<button class="btn secondary" type="button" data-tree-v2-action-do="complete_group">Tandai DG Selesai</button>'
+                .'<button class="btn secondary" type="button" data-tree-v2-action-do="reactivate_group">Aktifkan Kembali DG</button>'
+                .'<button class="btn" type="button" data-tree-v2-action-do="upgrade_group">Upgrade DG</button>'
+                .'</div>',
+        ])->render();
 
         echo "<button class=\"is-hidden\" type=\"button\" data-tree-v2-proxy=\"add-member\" data-modal-open=\"add\"></button>\n";
         echo "<button class=\"is-hidden\" type=\"button\" data-tree-v2-proxy=\"edit-person\" data-modal-open=\"edit\"></button>\n";

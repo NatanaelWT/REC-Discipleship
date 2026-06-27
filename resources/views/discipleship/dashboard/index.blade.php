@@ -97,15 +97,15 @@ $formatPercent = static function (float $value): string {
 </section>
 
 @if (! $centralReadOnly)
-  <div class="modal" id="discipleship-msk-edit-modal" data-msk-edit-modal aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="modal-card member-view-modal-card">
-      <div class="modal-head">
-        <div class="modal-title" data-msk-edit-title>Edit Sesi MSK</div>
-        <button class="btn tiny ghost" type="button" data-msk-edit-close aria-label="Tutup">&times;</button>
-      </div>
-      <div class="modal-body" data-msk-edit-body></div>
-    </div>
-  </div>
+  @include('partials.modal', [
+      'id' => 'discipleship-msk-edit-modal',
+      'size' => 'standard',
+      'modalAttrs' => ['data-msk-edit-modal' => true],
+      'title' => 'Edit Sesi MSK',
+      'titleAttrs' => ['data-msk-edit-title' => true],
+      'closeAttrs' => ['data-msk-edit-close' => true],
+      'bodyAttrs' => ['data-msk-edit-body' => true],
+  ])
 @endif
 
 <script>

@@ -811,16 +811,7 @@ if ($page === 'dg_reports_recap') {
         ],
     ])->render();
 
-    echo "<div class=\"modal\" id=\"dg-recap-calendar-modal\" data-dg-recap-calendar-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-    echo "  <div class=\"modal-card dg-recap-calendar-modal-card\">\n";
-    echo "    <div class=\"modal-head\">\n";
-    echo "      <div>\n";
-    echo "        <div class=\"modal-title\">Kalender Laporan DG</div>\n";
-    echo "        <div class=\"dg-recap-subtext\">Tanggal yang ditandai menunjukkan adanya laporan pertemuan DG.</div>\n";
-    echo "      </div>\n";
-    echo "      <button class=\"btn tiny ghost\" type=\"button\" data-dg-calendar-close>&times;</button>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"modal-body dg-recap-calendar-modal-body\">\n";
+    ob_start();
     echo "      <div class=\"dg-recap-calendar-toolbar\">\n";
     echo '        <div class="dg-recap-calendar-nav" data-dg-calendar-nav data-report-map="'.h(json_encode($reportCalendarByMonth, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}').'" data-default-month="'.h($defaultCalendarMonth)."\">\n";
     echo "          <button class=\"btn tiny ghost dg-recap-calendar-nav-btn\" type=\"button\" data-dg-calendar-prev aria-label=\"Bulan sebelumnya\">&lsaquo;</button>\n";
@@ -834,48 +825,53 @@ if ($page === 'dg_reports_recap') {
     echo "        </div>\n";
     echo "      </div>\n";
     echo "      <div class=\"dg-recap-calendar-panels\" data-dg-calendar-panels></div>\n";
-    echo "    </div>\n";
-    echo "  </div>\n";
-    echo "</div>\n";
-    echo "<div class=\"modal\" id=\"dg-recap-month-report-modal\" data-dg-recap-month-report-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-    echo "  <div class=\"modal-card dg-recap-group-report-modal-card\">\n";
-    echo "    <div class=\"modal-head\">\n";
-    echo "      <div>\n";
-    echo "        <div class=\"modal-title\" data-dg-recap-month-report-title>Laporan Bulanan</div>\n";
-    echo "        <div class=\"dg-recap-subtext\" data-dg-recap-month-report-meta></div>\n";
-    echo "      </div>\n";
-    echo "      <button class=\"btn tiny ghost\" type=\"button\" data-dg-recap-month-report-close>&times;</button>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"modal-body\" data-dg-recap-month-report-body>\n";
-    echo "      <div class=\"panel-note\">Gunakan tombol laporan bulanan pada modal kalender untuk melihat daftar laporan pada bulan aktif.</div>\n";
-    echo "    </div>\n";
-    echo "  </div>\n";
-    echo "</div>\n";
-    echo "<div class=\"modal\" id=\"dg-recap-date-report-modal\" data-dg-recap-date-report-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-    echo "  <div class=\"modal-card dg-recap-group-report-modal-card\">\n";
-    echo "    <div class=\"modal-head\">\n";
-    echo "      <div>\n";
-    echo "        <div class=\"modal-title\" data-dg-recap-date-report-title>Laporan Tanggal</div>\n";
-    echo "        <div class=\"dg-recap-subtext\" data-dg-recap-date-report-meta></div>\n";
-    echo "      </div>\n";
-    echo "      <button class=\"btn tiny ghost\" type=\"button\" data-dg-recap-date-report-close>&times;</button>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"modal-body\" data-dg-recap-date-report-body>\n";
-    echo "      <div class=\"panel-note\">Klik tanggal yang memiliki laporan pada kalender untuk melihat detailnya.</div>\n";
-    echo "    </div>\n";
-    echo "  </div>\n";
-    echo "</div>\n";
-    echo "<div class=\"modal\" id=\"dg-recap-photo-modal\" data-dg-recap-photo-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-    echo "  <div class=\"modal-card file-view-modal-card\">\n";
-    echo "    <div class=\"modal-head\">\n";
-    echo "      <div class=\"modal-title\" data-dg-recap-photo-title>Preview Foto</div>\n";
-    echo "      <button class=\"btn tiny ghost\" type=\"button\" data-dg-recap-photo-close>&times;</button>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"modal-body file-view-body\">\n";
-    echo "      <div class=\"file-view-image-wrap\" data-dg-recap-photo-wrap><img class=\"file-view-image\" src=\"\" alt=\"Preview Foto\" data-dg-recap-photo-image></div>\n";
-    echo "    </div>\n";
-    echo "  </div>\n";
-    echo "</div>\n";
+    $calendarBodyHtml = ob_get_clean();
+    echo view('partials.modal', [
+        'id' => 'dg-recap-calendar-modal',
+        'size' => 'wide',
+        'modalAttrs' => ['data-dg-recap-calendar-modal' => true],
+        'cardClass' => 'dg-recap-calendar-modal-card',
+        'title' => 'Kalender Laporan DG',
+        'subtitleHtml' => '<div class="dg-recap-subtext">Tanggal yang ditandai menunjukkan adanya laporan pertemuan DG.</div>',
+        'closeAttrs' => ['data-dg-calendar-close' => true],
+        'bodyClass' => 'dg-recap-calendar-modal-body',
+        'bodyHtml' => $calendarBodyHtml,
+    ])->render();
+    echo view('partials.modal', [
+        'id' => 'dg-recap-month-report-modal',
+        'size' => 'wide',
+        'modalAttrs' => ['data-dg-recap-month-report-modal' => true],
+        'cardClass' => 'dg-recap-group-report-modal-card',
+        'title' => 'Laporan Bulanan',
+        'titleAttrs' => ['data-dg-recap-month-report-title' => true],
+        'subtitleHtml' => '<div class="dg-recap-subtext" data-dg-recap-month-report-meta></div>',
+        'closeAttrs' => ['data-dg-recap-month-report-close' => true],
+        'bodyAttrs' => ['data-dg-recap-month-report-body' => true],
+        'bodyHtml' => '<div class="panel-note">Gunakan tombol laporan bulanan pada modal kalender untuk melihat daftar laporan pada bulan aktif.</div>',
+    ])->render();
+    echo view('partials.modal', [
+        'id' => 'dg-recap-date-report-modal',
+        'size' => 'wide',
+        'modalAttrs' => ['data-dg-recap-date-report-modal' => true],
+        'cardClass' => 'dg-recap-group-report-modal-card',
+        'title' => 'Laporan Tanggal',
+        'titleAttrs' => ['data-dg-recap-date-report-title' => true],
+        'subtitleHtml' => '<div class="dg-recap-subtext" data-dg-recap-date-report-meta></div>',
+        'closeAttrs' => ['data-dg-recap-date-report-close' => true],
+        'bodyAttrs' => ['data-dg-recap-date-report-body' => true],
+        'bodyHtml' => '<div class="panel-note">Klik tanggal yang memiliki laporan pada kalender untuk melihat detailnya.</div>',
+    ])->render();
+    echo view('partials.modal', [
+        'id' => 'dg-recap-photo-modal',
+        'size' => 'media',
+        'modalAttrs' => ['data-dg-recap-photo-modal' => true],
+        'cardClass' => 'file-view-modal-card',
+        'title' => 'Preview Foto',
+        'titleAttrs' => ['data-dg-recap-photo-title' => true],
+        'closeAttrs' => ['data-dg-recap-photo-close' => true],
+        'bodyClass' => 'file-view-body',
+        'bodyHtml' => '<div class="file-view-image-wrap" data-dg-recap-photo-wrap><img class="file-view-image" src="" alt="Preview Foto" data-dg-recap-photo-image></div>',
+    ])->render();
     foreach ($reportCalendarRowsByDate as $reportDate => $dateRows) {
         if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $reportDate)) {
             continue;
@@ -1126,20 +1122,18 @@ if ($page === 'dg_reports_recap') {
     echo "  </div>\n";
     echo "</section>\n";
 
-    echo "<div class=\"modal\" id=\"dg-recap-group-report-modal\" data-dg-recap-group-report-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-    echo "  <div class=\"modal-card dg-recap-group-report-modal-card\">\n";
-    echo "    <div class=\"modal-head\">\n";
-    echo "      <div>\n";
-    echo "        <div class=\"modal-title\" data-dg-recap-group-report-title>Daftar Laporan Kelompok</div>\n";
-    echo "        <div class=\"dg-recap-subtext\" data-dg-recap-group-report-meta></div>\n";
-    echo "      </div>\n";
-    echo "      <button class=\"btn tiny ghost\" type=\"button\" data-dg-recap-group-report-close>&times;</button>\n";
-    echo "    </div>\n";
-    echo "    <div class=\"modal-body\" data-dg-recap-group-report-body>\n";
-    echo "      <div class=\"panel-note\">Klik jumlah laporan pada tabel ringkasan kelompok untuk membuka detail laporan kelompok tersebut.</div>\n";
-    echo "    </div>\n";
-    echo "  </div>\n";
-    echo "</div>\n";
+    echo view('partials.modal', [
+        'id' => 'dg-recap-group-report-modal',
+        'size' => 'wide',
+        'modalAttrs' => ['data-dg-recap-group-report-modal' => true],
+        'cardClass' => 'dg-recap-group-report-modal-card',
+        'title' => 'Daftar Laporan Kelompok',
+        'titleAttrs' => ['data-dg-recap-group-report-title' => true],
+        'subtitleHtml' => '<div class="dg-recap-subtext" data-dg-recap-group-report-meta></div>',
+        'closeAttrs' => ['data-dg-recap-group-report-close' => true],
+        'bodyAttrs' => ['data-dg-recap-group-report-body' => true],
+        'bodyHtml' => '<div class="panel-note">Klik jumlah laporan pada tabel ringkasan kelompok untuk membuka detail laporan kelompok tersebut.</div>',
+    ])->render();
     foreach ($groupRows as $groupRow) {
         $reportGroupKey = (string) ($groupRow['report_group_key'] ?? '');
         if ($reportGroupKey === '') {

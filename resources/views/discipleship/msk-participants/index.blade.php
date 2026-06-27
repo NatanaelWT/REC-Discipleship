@@ -712,37 +712,39 @@ if ($page === 'msk_classes') {
         }
         echo "</div>\n";
 
-        echo '<div class="modal" id="msk-view-modal" data-msk-view-modal data-msk-view-auto-open="'.h($autoOpenViewParticipantId)."\" aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-        echo "  <div class=\"modal-card member-view-modal-card msk-view-modal-card\">\n";
-        echo "    <div class=\"modal-head\">\n";
-        echo "      <div class=\"modal-title\" data-msk-view-title>Detail Peserta MSK</div>\n";
-        echo "      <button class=\"btn tiny ghost\" type=\"button\" data-msk-view-close>&times;</button>\n";
-        echo "    </div>\n";
-        echo "    <div class=\"modal-body\" data-msk-view-body>\n";
-        echo "      <div class=\"panel-note msk-modal-empty-state\">Pilih tombol Lihat pada baris peserta untuk membuka detail peserta MSK.</div>\n";
-        echo "    </div>\n";
-        echo "    <div class=\"modal-actions\">\n";
+        $mskViewFooterHtml = '';
         if (! $centralReadOnly) {
-            echo "      <a class=\"btn tiny secondary is-hidden\" href=\"#\" data-msk-view-edit-link>Edit</a>\n";
+            $mskViewFooterHtml .= '<a class="btn tiny secondary is-hidden" href="#" data-msk-view-edit-link>Edit</a>';
         }
-        echo "      <button class=\"btn tiny ghost\" type=\"button\" data-msk-view-close>Tutup</button>\n";
-        echo "    </div>\n";
-        echo "  </div>\n";
-        echo "</div>\n";
+        $mskViewFooterHtml .= '<button class="btn tiny ghost" type="button" data-msk-view-close>Tutup</button>';
+        echo view('partials.modal', [
+            'id' => 'msk-view-modal',
+            'size' => 'standard',
+            'modalAttrs' => [
+                'data-msk-view-modal' => true,
+                'data-msk-view-auto-open' => $autoOpenViewParticipantId,
+            ],
+            'cardClass' => 'member-view-modal-card msk-view-modal-card',
+            'title' => 'Detail Peserta MSK',
+            'titleAttrs' => ['data-msk-view-title' => true],
+            'closeAttrs' => ['data-msk-view-close' => true],
+            'bodyAttrs' => ['data-msk-view-body' => true],
+            'bodyHtml' => '<div class="panel-note msk-modal-empty-state">Pilih tombol Lihat pada baris peserta untuk membuka detail peserta MSK.</div>',
+            'footerHtml' => $mskViewFooterHtml,
+        ])->render();
     }
 
     if (! $centralReadOnly) {
-        echo "<div class=\"modal\" id=\"msk-create-modal\" data-msk-create-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-        echo "  <div class=\"modal-card member-view-modal-card msk-form-modal-card\">\n";
-        echo "    <div class=\"modal-head\">\n";
-        echo "      <div class=\"modal-title\">Tambah Peserta MSK</div>\n";
-        echo "      <button class=\"btn tiny ghost\" type=\"button\" data-msk-create-close>&times;</button>\n";
-        echo "    </div>\n";
-        echo "    <div class=\"modal-body msk-form-modal-body\">\n";
-        echo $createMskFormContent;
-        echo "    </div>\n";
-        echo "  </div>\n";
-        echo "</div>\n";
+        echo view('partials.modal', [
+            'id' => 'msk-create-modal',
+            'size' => 'standard',
+            'modalAttrs' => ['data-msk-create-modal' => true],
+            'cardClass' => 'member-view-modal-card msk-form-modal-card',
+            'title' => 'Tambah Peserta MSK',
+            'closeAttrs' => ['data-msk-create-close' => true],
+            'bodyClass' => 'msk-form-modal-body',
+            'bodyHtml' => $createMskFormContent,
+        ])->render();
     }
 
     if (! $centralReadOnly && count($mskEditModalTemplates) > 0) {
@@ -757,17 +759,21 @@ if ($page === 'msk_classes') {
         }
         echo "</div>\n";
 
-        echo '<div class="modal" id="msk-edit-modal" data-msk-edit-modal data-msk-edit-auto-open="'.h($autoOpenEditParticipantId)."\" aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-        echo "  <div class=\"modal-card member-view-modal-card msk-form-modal-card\">\n";
-        echo "    <div class=\"modal-head\">\n";
-        echo "      <div class=\"modal-title\" data-msk-edit-title>Edit Peserta MSK</div>\n";
-        echo "      <button class=\"btn tiny ghost\" type=\"button\" data-msk-edit-close>&times;</button>\n";
-        echo "    </div>\n";
-        echo "    <div class=\"modal-body msk-form-modal-body\" data-msk-edit-body>\n";
-        echo "      <div class=\"panel-note msk-modal-empty-state\">Pilih tombol Edit pada baris peserta untuk membuka form edit peserta MSK.</div>\n";
-        echo "    </div>\n";
-        echo "  </div>\n";
-        echo "</div>\n";
+        echo view('partials.modal', [
+            'id' => 'msk-edit-modal',
+            'size' => 'standard',
+            'modalAttrs' => [
+                'data-msk-edit-modal' => true,
+                'data-msk-edit-auto-open' => $autoOpenEditParticipantId,
+            ],
+            'cardClass' => 'member-view-modal-card msk-form-modal-card',
+            'title' => 'Edit Peserta MSK',
+            'titleAttrs' => ['data-msk-edit-title' => true],
+            'closeAttrs' => ['data-msk-edit-close' => true],
+            'bodyClass' => 'msk-form-modal-body',
+            'bodyAttrs' => ['data-msk-edit-body' => true],
+            'bodyHtml' => '<div class="panel-note msk-modal-empty-state">Pilih tombol Edit pada baris peserta untuk membuka form edit peserta MSK.</div>',
+        ])->render();
     }
 
     page_footer();
