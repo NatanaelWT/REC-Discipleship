@@ -5146,6 +5146,68 @@ textarea {
   background: linear-gradient(135deg, #db5a4a, #bb2f2f);
 }
 
+.tree-v2-profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.tree-v2-profile-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  min-width: 128px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.1;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+  white-space: nowrap;
+}
+
+.tree-v2-profile-action .icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+}
+
+.tree-v2-profile-action:hover:not(:disabled),
+.tree-v2-profile-action:focus-visible:not(:disabled) {
+  transform: translateY(-1px);
+  color: #ffffff;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.16);
+}
+
+.tree-v2-profile-action.is-add {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #111827;
+}
+
+.tree-v2-profile-action.is-add:hover:not(:disabled),
+.tree-v2-profile-action.is-add:focus-visible:not(:disabled) {
+  color: #111827;
+}
+
+.tree-v2-profile-action.is-edit {
+  background: linear-gradient(135deg, #0f766e, #155e75);
+}
+
+.tree-v2-profile-action.is-leave {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+
+.tree-v2-profile-action.is-delete {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+}
+
 .page-discipleship-people-list .discipleship-list-card.table-card-plain {
   flex: 0 0 auto;
   min-height: auto;
@@ -5199,6 +5261,24 @@ textarea {
   .tree-v2-action-modal-card .tree-v2-action-buttons .btn {
     flex-basis: 100%;
     min-width: 0;
+  }
+
+  .tree-v2-profile-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .tree-v2-profile-action {
+    min-width: 0;
+    width: 100%;
+    padding-inline: 10px;
+  }
+}
+
+@media (max-width: 420px) {
+  .tree-v2-profile-actions {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

@@ -400,12 +400,13 @@ if ($page === 'people_tree') {
 
     $treePersonProfileFooterHtml = '';
     if (!$centralReadOnly) {
-        $treePersonProfileFooterHtml .= '<button class="btn tiny secondary" type="button" data-tree-v2-profile-action="add_group">Tambah Kelompok</button>';
-        $treePersonProfileFooterHtml .= '<button class="btn tiny" type="button" data-tree-v2-profile-action="edit_person">Edit Orang</button>';
-        $treePersonProfileFooterHtml .= '<button class="btn tiny danger" type="button" data-tree-v2-profile-action="leave_group">Keluar DG</button>';
-        $treePersonProfileFooterHtml .= '<button class="btn tiny danger" type="button" data-tree-v2-profile-action="delete_person">Hapus Anggota</button>';
+        $treePersonProfileFooterHtml .= '<div class="tree-v2-profile-actions">';
+        $treePersonProfileFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-add" type="button" data-tree-v2-profile-action="add_group">'.icon_svg('plus').'<span>Tambah Kelompok</span></button>';
+        $treePersonProfileFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-edit" type="button" data-tree-v2-profile-action="edit_person">'.icon_svg('edit').'<span>Edit Orang</span></button>';
+        $treePersonProfileFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-leave" type="button" data-tree-v2-profile-action="leave_group">'.icon_svg('exit').'<span>Keluar DG</span></button>';
+        $treePersonProfileFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-delete" type="button" data-tree-v2-profile-action="delete_person">'.icon_svg('trash').'<span>Hapus Anggota</span></button>';
+        $treePersonProfileFooterHtml .= '</div>';
     }
-    $treePersonProfileFooterHtml .= '<button class="btn tiny ghost" type="button" data-tree-v2-person-profile-close>Tutup</button>';
     echo view('partials.modal', [
         'id' => 'tree-v2-person-profile-modal',
         'size' => 'standard',
