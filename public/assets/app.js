@@ -2713,7 +2713,6 @@
       const editPersonProxy = document.querySelector('[data-tree-v2-proxy="edit-person"]');
       const addGroupProxy = document.querySelector('[data-tree-v2-proxy="add-group"]');
       const viewHistoryProxy = document.querySelector('[data-tree-v2-proxy="view-history"]');
-      const viewPersonJourneyProxy = document.querySelector('[data-tree-v2-proxy="view-person-journey"]');
       const leaveGroupForm = document.querySelector('[data-tree-v2-leave-form]');
       const deletePersonForm = document.querySelector('[data-tree-v2-delete-person-form]');
       const completeGroupForm = document.querySelector('[data-tree-v2-complete-group-form]');
@@ -2805,7 +2804,6 @@
         const canAddGroup = isPerson && !nodeData.isRoot;
         const canEditPerson = isPerson && !nodeData.isRoot;
         const canDeletePerson = isPerson && !nodeData.isRoot && nodeData.personId !== '';
-        const canViewPersonJourney = isPerson && !nodeData.isRoot && nodeData.personId !== '';
         const canLeaveGroup = isPerson
           && !nodeData.isRoot
           && currentGroupId !== ''
@@ -2829,13 +2827,12 @@
           && nodeData.groupId !== ''
           && isActiveGroup
           && String(nodeData.progress || '').trim() !== 'DG 3';
-        const hasAnyAction = canViewHistory || canAddGroup || canEditPerson || canDeletePerson || canViewPersonJourney || canLeaveGroup || canAddMember || canCompleteGroup || canReactivateGroup || canUpgradeGroup;
+        const hasAnyAction = canViewHistory || canAddGroup || canEditPerson || canDeletePerson || canLeaveGroup || canAddMember || canCompleteGroup || canReactivateGroup || canUpgradeGroup;
 
         setActionVisible('view_history', canViewHistory);
         setActionVisible('add_group', canAddGroup);
         setActionVisible('edit_person', canEditPerson);
         setActionVisible('delete_person', canDeletePerson);
-        setActionVisible('view_person_journey', canViewPersonJourney);
         setActionVisible('leave_group', canLeaveGroup);
         setActionVisible('add_member', canAddMember);
         setActionVisible('complete_group', canCompleteGroup);
@@ -2961,12 +2958,6 @@
           if (idInput) idInput.value = activeNodeData.groupId || '';
           closeActionModal();
           completeGroupForm.submit();
-          return;
-        }
-
-        if (actionName === 'view_person_journey' && viewPersonJourneyProxy) {
-          viewPersonJourneyProxy.setAttribute('data-spiritual-journey-view-open', activeNodeData.personId || '');
-          clickProxy(viewPersonJourneyProxy);
           return;
         }
 

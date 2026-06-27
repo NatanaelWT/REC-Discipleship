@@ -40,6 +40,9 @@ class PeopleTreePageTest extends TestCase
         $response->assertSee('Leader Test');
         $response->assertSee('Anggota Test');
         $response->assertDontSee('?page=people_tree', false);
+        $response->assertDontSee('Lihat Riwayat Pemuridan');
+        $response->assertDontSee('spiritual-journey-view-modal', false);
+        $response->assertDontSee('data-tree-v2-proxy="view-person-journey"', false);
     }
 
     public function test_central_all_branch_tree_renders_people_from_every_branch(): void

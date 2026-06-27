@@ -863,29 +863,6 @@ if ($page === 'people_tree') {
         'bodyAttrs' => ['data-tree-v2-history-body' => true],
         'bodyHtml' => '<div class="journey-history-empty">Riwayat kelompok belum tersedia.</div>',
     ])->render();
-    echo "<div class=\"is-hidden\" data-spiritual-journey-view-templates>\n";
-    foreach ($treePersonJourneyViews as $templateId => $templateData) {
-        $templateTitle = trim((string) ($templateData['title'] ?? 'Riwayat Pemuridan'));
-        if ($templateTitle === '') {
-            $templateTitle = 'Riwayat Pemuridan';
-        }
-        $templateContent = (string) ($templateData['content'] ?? '');
-        echo "<template data-spiritual-journey-view-template=\"" . h($templateId) . "\" data-spiritual-journey-view-template-title=\"" . h($templateTitle) . "\">" . $templateContent . "</template>\n";
-    }
-    echo "</div>\n";
-    echo view('partials.modal', [
-        'id' => 'spiritual-journey-view-modal',
-        'size' => 'standard',
-        'modalAttrs' => ['data-spiritual-journey-view-modal' => true],
-        'cardClass' => 'member-view-modal-card msk-view-modal-card',
-        'title' => 'Riwayat Pemuridan',
-        'titleAttrs' => ['data-spiritual-journey-view-title' => true],
-        'closeAttrs' => ['data-spiritual-journey-view-close' => true],
-        'bodyAttrs' => ['data-spiritual-journey-view-body' => true],
-        'bodyHtml' => '<div class="panel-note">Klik tombol riwayat pemuridan untuk membuka detail perjalanan orang ini.</div>',
-        'footerHtml' => '<button class="btn ghost" type="button" data-spiritual-journey-view-close>Tutup</button>',
-    ])->render();
-
     if (!$centralReadOnly) {
         ob_start();
         echo "      <form method=\"post\" action=\"" . h($peopleTreeSavePersonUrl) . "\" class=\"modal-form\" data-modal-form=\"add\">\n";
@@ -1195,7 +1172,6 @@ if ($page === 'people_tree') {
                 .'<button class="btn" type="button" data-tree-v2-action-do="add_group">Tambah Kelompok</button>'
                 .'<button class="btn" type="button" data-tree-v2-action-do="add_member">Tambah Anggota</button>'
                 .'<button class="btn" type="button" data-tree-v2-action-do="edit_person">Edit Orang</button>'
-                .'<button class="btn ghost" type="button" data-tree-v2-action-do="view_person_journey">Lihat Riwayat Pemuridan</button>'
                 .'<button class="btn danger" type="button" data-tree-v2-action-do="leave_group">Keluar dari DG Ini</button>'
                 .'<button class="btn danger" type="button" data-tree-v2-action-do="delete_person">Hapus Data Anggota</button>'
                 .'<button class="btn secondary" type="button" data-tree-v2-action-do="complete_group">Tandai DG Selesai</button>'
@@ -1208,7 +1184,6 @@ if ($page === 'people_tree') {
         echo "<button class=\"is-hidden\" type=\"button\" data-tree-v2-proxy=\"edit-person\" data-modal-open=\"edit\"></button>\n";
         echo "<button class=\"is-hidden\" type=\"button\" data-tree-v2-proxy=\"add-group\" data-group-open=\"add\"></button>\n";
         echo "<button class=\"is-hidden\" type=\"button\" data-tree-v2-proxy=\"view-history\" data-tree-v2-history-open=\"\"></button>\n";
-        echo "<button class=\"is-hidden\" type=\"button\" data-tree-v2-proxy=\"view-person-journey\" data-spiritual-journey-view-open=\"\"></button>\n";
         echo "<form method=\"post\" action=\"" . h($peopleTreeLeaveGroupUrl) . "\" class=\"is-hidden\" data-tree-v2-leave-form>\n";
         echo "  " . csrf_field() . "\n";
         echo "  <input type=\"hidden\" name=\"action\" value=\"leave_person_group\">\n";
