@@ -44,7 +44,7 @@
   <td>{!! $statusBadge !!}</td>
   <td>{!! $waHtml !!}</td>
   <td class="actions">
-    <button class="btn tiny secondary icon-btn" type="button" data-msk-view-open="{{ $participantId }}" data-msk-view-href="{{ $viewHref }}" aria-label="Lihat" title="Lihat">{{ icon_svg('eye') }}</button>
+    <button class="btn tiny secondary icon-btn" type="button" data-msk-view-open="{{ $participantId }}" data-msk-view-href="{{ $viewHref }}" aria-label="Lihat" title="Lihat">{!! icon_svg('eye') !!}</button>
     @if (! $centralReadOnly)
       @php
           $toggleAction = $participantStatus === 'inactive' ? 'reactivate_msk_participant' : 'delete_msk_participant';
@@ -57,7 +57,7 @@
           $toggleClass = $participantStatus === 'inactive' ? 'btn tiny secondary icon-btn' : 'btn tiny danger icon-btn';
           $toggleIcon = $participantStatus === 'inactive' ? icon_svg('check') : icon_svg('trash');
       @endphp
-      <button class="btn tiny icon-btn" type="button" data-msk-edit-open="{{ $participantId }}" data-msk-edit-href="{{ $editHref }}" aria-label="Edit" title="Edit">{{ icon_svg('edit') }}</button>
+      <button class="btn tiny icon-btn" type="button" data-msk-edit-open="{{ $participantId }}" data-msk-edit-href="{{ $editHref }}" aria-label="Edit" title="Edit">{!! icon_svg('edit') !!}</button>
       <form method="post" action="{{ $toggleRoute }}" class="inline" onsubmit="return confirm('{{ $toggleConfirm }}');">
         @csrf
         <input type="hidden" name="action" value="{{ $toggleAction }}">
