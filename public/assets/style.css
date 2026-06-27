@@ -5183,9 +5183,7 @@ textarea {
 .page-spiritual_journey .table-card-plain .table-wrap,
 .app-page.is-central-readonly.page-spiritual_journey .table-card-plain .table-wrap,
 .page-dg_reports_recap .dg-recap-section-card > .table-wrap,
-.app-page.is-central-readonly.page-dg_reports_recap .dg-recap-section-card > .table-wrap,
-.page-msk_classes .table-card-plain .table-wrap,
-.app-page.is-central-readonly.page-msk_classes .table-card-plain .table-wrap {
+.app-page.is-central-readonly.page-dg_reports_recap .dg-recap-section-card > .table-wrap {
   flex: 0 0 auto;
   min-height: 0 !important;
   height: auto !important;
@@ -9273,6 +9271,45 @@ textarea:focus-visible {
   vertical-align: middle;
 }
 
+#msk-table {
+  min-width: 980px;
+}
+
+#msk-table th:nth-child(1),
+#msk-table td:nth-child(1) {
+  width: 22%;
+}
+
+#msk-table th:nth-child(2),
+#msk-table td:nth-child(2) {
+  width: 16%;
+}
+
+#msk-table th:nth-child(3),
+#msk-table td:nth-child(3) {
+  width: 23%;
+}
+
+#msk-table th:nth-child(4),
+#msk-table td:nth-child(4) {
+  width: 12%;
+}
+
+#msk-table th:nth-child(5),
+#msk-table td:nth-child(5) {
+  width: 14%;
+}
+
+#msk-table th:nth-child(6),
+#msk-table td:nth-child(6) {
+  width: 13%;
+}
+
+.page-msk_classes .table-card-plain .table-wrap,
+.app-page.is-central-readonly.page-msk_classes .table-card-plain .table-wrap {
+  overflow: auto !important;
+}
+
 .dashboard-main-hero-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
@@ -10693,11 +10730,22 @@ button.member-feedback-recap-count-pill:focus-visible {
   flex-direction: column;
   gap: 3px;
   font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
 }
 
 .msk-wa-link span {
   color: #0f172a;
   font-weight: 700;
+}
+
+#msk-table td.actions,
+#msk-table th.actions-head {
+  min-width: 148px;
+}
+
+#msk-table td.actions > * {
+  margin-right: 6px;
 }
 
 .people-export-button {
