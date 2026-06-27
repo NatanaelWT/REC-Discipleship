@@ -16,7 +16,7 @@
   --discipleship-dg2: #7c3aed;
   --discipleship-dg3: #dc2626;
   --modal-max-height: 80dvh;
-  --modal-standard-width: 960px;
+  --modal-standard-width: 840px;
   --modal-wide-width: 1080px;
   --modal-media-width: 960px;
   --modal-compact-width: 540px;
@@ -5257,7 +5257,6 @@ textarea {
   background: #ffffff;
   border-radius: 14px;
   width: min(var(--modal-card-width), 92vw);
-  height: var(--modal-max-height);
   max-height: var(--modal-max-height);
   overflow: hidden;
   display: flex;
@@ -5274,6 +5273,7 @@ textarea {
 .modal-card--wide {
   --modal-card-width: var(--modal-wide-width);
   width: min(var(--modal-card-width), 94vw);
+  height: min(var(--modal-max-height), 860px);
 }
 
 .modal-card--media {
@@ -5316,15 +5316,19 @@ textarea {
 
 .modal-body {
   margin-top: 0;
-  padding: 12px 16px 16px;
+  padding: 16px;
   overflow: auto;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
+}
+
+.modal-card--wide .modal-body {
+  flex: 1 1 auto;
 }
 
 .modal-form {
   display: grid;
-  gap: 10px;
+  gap: 14px;
 }
 
 .modal-field {
@@ -5340,6 +5344,12 @@ textarea {
   gap: 8px;
   justify-content: flex-end;
   flex-wrap: wrap;
+}
+
+.modal-footer {
+  padding: 12px 16px 16px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(248, 250, 252, 0.92);
 }
 
 .modal-note {

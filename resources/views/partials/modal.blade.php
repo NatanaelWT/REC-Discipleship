@@ -79,7 +79,7 @@
       {!! $modalBodyHtml !!}
     </div>
     @if ($modalFooterHtml !== '')
-      <div class="modal-actions">
+      <div class="modal-actions modal-footer">
         {!! $modalFooterHtml !!}
       </div>
     @endif
