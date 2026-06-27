@@ -13,10 +13,15 @@ class RejectLegacyPageQuery
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->query->has('page')) {
+        if ($request->query->has('page') && ! $this->allowsPageQuery($request)) {
             abort(404);
         }
 
         return $next($request);
+    }
+
+    private function allowsPageQuery(Request $request): bool
+    {
+        return $request->is('pemuridan/anggota/rows');
     }
 }

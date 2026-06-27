@@ -332,7 +332,7 @@ class DiscipleshipPeopleListTest extends TestCase
             ->assertSee('Terakhir menyelesaikan DG 2');
     }
 
-    public function test_people_list_renders_all_rows_without_pagination_and_uses_live_search(): void
+    public function test_people_list_lazy_loads_rows_and_ajax_searches_server_side(): void
     {
         $this->createDiscipleshipTables();
         $rows = [];
@@ -367,19 +367,43 @@ class DiscipleshipPeopleListTest extends TestCase
         foreach (array_chunk($participantRows, 200) as $chunk) {
             DB::table('discipleship_group_people')->insert($chunk);
         }
+        $otherBranchPersonId = DB::table('discipleship_people')->insertGetId([
+            'branch_id' => 2,
+            'full_name' => 'Peserta 1000 Rahasia',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            'branch_id' => 2,
+            'discipleship_group_id' => 2,
+            'person_id' => $otherBranchPersonId,
+            'role' => 'member',
+            'stage' => 'DG 1',
+            'status' => 'active',
+            'started_on' => '2026-01-01',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         $this->actingAsRecUser();
         $queries = 0;
         DB::listen(static function () use (&$queries): void {
             $queries++;
         });
 
-        $response = $this->get('/pemuridan/anggota?q=Peserta+1000');
+        $response = $this->get('/pemuridan/anggota');
 
         $response->assertOk()
             ->assertSee('Peserta 0001')
-            ->assertSee('Peserta 0500')
-            ->assertSee('Peserta 1000')
-            ->assertSee('value="peserta 1000"', false)
+            ->assertSee('Peserta 0050')
+            ->assertDontSee('Peserta 0051')
+            ->assertDontSee('Peserta 1000')
+            ->assertDontSee('Peserta 1000 Rahasia')
+            ->assertSee('data-discipleship-people-list', false)
+            ->assertSee('data-rows-url="'.route('discipleship.people-list.rows').'"', false)
+            ->assertSee('data-per-page="50"', false)
+            ->assertSee('data-next-page="2"', false)
+            ->assertSee('data-people-stat="total">1000</strong>', false)
             ->assertSee('data-discipleship-people-search-form', false)
             ->assertSee('data-discipleship-people-search-input', false)
             ->assertSee('data-discipleship-people-search-row', false)
@@ -389,10 +413,30 @@ class DiscipleshipPeopleListTest extends TestCase
             ->assertDontSee('type="submit">Cari</button>', false);
         $this->assertLessThanOrEqual(10, $queries);
 
-        $this->get('/pemuridan/anggota?per_page=500')
-            ->assertOk()
-            ->assertSee('Peserta 1000')
-            ->assertDontSee('rec-pagination', false);
+        $pageTwo = $this->getJson('/pemuridan/anggota/rows?page=2');
+        $pageTwo->assertOk()
+            ->assertJsonPath('has_more', true)
+            ->assertJsonPath('next_page', 3)
+            ->assertJsonPath('stats.total', 1000);
+        $this->assertStringContainsString('Peserta 0051', (string) $pageTwo->json('html'));
+        $this->assertStringContainsString('Peserta 0100', (string) $pageTwo->json('html'));
+        $this->assertStringNotContainsString('Peserta 0050', (string) $pageTwo->json('html'));
+        $this->assertStringNotContainsString('Peserta 0101', (string) $pageTwo->json('html'));
+
+        $search = $this->getJson('/pemuridan/anggota/rows?q=Peserta+1000');
+        $search->assertOk()
+            ->assertJsonPath('has_more', false)
+            ->assertJsonPath('next_page', null)
+            ->assertJsonPath('stats.total', 1)
+            ->assertJsonPath('stats.dg1', 1);
+        $this->assertStringContainsString('Peserta 1000', (string) $search->json('html'));
+        $this->assertStringNotContainsString('Peserta 0001', (string) $search->json('html'));
+        $this->assertStringNotContainsString('Peserta 1000 Rahasia', (string) $search->json('html'));
+
+        $largePage = $this->getJson('/pemuridan/anggota/rows?per_page=500');
+        $largePage->assertOk()->assertJsonPath('next_page', 2);
+        $this->assertStringContainsString('Peserta 0100', (string) $largePage->json('html'));
+        $this->assertStringNotContainsString('Peserta 0101', (string) $largePage->json('html'));
     }
 
     public function test_people_list_exports_filtered_rows_to_a_valid_excel_file(): void

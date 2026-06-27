@@ -4,7 +4,7 @@
 
 <div class="discipleship-page-header__control-group">
   <div class="discipleship-page-header__filter">
-    <select name="progress" class="search people-status-filter" aria-label="Filter status progress anggota DG" onchange="this.form.submit()">
+    <select name="progress" class="search people-status-filter" aria-label="Filter status progress anggota DG" data-discipleship-people-progress-input>
       <option value="all" @selected($peopleProgressFilter === 'all')>Semua Peserta</option>
       <option value="active_dg1" @selected($peopleProgressFilter === 'active_dg1')>Sedang DG 1</option>
       <option value="complete_dg1" @selected($peopleProgressFilter === 'complete_dg1')>Selesai DG 1</option>

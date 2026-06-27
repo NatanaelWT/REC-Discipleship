@@ -413,6 +413,249 @@
       filterRows();
     };
 
+    const setupDiscipleshipPeopleList = () => {
+      const root = document.querySelector('[data-discipleship-people-list]');
+      const form = document.querySelector('[data-discipleship-people-search-form]');
+      if (!root || !form) {
+        return;
+      }
+
+      const input = form.querySelector('[data-discipleship-people-search-input]');
+      const progressInput = form.querySelector('[data-discipleship-people-progress-input]');
+      const scrollArea = root.querySelector('[data-discipleship-people-scroll]');
+      const body = root.querySelector('[data-discipleship-people-list-body]');
+      const emptyRow = root.querySelector('[data-discipleship-people-search-empty]');
+      const loadingRow = root.querySelector('[data-discipleship-people-loading]');
+      const rowsUrl = root.getAttribute('data-rows-url') || '';
+      if (!input || !body || !rowsUrl) {
+        return;
+      }
+
+      const statNodes = {
+        total: document.querySelector('[data-people-stat="total"]'),
+        dg1: document.querySelector('[data-people-stat="dg1"]'),
+        dg2: document.querySelector('[data-people-stat="dg2"]'),
+        dg3: document.querySelector('[data-people-stat="dg3"]')
+      };
+      let hasMore = root.getAttribute('data-has-more') === '1';
+      let nextPage = parseInt(root.getAttribute('data-next-page') || '0', 10) || null;
+      const perPage = parseInt(root.getAttribute('data-per-page') || '50', 10) || 50;
+      let activeController = null;
+      let requestSeq = 0;
+      let isLoading = false;
+      let searchTimer = null;
+
+      const currentQuery = () => String(input.value || '').trim();
+      const currentProgress = () => String(progressInput ? progressInput.value : 'all').trim() || 'all';
+
+      const updateStats = (stats) => {
+        if (!stats || typeof stats !== 'object') {
+          return;
+        }
+        Object.keys(statNodes).forEach((key) => {
+          if (statNodes[key] && Object.prototype.hasOwnProperty.call(stats, key)) {
+            statNodes[key].textContent = String(stats[key] ?? 0);
+          }
+        });
+      };
+
+      const setLoading = (value) => {
+        if (loadingRow) {
+          loadingRow.hidden = !value;
+        }
+      };
+
+      const visibleRowCount = () => body.querySelectorAll('[data-discipleship-people-search-row]').length;
+
+      const setEmptyState = (message) => {
+        if (!emptyRow) {
+          return;
+        }
+        const cell = emptyRow.querySelector('td');
+        if (cell && message) {
+          cell.textContent = message;
+        }
+        emptyRow.hidden = visibleRowCount() !== 0;
+      };
+
+      const clearRows = () => {
+        body.querySelectorAll('[data-discipleship-people-search-row]').forEach((row) => {
+          row.remove();
+        });
+      };
+
+      const insertRows = (html) => {
+        const anchor = loadingRow || emptyRow;
+        const content = String(html || '').trim();
+        if (content === '') {
+          return;
+        }
+        if (anchor) {
+          anchor.insertAdjacentHTML('beforebegin', content);
+        } else {
+          body.insertAdjacentHTML('beforeend', content);
+        }
+      };
+
+      const syncUrl = () => {
+        if (!window.history || typeof window.history.replaceState !== 'function') {
+          return;
+        }
+        const url = new URL(window.location.href);
+        const query = currentQuery();
+        const progress = currentProgress();
+        if (query) {
+          url.searchParams.set('q', query);
+        } else {
+          url.searchParams.delete('q');
+        }
+        if (progress !== 'all') {
+          url.searchParams.set('progress', progress);
+        } else {
+          url.searchParams.delete('progress');
+        }
+        url.searchParams.delete('page');
+        url.searchParams.delete('per_page');
+        window.history.replaceState(window.history.state, '', url.toString());
+      };
+
+      const buildRowsUrl = (page) => {
+        const url = new URL(rowsUrl, window.location.origin);
+        const branchInput = form.querySelector('input[name="branch_id"]');
+        const query = currentQuery();
+        if (query) {
+          url.searchParams.set('q', query);
+        }
+        url.searchParams.set('progress', currentProgress());
+        url.searchParams.set('page', String(page));
+        url.searchParams.set('per_page', String(perPage));
+        url.searchParams.set('stats', '1');
+        if (branchInput && String(branchInput.value || '').trim() !== '') {
+          url.searchParams.set('branch_id', String(branchInput.value).trim());
+        }
+
+        return url;
+      };
+
+      const applyResult = (data, mode) => {
+        if (mode === 'replace') {
+          clearRows();
+        }
+        insertRows(data && data.html);
+        hasMore = Boolean(data && data.has_more);
+        nextPage = hasMore ? (parseInt(String(data.next_page || ''), 10) || null) : null;
+        root.setAttribute('data-has-more', hasMore ? '1' : '0');
+        root.setAttribute('data-next-page', nextPage ? String(nextPage) : '');
+        updateStats(data ? data.stats : null);
+        setEmptyState(data ? data.empty_message : 'Peserta tidak ditemukan.');
+        scheduleViewportTableHeights();
+      };
+
+      const loadPage = (page, mode) => {
+        if (mode === 'append' && (!hasMore || !nextPage || isLoading)) {
+          return;
+        }
+        if (activeController) {
+          activeController.abort();
+        }
+        activeController = new AbortController();
+        const requestId = ++requestSeq;
+        isLoading = true;
+        setLoading(true);
+        window.fetch(buildRowsUrl(page).toString(), {
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          signal: activeController.signal
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error('Gagal memuat daftar anggota DG.');
+            }
+
+            return response.json();
+          })
+          .then((data) => {
+            if (requestId !== requestSeq) {
+              return;
+            }
+            applyResult(data, mode);
+          })
+          .catch((error) => {
+            if (error && error.name === 'AbortError') {
+              return;
+            }
+            if (mode === 'replace') {
+              clearRows();
+              setEmptyState('Data anggota DG gagal dimuat.');
+            }
+          })
+          .finally(() => {
+            if (requestId !== requestSeq) {
+              return;
+            }
+            isLoading = false;
+            setLoading(false);
+          });
+      };
+
+      const scheduleSearch = () => {
+        if (searchTimer !== null) {
+          window.clearTimeout(searchTimer);
+        }
+        searchTimer = window.setTimeout(() => {
+          searchTimer = null;
+          syncUrl();
+          loadPage(1, 'replace');
+        }, 250);
+      };
+
+      const nearBottom = () => {
+        if (scrollArea && scrollArea.scrollHeight > scrollArea.clientHeight) {
+          return scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 120;
+        }
+
+        return root.getBoundingClientRect().bottom <= (window.innerHeight || document.documentElement.clientHeight || 0) + 180;
+      };
+
+      const loadMoreIfNeeded = () => {
+        if (hasMore && nextPage && !isLoading && nearBottom()) {
+          loadPage(nextPage, 'append');
+        }
+      };
+
+      input.addEventListener('input', scheduleSearch);
+      if (progressInput) {
+        progressInput.addEventListener('change', () => {
+          if (searchTimer !== null) {
+            window.clearTimeout(searchTimer);
+            searchTimer = null;
+          }
+          syncUrl();
+          loadPage(1, 'replace');
+        });
+      }
+      form.addEventListener('submit', (event) => {
+        if (event.submitter && event.submitter.hasAttribute('data-live-search-external-submit')) {
+          return;
+        }
+        event.preventDefault();
+        if (searchTimer !== null) {
+          window.clearTimeout(searchTimer);
+          searchTimer = null;
+        }
+        syncUrl();
+        loadPage(1, 'replace');
+      });
+      if (scrollArea) {
+        scrollArea.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+      }
+      window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+      window.addEventListener('resize', loadMoreIfNeeded);
+      setEmptyState('Peserta tidak ditemukan.');
+    };
+
     initLiveTableSearch({
       formSelector: '[data-spiritual-journey-search-form]',
       inputSelector: '[data-spiritual-journey-search-input]',
@@ -425,12 +668,7 @@
       rowSelector: '[data-msk-search-row]',
       emptySelector: '[data-msk-search-empty]',
     });
-    initLiveTableSearch({
-      formSelector: '[data-discipleship-people-search-form]',
-      inputSelector: '[data-discipleship-people-search-input]',
-      rowSelector: '[data-discipleship-people-search-row]',
-      emptySelector: '[data-discipleship-people-search-empty]',
-    });
+    setupDiscipleshipPeopleList();
 
     const memberFeedbackGroupModal = document.querySelector('[data-member-feedback-group-modal]');
     if (memberFeedbackGroupModal) {

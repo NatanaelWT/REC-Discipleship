@@ -19,16 +19,9 @@ class DiscipleshipPeopleExportService
 
     public function export(ExportDiscipleshipPeopleRequest $request): BinaryFileResponse|RedirectResponse
     {
-        $data = $this->listData->forCurrentContext($request);
+        $data = $this->listData->allRowsForCurrentContext($request);
         $search = trim((string) $request->query('q', ''));
         $people = collect($data['people'] ?? []);
-        if ($search !== '') {
-            $needle = $this->lower($search);
-            $people = $people->filter(fn (array $row): bool => str_contains(
-                $this->lower((string) ($row['name'] ?? '')),
-                $needle,
-            ))->values();
-        }
 
         $headers = ['No.', 'Nama', 'Cabang', 'Peran', 'DG 1', 'DG 2', 'DG 3', 'Ringkasan Progress'];
         $rows = $people->values()->map(function (array $row, int $index): array {
@@ -132,8 +125,4 @@ class DiscipleshipPeopleExportService
         return $params;
     }
 
-    private function lower(string $value): string
-    {
-        return function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
-    }
 }

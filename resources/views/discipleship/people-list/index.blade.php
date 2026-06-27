@@ -35,76 +35,27 @@
         ],
     ])
 
-    <section class="card discipleship-list-card table-card-plain" id="discipleship-people-list">
-      <div class="table-wrap">
+    <section
+      class="card discipleship-list-card table-card-plain"
+      id="discipleship-people-list"
+      data-discipleship-people-list
+      data-rows-url="{{ route('discipleship.people-list.rows') }}"
+      data-page="{{ (int) ($peoplePage ?? 1) }}"
+      data-per-page="{{ (int) ($peoplePerPage ?? 50) }}"
+      data-has-more="{{ ! empty($hasMorePeopleRows) ? '1' : '0' }}"
+      data-next-page="{{ $nextPeoplePage ?? '' }}"
+    >
+      <div class="table-wrap" data-discipleship-people-scroll>
         <table class="table people-dashboard-table" id="people-dashboard-table">
           <thead><tr><th>Nama & Relasi</th><th>Peran</th><th>Progress DG</th></tr></thead>
-          <tbody>
-            @foreach ($people as $row)
-              @php
-                  $rowFilterState = trim((string) ($row['row_filter_state'] ?? 'none'));
-                  $rowProgressKey = trim((string) ($row['row_progress_key'] ?? 'none'));
-                  $name = trim((string) ($row['name'] ?? '-'));
-                  if ($name === '') {
-                      $name = '-';
-                  }
-                  $parentSummary = trim((string) ($row['parent_summary'] ?? 'Belum terhubung ke pembina'));
-                  if ($parentSummary === '') {
-                      $parentSummary = 'Belum terhubung ke pembina';
-                  }
-                  $roleLabel = trim((string) ($row['role_label'] ?? 'Anggota'));
-                  if ($roleLabel === '') {
-                      $roleLabel = 'Anggota';
-                  }
-                  $roleToneClass = trim((string) ($row['role_tone_class'] ?? 'is-member'));
-                  $roleSubtitle = trim((string) ($row['role_subtitle'] ?? 'Belum memiliki binaan langsung'));
-                  if ($roleSubtitle === '') {
-                      $roleSubtitle = 'Belum memiliki binaan langsung';
-                  }
-                  $progressSteps = is_array($row['progress_steps'] ?? null) ? $row['progress_steps'] : [];
-                  $progressSummary = trim((string) ($row['progress_summary'] ?? 'Belum memulai DG'));
-              @endphp
-              <tr data-people-filter="{{ $rowFilterState }}" data-people-progress="{{ $rowProgressKey }}" data-discipleship-people-search-row data-search-text="{{ $name }}">
-                <td>
-                  <div class="people-name-cell">
-                    <div class="people-name-main">{{ $name }}</div>
-                    <div class="people-name-sub">{{ $parentSummary }}</div>
-                  </div>
-                </td>
-                <td>
-                  <div class="people-role-cell">
-                    <span class="people-role-badge {{ $roleToneClass }}">{{ $roleLabel }}</span>
-                    <div class="people-role-sub">{{ $roleSubtitle }}</div>
-                  </div>
-                </td>
-                <td>
-                  <div class="people-progress-cell">
-                    <div class="people-progress-track" aria-label="{{ $progressSummary }}">
-                      @foreach ($progressSteps as $step)
-                        @php
-                            $stepState = trim((string) ($step['state'] ?? 'is-pending'));
-                            $stepLabel = trim((string) ($step['label'] ?? '-')) ?: '-';
-                            $stepStateLabel = trim((string) ($step['state_label'] ?? 'Belum')) ?: 'Belum';
-                        @endphp
-                        <span class="people-progress-step {{ $stepState }}">
-                          <span class="people-progress-step-marker" aria-hidden="true"></span>
-                          <span class="people-progress-step-copy">
-                            <strong>{{ $stepLabel }}</strong>
-                            <small>{{ $stepStateLabel }}</small>
-                          </span>
-                        </span>
-                      @endforeach
-                    </div>
-                    <span class="people-progress-summary">{{ $progressSummary }}</span>
-                  </div>
-                </td>
-              </tr>
-            @endforeach
-            @if ($filteredPeopleRows === 0)
-              <tr><td colspan="3">Belum ada data orang.</td></tr>
-            @else
-              <tr data-discipleship-people-search-empty hidden><td colspan="3" aria-live="polite">Peserta tidak ditemukan.</td></tr>
-            @endif
+          <tbody data-discipleship-people-list-body>
+            @include('discipleship.people-list.partials.rows', ['people' => $people])
+            <tr data-discipleship-people-search-empty @if ((int) $filteredPeopleRows !== 0) hidden @endif>
+              <td colspan="3" aria-live="polite">{{ $peopleEmptyMessage ?? 'Peserta tidak ditemukan.' }}</td>
+            </tr>
+            <tr data-discipleship-people-loading hidden>
+              <td colspan="3" aria-live="polite">Memuat peserta...</td>
+            </tr>
           </tbody>
         </table>
       </div>
