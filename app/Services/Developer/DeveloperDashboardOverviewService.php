@@ -37,7 +37,6 @@ class DeveloperDashboardOverviewService
             'recent_activities' => $this->recentActivities(),
             'attention_items' => $attentionItems,
             'access_snapshot' => $this->accessSnapshot(),
-            'quick_links' => $this->quickLinks(),
         ];
     }
 
@@ -100,7 +99,6 @@ class DeveloperDashboardOverviewService
             'page_views' => 0,
             'visitors' => 0,
             'sessions' => 0,
-            'active_now' => 0,
         ];
         $topPages = [];
 
@@ -112,10 +110,6 @@ class DeveloperDashboardOverviewService
                     'page_views' => (clone $human)->count(),
                     'visitors' => (clone $human)->distinct()->count('visitor_hash'),
                     'sessions' => (clone $human)->distinct()->count('session_id'),
-                    'active_now' => (clone $human)
-                        ->where('occurred_at', '>=', CarbonImmutable::now('UTC')->subMinutes(5))
-                        ->distinct()
-                        ->count('visitor_hash'),
                 ];
                 $topPages = (clone $human)
                     ->selectRaw("COALESCE(route_name, '') AS item_key, COALESCE(path, '') AS item_path, COUNT(*) AS aggregate_count")
@@ -130,7 +124,7 @@ class DeveloperDashboardOverviewService
                     ])
                     ->all();
             } catch (Throwable) {
-                $summary = ['page_views' => 0, 'visitors' => 0, 'sessions' => 0, 'active_now' => 0];
+                $summary = ['page_views' => 0, 'visitors' => 0, 'sessions' => 0];
                 $topPages = [];
             }
         }
@@ -141,7 +135,6 @@ class DeveloperDashboardOverviewService
                 ['label' => 'Page View', 'value' => $this->formatNumber((int) $summary['page_views']), 'note' => 'Kunjungan manusia 7 hari'],
                 ['label' => 'Pengunjung', 'value' => $this->formatNumber((int) $summary['visitors']), 'note' => 'Visitor unik'],
                 ['label' => 'Sesi', 'value' => $this->formatNumber((int) $summary['sessions']), 'note' => 'Sesi publik/login'],
-                ['label' => 'Aktif 5 Menit', 'value' => $this->formatNumber((int) $summary['active_now']), 'note' => 'Visitor aktif sekarang'],
             ],
             'top_pages' => $topPages,
         ];
@@ -253,17 +246,6 @@ class DeveloperDashboardOverviewService
                 ['label' => 'Cabang Pemuridan', 'value' => $this->formatNumber($raw['branches']), 'note' => 'Cabang aktif terpantau', 'tone' => 'is-violet', 'icon' => 'statistics'],
             ],
             'raw' => $raw,
-        ];
-    }
-
-    /** @return array<int, array<string, string>> */
-    private function quickLinks(): array
-    {
-        return [
-            ['label' => 'User', 'description' => 'Kelola akun, role, dan password.', 'icon' => 'users', 'href' => route('developer.users')],
-            ['label' => 'Config', 'description' => 'Atur identitas aplikasi dan runtime.', 'icon' => 'config', 'href' => route('developer.config')],
-            ['label' => 'Statistik', 'description' => 'Buka analitik publik lengkap.', 'icon' => 'statistics', 'href' => route('developer.statistics')],
-            ['label' => 'Aktivitas', 'description' => 'Telusuri audit request dan event.', 'icon' => 'activities', 'href' => route('developer.activities')],
         ];
     }
 

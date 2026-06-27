@@ -14,7 +14,6 @@
     $accessSnapshot = is_array($overview['access_snapshot'] ?? null) ? $overview['access_snapshot'] : [];
     $recentActivities = collect(is_array($overview['recent_activities'] ?? null) ? $overview['recent_activities'] : []);
     $attentionItems = collect(is_array($overview['attention_items'] ?? null) ? $overview['attention_items'] : []);
-    $quickLinks = collect(is_array($overview['quick_links'] ?? null) ? $overview['quick_links'] : []);
   @endphp
 
   @include('developer._header', [
@@ -148,20 +147,4 @@
     </section>
   </div>
 
-  <section class="card developer-panel developer-section-card">
-    <div class="developer-section-head">
-      <span class="developer-section-icon">@include('developer._icon', ['name' => 'dashboard'])</span>
-      <div><span class="developer-section-kicker">Navigasi</span><h2>Akses Cepat</h2><p>Buka alat developer utama tanpa kembali ke menu samping.</p></div>
-    </div>
-
-    <div class="developer-quick-link-grid">
-      @foreach ($quickLinks as $link)
-        <a class="developer-quick-link" href="{{ $link['href'] ?? '#' }}">
-          <span class="developer-metric-icon">@include('developer._icon', ['name' => $link['icon'] ?? 'dashboard'])</span>
-          <span><strong>{{ $link['label'] ?? '-' }}</strong><small>{{ $link['description'] ?? '' }}</small></span>
-          @include('developer._icon', ['name' => 'arrow-right'])
-        </a>
-      @endforeach
-    </div>
-  </section>
 @endsection
