@@ -12,7 +12,6 @@
       $groupRows = is_array($group_rows ?? null) ? $group_rows : [];
       $detailRows = is_array($detail_rows ?? null) ? $detail_rows : [];
       $filters = is_array($filters ?? null) ? $filters : [];
-      $totalRows = count($detailRows);
       $feedbackRowsByGroupSession = [];
       foreach ($detailRows as $detailRow) {
           $groupSessionKey = (string) ((int) ($detailRow['group_id'] ?? 0)).'-'.(string) ((int) ($detailRow['feedback_session'] ?? 0));
@@ -52,17 +51,6 @@
           ],
       ],
   ])
-
-  @if ($totalRows === 0)
-    <section class="card member-feedback-recap-empty">
-      <div>
-        <span class="member-feedback-recap-kicker">Belum Ada Data</span>
-        <h2>Belum ada jurnal umpan balik anggota pada scope ini.</h2>
-        <p>Bagikan form publik kepada anggota DG pada pertemuan 3 dan 12 agar rekap mulai terisi.</p>
-      </div>
-      <a class="btn secondary" href="{{ route('public.member-feedback.branch') }}">Buka Form Publik</a>
-    </section>
-  @endif
 
   <section class="card member-feedback-recap-group-card">
     <div class="member-feedback-recap-panel-head">

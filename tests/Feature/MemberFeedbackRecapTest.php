@@ -146,7 +146,8 @@ class MemberFeedbackRecapTest extends TestCase
 
         $this->get('/pemuridan/umpan-balik-anggota')
             ->assertOk()
-            ->assertSee('Belum ada jurnal umpan balik anggota pada scope ini.');
+            ->assertSee('Pengisi Feedback per Kelompok')
+            ->assertDontSee('Belum ada jurnal umpan balik anggota pada scope ini.');
 
         $payload = [
             'action' => 'save_public_member_feedback',

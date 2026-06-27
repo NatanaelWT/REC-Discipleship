@@ -9737,23 +9737,6 @@ textarea:focus-visible {
   min-width: 240px;
 }
 
-.member-feedback-recap-empty {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 22px 24px;
-}
-
-.member-feedback-recap-empty h2 {
-  margin: 6px 0;
-}
-
-.member-feedback-recap-empty p {
-  margin: 0;
-  color: #64748b;
-}
-
 .member-feedback-recap-kicker {
   color: #0f766e;
   font-size: 11px;
@@ -10582,7 +10565,6 @@ button.member-feedback-recap-count-pill:focus-visible {
     width: 100%;
   }
 
-  .member-feedback-recap-empty,
   .member-feedback-recap-panel-head,
   .member-feedback-recap-group-item {
     flex-direction: column;
