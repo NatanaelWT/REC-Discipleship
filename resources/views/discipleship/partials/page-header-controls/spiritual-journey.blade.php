@@ -3,7 +3,7 @@
 @endif
 
 <div class="discipleship-page-header__filter">
-  <select name="journey_filter" class="search journey-status-filter" aria-label="Filter spiritual journey" onchange="this.form.submit()">
+  <select name="journey_filter" class="search journey-status-filter" aria-label="Filter spiritual journey" data-spiritual-journey-filter-input>
     @foreach ($journeyFilterOptions as $filterValue => $filterLabel)
       <option value="{{ $filterValue }}" @selected($journeyFilter === $filterValue)>{{ $filterLabel }}</option>
     @endforeach

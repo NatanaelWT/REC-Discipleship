@@ -8,62 +8,116 @@ use App\Models\DiscipleshipPerson;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class DiscipleshipGroupIndexData
 {
+    private const DEFAULT_PER_PAGE = 50;
+
+    private const MAX_PER_PAGE = 100;
+
     public function __construct(private readonly CurrentDiscipleshipScope $scope) {}
 
     /** @return array<string, mixed> */
     public function forCurrentContext(Request $request): array
     {
-        $search = strtolower(trim((string) $request->query('q', '')));
-        $status = trim((string) $request->query('status', 'all'));
-        $base = DiscipleshipGroup::query()
+        return [
+            'settings' => ['church_name' => app_church_name()],
+            ...$this->paginatedRowsForCurrentContext($request),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function paginatedRowsForCurrentContext(Request $request): array
+    {
+        $search = $this->search($request);
+        $status = $this->statusFilter($request);
+        $page = $this->page($request);
+        $perPage = $this->perPage($request);
+        $query = $this->filteredGroupQuery($search, $status)
+            ->select(['id', 'branch_id', 'name', 'status', 'start_stage', 'current_stage', 'created_at'])
+            ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
+            ->orderBy('name')
+            ->orderBy('id');
+
+        $groups = $query
+            ->offset(($page - 1) * $perPage)
+            ->limit($perPage + 1)
+            ->get();
+        $hasMore = $groups->count() > $perPage;
+        if ($hasMore) {
+            $groups = $groups->slice(0, $perPage)->values();
+        }
+        $stats = $this->stats($search, $status);
+
+        return [
+            'groups' => $this->rows($groups)->all(),
+            'filteredGroupRows' => $stats['total'],
+            'totalGroupRows' => $stats['total'],
+            'groupsInDg1Count' => $stats['dg1'],
+            'groupsInDg2Count' => $stats['dg2'],
+            'groupsInDg3Count' => $stats['dg3'],
+            'groupsSearch' => $search,
+            'groupsStatusFilter' => $status,
+            'groupsPage' => $page,
+            'groupsPerPage' => $perPage,
+            'hasMoreGroupRows' => $hasMore,
+            'nextGroupPage' => $hasMore ? $page + 1 : null,
+            'groupsEmptyMessage' => $this->emptyMessage($search, $status),
+        ];
+    }
+
+    private function filteredGroupQuery(string $search, string $status): Builder
+    {
+        $query = DiscipleshipGroup::query()
             ->whereIn('branch_id', $this->scope->branchIds())
             ->whereExists(static function ($subquery): void {
                 $subquery->selectRaw('1')
                     ->from('discipleship_group_people as existing_gp')
-                    ->whereColumn('existing_gp.discipleship_group_id', 'discipleship_groups.id');
+                    ->whereColumn('existing_gp.discipleship_group_id', 'discipleship_groups.id')
+                    ->whereColumn('existing_gp.branch_id', 'discipleship_groups.branch_id');
             });
-        $stats = (clone $base)
-            ->selectRaw("COUNT(*) AS total,
-                SUM(CASE WHEN current_stage = 'DG 1' THEN 1 ELSE 0 END) AS dg1,
-                SUM(CASE WHEN current_stage = 'DG 2' THEN 1 ELSE 0 END) AS dg2,
-                SUM(CASE WHEN current_stage = 'DG 3' THEN 1 ELSE 0 END) AS dg3")
-            ->first();
 
-        $query = (clone $base)->select([
-            'id', 'branch_id', 'name', 'status', 'start_stage', 'current_stage', 'created_at',
-        ]);
         if ($status === 'active') {
             $query->where('status', $status);
         } elseif ($status === 'inactive') {
             $query->where('status', '!=', 'active');
-        } else {
-            $status = 'all';
         }
+
         if ($search !== '') {
             $query->where(function (Builder $builder) use ($search): void {
                 $builder->whereRaw('LOWER(name) LIKE ?', ['%'.$search.'%'])
+                    ->orWhereRaw('LOWER(start_stage) LIKE ?', ['%'.$search.'%'])
+                    ->orWhereRaw('LOWER(current_stage) LIKE ?', ['%'.$search.'%'])
                     ->orWhereExists(function ($subquery) use ($search): void {
                         $subquery->selectRaw('1')
                             ->from('discipleship_group_people as search_gp')
-                            ->join('discipleship_people as search_person', 'search_person.id', '=', 'search_gp.person_id')
+                            ->join('discipleship_people as search_person', function ($join): void {
+                                $join->on('search_person.id', '=', 'search_gp.person_id')
+                                    ->on('search_person.branch_id', '=', 'search_gp.branch_id');
+                            })
                             ->whereColumn('search_gp.discipleship_group_id', 'discipleship_groups.id')
+                            ->whereColumn('search_gp.branch_id', 'discipleship_groups.branch_id')
                             ->whereRaw('LOWER(search_person.full_name) LIKE ?', ['%'.$search.'%']);
                     });
             });
         }
 
-        $groups = $query->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
-            ->orderBy('name')
-            ->get();
+        return $query;
+    }
+
+    /**
+     * @param Collection<int, DiscipleshipGroup> $groups
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function rows(Collection $groups): Collection
+    {
         $groupIds = $groups->pluck('id')->map(static fn ($id): int => (int) $id)->all();
         $links = $this->groupPeople($groupIds);
         $people = $this->people($links->pluck('person_id')->filter()->unique()->all());
         $branchOptions = $this->scope->optionsById();
 
-        $rows = $groups->map(function (DiscipleshipGroup $group) use ($links, $people, $branchOptions): array {
+        return $groups->map(function (DiscipleshipGroup $group) use ($links, $people, $branchOptions): array {
             $groupLinks = $links->where('discipleship_group_id', $group->id);
             $isActiveGroup = strtolower((string) $group->status) === 'active';
             $activeLinks = $groupLinks
@@ -112,16 +166,23 @@ class DiscipleshipGroupIndexData
                 'member_count' => count($members),
             ];
         })->values();
+    }
+
+    /** @return array{total:int,dg1:int,dg2:int,dg3:int} */
+    private function stats(string $search, string $status): array
+    {
+        $row = $this->filteredGroupQuery($search, $status)
+            ->selectRaw("COUNT(*) AS total,
+                SUM(CASE WHEN current_stage = 'DG 1' THEN 1 ELSE 0 END) AS dg1,
+                SUM(CASE WHEN current_stage = 'DG 2' THEN 1 ELSE 0 END) AS dg2,
+                SUM(CASE WHEN current_stage = 'DG 3' THEN 1 ELSE 0 END) AS dg3")
+            ->first();
+
         return [
-            'settings' => ['church_name' => app_church_name()],
-            'groups' => $rows->all(),
-            'filteredGroupRows' => $rows->count(),
-            'totalGroupRows' => (int) ($stats->total ?? 0),
-            'groupsInDg1Count' => (int) ($stats->dg1 ?? 0),
-            'groupsInDg2Count' => (int) ($stats->dg2 ?? 0),
-            'groupsInDg3Count' => (int) ($stats->dg3 ?? 0),
-            'groupsSearch' => $search,
-            'groupsStatusFilter' => $status,
+            'total' => (int) ($row->total ?? 0),
+            'dg1' => (int) ($row->dg1 ?? 0),
+            'dg2' => (int) ($row->dg2 ?? 0),
+            'dg3' => (int) ($row->dg3 ?? 0),
         ];
     }
 
@@ -132,6 +193,7 @@ class DiscipleshipGroupIndexData
         }
 
         return DiscipleshipGroupPerson::query()
+            ->whereIn('branch_id', $this->scope->branchIds())
             ->whereIn('discipleship_group_id', $groupIds)
             ->get(['id', 'discipleship_group_id', 'person_id', 'role', 'status', 'ended_on']);
     }
@@ -144,8 +206,40 @@ class DiscipleshipGroupIndexData
 
         return DiscipleshipPerson::query()
             ->whereIn('id', $personIds)
+            ->whereIn('branch_id', $this->scope->branchIds())
             ->pluck('full_name', 'id')
             ->map(static fn ($name): string => trim((string) $name))
             ->all();
+    }
+
+    private function search(Request $request): string
+    {
+        $value = trim((string) $request->query('q', ''));
+
+        return function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
+    }
+
+    private function statusFilter(Request $request): string
+    {
+        $status = trim((string) $request->query('status', 'all'));
+
+        return in_array($status, ['all', 'active', 'inactive'], true) ? $status : 'all';
+    }
+
+    private function page(Request $request): int
+    {
+        return max(1, (int) $request->query('page', 1));
+    }
+
+    private function perPage(Request $request): int
+    {
+        return max(1, min(self::MAX_PER_PAGE, (int) $request->query('per_page', self::DEFAULT_PER_PAGE)));
+    }
+
+    private function emptyMessage(string $search, string $status): string
+    {
+        return $search !== '' || $status !== 'all'
+            ? 'Kelompok tidak ditemukan.'
+            : 'Belum ada kelompok.';
     }
 }

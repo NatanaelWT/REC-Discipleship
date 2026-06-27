@@ -357,6 +357,24 @@
       });
     });
 
+    const cssAttributeValue = (value) => {
+      const text = String(value || '');
+      if (window.CSS && typeof window.CSS.escape === 'function') {
+        return window.CSS.escape(text);
+      }
+
+      return text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    };
+
+    const queryTemplateByAttribute = (attribute, value) => {
+      const key = String(value || '').trim();
+      if (!key) {
+        return null;
+      }
+
+      return document.querySelector('template[' + attribute + '="' + cssAttributeValue(key) + '"]');
+    };
+
     const initLiveTableSearch = ({ formSelector, inputSelector, rowSelector, emptySelector }) => {
       const form = document.querySelector(formSelector);
       if (!form) {
@@ -656,19 +674,773 @@
       setEmptyState('Peserta tidak ditemukan.');
     };
 
-    initLiveTableSearch({
-      formSelector: '[data-spiritual-journey-search-form]',
-      inputSelector: '[data-spiritual-journey-search-input]',
-      rowSelector: '[data-spiritual-journey-search-row]',
-      emptySelector: '[data-spiritual-journey-search-empty]',
-    });
-    initLiveTableSearch({
-      formSelector: '[data-msk-search-form]',
-      inputSelector: '[data-msk-search-input]',
-      rowSelector: '[data-msk-search-row]',
-      emptySelector: '[data-msk-search-empty]',
-    });
+    const setupDiscipleshipGroupsList = () => {
+      const root = document.querySelector('[data-discipleship-groups-list]');
+      const form = document.querySelector('[data-discipleship-groups-search-form]');
+      if (!root || !form) {
+        return;
+      }
+
+      const input = form.querySelector('[data-discipleship-groups-search-input]');
+      const statusInput = form.querySelector('[data-discipleship-groups-status-input]');
+      const scrollArea = root.querySelector('[data-discipleship-groups-scroll]');
+      const body = root.querySelector('[data-discipleship-groups-list-body]');
+      const emptyRow = root.querySelector('[data-discipleship-groups-empty]');
+      const loadingRow = root.querySelector('[data-discipleship-groups-loading]');
+      const rowsUrl = root.getAttribute('data-rows-url') || '';
+      if (!input || !body || !rowsUrl) {
+        return;
+      }
+
+      const statNodes = {
+        total: document.querySelector('[data-groups-stat="total"]'),
+        dg1: document.querySelector('[data-groups-stat="dg1"]'),
+        dg2: document.querySelector('[data-groups-stat="dg2"]'),
+        dg3: document.querySelector('[data-groups-stat="dg3"]')
+      };
+      let hasMore = root.getAttribute('data-has-more') === '1';
+      let nextPage = parseInt(root.getAttribute('data-next-page') || '0', 10) || null;
+      const perPage = parseInt(root.getAttribute('data-per-page') || '50', 10) || 50;
+      let activeController = null;
+      let requestSeq = 0;
+      let isLoading = false;
+      let searchTimer = null;
+
+      const currentQuery = () => String(input.value || '').trim();
+      const currentStatus = () => String(statusInput ? statusInput.value : 'all').trim() || 'all';
+
+      const updateStats = (stats) => {
+        if (!stats || typeof stats !== 'object') {
+          return;
+        }
+        Object.keys(statNodes).forEach((key) => {
+          if (statNodes[key] && Object.prototype.hasOwnProperty.call(stats, key)) {
+            statNodes[key].textContent = String(stats[key] ?? 0);
+          }
+        });
+      };
+
+      const setLoading = (value) => {
+        if (loadingRow) {
+          loadingRow.hidden = !value;
+        }
+      };
+
+      const visibleRowCount = () => body.querySelectorAll('[data-discipleship-groups-row]').length;
+
+      const setEmptyState = (message) => {
+        if (!emptyRow) {
+          return;
+        }
+        const cell = emptyRow.querySelector('td');
+        if (cell && message) {
+          cell.textContent = message;
+        }
+        emptyRow.hidden = visibleRowCount() !== 0;
+      };
+
+      const clearRows = () => {
+        body.querySelectorAll('[data-discipleship-groups-row]').forEach((row) => {
+          row.remove();
+        });
+      };
+
+      const insertRows = (html) => {
+        const content = String(html || '').trim();
+        if (content === '') {
+          return;
+        }
+        const anchor = loadingRow || emptyRow;
+        if (anchor) {
+          anchor.insertAdjacentHTML('beforebegin', content);
+        } else {
+          body.insertAdjacentHTML('beforeend', content);
+        }
+      };
+
+      const syncUrl = () => {
+        if (!window.history || typeof window.history.replaceState !== 'function') {
+          return;
+        }
+        const url = new URL(window.location.href);
+        const query = currentQuery();
+        const status = currentStatus();
+        if (query) {
+          url.searchParams.set('q', query);
+        } else {
+          url.searchParams.delete('q');
+        }
+        if (status !== 'all') {
+          url.searchParams.set('status', status);
+        } else {
+          url.searchParams.delete('status');
+        }
+        url.searchParams.delete('page');
+        url.searchParams.delete('per_page');
+        window.history.replaceState(window.history.state, '', url.toString());
+      };
+
+      const buildRowsUrl = (page) => {
+        const url = new URL(rowsUrl, window.location.origin);
+        const branchInput = form.querySelector('input[name="branch_id"]');
+        const query = currentQuery();
+        if (query) {
+          url.searchParams.set('q', query);
+        }
+        url.searchParams.set('status', currentStatus());
+        url.searchParams.set('page', String(page));
+        url.searchParams.set('per_page', String(perPage));
+        if (branchInput && String(branchInput.value || '').trim() !== '') {
+          url.searchParams.set('branch_id', String(branchInput.value).trim());
+        }
+
+        return url;
+      };
+
+      const applyResult = (data, mode) => {
+        if (mode === 'replace') {
+          clearRows();
+        }
+        insertRows(data && data.html);
+        hasMore = Boolean(data && data.has_more);
+        nextPage = hasMore ? (parseInt(String(data.next_page || ''), 10) || null) : null;
+        root.setAttribute('data-has-more', hasMore ? '1' : '0');
+        root.setAttribute('data-next-page', nextPage ? String(nextPage) : '');
+        updateStats(data ? data.stats : null);
+        setEmptyState(data ? data.empty_message : 'Kelompok tidak ditemukan.');
+        scheduleViewportTableHeights();
+      };
+
+      const loadPage = (page, mode) => {
+        if (mode === 'append' && (!hasMore || !nextPage || isLoading)) {
+          return;
+        }
+        if (activeController) {
+          activeController.abort();
+        }
+        activeController = new AbortController();
+        const requestId = ++requestSeq;
+        isLoading = true;
+        setLoading(true);
+        window.fetch(buildRowsUrl(page).toString(), {
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          signal: activeController.signal
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error('Gagal memuat kelompok DG.');
+            }
+
+            return response.json();
+          })
+          .then((data) => {
+            if (requestId !== requestSeq) {
+              return;
+            }
+            applyResult(data, mode);
+          })
+          .catch((error) => {
+            if (error && error.name === 'AbortError') {
+              return;
+            }
+            if (mode === 'replace') {
+              clearRows();
+              setEmptyState('Data kelompok DG gagal dimuat.');
+            }
+          })
+          .finally(() => {
+            if (requestId !== requestSeq) {
+              return;
+            }
+            isLoading = false;
+            setLoading(false);
+          });
+      };
+
+      const scheduleSearch = () => {
+        if (searchTimer !== null) {
+          window.clearTimeout(searchTimer);
+        }
+        searchTimer = window.setTimeout(() => {
+          searchTimer = null;
+          syncUrl();
+          loadPage(1, 'replace');
+        }, 250);
+      };
+
+      const nearBottom = () => {
+        if (scrollArea && scrollArea.scrollHeight > scrollArea.clientHeight) {
+          return scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 120;
+        }
+
+        return root.getBoundingClientRect().bottom <= (window.innerHeight || document.documentElement.clientHeight || 0) + 180;
+      };
+
+      const loadMoreIfNeeded = () => {
+        if (hasMore && nextPage && !isLoading && nearBottom()) {
+          loadPage(nextPage, 'append');
+        }
+      };
+
+      input.addEventListener('input', scheduleSearch);
+      if (statusInput) {
+        statusInput.addEventListener('change', () => {
+          if (searchTimer !== null) {
+            window.clearTimeout(searchTimer);
+            searchTimer = null;
+          }
+          syncUrl();
+          loadPage(1, 'replace');
+        });
+      }
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (searchTimer !== null) {
+          window.clearTimeout(searchTimer);
+          searchTimer = null;
+        }
+        syncUrl();
+        loadPage(1, 'replace');
+      });
+      if (scrollArea) {
+        scrollArea.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+      }
+      window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+      window.addEventListener('resize', loadMoreIfNeeded);
+      setEmptyState('Kelompok tidak ditemukan.');
+    };
+
+    const setupMskList = () => {
+      const root = document.querySelector('[data-msk-list]');
+      const form = document.querySelector('[data-msk-search-form]');
+      if (!root || !form) {
+        return;
+      }
+
+      const input = form.querySelector('[data-msk-search-input]');
+      const batchInput = document.querySelector('[data-msk-batch-input]');
+      const scrollArea = root.querySelector('[data-msk-scroll]');
+      const body = root.querySelector('[data-msk-list-body]');
+      const emptyRow = root.querySelector('[data-msk-search-empty]');
+      const loadingRow = root.querySelector('[data-msk-loading]');
+      const rowsUrl = root.getAttribute('data-rows-url') || '';
+      if (!input || !body || !rowsUrl) {
+        return;
+      }
+
+      const statNodes = {
+        filter: document.querySelector('[data-msk-stat="filter"]'),
+        total: document.querySelector('[data-msk-stat="total"]'),
+        complete: document.querySelector('[data-msk-stat="complete"]'),
+        progress: document.querySelector('[data-msk-stat="progress"]')
+      };
+      let hasMore = root.getAttribute('data-has-more') === '1';
+      let nextPage = parseInt(root.getAttribute('data-next-page') || '0', 10) || null;
+      const perPage = parseInt(root.getAttribute('data-per-page') || '50', 10) || 50;
+      let activeController = null;
+      let requestSeq = 0;
+      let isLoading = false;
+      let searchTimer = null;
+
+      const currentQuery = () => String(input.value || '').trim();
+      const currentBatch = () => {
+        if (batchInput) {
+          return String(batchInput.value || '').trim() || 'all';
+        }
+        const hiddenBatch = form.querySelector('input[name="batch_month"]');
+
+        return hiddenBatch ? (String(hiddenBatch.value || '').trim() || 'all') : 'all';
+      };
+
+      const syncBatchHiddenInputs = () => {
+        const batch = currentBatch();
+        document.querySelectorAll('input[name="batch_month"]').forEach((node) => {
+          node.value = batch;
+        });
+      };
+
+      const syncSearchHiddenInputs = () => {
+        const query = currentQuery();
+        document.querySelectorAll('input[type="hidden"][name="q"]').forEach((node) => {
+          node.value = query;
+        });
+      };
+
+      const updateStats = (stats) => {
+        if (!stats || typeof stats !== 'object') {
+          return;
+        }
+        Object.keys(statNodes).forEach((key) => {
+          if (statNodes[key] && Object.prototype.hasOwnProperty.call(stats, key)) {
+            statNodes[key].textContent = String(stats[key] ?? 0);
+          }
+        });
+      };
+
+      const setLoading = (value) => {
+        if (loadingRow) {
+          loadingRow.hidden = !value;
+        }
+      };
+
+      const visibleRowCount = () => body.querySelectorAll('[data-msk-search-row]').length;
+
+      const setEmptyState = (message) => {
+        if (!emptyRow) {
+          return;
+        }
+        const cell = emptyRow.querySelector('td');
+        if (cell && message) {
+          cell.textContent = message;
+        }
+        emptyRow.hidden = visibleRowCount() !== 0;
+      };
+
+      const clearRows = () => {
+        body.querySelectorAll('[data-msk-search-row]').forEach((row) => {
+          row.remove();
+        });
+      };
+
+      const insertRows = (html) => {
+        const content = String(html || '').trim();
+        if (content === '') {
+          return;
+        }
+        const anchor = loadingRow || emptyRow;
+        if (anchor) {
+          anchor.insertAdjacentHTML('beforebegin', content);
+        } else {
+          body.insertAdjacentHTML('beforeend', content);
+        }
+      };
+
+      const syncUrl = () => {
+        if (!window.history || typeof window.history.replaceState !== 'function') {
+          return;
+        }
+        const url = new URL(window.location.href);
+        const query = currentQuery();
+        const batch = currentBatch();
+        if (query) {
+          url.searchParams.set('q', query);
+        } else {
+          url.searchParams.delete('q');
+        }
+        if (batch) {
+          url.searchParams.set('batch_month', batch);
+        } else {
+          url.searchParams.delete('batch_month');
+        }
+        url.searchParams.delete('page');
+        url.searchParams.delete('per_page');
+        window.history.replaceState(window.history.state, '', url.toString());
+      };
+
+      const buildRowsUrl = (page) => {
+        const url = new URL(rowsUrl, window.location.origin);
+        const branchInput = form.querySelector('input[name="branch_id"]') || document.querySelector('input[name="branch_id"]');
+        const query = currentQuery();
+        if (query) {
+          url.searchParams.set('q', query);
+        }
+        url.searchParams.set('batch_month', currentBatch());
+        url.searchParams.set('page', String(page));
+        url.searchParams.set('per_page', String(perPage));
+        if (branchInput && String(branchInput.value || '').trim() !== '') {
+          url.searchParams.set('branch_id', String(branchInput.value).trim());
+        }
+
+        return url;
+      };
+
+      const applyResult = (data, mode) => {
+        if (mode === 'replace') {
+          clearRows();
+        }
+        insertRows(data && data.html);
+        hasMore = Boolean(data && data.has_more);
+        nextPage = hasMore ? (parseInt(String(data.next_page || ''), 10) || null) : null;
+        root.setAttribute('data-has-more', hasMore ? '1' : '0');
+        root.setAttribute('data-next-page', nextPage ? String(nextPage) : '');
+        updateStats(data ? data.stats : null);
+        setEmptyState(data ? data.empty_message : 'Peserta tidak ditemukan.');
+        scheduleViewportTableHeights();
+      };
+
+      const loadPage = (page, mode) => {
+        if (mode === 'append' && (!hasMore || !nextPage || isLoading)) {
+          return;
+        }
+        if (activeController) {
+          activeController.abort();
+        }
+        activeController = new AbortController();
+        const requestId = ++requestSeq;
+        isLoading = true;
+        setLoading(true);
+        window.fetch(buildRowsUrl(page).toString(), {
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          signal: activeController.signal
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error('Gagal memuat peserta MSK.');
+            }
+
+            return response.json();
+          })
+          .then((data) => {
+            if (requestId !== requestSeq) {
+              return;
+            }
+            applyResult(data, mode);
+          })
+          .catch((error) => {
+            if (error && error.name === 'AbortError') {
+              return;
+            }
+            if (mode === 'replace') {
+              clearRows();
+              setEmptyState('Data peserta MSK gagal dimuat.');
+            }
+          })
+          .finally(() => {
+            if (requestId !== requestSeq) {
+              return;
+            }
+            isLoading = false;
+            setLoading(false);
+          });
+      };
+
+      const scheduleSearch = () => {
+        if (searchTimer !== null) {
+          window.clearTimeout(searchTimer);
+        }
+        searchTimer = window.setTimeout(() => {
+          searchTimer = null;
+          syncBatchHiddenInputs();
+          syncSearchHiddenInputs();
+          syncUrl();
+          loadPage(1, 'replace');
+        }, 250);
+      };
+
+      const nearBottom = () => {
+        if (scrollArea && scrollArea.scrollHeight > scrollArea.clientHeight) {
+          return scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 120;
+        }
+
+        return root.getBoundingClientRect().bottom <= (window.innerHeight || document.documentElement.clientHeight || 0) + 180;
+      };
+
+      const loadMoreIfNeeded = () => {
+        if (hasMore && nextPage && !isLoading && nearBottom()) {
+          loadPage(nextPage, 'append');
+        }
+      };
+
+      input.addEventListener('input', () => {
+        syncSearchHiddenInputs();
+        scheduleSearch();
+      });
+      if (batchInput) {
+        batchInput.addEventListener('change', () => {
+          if (searchTimer !== null) {
+            window.clearTimeout(searchTimer);
+            searchTimer = null;
+          }
+          syncBatchHiddenInputs();
+          syncSearchHiddenInputs();
+          syncUrl();
+          loadPage(1, 'replace');
+        });
+      }
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (searchTimer !== null) {
+          window.clearTimeout(searchTimer);
+          searchTimer = null;
+        }
+        syncBatchHiddenInputs();
+        syncSearchHiddenInputs();
+        syncUrl();
+        loadPage(1, 'replace');
+      });
+      if (scrollArea) {
+        scrollArea.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+      }
+      window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+      window.addEventListener('resize', loadMoreIfNeeded);
+      setEmptyState('Peserta tidak ditemukan.');
+    };
+
+
+    const setupSpiritualJourneyList = () => {
+      const root = document.querySelector('[data-spiritual-journey-list]');
+      const form = document.querySelector('[data-spiritual-journey-search-form]');
+      if (!root || !form) {
+        return;
+      }
+
+      const input = form.querySelector('[data-spiritual-journey-search-input]');
+      const filterInput = form.querySelector('[data-spiritual-journey-filter-input]');
+      const scrollArea = root.querySelector('[data-spiritual-journey-scroll]');
+      const body = root.querySelector('[data-spiritual-journey-list-body]');
+      const emptyRow = root.querySelector('[data-spiritual-journey-search-empty]');
+      const loadingRow = root.querySelector('[data-spiritual-journey-loading]');
+      const templatesContainer = document.querySelector('[data-spiritual-journey-view-templates]');
+      const rowsUrl = root.getAttribute('data-rows-url') || '';
+      if (!input || !body || !rowsUrl) {
+        return;
+      }
+
+      const statNodes = {
+        dg1: document.querySelector('[data-spiritual-journey-stat="dg1"]'),
+        kgap: document.querySelector('[data-spiritual-journey-stat="kgap"]'),
+        dg2: document.querySelector('[data-spiritual-journey-stat="dg2"]'),
+        dg3: document.querySelector('[data-spiritual-journey-stat="dg3"]')
+      };
+      let hasMore = root.getAttribute('data-has-more') === '1';
+      let nextPage = parseInt(root.getAttribute('data-next-page') || '0', 10) || null;
+      const perPage = parseInt(root.getAttribute('data-per-page') || '50', 10) || 50;
+      let activeController = null;
+      let requestSeq = 0;
+      let isLoading = false;
+      let searchTimer = null;
+
+      const currentQuery = () => String(input.value || '').trim();
+      const currentFilter = () => String(filterInput ? filterInput.value : 'all').trim() || 'all';
+
+      const updateStats = (stats) => {
+        if (!stats || typeof stats !== 'object') {
+          return;
+        }
+        Object.keys(statNodes).forEach((key) => {
+          if (statNodes[key] && Object.prototype.hasOwnProperty.call(stats, key)) {
+            statNodes[key].textContent = String(stats[key] ?? 0);
+          }
+        });
+      };
+
+      const setLoading = (value) => {
+        if (loadingRow) {
+          loadingRow.hidden = !value;
+        }
+      };
+
+      const visibleRowCount = () => body.querySelectorAll('[data-spiritual-journey-search-row]').length;
+
+      const setEmptyState = (message) => {
+        if (!emptyRow) {
+          return;
+        }
+        const cell = emptyRow.querySelector('td');
+        if (cell && message) {
+          cell.textContent = message;
+        }
+        emptyRow.hidden = visibleRowCount() !== 0;
+      };
+
+      const clearRows = () => {
+        body.querySelectorAll('[data-spiritual-journey-search-row]').forEach((row) => {
+          row.remove();
+        });
+      };
+
+      const insertRows = (html) => {
+        const content = String(html || '').trim();
+        if (content === '') {
+          return;
+        }
+        const anchor = loadingRow || emptyRow;
+        if (anchor) {
+          anchor.insertAdjacentHTML('beforebegin', content);
+        } else {
+          body.insertAdjacentHTML('beforeend', content);
+        }
+      };
+
+      const insertTemplates = (html, mode) => {
+        if (!templatesContainer) {
+          return;
+        }
+        if (mode === 'replace') {
+          templatesContainer.innerHTML = '';
+        }
+        const content = String(html || '').trim();
+        if (content !== '') {
+          templatesContainer.insertAdjacentHTML('beforeend', content);
+        }
+      };
+
+      const syncUrl = () => {
+        if (!window.history || typeof window.history.replaceState !== 'function') {
+          return;
+        }
+        const url = new URL(window.location.href);
+        const query = currentQuery();
+        const filter = currentFilter();
+        if (query) {
+          url.searchParams.set('q', query);
+        } else {
+          url.searchParams.delete('q');
+        }
+        if (filter !== 'all') {
+          url.searchParams.set('journey_filter', filter);
+        } else {
+          url.searchParams.delete('journey_filter');
+        }
+        url.searchParams.delete('page');
+        url.searchParams.delete('per_page');
+        window.history.replaceState(window.history.state, '', url.toString());
+      };
+
+      const buildRowsUrl = (page) => {
+        const url = new URL(rowsUrl, window.location.origin);
+        const branchInput = form.querySelector('input[name="branch_id"]') || document.querySelector('input[name="branch_id"]');
+        const query = currentQuery();
+        if (query) {
+          url.searchParams.set('q', query);
+        }
+        url.searchParams.set('journey_filter', currentFilter());
+        url.searchParams.set('page', String(page));
+        url.searchParams.set('per_page', String(perPage));
+        if (branchInput && String(branchInput.value || '').trim() !== '') {
+          url.searchParams.set('branch_id', String(branchInput.value).trim());
+        }
+
+        return url;
+      };
+
+      const applyResult = (data, mode) => {
+        if (mode === 'replace') {
+          clearRows();
+        }
+        insertRows(data && data.html);
+        insertTemplates(data && data.templates_html, mode);
+        hasMore = Boolean(data && data.has_more);
+        nextPage = hasMore ? (parseInt(String(data.next_page || ''), 10) || null) : null;
+        root.setAttribute('data-has-more', hasMore ? '1' : '0');
+        root.setAttribute('data-next-page', nextPage ? String(nextPage) : '');
+        updateStats(data ? data.stats : null);
+        setEmptyState(data ? data.empty_message : 'Peserta tidak ditemukan.');
+        scheduleViewportTableHeights();
+      };
+
+      const loadPage = (page, mode) => {
+        if (mode === 'append' && (!hasMore || !nextPage || isLoading)) {
+          return;
+        }
+        if (activeController) {
+          activeController.abort();
+        }
+        activeController = new AbortController();
+        const requestId = ++requestSeq;
+        isLoading = true;
+        setLoading(true);
+        window.fetch(buildRowsUrl(page).toString(), {
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          signal: activeController.signal
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error('Gagal memuat spiritual journey.');
+            }
+
+            return response.json();
+          })
+          .then((data) => {
+            if (requestId !== requestSeq) {
+              return;
+            }
+            applyResult(data, mode);
+          })
+          .catch((error) => {
+            if (error && error.name === 'AbortError') {
+              return;
+            }
+            if (mode === 'replace') {
+              clearRows();
+              setEmptyState('Data spiritual journey gagal dimuat.');
+            }
+          })
+          .finally(() => {
+            if (requestId !== requestSeq) {
+              return;
+            }
+            isLoading = false;
+            setLoading(false);
+          });
+      };
+
+      const scheduleSearch = () => {
+        if (searchTimer !== null) {
+          window.clearTimeout(searchTimer);
+        }
+        searchTimer = window.setTimeout(() => {
+          searchTimer = null;
+          syncUrl();
+          loadPage(1, 'replace');
+        }, 250);
+      };
+
+      const nearBottom = () => {
+        if (scrollArea && scrollArea.scrollHeight > scrollArea.clientHeight) {
+          return scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 120;
+        }
+
+        return root.getBoundingClientRect().bottom <= (window.innerHeight || document.documentElement.clientHeight || 0) + 180;
+      };
+
+      const loadMoreIfNeeded = () => {
+        if (hasMore && nextPage && !isLoading && nearBottom()) {
+          loadPage(nextPage, 'append');
+        }
+      };
+
+      input.addEventListener('input', scheduleSearch);
+      if (filterInput) {
+        filterInput.addEventListener('change', () => {
+          if (searchTimer !== null) {
+            window.clearTimeout(searchTimer);
+            searchTimer = null;
+          }
+          syncUrl();
+          loadPage(1, 'replace');
+        });
+      }
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (searchTimer !== null) {
+          window.clearTimeout(searchTimer);
+          searchTimer = null;
+        }
+        syncUrl();
+        loadPage(1, 'replace');
+      });
+      if (scrollArea) {
+        scrollArea.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+      }
+      window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+      window.addEventListener('resize', loadMoreIfNeeded);
+      setEmptyState('Peserta tidak ditemukan.');
+    };
+
+    setupSpiritualJourneyList();
     setupDiscipleshipPeopleList();
+    setupDiscipleshipGroupsList();
+    setupMskList();
 
     const memberFeedbackGroupModal = document.querySelector('[data-member-feedback-group-modal]');
     if (memberFeedbackGroupModal) {
@@ -824,8 +1596,17 @@
 
       const openMskView = (participantId) => {
         const key = String(participantId || '').trim();
-        if (!key || !templateMap.has(key)) {
-          return;
+        if (!key) {
+          return false;
+        }
+        if (!templateMap.has(key)) {
+          const freshTemplate = queryTemplateByAttribute('data-msk-view-template', key);
+          if (freshTemplate) {
+            templateMap.set(key, freshTemplate);
+          }
+        }
+        if (!templateMap.has(key)) {
+          return false;
         }
         const templateEl = templateMap.get(key);
         const modalTitle = templateEl?.getAttribute('data-msk-view-template-title') || 'Detail Peserta MSK';
@@ -851,6 +1632,8 @@
         mskViewModal.classList.add('is-open');
         mskViewModal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('modal-open');
+
+        return true;
       };
 
       const closeMskView = () => {
@@ -865,7 +1648,10 @@
           return;
         }
         event.preventDefault();
-        openMskView(trigger.getAttribute('data-msk-view-open') || '');
+        const opened = openMskView(trigger.getAttribute('data-msk-view-open') || '');
+        if (!opened && trigger.getAttribute('data-msk-view-href')) {
+          window.location.href = trigger.getAttribute('data-msk-view-href');
+        }
       });
 
       closeButtons.forEach((btn) => {
@@ -907,8 +1693,17 @@
 
       const openMskEdit = (participantId) => {
         const key = String(participantId || '').trim();
-        if (!key || !templateMap.has(key)) {
-          return;
+        if (!key) {
+          return false;
+        }
+        if (!templateMap.has(key)) {
+          const freshTemplate = queryTemplateByAttribute('data-msk-edit-template', key);
+          if (freshTemplate) {
+            templateMap.set(key, freshTemplate);
+          }
+        }
+        if (!templateMap.has(key)) {
+          return false;
         }
         const templateEl = templateMap.get(key);
         const modalTitle = templateEl?.getAttribute('data-msk-edit-template-title') || 'Edit Peserta MSK';
@@ -932,6 +1727,8 @@
             firstInput.focus();
           }
         }
+
+        return true;
       };
 
       const closeMskEdit = () => {
@@ -946,7 +1743,10 @@
           return;
         }
         event.preventDefault();
-        openMskEdit(trigger.getAttribute('data-msk-edit-open') || '');
+        const opened = openMskEdit(trigger.getAttribute('data-msk-edit-open') || '');
+        if (!opened && trigger.getAttribute('data-msk-edit-href')) {
+          window.location.href = trigger.getAttribute('data-msk-edit-href');
+        }
       });
 
       mskEditModal.addEventListener('click', function (event) {
@@ -989,8 +1789,17 @@
 
       const openSpiritualJourneyView = (personKey) => {
         const key = String(personKey || '').trim();
-        if (!key || !templateMap.has(key)) {
-          return;
+        if (!key) {
+          return false;
+        }
+        if (!templateMap.has(key)) {
+          const freshTemplate = queryTemplateByAttribute('data-spiritual-journey-view-template', key);
+          if (freshTemplate) {
+            templateMap.set(key, freshTemplate);
+          }
+        }
+        if (!templateMap.has(key)) {
+          return false;
         }
         const templateEl = templateMap.get(key);
         const modalTitle = templateEl?.getAttribute('data-spiritual-journey-view-template-title') || 'Profil Spiritual';
@@ -1006,6 +1815,8 @@
         spiritualJourneyViewModal.classList.add('is-open');
         spiritualJourneyViewModal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('modal-open');
+
+        return true;
       };
 
       const closeSpiritualJourneyView = () => {

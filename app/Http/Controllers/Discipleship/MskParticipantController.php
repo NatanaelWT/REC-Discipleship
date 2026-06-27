@@ -17,6 +17,7 @@ use App\Services\MskParticipants\MskParticipantImportService;
 use App\Services\MskParticipants\MskParticipantPageData;
 use App\Services\MskParticipants\MskParticipantWriter;
 use App\Support\RuntimeBootstrap;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -29,6 +30,26 @@ class MskParticipantController extends Controller
         RuntimeBootstrap::boot($request);
 
         return response(view('discipleship.msk-participants.index', $pageData->forCurrentContext($request))->render());
+    }
+
+    public function rows(Request $request, MskParticipantPageData $pageData): JsonResponse
+    {
+        RuntimeBootstrap::boot($request);
+
+        $data = $pageData->paginatedRowsForCurrentContext($request);
+
+        return response()->json([
+            'html' => view('discipleship.msk-participants.partials.rows', $data)->render(),
+            'has_more' => (bool) ($data['hasMoreMskRows'] ?? false),
+            'next_page' => $data['nextMskPage'] ?? null,
+            'stats' => [
+                'filter' => (string) ($data['batchMonthFilterLabel'] ?? '-'),
+                'total' => (int) ($data['totalParticipantsFiltered'] ?? 0),
+                'complete' => (int) ($data['completedParticipantsFiltered'] ?? 0),
+                'progress' => (int) ($data['inProgressParticipantsFiltered'] ?? 0),
+            ],
+            'empty_message' => (string) ($data['mskEmptyMessage'] ?? 'Peserta tidak ditemukan.'),
+        ]);
     }
 
     public function store(

@@ -558,10 +558,10 @@ if ($page === 'msk_classes') {
             'description' => 'Pantau batch aktif, progres penyelesaian sesi, dan kelola peserta MSK dari satu panel yang lebih ringkas.',
             'stats_aria_label' => 'Ringkasan kelas MSK',
             'stats' => [
-                ['label' => 'Filter', 'value' => $batchMonthFilterLabel],
-                ['label' => 'Peserta', 'value' => (string) $totalParticipantsFiltered],
-                ['label' => 'Selesai', 'value' => (string) $completedParticipantsFiltered],
-                ['label' => 'Berjalan', 'value' => (string) $inProgressParticipantsFiltered],
+                ['label' => 'Filter', 'value' => $batchMonthFilterLabel, 'value_attributes' => ['data-msk-stat' => 'filter']],
+                ['label' => 'Peserta', 'value' => (string) $totalParticipantsFiltered, 'value_attributes' => ['data-msk-stat' => 'total']],
+                ['label' => 'Selesai', 'value' => (string) $completedParticipantsFiltered, 'value_attributes' => ['data-msk-stat' => 'complete']],
+                ['label' => 'Berjalan', 'value' => (string) $inProgressParticipantsFiltered, 'value_attributes' => ['data-msk-stat' => 'progress']],
             ],
             'tools' => [
                 'element' => 'div',
@@ -587,11 +587,31 @@ if ($page === 'msk_classes') {
         ],
     ])->render();
 
-    echo "<section class=\"card table-card-plain\">\n";
-    echo "  <div class=\"table-wrap\">\n";
+    if (! $centralReadOnly) {
+        foreach ($participantsFilteredByBatch as $participant) {
+            $participantId = trim((string) ($participant['id'] ?? ''));
+            $fullName = trim((string) ($participant['full_name'] ?? ''));
+            if ($fullName === '') {
+                $fullName = '-';
+            }
+            if ($participantId !== '') {
+                $mskEditModalTemplates[$participantId] = [
+                    'title' => 'Edit Peserta MSK: '.$fullName,
+                    'content' => $renderMskParticipantForm($participant, $batchMonthFilterParam, 'data-msk-edit-close'),
+                ];
+            }
+        }
+    }
+
+    echo '<section class="card table-card-plain" data-msk-list data-rows-url="'.h(route('discipleship.msk-classes.rows')).'" data-page="'.h((string) ($mskPage ?? 1)).'" data-per-page="'.h((string) ($mskPerPage ?? 50)).'" data-has-more="'.(! empty($hasMoreMskRows) ? '1' : '0').'" data-next-page="'.h((string) ($nextMskPage ?? '')).'">'."\n";
+    echo "  <div class=\"table-wrap\" data-msk-scroll>\n";
     echo "    <table class=\"table\" id=\"msk-table\">\n";
     echo "      <thead><tr><th>Nama Peserta</th><th>Bulan MSK</th><th>Progress Sesi</th><th>Status</th><th>WhatsApp</th><th class=\"actions-head\">Aksi</th></tr></thead>\n";
-    echo "      <tbody>\n";
+    echo "      <tbody data-msk-list-body>\n";
+    echo view('discipleship.msk-participants.partials.rows', compact('participantsFilteredByBatch', 'centralReadOnly', 'batchMonthFilterParam'))->render();
+    echo '<tr data-msk-search-empty '.(((int) $totalParticipantsFiltered !== 0) ? 'hidden' : '').'><td colspan="6" aria-live="polite">'.h((string) ($mskEmptyMessage ?? 'Peserta tidak ditemukan.'))."</td></tr>\n";
+    echo "<tr data-msk-loading hidden><td colspan=\"6\" aria-live=\"polite\">Memuat peserta...</td></tr>\n";
+    /*
     foreach ($participantsFilteredByBatch as $participant) {
         $participantId = trim((string) ($participant['id'] ?? ''));
         $fullName = trim((string) ($participant['full_name'] ?? ''));
@@ -673,6 +693,7 @@ if ($page === 'msk_classes') {
     } else {
         echo "<tr data-msk-search-empty hidden><td colspan=\"6\" aria-live=\"polite\">Peserta tidak ditemukan.</td></tr>\n";
     }
+    */
     echo "      </tbody>\n";
     echo "    </table>\n";
     echo "  </div>\n";

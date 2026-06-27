@@ -7,6 +7,10 @@ use Illuminate\Http\Request;
 
 class MskParticipantPageData
 {
+    private const DEFAULT_PER_PAGE = 50;
+
+    private const MAX_PER_PAGE = 100;
+
     public function __construct(
         private readonly MskParticipantHistoryData $historyData,
         private readonly MskParticipantProfileData $profileData,
@@ -16,6 +20,17 @@ class MskParticipantPageData
      * @return array<string, mixed>
      */
     public function forCurrentContext(Request $request): array
+    {
+        return [
+            'settings' => ['church_name' => app_church_name()],
+            ...$this->paginatedRowsForCurrentContext($request),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function paginatedRowsForCurrentContext(Request $request): array
     {
         $centralReadOnly = is_effective_central_discipleship_readonly();
         $selectedBranch = $centralReadOnly
@@ -61,14 +76,33 @@ class MskParticipantPageData
             ->select(MskParticipant::VIEW_COLUMNS)
             ->whereIn('branch_id', $branchIds)
             ->when(! $batchMonthFilterIsAll, static fn ($query) => $query->where('batch_month', $batchMonthFilter));
-        $participants = $filteredQuery
-            ->orderBy('full_name')
-            ->orderBy('id')
-            ->get();
-        $totalParticipantsFiltered = $participants->count();
-        $completedParticipantsFiltered = $participants
+
+        if ($search !== '') {
+            $filteredQuery->where(static function ($query) use ($search): void {
+                $query->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%'])
+                    ->orWhereRaw('LOWER(whatsapp) LIKE ?', ['%'.$search.'%'])
+                    ->orWhereRaw('LOWER(email) LIKE ?', ['%'.$search.'%']);
+            });
+        }
+
+        $totalParticipantsFiltered = (clone $filteredQuery)->count();
+        $completedParticipantsFiltered = (clone $filteredQuery)
+            ->get(['session_numbers'])
             ->filter(static fn (MskParticipant $participant): bool => count(normalize_msk_session_numbers($participant->session_numbers ?? [])) === 12)
             ->count();
+
+        $page = $this->page($request);
+        $perPage = $this->perPage($request);
+        $participants = (clone $filteredQuery)
+            ->orderBy('full_name')
+            ->orderBy('id')
+            ->offset(($page - 1) * $perPage)
+            ->limit($perPage + 1)
+            ->get();
+        $hasMore = $participants->count() > $perPage;
+        if ($hasMore) {
+            $participants = $participants->slice(0, $perPage)->values();
+        }
         $pageParticipants = $participants
             ->map($this->participantViewRow(...))
             ->values()
@@ -102,7 +136,6 @@ class MskParticipantPageData
         $participantHistories = $this->historyData->forParticipants($pageParticipants, $branchIds);
 
         return [
-            'settings' => ['church_name' => app_church_name()],
             'page' => 'msk_classes',
             'centralReadOnly' => $centralReadOnly,
             'members' => [],
@@ -129,6 +162,11 @@ class MskParticipantPageData
             'completedParticipantsFiltered' => $completedParticipantsFiltered,
             'inProgressParticipantsFiltered' => max(0, $totalParticipantsFiltered - $completedParticipantsFiltered),
             'totalParticipantsAll' => array_sum($batchMonthMap),
+            'mskPage' => $page,
+            'mskPerPage' => $perPage,
+            'hasMoreMskRows' => $hasMore,
+            'nextMskPage' => $hasMore ? $page + 1 : null,
+            'mskEmptyMessage' => $this->emptyMessage($search, $batchMonthFilterParam),
             'participantHistories' => $participantHistories,
             'participantProfiles' => $this->profileData->forParticipants($pageParticipants, $participantHistories),
         ];
@@ -156,5 +194,22 @@ class MskParticipantPageData
         $row['branch_code'] = normalize_public_branch_code((string) $participant->branch_code);
 
         return $row;
+    }
+
+    private function page(Request $request): int
+    {
+        return max(1, (int) $request->query('page', 1));
+    }
+
+    private function perPage(Request $request): int
+    {
+        return max(1, min(self::MAX_PER_PAGE, (int) $request->query('per_page', self::DEFAULT_PER_PAGE)));
+    }
+
+    private function emptyMessage(string $search, string $batchMonth): string
+    {
+        return $search !== '' || $batchMonth !== 'all'
+            ? 'Peserta tidak ditemukan.'
+            : 'Belum ada data peserta kelas MSK.';
     }
 }

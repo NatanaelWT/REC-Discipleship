@@ -22,6 +22,9 @@ class RejectLegacyPageQuery
 
     private function allowsPageQuery(Request $request): bool
     {
-        return $request->is('pemuridan/anggota/rows');
+        return $request->is('pemuridan/anggota/rows')
+            || $request->is('pemuridan/kelompok/rows')
+            || $request->is('pemuridan/msk/rows')
+            || $request->is('pemuridan/spiritual-journey/rows');
     }
 }

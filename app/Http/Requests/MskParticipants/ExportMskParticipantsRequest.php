@@ -38,6 +38,13 @@ class ExportMskParticipantsRequest extends FormRequest
         return strtolower($input) === 'all' ? 'all' : import_normalize_month_strict($input);
     }
 
+    public function search(): string
+    {
+        $value = trim((string) $this->input('q', ''));
+
+        return function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
+    }
+
     protected function failedAuthorization(): void
     {
         $context = app(CurrentUserContext::class);

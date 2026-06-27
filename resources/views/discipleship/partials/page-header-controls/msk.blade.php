@@ -18,7 +18,7 @@
         @if ($participantsSearch !== '')
           <input type="hidden" name="q" value="{{ $participantsSearch }}">
         @endif
-        <select name="batch_month" class="msk-batch-select" aria-label="Filter batch bulan MSK" required onchange="this.form.submit()">
+        <select name="batch_month" class="msk-batch-select" aria-label="Filter batch bulan MSK" required data-msk-batch-input>
           <option value="all" @selected($batchMonthFilterIsAll)>Semua Batch ({{ (string) $totalParticipantsAll }})</option>
           @foreach ($batchMonthOptions as $batchMonthOption)
             <option value="{{ $batchMonthOption }}" @selected(! $batchMonthFilterIsAll && $batchMonthOption === $batchMonthFilter)>{{ format_indo_month($batchMonthOption) }} ({{ (string) ($batchMonthMap[$batchMonthOption] ?? 0) }})</option>
@@ -45,6 +45,7 @@
       @csrf
       <input type="hidden" name="action" value="export_pemuridan_excel">
       <input type="hidden" name="batch_month" value="{{ $batchMonthFilterParam }}">
+      <input type="hidden" name="q" value="{{ $participantsSearch }}">
       <button class="btn tiny ghost msk-transfer-button" type="submit"><?php echo icon_svg('download'); ?><span>Export</span></button>
     </form>
   </div>

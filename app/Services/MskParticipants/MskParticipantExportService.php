@@ -19,7 +19,11 @@ class MskParticipantExportService
     public function export(ExportMskParticipantsRequest $request): BinaryFileResponse|RedirectResponse
     {
         $batchMonth = $request->batchMonth();
+        $search = $request->search();
         $batchMonthParam = $batchMonth !== '' ? ['batch_month' => $batchMonth] : [];
+        if ($search !== '') {
+            $batchMonthParam['q'] = $search;
+        }
 
         $branchCodes = [];
         foreach ($this->scope->branchIds() as $branchId) {
@@ -38,6 +42,17 @@ class MskParticipantExportService
                 return import_normalize_month_strict((string) ($participant['msk_month'] ?? '')) === $batchMonth;
             }));
         }
+        if ($search !== '') {
+            $participantsToExport = array_values(array_filter($participantsToExport, static function ($participant) use ($search): bool {
+                $haystack = strtolower(trim(implode(' ', [
+                    (string) ($participant['full_name'] ?? ''),
+                    (string) ($participant['whatsapp'] ?? ''),
+                    (string) ($participant['email'] ?? ''),
+                ])));
+
+                return str_contains($haystack, $search);
+            }));
+        }
 
         $exportError = '';
         $xlsxPath = create_msk_import_export_xlsx($participantsToExport, $exportError);
@@ -50,7 +65,7 @@ class MskParticipantExportService
                 $this->scope->selectedSlug(),
                 null,
                 'Ekspor peserta MSK gagal.',
-                metadata: ['error' => $error, 'batch_month' => $batchMonth],
+                metadata: ['error' => $error, 'batch_month' => $batchMonth, 'q' => $search],
             );
 
             return redirect()->route('discipleship.msk-classes', $batchMonthParam + ['error' => $error]);
@@ -78,6 +93,7 @@ class MskParticipantExportService
             'Data peserta MSK diekspor.',
             metadata: [
                 'batch_month' => $batchMonth,
+                'q' => $search,
                 'participant_count' => count($participantsToExport),
                 'name' => $downloadName,
                 'size_bytes' => is_file($xlsxPath) ? (int) filesize($xlsxPath) : 0,

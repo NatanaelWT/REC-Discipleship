@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\Schema;
 
 class SpiritualJourneyPageData
 {
+    private const DEFAULT_PER_PAGE = 50;
+
+    private const MAX_PER_PAGE = 100;
+
     public function __construct(
         private readonly DiscipleshipTargetReader $targetReader,
         private readonly CurrentDiscipleshipScope $scope,
@@ -27,6 +31,15 @@ class SpiritualJourneyPageData
 
     /** @return array<string, mixed> */
     public function forCurrentContext(Request $request): array
+    {
+        return [
+            'settings' => ['church_name' => app_church_name()],
+            ...$this->paginatedRowsForCurrentContext($request),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function paginatedRowsForCurrentContext(Request $request): array
     {
         $search = strtolower(trim((string) $request->query('q', '')));
         $journeyFilter = trim((string) $request->query('journey_filter', 'all'));
@@ -38,10 +51,25 @@ class SpiritualJourneyPageData
             ])
             ->whereIn('branch_id', $this->scope->branchIds());
         $this->applyJourneyFilter($query, $journeyFilter);
+        if ($search !== '') {
+            $query->where(static function (Builder $builder) use ($search): void {
+                $builder->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%'])
+                    ->orWhereRaw('LOWER(whatsapp) LIKE ?', ['%'.$search.'%']);
+            });
+        }
 
-        $participants = $query
+        $stats = $this->stats(clone $query);
+        $page = $this->page($request);
+        $perPage = $this->perPage($request);
+        $participants = (clone $query)
             ->orderBy('full_name')->orderBy('id')
+            ->offset(($page - 1) * $perPage)
+            ->limit($perPage + 1)
             ->get();
+        $hasMore = $participants->count() > $perPage;
+        if ($hasMore) {
+            $participants = $participants->slice(0, $perPage)->values();
+        }
         $personIds = $participants->pluck('discipleship_person_id')->filter()->map(static fn ($id): int => (int) $id)->unique()->all();
         $people = $this->people($personIds);
         $groupPeople = $this->groupPeople($personIds);
@@ -58,19 +86,26 @@ class SpiritualJourneyPageData
         })->values()->all();
 
         $participantHistories = $this->historyData->forParticipants($participantRows, $this->scope->branchIds());
+        $participantProfiles = $this->profileData->forParticipants($participantRows, $participantHistories);
 
         return [
-            'settings' => ['church_name' => app_church_name()],
             'page' => 'spiritual_journey',
             'people' => array_values($people),
             'peopleById' => $people,
             'mskClasses' => $participantRows,
             'spiritualJourneySearch' => $search,
             'spiritualJourneyFilter' => $journeyFilter,
-            'spiritualJourneyTotalParticipants' => $participants->count(),
+            'spiritualJourneyTotalParticipants' => $stats['total'],
+            'spiritualJourneyStats' => $stats,
+            'spiritualJourneyPage' => $page,
+            'spiritualJourneyPerPage' => $perPage,
+            'hasMoreSpiritualJourneyRows' => $hasMore,
+            'nextSpiritualJourneyPage' => $hasMore ? $page + 1 : null,
+            'spiritualJourneyEmptyMessage' => $this->emptyMessage($search, $journeyFilter),
             'discipleshipTargets' => $this->targets(),
             'participantHistories' => $participantHistories,
-            'participantProfiles' => $this->profileData->forParticipants($participantRows, $participantHistories),
+            'participantProfiles' => $participantProfiles,
+            'spiritualJourneyRows' => $this->journeyRows($participantRows, $groupPeople),
             'discipleshipV2Model' => [
                 'discipleship_persons' => array_values($people),
                 'discipleship_groups' => array_values($groups),
@@ -79,6 +114,135 @@ class SpiritualJourneyPageData
                 'discipleship_relations' => $relationships,
             ],
         ];
+    }
+
+    /** @return array{total:int,completed_msk:int,following_kgap:int,completed_dg1:int,completed_dg2:int,completed_dg3:int} */
+    private function stats(Builder $query): array
+    {
+        $participants = $query->get(['id', 'branch_id', 'discipleship_person_id', 'journey_bridge_status', 'session_numbers']);
+        $personIds = $participants->pluck('discipleship_person_id')->filter()->map(static fn ($id): int => (int) $id)->unique()->all();
+        $groupPeople = $this->groupPeople($personIds);
+        $completion = $this->completionMaps($groupPeople);
+        $completedMsk = 0;
+        $followingKgap = 0;
+        $completedDg1 = 0;
+        $completedDg2 = 0;
+        $completedDg3 = 0;
+
+        foreach ($participants as $participant) {
+            $sessionCount = count(normalize_msk_session_numbers($participant->session_numbers ?? []));
+            if ($sessionCount >= 12) {
+                $completedMsk++;
+            }
+            $bridgeStatus = normalize_journey_bridge_status((string) ($participant->journey_bridge_status ?? 'belum'));
+            if (in_array($bridgeStatus, ['sudah_kgap', 'ikut_keduanya'], true)) {
+                $followingKgap++;
+            }
+            $personId = (string) ((int) ($participant->discipleship_person_id ?? 0));
+            if ($personId !== '0' && ! empty($completion['dg1'][$personId])) {
+                $completedDg1++;
+            }
+            if ($personId !== '0' && ! empty($completion['dg2'][$personId])) {
+                $completedDg2++;
+            }
+            if ($personId !== '0' && ! empty($completion['dg3'][$personId])) {
+                $completedDg3++;
+            }
+        }
+
+        return [
+            'total' => $participants->count(),
+            'completed_msk' => $completedMsk,
+            'following_kgap' => $followingKgap,
+            'completed_dg1' => $completedDg1,
+            'completed_dg2' => $completedDg2,
+            'completed_dg3' => $completedDg3,
+        ];
+    }
+
+    private function journeyRows(array $participantRows, $groupPeople): array
+    {
+        $completion = $this->completionMaps($groupPeople);
+        $rows = [];
+        foreach ($participantRows as $participant) {
+            if (! is_array($participant)) {
+                continue;
+            }
+            $fullName = trim((string) ($participant['full_name'] ?? ''));
+            if ($fullName === '') {
+                continue;
+            }
+            $sessionNumbers = normalize_msk_session_numbers($participant['session_numbers'] ?? []);
+            $sessionCount = min(12, count($sessionNumbers));
+            $journeyViewKey = trim((string) ($participant['id'] ?? ''));
+            if ($journeyViewKey === '') {
+                $journeyViewKey = 'spiritual-journey-'.(string) (count($rows) + 1);
+            }
+            $personId = (string) ((int) ($participant['discipleship_person_id'] ?? 0));
+            $rows[] = [
+                'id' => (string) ($participant['id'] ?? ''),
+                'name' => $fullName,
+                'search_text' => trim($fullName.' '.(string) ($participant['whatsapp'] ?? '')),
+                'msk_progress' => $sessionCount > 0 ? ((string) $sessionCount.'/12') : '-',
+                'session_count' => $sessionCount,
+                'msk_percent' => (int) round(($sessionCount / 12) * 100),
+                'session_label' => $sessionCount > 0 ? 'Sesi '.implode(', ', array_map('strval', $sessionNumbers)) : 'Belum ada sesi',
+                'active_dg_progress' => '',
+                'completed_dg1' => $personId !== '0' && ! empty($completion['dg1'][$personId]),
+                'completed_dg2' => $personId !== '0' && ! empty($completion['dg2'][$personId]),
+                'completed_dg3' => $personId !== '0' && ! empty($completion['dg3'][$personId]),
+                'journey_bridge_status' => normalize_journey_bridge_status((string) ($participant['journey_bridge_status'] ?? 'belum')),
+                'journey_view_key' => $journeyViewKey,
+            ];
+        }
+
+        usort($rows, function (array $a, array $b): int {
+            $sessionA = (int) ($a['session_count'] ?? 0);
+            $sessionB = (int) ($b['session_count'] ?? 0);
+            if ($sessionA !== $sessionB) {
+                return $sessionB <=> $sessionA;
+            }
+
+            return strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+        });
+
+        return $rows;
+    }
+
+    /** @return array{dg1:array<string,bool>,dg2:array<string,bool>,dg3:array<string,bool>} */
+    private function completionMaps($groupPeople): array
+    {
+        $dg1 = [];
+        $dg2 = [];
+        $dg3 = [];
+        foreach ($groupPeople as $membershipRecord) {
+            $personId = (string) ((int) ($membershipRecord->person_id ?? 0));
+            if ($personId === '0') {
+                continue;
+            }
+            $stage = normalize_dg_progress_value((string) ($membershipRecord->stage ?? ''));
+            if ($stage === '') {
+                continue;
+            }
+            $stageRank = match ($stage) {
+                'DG 3' => 3,
+                'DG 2' => 2,
+                'DG 1' => 1,
+                default => 0,
+            };
+            $reasonEnd = trim((string) ($membershipRecord->end_reason ?? ''));
+            if ($stageRank >= 2 || ($stage === 'DG 1' && in_array($reasonEnd, ['continued_to_child_group', 'group_completed', 'stage_transition', 'manual_completion'], true))) {
+                $dg1[$personId] = true;
+            }
+            if ($stageRank >= 3 || ($stage === 'DG 2' && in_array($reasonEnd, ['continued_to_child_group', 'group_completed', 'stage_transition', 'manual_completion'], true))) {
+                $dg2[$personId] = true;
+            }
+            if ($stage === 'DG 3' && in_array($reasonEnd, ['group_completed', 'continued_to_child_group', 'stage_transition', 'manual_completion'], true)) {
+                $dg3[$personId] = true;
+            }
+        }
+
+        return ['dg1' => $dg1, 'dg2' => $dg2, 'dg3' => $dg3];
     }
 
     private function applyJourneyFilter(Builder $query, string &$journeyFilter): void
@@ -162,9 +326,12 @@ class SpiritualJourneyPageData
             return collect();
         }
 
-        $rows = DiscipleshipGroupPerson::query()->whereIn('person_id', $personIds)->get([
-            'id', 'branch_id', 'discipleship_group_id', 'person_id', 'role', 'stage', 'status', 'started_on', 'ended_on', 'end_reason', 'created_at', 'updated_at',
-        ]);
+        $rows = DiscipleshipGroupPerson::query()
+            ->whereIn('branch_id', $this->scope->branchIds())
+            ->whereIn('person_id', $personIds)
+            ->get([
+                'id', 'branch_id', 'discipleship_group_id', 'person_id', 'role', 'stage', 'status', 'started_on', 'ended_on', 'end_reason', 'created_at', 'updated_at',
+            ]);
 
         return $rows->merge($this->manualGroupPeople($personIds));
     }
@@ -238,6 +405,7 @@ class SpiritualJourneyPageData
         }
 
         return DB::table('discipleship_manual_journey_records')
+            ->whereIn('branch_id', $this->scope->branchIds())
             ->whereIn('person_id', $personIds)
             ->orderBy('id')
             ->get()
@@ -279,5 +447,24 @@ class SpiritualJourneyPageData
         }
 
         return $total;
+    }
+
+    private function page(Request $request): int
+    {
+        return max(1, (int) $request->query('page', 1));
+    }
+
+    private function perPage(Request $request): int
+    {
+        return max(1, min(self::MAX_PER_PAGE, (int) $request->query('per_page', self::DEFAULT_PER_PAGE)));
+    }
+
+    private function emptyMessage(string $search, string $journeyFilter): string
+    {
+        if ($journeyFilter === 'dg_without_kgap') {
+            return 'Belum ada peserta minimal DG 1 yang belum mengikuti Kamp GAP.';
+        }
+
+        return $search !== '' ? 'Peserta tidak ditemukan.' : 'Belum ada data peserta MSK.';
     }
 }

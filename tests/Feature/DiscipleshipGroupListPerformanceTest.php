@@ -9,7 +9,7 @@ use Tests\TestCase;
 
 class DiscipleshipGroupListPerformanceTest extends TestCase
 {
-    public function test_group_list_renders_all_rows_without_pagination(): void
+    public function test_group_list_lazy_loads_rows_and_searches_server_side(): void
     {
         $this->createTables();
         $people = [];
@@ -38,22 +38,36 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Kelompok 0001')
-            ->assertSee('Kelompok 0150')
-            ->assertSee('Kelompok 0300')
+            ->assertSee('Kelompok 0050')
+            ->assertDontSee('Kelompok 0051')
+            ->assertDontSee('Kelompok 0300')
             ->assertDontSee('rec-pagination', false)
             ->assertDontSee('Halaman 1 dari')
-            ->assertSee('data-auto-submit-search-form', false)
-            ->assertSee('data-auto-submit-search-input', false)
+            ->assertSee('data-discipleship-groups-list', false)
+            ->assertSee('data-discipleship-groups-search-form', false)
+            ->assertSee('data-discipleship-groups-search-input', false)
+            ->assertSee('data-next-page="2"', false)
             ->assertSee('discipleship-page-header__stats', false)
             ->assertSee('discipleship-page-header__stat', false)
+            ->assertSee('data-groups-stat="total">300', false)
             ->assertDontSee('>Cari</button>', false);
-        $this->assertLessThanOrEqual(8, $queries);
+        $this->assertLessThanOrEqual(12, $queries);
 
-        $this->get('/pemuridan/kelompok?per_page=1')
-            ->assertOk()
-            ->assertSee('Kelompok 0001')
-            ->assertSee('Kelompok 0300')
-            ->assertDontSee('rec-pagination', false);
+        $pageTwo = $this->get('/pemuridan/kelompok/rows?page=2');
+        $pageTwo->assertOk()
+            ->assertJsonPath('has_more', true)
+            ->assertJsonPath('next_page', 3)
+            ->assertJsonPath('stats.total', 300);
+        $this->assertStringContainsString('Kelompok 0051', (string) $pageTwo->json('html'));
+        $this->assertStringContainsString('Kelompok 0100', (string) $pageTwo->json('html'));
+        $this->assertStringNotContainsString('Kelompok 0101', (string) $pageTwo->json('html'));
+
+        $search = $this->get('/pemuridan/kelompok/rows?q=Kelompok+0300');
+        $search->assertOk()
+            ->assertJsonPath('has_more', false)
+            ->assertJsonPath('stats.total', 1);
+        $this->assertStringContainsString('Kelompok 0300', (string) $search->json('html'));
+        $this->assertStringNotContainsString('Kelompok 0299', (string) $search->json('html'));
     }
 
     public function test_inactive_group_shows_its_last_leader_and_members(): void

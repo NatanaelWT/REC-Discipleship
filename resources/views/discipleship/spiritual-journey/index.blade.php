@@ -686,16 +686,26 @@ if ($page === 'spiritual_journey') {
         ['label' => 'Selesai DG 2', 'value' => $completedDg2Count, 'target' => $journeyTargetDg2, 'color' => discipleship_stage_color('DG 2')],
         ['label' => 'Selesai DG 3', 'value' => $completedDg3Count, 'target' => $journeyTargetDg3, 'color' => discipleship_stage_color('DG 3')],
     ];
+    $journeyStats = is_array($spiritualJourneyStats ?? null) ? $spiritualJourneyStats : [];
+    $journeyProgressRows[0]['value'] = (int) ($journeyStats['completed_dg1'] ?? $journeyProgressRows[0]['value']);
+    $journeyProgressRows[1]['value'] = (int) ($journeyStats['following_kgap'] ?? $journeyProgressRows[1]['value']);
+    $journeyProgressRows[2]['value'] = (int) ($journeyStats['completed_dg2'] ?? $journeyProgressRows[2]['value']);
+    $journeyProgressRows[3]['value'] = (int) ($journeyStats['completed_dg3'] ?? $journeyProgressRows[3]['value']);
 
     $journeyFilter = trim((string) ($spiritualJourneyFilter ?? 'all'));
     $journeyFilterOptions = [
         'all' => 'Semua Peserta',
         'dg_without_kgap' => 'Minimal DG 1, Belum Kamp GAP',
     ];
-    $journeyHeaderStats = array_map(static fn (array $row): array => [
-        'label' => (string) ($row['label'] ?? '-'),
-        'value' => (string) max(0, (int) ($row['value'] ?? 0)),
-    ], $journeyProgressRows);
+    $journeyHeaderStats = [];
+    $journeyHeaderStatKeys = ['dg1', 'kgap', 'dg2', 'dg3'];
+    foreach ($journeyProgressRows as $statIndex => $row) {
+        $journeyHeaderStats[] = [
+            'label' => (string) ($row['label'] ?? '-'),
+            'value' => (string) max(0, (int) ($row['value'] ?? 0)),
+            'value_attributes' => ['data-spiritual-journey-stat' => $journeyHeaderStatKeys[$statIndex] ?? ''],
+        ];
+    }
     echo view('discipleship.partials.page-header', [
         'header' => [
             'kicker' => 'Pemantauan Pertumbuhan',
@@ -717,105 +727,41 @@ if ($page === 'spiritual_journey') {
         ],
     ])->render();
 
-    echo "<section class=\"card table-card-plain\">\n";
-    echo "  <div class=\"table-wrap\">\n";
+    $rows = is_array($spiritualJourneyRows ?? null) ? $spiritualJourneyRows : $rows;
+    echo '<section class="card table-card-plain" data-spiritual-journey-list data-rows-url="'.h(route('discipleship.spiritual-journey.rows')).'" data-page="'.h((string) ($spiritualJourneyPage ?? 1)).'" data-per-page="'.h((string) ($spiritualJourneyPerPage ?? 50)).'" data-has-more="'.(! empty($hasMoreSpiritualJourneyRows) ? '1' : '0').'" data-next-page="'.h((string) ($nextSpiritualJourneyPage ?? '')).'">'."\n";
+    echo "  <div class=\"table-wrap\" data-spiritual-journey-scroll>\n";
     echo "    <table class=\"table journey-dashboard-table\" id=\"spiritual-journey-table\">\n";
     echo "      <colgroup>\n";
     echo "        <col class=\"journey-col-name\">\n";
     echo "        <col class=\"journey-col-track\">\n";
     echo "      </colgroup>\n";
     echo "      <thead><tr><th>Nama Peserta</th><th>Spiritual Journey</th></tr></thead>\n";
-    echo "      <tbody>\n";
-    foreach ($rows as $row) {
-        $journeyParticipantId = trim((string) ($row['id'] ?? ''));
-        $journeyName = trim((string) ($row['name'] ?? '-'));
-        if ($journeyName === '') {
-            $journeyName = '-';
-        }
-        $journeyViewKey = trim((string) ($row['journey_view_key'] ?? ''));
-        $mskProgressLabel = trim((string) ($row['msk_progress'] ?? '-'));
-        $mskPercent = max(0, min(100, (int) ($row['msk_percent'] ?? 0)));
-        $sessionLabel = trim((string) ($row['session_label'] ?? 'Belum ada sesi'));
-        $activeDgProgress = trim((string) ($row['active_dg_progress'] ?? ''));
-        $activeDgRank = 0;
-        $journeyBridgeStatus = normalize_journey_bridge_status((string) ($row['journey_bridge_status'] ?? 'belum'));
-        $hasCompletedDg1 = ! empty($row['completed_dg1']);
-        $hasCompletedDg2 = ! empty($row['completed_dg2']);
-        $hasCompletedDg3 = ! empty($row['completed_dg3']);
-        $dg1Class = $hasCompletedDg1 ? 'is-dg1' : 'is-muted';
-        $dg2Class = $hasCompletedDg2 ? 'is-dg2' : 'is-muted';
-        $dg3Class = $hasCompletedDg3 ? 'is-dg3' : 'is-muted';
-        $bridgeOptions = [
-            'belum' => 'Belum',
-            'sudah_rg' => 'Sudah RG',
-            'sudah_kgap' => 'Sudah KGAP',
-            'ikut_keduanya' => 'Ikut Keduanya',
-        ];
-        $bridgeSelectAttrs = is_effective_central_discipleship_readonly()
-            ? ' disabled'
-            : ' onchange="this.form.submit()"';
-        $bridgeStateClass = 'is-bridge-none';
-        if ($journeyBridgeStatus === 'sudah_rg') {
-            $bridgeStateClass = 'is-bridge-rg';
-        } elseif (in_array($journeyBridgeStatus, ['sudah_kgap', 'ikut_keduanya'], true)) {
-            $bridgeStateClass = 'is-bridge-kgap';
-        }
-        $bridgeFormAction = $journeyParticipantId !== ''
-            ? route('discipleship.spiritual-journey.bridge-status', ['participant' => $journeyParticipantId])
-            : route('discipleship.spiritual-journey.bridge-status-form');
-        $bridgeSelect = '<span class="journey-track-bridge"><form method="post" action="'.h($bridgeFormAction).'" class="journey-bridge-form">'.csrf_field().'<input type="hidden" name="action" value="save_journey_bridge_status"><input type="hidden" name="id" value="'.h($journeyParticipantId).'"><select name="journey_bridge_status" class="journey-bridge-select '.h($bridgeStateClass).'" aria-label="Status RG atau KGAP untuk '.h($journeyName).'"'.$bridgeSelectAttrs.'>';
-        foreach ($bridgeOptions as $bridgeValue => $bridgeLabel) {
-            $selected = $journeyBridgeStatus === $bridgeValue ? ' selected' : '';
-            $bridgeSelect .= '<option value="'.h($bridgeValue).'"'.$selected.'>'.h($bridgeLabel).'</option>';
-        }
-        $bridgeSelect .= '</select></form></span>';
-        echo '<tr data-spiritual-journey-search-row data-search-text="'.h((string) ($row['search_text'] ?? $journeyName)).'">';
-        echo '<td><div class="journey-name-cell"><div class="journey-name-main">'.h($journeyName).'</div><div class="journey-name-sub">Peserta kelas MSK</div><button class="note-link member-inline-trigger journey-history-trigger" type="button" data-spiritual-journey-view-open="'.h($journeyViewKey).'" aria-label="'.h('Lihat profil '.$journeyName).'">Lihat profil</button></div></td>';
-        $mskDone = $mskPercent >= 100;
-        $mskBadgeClass = $mskDone ? 'journey-track-badge is-msk is-msk-done' : 'journey-track-badge is-msk is-msk-progress';
-        $mskBadge = '<span class="'.h($mskBadgeClass).'">MSK '.h($mskProgressLabel).'</span>';
-        echo "<td><div class=\"journey-inline-track\" title=\"Tahap DG dan MSK peserta\">{$mskBadge}<span class=\"journey-track-badge ".h($dg1Class).'">DG 1</span>'.$bridgeSelect.'<span class="journey-track-badge '.h($dg2Class).'">DG 2</span><span class="journey-track-badge '.h($dg3Class).'">DG 3</span></div></td>';
-        echo "</tr>\n";
-    }
-    if (count($rows) === 0) {
-        $emptyMessage = $journeyFilter === 'dg_without_kgap'
-            ? 'Belum ada peserta minimal DG 1 yang belum mengikuti Kamp GAP.'
-            : 'Belum ada data peserta MSK.';
-        echo '<tr><td colspan="2">'.h($emptyMessage)."</td></tr>\n";
-    } else {
-        echo '<tr data-spiritual-journey-search-empty hidden><td colspan="2" aria-live="polite">Peserta tidak ditemukan.</td></tr>'."\n";
-    }
+    echo "      <tbody data-spiritual-journey-list-body>\n";
+    echo view('discipleship.spiritual-journey.partials.rows', ['rows' => $rows])->render();
+    echo '<tr data-spiritual-journey-search-empty '.(count($rows) !== 0 ? 'hidden' : '').'><td colspan="2" aria-live="polite">'.h((string) ($spiritualJourneyEmptyMessage ?? 'Peserta tidak ditemukan.'))."</td></tr>\n";
+    echo "<tr data-spiritual-journey-loading hidden><td colspan=\"2\" aria-live=\"polite\">Memuat peserta...</td></tr>\n";
     echo "      </tbody>\n";
     echo "    </table>\n";
     echo "  </div>\n";
     echo "</section>\n";
 
-    if (count($journeyViewTemplates) > 0) {
-        echo "<div class=\"is-hidden\" data-spiritual-journey-view-templates>\n";
-        foreach ($journeyViewTemplates as $templateId => $templateData) {
-            $templateTitle = trim((string) ($templateData['title'] ?? 'Profil Peserta'));
-            if ($templateTitle === '') {
-                $templateTitle = 'Profil Peserta';
-            }
-            $templateContent = (string) ($templateData['content'] ?? '');
-            echo '<template data-spiritual-journey-view-template="'.h($templateId).'" data-spiritual-journey-view-template-title="'.h($templateTitle).'">'.$templateContent."</template>\n";
-        }
-        echo "</div>\n";
+    echo "<div class=\"is-hidden\" data-spiritual-journey-view-templates>\n";
+    echo view('discipleship.spiritual-journey.partials.view-templates', compact('participantProfiles', 'mskClasses'))->render();
+    echo "</div>\n";
 
-        echo "<div class=\"modal\" id=\"spiritual-journey-view-modal\" data-spiritual-journey-view-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
-        echo "  <div class=\"modal-card member-view-modal-card msk-view-modal-card\">\n";
-        echo "    <div class=\"modal-head\">\n";
-        echo "      <div class=\"modal-title\" data-spiritual-journey-view-title>Profil Peserta</div>\n";
-        echo "      <button class=\"btn tiny ghost\" type=\"button\" data-spiritual-journey-view-close>&times;</button>\n";
-        echo "    </div>\n";
-        echo "    <div class=\"modal-body\" data-spiritual-journey-view-body>\n";
-        echo "      <div class=\"panel-note\">Klik Lihat profil pada tabel untuk membuka profil peserta.</div>\n";
-        echo "    </div>\n";
-        echo "    <div class=\"modal-actions\">\n";
-        echo "      <button class=\"btn ghost\" type=\"button\" data-spiritual-journey-view-close>Tutup</button>\n";
-        echo "    </div>\n";
-        echo "  </div>\n";
-        echo "</div>\n";
-    }
+    echo "<div class=\"modal\" id=\"spiritual-journey-view-modal\" data-spiritual-journey-view-modal aria-hidden=\"true\" role=\"dialog\" aria-modal=\"true\">\n";
+    echo "  <div class=\"modal-card member-view-modal-card msk-view-modal-card\">\n";
+    echo "    <div class=\"modal-head\">\n";
+    echo "      <div class=\"modal-title\" data-spiritual-journey-view-title>Profil Peserta</div>\n";
+    echo "      <button class=\"btn tiny ghost\" type=\"button\" data-spiritual-journey-view-close>&times;</button>\n";
+    echo "    </div>\n";
+    echo "    <div class=\"modal-body\" data-spiritual-journey-view-body>\n";
+    echo "      <div class=\"panel-note\">Klik Lihat profil pada tabel untuk membuka profil peserta.</div>\n";
+    echo "    </div>\n";
+    echo "    <div class=\"modal-actions\">\n";
+    echo "      <button class=\"btn ghost\" type=\"button\" data-spiritual-journey-view-close>Tutup</button>\n";
+    echo "    </div>\n";
+    echo "  </div>\n";
+    echo "</div>\n";
     page_footer();
 }

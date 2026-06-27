@@ -99,6 +99,7 @@ Route::group([], function (): void {
         Route::get('/orang', static function (Request $request): RedirectResponse {
             return redirect()->route('discipleship.tree', $request->query());
         })->name('people');
+        Route::get('/kelompok/rows', [DiscipleshipGroupController::class, 'rows'])->middleware('rec.page:groups_list')->name('groups.rows');
         Route::get('/anggota', [DiscipleshipPeopleListController::class, 'index'])->middleware('rec.page:people_list')->name('people-list');
         Route::get('/anggota/rows', [DiscipleshipPeopleListController::class, 'rows'])->middleware('rec.page:people_list')->name('people-list.rows');
         Route::get('/anggota/ekspor', [DiscipleshipPeopleListController::class, 'export'])->middleware('rec.page:people_list')->name('people-list.export');
@@ -113,11 +114,13 @@ Route::group([], function (): void {
         Route::post('/pohon/kelompok/aktifkan', [DiscipleshipPeopleTreeController::class, 'reactivateGroup'])->middleware('rec.page:people_tree')->name('tree.groups.reactivate');
         Route::post('/pohon/export-dot', [DiscipleshipPeopleTreeController::class, 'exportDot'])->middleware('rec.page:people_tree')->name('tree.export-dot');
         Route::get('/spiritual-journey', [DiscipleshipSpiritualJourneyController::class, 'index'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey');
+        Route::get('/spiritual-journey/rows', [DiscipleshipSpiritualJourneyController::class, 'rows'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.rows');
         Route::post('/spiritual-journey', [DiscipleshipSpiritualJourneyController::class, 'updateBridgeStatusFromForm'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.bridge-status-form');
         Route::post('/spiritual-journey/{participant}/bridge-status', [DiscipleshipSpiritualJourneyController::class, 'updateBridgeStatus'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.bridge-status');
         Route::get('/laporan-dg', [DiscipleshipMeetingReportRecapController::class, 'index'])->middleware('rec.page:dg_reports_recap')->name('reports-recap');
         Route::get('/umpan-balik-anggota', [DiscipleshipMemberFeedbackRecapController::class, 'index'])->middleware('rec.page:member_feedback_recap')->name('member-feedback-recap');
         Route::get('/msk', [DiscipleshipMskParticipantController::class, 'index'])->middleware('rec.page:msk_classes')->name('msk-classes');
+        Route::get('/msk/rows', [DiscipleshipMskParticipantController::class, 'rows'])->middleware('rec.page:msk_classes')->name('msk-classes.rows');
         Route::post('/msk/peserta', [DiscipleshipMskParticipantController::class, 'store'])->middleware('rec.page:msk_classes')->name('msk-classes.store');
         Route::post('/msk/impor', [DiscipleshipMskParticipantController::class, 'import'])->middleware('rec.page:msk_classes')->name('msk-classes.import');
         Route::post('/msk/ekspor', [DiscipleshipMskParticipantController::class, 'export'])->middleware('rec.page:msk_classes')->name('msk-classes.export');

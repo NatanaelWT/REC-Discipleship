@@ -40,7 +40,7 @@ class SpiritualJourneyPageTest extends TestCase
         $response->assertSee('data-spiritual-journey-view-title>Profil Peserta', false);
     }
 
-    public function test_spiritual_journey_renders_all_participants_without_pagination_and_uses_live_search(): void
+    public function test_spiritual_journey_lazy_loads_rows_and_searches_server_side(): void
     {
         $this->createMskTables();
         $now = now();
@@ -64,17 +64,34 @@ class SpiritualJourneyPageTest extends TestCase
         DB::table('msk_participants')->insert($participants);
         $this->actingAsRecUser();
 
-        $response = $this->get('/pemuridan/spiritual-journey?q=Journey+125');
+        $response = $this->get('/pemuridan/spiritual-journey');
 
         $response->assertOk();
         $response->assertSee('Peserta Journey 001');
-        $response->assertSee('Peserta Journey 125');
+        $response->assertSee('Peserta Journey 050');
+        $response->assertDontSee('Peserta Journey 051');
+        $response->assertDontSee('Peserta Journey 125');
+        $response->assertSee('data-spiritual-journey-list', false);
+        $response->assertSee('data-next-page="2"', false);
         $response->assertSee('data-spiritual-journey-search-form', false);
         $response->assertSee('data-spiritual-journey-search-input', false);
         $response->assertSee('data-spiritual-journey-search-row', false);
-        $response->assertSee('value="journey 125"', false);
         $response->assertDontSee('class="rec-pagination"', false);
         $response->assertDontSee('type="submit">Cari</button>', false);
+
+        $pageTwo = $this->get('/pemuridan/spiritual-journey/rows?page=2');
+        $pageTwo->assertOk()
+            ->assertJsonPath('has_more', true)
+            ->assertJsonPath('next_page', 3);
+        $this->assertStringContainsString('Peserta Journey 051', (string) $pageTwo->json('html'));
+        $this->assertStringContainsString('Peserta Journey 100', (string) $pageTwo->json('html'));
+        $this->assertStringNotContainsString('Peserta Journey 101', (string) $pageTwo->json('html'));
+
+        $search = $this->get('/pemuridan/spiritual-journey/rows?q=Journey+125');
+        $search->assertOk()
+            ->assertJsonPath('has_more', false);
+        $this->assertStringContainsString('Peserta Journey 125', (string) $search->json('html'));
+        $this->assertStringNotContainsString('Peserta Journey 001', (string) $search->json('html'));
     }
 
     public function test_spiritual_journey_filters_dg_participants_without_kgap(): void

@@ -178,7 +178,7 @@ class MskParticipantPageTest extends TestCase
         ])->assertRedirect('/developer?error=access_denied');
     }
 
-    public function test_msk_page_renders_all_participants_without_pagination_and_uses_live_search(): void
+    public function test_msk_page_lazy_loads_rows_and_searches_server_side(): void
     {
         $this->createMskTables();
         $rows = [];
@@ -198,16 +198,39 @@ class MskParticipantPageTest extends TestCase
         DB::table('msk_participants')->insert($rows);
         $this->actingAsRecUser();
 
-        $this->get('/pemuridan/msk?batch_month=all&q=MSK+120')
+        $response = $this->get('/pemuridan/msk?batch_month=all');
+
+        $response
             ->assertOk()
             ->assertSee('Peserta MSK 001')
-            ->assertSee('Peserta MSK 120')
+            ->assertSee('Peserta MSK 050')
+            ->assertDontSee('Peserta MSK 051')
+            ->assertDontSee('Peserta MSK 120')
+            ->assertSee('data-msk-list', false)
+            ->assertSee('data-next-page="2"', false)
             ->assertSee('data-msk-search-form', false)
             ->assertSee('data-msk-search-input', false)
             ->assertSee('data-msk-search-row', false)
-            ->assertSee('value="msk 120"', false)
             ->assertDontSee('class="rec-pagination"', false)
             ->assertDontSee('type="submit">Cari</button>', false);
+
+        $pageTwo = $this->get('/pemuridan/msk/rows?batch_month=all&page=2');
+        $pageTwo->assertOk()
+            ->assertJsonPath('has_more', true)
+            ->assertJsonPath('next_page', 3)
+            ->assertJsonPath('stats.total', 120)
+            ->assertJsonPath('stats.progress', 120);
+        $this->assertStringContainsString('Peserta MSK 051', (string) $pageTwo->json('html'));
+        $this->assertStringContainsString('Peserta MSK 100', (string) $pageTwo->json('html'));
+        $this->assertStringNotContainsString('Peserta MSK 101', (string) $pageTwo->json('html'));
+
+        $search = $this->get('/pemuridan/msk/rows?batch_month=all&q=MSK+120');
+        $search->assertOk()
+            ->assertJsonPath('has_more', false)
+            ->assertJsonPath('stats.total', 1)
+            ->assertJsonPath('stats.progress', 1);
+        $this->assertStringContainsString('Peserta MSK 120', (string) $search->json('html'));
+        $this->assertStringNotContainsString('Peserta MSK 001', (string) $search->json('html'));
     }
 
     public function test_batch_filter_lists_all_batches_not_only_the_active_batch(): void
