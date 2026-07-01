@@ -405,6 +405,9 @@ class WebsiteAnalyticsTest extends TestCase
             $table->string('role')->nullable();
             $table->unsignedBigInteger('branch_id')->nullable();
             $table->string('branch_label')->nullable();
+            $table->unsignedBigInteger('impersonator_user_id')->nullable();
+            $table->string('impersonator_username')->nullable();
+            $table->string('impersonator_role')->nullable();
             $table->char('visitor_hash', 64)->nullable();
             $table->string('ip_address', 45)->nullable();
             $table->string('method', 12);

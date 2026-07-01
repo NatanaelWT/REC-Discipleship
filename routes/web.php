@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\Developer\DeveloperAccessController;
 use App\Http\Controllers\Developer\DeveloperActivityController;
 use App\Http\Controllers\Developer\DeveloperConfigController;
 use App\Http\Controllers\Developer\DeveloperController;
@@ -41,6 +42,9 @@ Route::group([], function (): void {
     Route::get('/login', [LoginController::class, 'show'])->name('auth.login');
     Route::post('/login', [LoginController::class, 'store'])->name('auth.login.store');
     Route::post('/logout', [LogoutController::class, 'destroy'])->middleware('rec.auth')->name('auth.logout');
+    Route::post('/developer/access/return', [DeveloperAccessController::class, 'stop'])
+        ->middleware('rec.auth')
+        ->name('developer.access.return');
     Route::get('/pengaturan', [SettingsController::class, 'index'])->middleware('rec.page:settings')->name('settings');
     Route::post('/pengaturan', [SettingsController::class, 'update'])->middleware('rec.page:settings')->name('settings.update');
 
@@ -48,6 +52,7 @@ Route::group([], function (): void {
         Route::get('/', [DeveloperController::class, 'index'])->name('dashboard');
         Route::get('/users', [DeveloperUserController::class, 'index'])->name('users');
         Route::post('/users', [DeveloperUserController::class, 'store'])->name('users.store');
+        Route::post('/users/{user}/access', [DeveloperAccessController::class, 'start'])->name('users.access');
         Route::post('/users/{user}', [DeveloperUserController::class, 'update'])->name('users.update');
         Route::post('/users/{user}/password', [DeveloperUserController::class, 'resetPassword'])->name('users.password');
         Route::get('/config', [DeveloperConfigController::class, 'index'])->name('config');

@@ -17,6 +17,9 @@ return new class extends Migration
                 $table->string('role', 80)->nullable()->index();
                 $table->unsignedBigInteger('branch_id')->nullable()->index();
                 $table->string('branch_label', 160)->nullable();
+                $table->unsignedBigInteger('impersonator_user_id')->nullable()->index();
+                $table->string('impersonator_username', 120)->nullable();
+                $table->string('impersonator_role', 80)->nullable();
                 $table->char('visitor_hash', 64)->nullable()->index();
                 $table->string('ip_address', 45)->nullable()->index();
                 $table->string('method', 12)->index();

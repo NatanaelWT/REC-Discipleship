@@ -210,6 +210,74 @@ class DeveloperAccessTest extends TestCase
             ->assertSee('<details class="developer-user-item" data-developer-user open>', false);
     }
 
+    public function test_developer_can_access_as_active_user_and_return_to_developer(): void
+    {
+        $this->createCoreTables();
+        $this->seedDeveloper();
+        $branchUserId = $this->seedUser('branch_user', 'pemuridan_cabang', ['branch_id' => 2]);
+        $inactiveUserId = $this->seedUser('inactive_user', 'pemuridan_cabang', ['is_active' => false]);
+        $this->loginAs('developer');
+
+        $this->get('/developer/users')
+            ->assertOk()
+            ->assertSee(route('developer.users.access', $branchUserId), false)
+            ->assertDontSee(route('developer.users.access', $inactiveUserId), false);
+
+        $this->post('/developer/users/'.$branchUserId.'/access')
+            ->assertRedirect('/pemuridan/dashboard');
+
+        RuntimeBootstrap::load();
+        $this->assertTrue(is_developer_access_mode());
+        $this->assertSame('branch_user', current_username());
+        $this->assertSame('pemuridan_cabang', current_auth_access_scope());
+        $this->assertSame('gm', current_user_branch());
+
+        $this->get('/developer/users')
+            ->assertRedirect('/pemuridan/dashboard?error=access_denied');
+
+        $this->get('/pengaturan')
+            ->assertOk()
+            ->assertSee('Mode akses: developer sebagai branch_user')
+            ->assertSee('Kembali ke Developer')
+            ->assertSee('Mode akses developer · password dikunci')
+            ->assertSee('disabled aria-disabled="true"', false);
+
+        $this->post('/pengaturan', [
+            'current_password' => 'secret-dev',
+            'new_password' => 'new-secret',
+            'new_password_confirm' => 'new-secret',
+        ])->assertRedirect('/pengaturan?error=developer_access_password_disabled');
+
+        $this->post('/developer/access/return')
+            ->assertRedirect('/developer/users?status=access_returned');
+
+        RuntimeBootstrap::load();
+        $this->assertFalse(is_developer_access_mode());
+        $this->assertSame('developer', current_username());
+        $this->assertSame('developer', current_auth_access_scope());
+        $this->assertSame('', current_user_branch());
+    }
+
+    public function test_developer_access_rejects_inactive_self_and_developer_targets(): void
+    {
+        $this->createCoreTables();
+        $developerId = $this->seedDeveloper();
+        $inactiveUserId = $this->seedUser('inactive_user', 'pemuridan_cabang', ['is_active' => false]);
+        $otherDeveloperId = $this->seedUser('otherdev', 'developer', ['branch_id' => null]);
+        $this->loginAs('developer');
+
+        $this->post('/developer/users/'.$inactiveUserId.'/access')
+            ->assertRedirect('/developer/users?error=access_target_inactive&user='.$inactiveUserId);
+        $this->post('/developer/users/'.$developerId.'/access')
+            ->assertRedirect('/developer/users?error=access_self&user='.$developerId);
+        $this->post('/developer/users/'.$otherDeveloperId.'/access')
+            ->assertRedirect('/developer/users?error=access_target_developer&user='.$otherDeveloperId);
+
+        RuntimeBootstrap::load();
+        $this->assertFalse(is_developer_access_mode());
+        $this->assertSame('developer', current_auth_access_scope());
+    }
+
     public function test_developer_diagnostics_counts_only_active_discipleship_branches(): void
     {
         $this->createCoreTables();
@@ -376,6 +444,9 @@ class DeveloperAccessTest extends TestCase
             $table->string('role', 80)->nullable();
             $table->unsignedBigInteger('branch_id')->nullable();
             $table->string('branch_label', 160)->nullable();
+            $table->unsignedBigInteger('impersonator_user_id')->nullable();
+            $table->string('impersonator_username', 120)->nullable();
+            $table->string('impersonator_role', 80)->nullable();
             $table->char('visitor_hash', 64)->nullable();
             $table->string('ip_address', 45)->nullable();
             $table->string('method', 12);

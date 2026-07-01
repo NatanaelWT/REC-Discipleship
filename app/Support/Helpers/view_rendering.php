@@ -1019,6 +1019,17 @@ function page_header(string $title, array $settings, string $currentPage, bool $
     echo "  </aside>\n";
     echo "  <div class=\"app-main\">\n";
     echo "    <main class=\"container\">\n";
+    if (function_exists('is_developer_access_mode') && is_developer_access_mode()) {
+        $originalUsername = function_exists('developer_access_original_username') ? developer_access_original_username() : 'developer';
+        $targetUsername = function_exists('developer_access_target_username') ? developer_access_target_username() : current_username();
+        echo "  <div class=\"developer-access-banner\">\n";
+        echo '    <span>Mode akses: '.h($originalUsername ?: 'developer').' sebagai '.h($targetUsername ?: current_username())."</span>\n";
+        echo '    <form method="post" action="'.h(route('developer.access.return'))."\">\n";
+        echo '      '.csrf_field()."\n";
+        echo "      <button type=\"submit\">Kembali ke Developer</button>\n";
+        echo "    </form>\n";
+        echo "  </div>\n";
+    }
     if (function_exists('is_developer_session') && is_developer_session() && function_exists('developer_debug_banner_enabled') && developer_debug_banner_enabled()) {
         echo '  <div class="developer-debug-banner">Developer debug aktif &middot; cabang '.h(user_branch_label($currentBranch))."</div>\n";
     }

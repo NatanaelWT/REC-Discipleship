@@ -9,13 +9,20 @@ use Illuminate\Support\Facades\Auth;
 
 class CurrentUserContext
 {
-    public function __construct(private readonly BranchCatalog $branches) {}
+    public function __construct(
+        private readonly BranchCatalog $branches,
+        private readonly DeveloperAccessSession $developerAccess,
+    ) {}
 
     public function user(): ?User
     {
         $user = Auth::user();
 
-        return $user instanceof User ? $user : null;
+        if (! $user instanceof User) {
+            return null;
+        }
+
+        return $this->developerAccess->effectiveUser($user);
     }
 
     public function isLoggedIn(): bool

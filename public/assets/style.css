@@ -13049,6 +13049,52 @@ button.member-feedback-recap-count-pill:focus-visible {
   font-weight: 800;
 }
 
+.developer-access-banner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(14, 116, 144, .24);
+  border-radius: 12px;
+  background: #ecfeff;
+  color: #155e75;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.developer-access-banner form {
+  margin: 0;
+}
+
+.developer-access-banner button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(14, 116, 144, .28);
+  border-radius: 999px;
+  background: #fff;
+  color: #0e7490;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.developer-access-banner button:hover {
+  background: #cffafe;
+}
+
+@media (max-width: 640px) {
+  .developer-access-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .developer-access-banner button {
+    width: 100%;
+  }
+}
+
 .page-analytics .container {
   max-width: 1380px;
 }
@@ -14365,7 +14411,7 @@ details[open] > summary .activity-disclosure-icon::after {
 
 .developer-user-toggle {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   justify-content: initial;
   min-height: 72px;
   padding: 12px 15px;
@@ -14415,6 +14461,28 @@ details[open] > summary .activity-disclosure-icon::after {
 
 .developer-user-status.is-active { background: #dcfce7; color: #166534; }
 .developer-user-status.is-inactive { background: #fee2e2; color: #991b1b; }
+
+.developer-access-form {
+  margin: 0;
+}
+
+.developer-access-button {
+  display: inline-grid;
+  min-height: 32px;
+  padding: 0 12px;
+  place-items: center;
+  border: 1px solid rgba(14, 116, 144, .28);
+  border-radius: 999px;
+  background: #ecfeff;
+  color: #0e7490;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.developer-access-button:hover {
+  background: #cffafe;
+}
 
 .developer-user-chevron {
   position: relative;
@@ -14752,6 +14820,11 @@ details[open] > summary .activity-disclosure-icon::after {
   }
 
   .developer-user-status {
+    grid-column: 2;
+    width: fit-content;
+  }
+
+  .developer-access-form {
     grid-column: 2;
     width: fit-content;
   }

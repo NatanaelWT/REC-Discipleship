@@ -22,6 +22,10 @@ class SettingsController extends Controller
     {
         RuntimeBootstrap::boot($request);
 
+        if (function_exists('is_developer_access_mode') && is_developer_access_mode()) {
+            return redirect()->route('settings', ['error' => 'developer_access_password_disabled']);
+        }
+
         $error = $passwordService->updatePassword(
             current_username(),
             (string) $request->input('current_password', ''),

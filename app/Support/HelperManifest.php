@@ -15,7 +15,7 @@ class HelperManifest
         'current_user_can_access_worship', 'developer_debug_banner_enabled', 'discipleship_action_map',
         'discipleship_page_map', 'destroy_current_session', 'format_datetime_id',
         'format_indo_date', 'format_indo_month', 'format_lock_wait_label', 'format_short_indo_date', 'format_short_indo_weekday_date',
-        'h', 'is_central_discipleship_readonly_session', 'is_developer_session', 'is_discipleship_action',
+        'h', 'is_central_discipleship_readonly_session', 'is_developer_access_mode', 'is_developer_session', 'is_discipleship_action',
         'is_discipleship_branch_scope', 'is_effective_central_discipleship_readonly', 'is_logged_in',
         'is_same_origin_url', 'is_superuser_session', 'is_valid_post_origin', 'is_worship_action',
         'is_worship_only_scope', 'is_worship_page', 'normalize_auth_access_scope', 'normalize_central_recap_branch',
@@ -24,6 +24,7 @@ class HelperManifest
         'restricted_branch_action_map', 'restricted_branch_page_map', 'restricted_secure_upload_prefixes',
         'secure_upload_prefixes_for_current_scope', 'secure_upload_url', 'today_date', 'user_branch_label',
         'view_rendering', 'worship_action_map', 'worship_only_action_map', 'worship_only_page_map', 'worship_page_map',
+        'developer_access_original_username', 'developer_access_target_username',
     ];
 
     private const FILES = [

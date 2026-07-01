@@ -98,6 +98,39 @@ class ActivityAuditTest extends TestCase
         $this->assertArrayHasKey('is_active', $event->changed_values);
     }
 
+    public function test_developer_access_mode_records_effective_user_and_impersonator(): void
+    {
+        $developer = $this->developer();
+        $target = User::query()->create([
+            'username' => 'branch_user',
+            'password' => Hash::make('secret'),
+            'branch_id' => 1,
+            'access_scope' => 'pemuridan_cabang',
+            'is_active' => true,
+        ]);
+        $this->actingAs($developer);
+
+        $start = $this->post('/developer/users/'.$target->getKey().'/access')->assertRedirect('/pemuridan/dashboard');
+        $startActivity = ActivityRequest::query()->findOrFail($start->headers->get('X-Activity-Request-Id'));
+        $this->assertTrue($startActivity->events()->where('action', 'developer.access.started')->exists());
+
+        $response = $this->get('/_audit-test/view')->assertOk();
+        $activity = ActivityRequest::query()->findOrFail($response->headers->get('X-Activity-Request-Id'));
+
+        $this->assertSame('user', $activity->actor_type);
+        $this->assertSame((int) $target->getKey(), (int) $activity->user_id);
+        $this->assertSame('branch_user', $activity->username);
+        $this->assertSame('pemuridan_cabang', $activity->role);
+        $this->assertSame(1, (int) $activity->branch_id);
+        $this->assertSame((int) $developer->getKey(), (int) $activity->impersonator_user_id);
+        $this->assertSame('developer', $activity->impersonator_username);
+        $this->assertSame('developer', $activity->impersonator_role);
+
+        $stop = $this->post('/developer/access/return')->assertRedirect('/developer/users?status=access_returned');
+        $stopActivity = ActivityRequest::query()->findOrFail($stop->headers->get('X-Activity-Request-Id'));
+        $this->assertTrue($stopActivity->events()->where('action', 'developer.access.stopped')->exists());
+    }
+
     public function test_login_success_and_logout_keep_the_correct_actor(): void
     {
         $user = $this->developer();

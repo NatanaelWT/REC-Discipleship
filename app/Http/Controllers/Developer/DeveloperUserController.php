@@ -129,6 +129,10 @@ class DeveloperUserController extends Controller
             'self_deactivate' => 'Developer tidak bisa menonaktifkan akunnya sendiri.',
             'last_active_developer' => 'Harus ada minimal satu developer aktif.',
             'self_password_reset' => 'Gunakan halaman pengaturan untuk mengganti password sendiri.',
+            'access_denied' => 'Akses developer diperlukan.',
+            'access_self' => 'Developer tidak bisa memakai akses akunnya sendiri.',
+            'access_target_inactive' => 'User nonaktif tidak bisa dipakai.',
+            'access_target_developer' => 'Akses developer lain tidak bisa dipakai.',
         ];
     }
 }

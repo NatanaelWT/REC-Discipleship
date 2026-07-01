@@ -4,15 +4,21 @@ namespace App\Services\Activity;
 
 use App\Enums\UserAccessRole;
 use App\Models\User;
+use App\Services\Auth\CurrentUserContext;
+use App\Services\Auth\DeveloperAccessSession;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class ActorSnapshotFactory
 {
+    public function __construct(
+        private readonly CurrentUserContext $users,
+        private readonly DeveloperAccessSession $developerAccess,
+    ) {}
+
     /** @return array<string, mixed> */
     public function current(Request $request): array
     {
-        $user = Auth::user();
+        $user = $this->users->user();
         if (! $user instanceof User) {
             return [
                 'actor_type' => 'anonymous',
@@ -21,9 +27,14 @@ class ActorSnapshotFactory
                 'role' => null,
                 'branch_id' => null,
                 'branch_label' => null,
+                'impersonator_user_id' => null,
+                'impersonator_username' => null,
+                'impersonator_role' => null,
                 'visitor_hash' => $this->visitorHash($request),
             ];
         }
+
+        $original = $this->developerAccess->originalUser();
 
         $branchId = is_numeric($user->branch_id) ? (int) $user->branch_id : null;
         $branchLabel = null;
@@ -38,6 +49,9 @@ class ActorSnapshotFactory
             'role' => UserAccessRole::fromStoredValue((string) $user->access_scope)->value,
             'branch_id' => $branchId,
             'branch_label' => $branchLabel,
+            'impersonator_user_id' => $original instanceof User ? (int) $original->getKey() : null,
+            'impersonator_username' => $original instanceof User ? trim((string) $original->username) ?: null : null,
+            'impersonator_role' => $original instanceof User ? UserAccessRole::fromStoredValue((string) $original->access_scope)->value : null,
             'visitor_hash' => $this->visitorHash($request),
         ];
     }

@@ -30,6 +30,8 @@
       <div class="alert success">User diperbarui.</div>
     @elseif ($statusCode === 'password_reset')
       <div class="alert success">Password user diperbarui.</div>
+    @elseif ($statusCode === 'access_returned')
+      <div class="alert success">Kembali ke akses developer.</div>
     @elseif ($errorCode !== '')
       <div class="alert danger">{{ $errorMessages[$errorCode] ?? 'Perubahan ditolak.' }}</div>
     @endif
@@ -104,6 +106,12 @@
               <span class="developer-user-avatar">{{ $userInitial }}</span>
               <span class="developer-user-identity"><strong>{{ $user->username }}</strong><small>{{ $roleLabel }} · {{ $requiresBranch ? $branchLabel : 'Tanpa cabang' }}</small></span>
               <span class="developer-user-status {{ $active ? 'is-active' : 'is-inactive' }}">{{ $active ? 'Aktif' : 'Nonaktif' }}</span>
+              @if ($active)
+                <form method="post" action="{{ route('developer.users.access', $user) }}" class="developer-access-form" data-developer-access-form>
+                  @csrf
+                  <button class="developer-access-button" type="submit">Akses</button>
+                </form>
+              @endif
               <span class="developer-user-chevron" aria-hidden="true"></span>
             </summary>
             <div class="developer-user-detail">
@@ -157,6 +165,12 @@
 
     <script>
       var developerUserItems = document.querySelectorAll('[data-developer-user]');
+      document.querySelectorAll('[data-developer-access-form]').forEach(function (form) {
+        form.addEventListener('click', function (event) {
+          event.stopPropagation();
+        });
+      });
+
       developerUserItems.forEach(function (item) {
         item.addEventListener('toggle', function () {
           if (!item.open) {
