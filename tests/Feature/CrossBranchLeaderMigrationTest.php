@@ -84,6 +84,67 @@ class CrossBranchLeaderMigrationTest extends TestCase
         ]);
     }
 
+    public function test_yakub_darmo_external_is_relinked_to_gm_person_idempotently(): void
+    {
+        $this->createTables();
+        $this->seedYakubRows();
+
+        $migration = require database_path('migrations/2026_07_01_000003_relink_yakub_tri_handoko_darmo_to_gm.php');
+        $migration->up();
+        $migration->up();
+
+        $this->assertDatabaseHas('discipleship_group_people', [
+            'branch_id' => 3,
+            'discipleship_group_id' => 300,
+            'person_id' => 626,
+            'role' => 'leader',
+        ]);
+        $this->assertDatabaseMissing('discipleship_group_people', [
+            'branch_id' => 3,
+            'person_id' => 776,
+            'role' => 'leader',
+        ]);
+        $this->assertDatabaseHas('discipleship_relationships', [
+            'branch_id' => 3,
+            'mentor_person_id' => 626,
+            'disciple_person_id' => 641,
+        ]);
+        $this->assertDatabaseHas('discipleship_groups', [
+            'id' => 300,
+            'branch_id' => 3,
+            'initiated_by_person_id' => 626,
+        ]);
+        $this->assertDatabaseHas('discipleship_group_multiplications', [
+            'branch_id' => 3,
+            'initiated_by_person_id' => 626,
+        ]);
+        $this->assertDatabaseHas('discipleship_meeting_reports', [
+            'branch_id' => 3,
+            'leader_person_id' => 626,
+        ]);
+        $this->assertDatabaseHas('discipleship_feedbacks', [
+            'branch_id' => 3,
+            'leader_person_id' => 626,
+            'respondent_person_id' => 626,
+        ]);
+        $this->assertDatabaseHas('discipleship_people', [
+            'id' => 776,
+            'branch_id' => 3,
+            'status' => 'inactive',
+        ]);
+        $this->assertDatabaseHas('discipleship_relationships', [
+            'branch_id' => 3,
+            'disciple_person_id' => 776,
+            'status' => 'closed',
+            'reason_end' => 'converted_to_cross_branch_leader',
+        ]);
+        $this->assertDatabaseHas('discipleship_group_people', [
+            'branch_id' => 1,
+            'person_id' => 790,
+            'role' => 'leader',
+        ]);
+    }
+
     private function createTables(): void
     {
         Schema::dropIfExists('discipleship_feedbacks');
@@ -153,6 +214,7 @@ class CrossBranchLeaderMigrationTest extends TestCase
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('leader_person_id')->nullable();
+            $table->unsignedBigInteger('respondent_person_id')->nullable();
             $table->timestamps();
         });
     }
@@ -168,6 +230,7 @@ class CrossBranchLeaderMigrationTest extends TestCase
         DB::table('discipleship_groups')->insert([
             ['id' => 175, 'branch_id' => 1, 'name' => 'Kelompok', 'status' => 'completed', 'initiated_by_person_id' => null, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 176, 'branch_id' => 1, 'name' => 'Kelompok', 'status' => 'completed', 'initiated_by_person_id' => 790, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 300, 'branch_id' => 3, 'name' => 'Kelompok Darmo', 'status' => 'completed', 'initiated_by_person_id' => 776, 'created_at' => now(), 'updated_at' => now()],
         ]);
         DB::table('discipleship_group_people')->insert([
             ['branch_id' => 1, 'discipleship_group_id' => 175, 'person_id' => 790, 'role' => 'leader', 'status' => 'closed', 'created_at' => now(), 'updated_at' => now()],
@@ -177,24 +240,19 @@ class CrossBranchLeaderMigrationTest extends TestCase
             ['branch_id' => 1, 'mentor_person_id' => 790, 'disciple_person_id' => 641, 'status' => 'closed', 'created_at' => now(), 'updated_at' => now()],
             ['branch_id' => 1, 'mentor_person_id' => null, 'disciple_person_id' => 790, 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
             ['branch_id' => 3, 'mentor_person_id' => 776, 'disciple_person_id' => 641, 'status' => 'closed', 'created_at' => now(), 'updated_at' => now()],
+            ['branch_id' => 3, 'mentor_person_id' => null, 'disciple_person_id' => 776, 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
         ]);
         DB::table('discipleship_group_multiplications')->insert([
-            'branch_id' => 1,
-            'initiated_by_person_id' => 790,
-            'created_at' => now(),
-            'updated_at' => now(),
+            ['branch_id' => 1, 'initiated_by_person_id' => 790, 'created_at' => now(), 'updated_at' => now()],
+            ['branch_id' => 3, 'initiated_by_person_id' => 776, 'created_at' => now(), 'updated_at' => now()],
         ]);
         DB::table('discipleship_meeting_reports')->insert([
-            'branch_id' => 1,
-            'leader_person_id' => 790,
-            'created_at' => now(),
-            'updated_at' => now(),
+            ['branch_id' => 1, 'leader_person_id' => 790, 'created_at' => now(), 'updated_at' => now()],
+            ['branch_id' => 3, 'leader_person_id' => 776, 'created_at' => now(), 'updated_at' => now()],
         ]);
         DB::table('discipleship_feedbacks')->insert([
-            'branch_id' => 1,
-            'leader_person_id' => 790,
-            'created_at' => now(),
-            'updated_at' => now(),
+            ['branch_id' => 1, 'leader_person_id' => 790, 'respondent_person_id' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['branch_id' => 3, 'leader_person_id' => 776, 'respondent_person_id' => 776, 'created_at' => now(), 'updated_at' => now()],
         ]);
     }
 }
