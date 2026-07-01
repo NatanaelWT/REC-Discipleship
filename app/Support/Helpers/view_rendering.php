@@ -694,6 +694,7 @@ function render_people_tree_v3(
     $attrNotes = str_replace(["\r", "\n"], ' ', (string) ($person['notes'] ?? ''));
     $attrMemberId = trim((string) ($person['member_id'] ?? ''));
     $canPersonManage = $canManageTree;
+    $canPersonInteract = $canPersonManage || ! $isRoot;
 
     $personItemClass = 'tree-v2-item tree-v2-item-person'.($isRoot ? ' is-root' : '');
     $personNodeClass = 'tree-v2-node tree-v2-person'.($isRoot ? ' is-root' : '');
@@ -702,11 +703,11 @@ function render_people_tree_v3(
     } elseif ($personGender === 'Perempuan') {
         $personNodeClass .= ' is-female';
     }
-    if ($canPersonManage) {
+    if ($canPersonInteract) {
         $personNodeClass .= ' is-actionable';
     }
     $personNodeAttrs = '';
-    if ($canPersonManage) {
+    if ($canPersonInteract) {
         $personNodeAttrs .= ' data-tree-v2-node-action="person"';
         $personNodeAttrs .= ' data-person-id="'.h($personId).'"';
         $personNodeAttrs .= ' data-member-id="'.h($attrMemberId).'"';

@@ -79,7 +79,14 @@ class PeopleTreePageTest extends TestCase
             ->assertOk()
             ->assertSee('Yakub Tri Handoko (GM)')
             ->assertSee('Anggota Kutisari Lintas')
-            ->assertSee('Kelompok Lintas Cabang');
+            ->assertSee('Kelompok Lintas Cabang')
+            ->assertSee('data-tree-v2-person-profile-template="626"', false)
+            ->assertSee('data-tree-v2-node-action="person" data-person-id="626"', false)
+            ->assertSee('tree-v2-node tree-v2-person is-male is-actionable', false)
+            ->assertSee('Riwayat Memimpin')
+            ->assertDontSee('Peserta ini belum terhubung ke data pemuridan.')
+            ->assertDontSee('data-tree-v2-profile-action="edit_person"', false)
+            ->assertDontSee('data-tree-v2-action-modal', false);
     }
 
     public function test_central_all_branch_tree_renders_people_from_every_branch(): void
@@ -343,6 +350,7 @@ class PeopleTreePageTest extends TestCase
             'id' => 626,
             'branch_id' => 2,
             'full_name' => 'Yakub Tri Handoko',
+            'gender' => 'Laki-laki',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
@@ -573,6 +581,7 @@ class PeopleTreePageTest extends TestCase
             'id' => 626,
             'branch_id' => 2,
             'full_name' => 'Yakub Tri Handoko',
+            'gender' => 'Laki-laki',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),

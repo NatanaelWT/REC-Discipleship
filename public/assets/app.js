@@ -2705,11 +2705,11 @@
     }
 
     const treeV2ActionModal = document.querySelector('[data-tree-v2-action-modal]');
-    if (treeV2ActionModal) {
-      const titleEl = treeV2ActionModal.querySelector('[data-tree-v2-action-title]');
-      const closeButtons = treeV2ActionModal.querySelectorAll('[data-tree-v2-action-close]');
-      const actionButtons = treeV2ActionModal.querySelectorAll('[data-tree-v2-action-do]');
-      const personProfileModal = document.querySelector('[data-tree-v2-person-profile-modal]');
+    const personProfileModal = document.querySelector('[data-tree-v2-person-profile-modal]');
+    if (treeV2ActionModal || personProfileModal) {
+      const titleEl = treeV2ActionModal ? treeV2ActionModal.querySelector('[data-tree-v2-action-title]') : null;
+      const closeButtons = treeV2ActionModal ? treeV2ActionModal.querySelectorAll('[data-tree-v2-action-close]') : [];
+      const actionButtons = treeV2ActionModal ? treeV2ActionModal.querySelectorAll('[data-tree-v2-action-do]') : [];
       const personProfileTitleEl = personProfileModal ? personProfileModal.querySelector('[data-tree-v2-person-profile-title]') : null;
       const personProfileBodyEl = personProfileModal ? personProfileModal.querySelector('[data-tree-v2-person-profile-body]') : null;
       const personProfileCloseButtons = personProfileModal ? personProfileModal.querySelectorAll('[data-tree-v2-person-profile-close]') : [];
@@ -2753,8 +2753,10 @@
       };
 
       const closeActionModal = () => {
-        treeV2ActionModal.classList.remove('is-open');
-        treeV2ActionModal.setAttribute('aria-hidden', 'true');
+        if (treeV2ActionModal) {
+          treeV2ActionModal.classList.remove('is-open');
+          treeV2ActionModal.setAttribute('aria-hidden', 'true');
+        }
         if (personProfileModal) {
           personProfileModal.classList.remove('is-open');
           personProfileModal.setAttribute('aria-hidden', 'true');
@@ -2867,6 +2869,7 @@
         if (nodeData.kind === 'person' && !nodeData.isRoot && openPersonProfileModal(node, nodeData)) {
           return;
         }
+        if (!treeV2ActionModal) return;
 
         activeNode = node;
         activeNodeData = nodeData;
@@ -2948,11 +2951,13 @@
         });
       });
 
-      treeV2ActionModal.addEventListener('click', function (event) {
-        if (event.target === treeV2ActionModal) {
-          closeActionModal();
-        }
-      });
+      if (treeV2ActionModal) {
+        treeV2ActionModal.addEventListener('click', function (event) {
+          if (event.target === treeV2ActionModal) {
+            closeActionModal();
+          }
+        });
+      }
       if (personProfileModal) {
         personProfileModal.addEventListener('click', function (event) {
           if (event.target === personProfileModal) {
@@ -2965,7 +2970,7 @@
         if (
           event.key === 'Escape'
           && (
-            treeV2ActionModal.classList.contains('is-open')
+            (treeV2ActionModal && treeV2ActionModal.classList.contains('is-open'))
             || (personProfileModal && personProfileModal.classList.contains('is-open'))
           )
         ) {

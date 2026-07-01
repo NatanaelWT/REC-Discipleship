@@ -9,6 +9,25 @@ use Tests\TestCase;
 
 class CrossBranchLeaderMigrationTest extends TestCase
 {
+    public function test_yakub_gm_missing_gender_is_filled_idempotently(): void
+    {
+        $this->createTables();
+        $this->seedYakubRows();
+
+        $migration = require database_path('migrations/2026_07_01_000002_fill_yakub_tri_handoko_gm_gender.php');
+        $migration->up();
+        $migration->up();
+
+        $this->assertDatabaseHas('discipleship_people', [
+            'id' => 626,
+            'branch_id' => 2,
+            'full_name' => 'Yakub Tri Handoko',
+            'gender' => 'Laki-laki',
+        ]);
+        $this->assertNull(DB::table('discipleship_people')->where('id', 776)->value('gender'));
+        $this->assertNull(DB::table('discipleship_people')->where('id', 790)->value('gender'));
+    }
+
     public function test_yakub_kutisari_external_is_relinked_to_gm_person_idempotently(): void
     {
         $this->createTables();
@@ -79,6 +98,7 @@ class CrossBranchLeaderMigrationTest extends TestCase
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('full_name')->nullable();
+            $table->string('gender')->nullable();
             $table->string('status')->default('active');
             $table->timestamps();
         });
