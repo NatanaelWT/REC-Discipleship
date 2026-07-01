@@ -79,6 +79,10 @@ if ($page === 'people_tree') {
     usort($peopleSorted, function ($a, $b) {
         return strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
     });
+    $leaderCandidatesSorted = is_array($leaderCandidates ?? null) ? $leaderCandidates : $people;
+    usort($leaderCandidatesSorted, function ($a, $b) {
+        return strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+    });
     $membersSorted = discipleship_person_sources($members, $mskClasses);
     usort($membersSorted, function ($a, $b) {
         return strcasecmp((string) ($a['full_name'] ?? ''), (string) ($b['full_name'] ?? ''));
@@ -609,7 +613,7 @@ if ($page === 'people_tree') {
         echo "        <input type=\"hidden\" name=\"return_page\" value=\"people_tree\">\n";
         echo "        <input type=\"hidden\" name=\"id\" value=\"\">\n";
         echo "        <label class=\"modal-field\">Leader<select name=\"leader_id\" required>";
-        foreach ($peopleSorted as $p) {
+        foreach ($leaderCandidatesSorted as $p) {
             $pid = trim((string) ($p['id'] ?? ''));
             if ($pid === '' || $pid === $rootLeaderId) {
                 continue;
@@ -619,7 +623,7 @@ if ($page === 'people_tree') {
         echo "</select></label>\n";
         echo "        <label class=\"modal-field\">Pendamping (Opsional)<select name=\"assistant_id\">";
         echo "<option value=\"\">- Tidak ada -</option>";
-        foreach ($peopleSorted as $p) {
+        foreach ($leaderCandidatesSorted as $p) {
             $pid = $p['id'] ?? '';
             echo "<option value=\"" . h($pid) . "\">" . h($p['name'] ?? '') . "</option>";
         }
@@ -644,7 +648,7 @@ if ($page === 'people_tree') {
         echo "        <input type=\"hidden\" name=\"return_page\" value=\"people_tree\">\n";
         echo "        <input type=\"hidden\" name=\"id\" value=\"\">\n";
         echo "        <label class=\"modal-field\">Leader<select name=\"leader_id\" required>";
-        foreach ($peopleSorted as $p) {
+        foreach ($leaderCandidatesSorted as $p) {
             $pid = trim((string) ($p['id'] ?? ''));
             if ($pid === '' || $pid === $rootLeaderId) {
                 continue;
@@ -654,7 +658,7 @@ if ($page === 'people_tree') {
         echo "</select></label>\n";
         echo "        <label class=\"modal-field\">Pendamping (Opsional)<select name=\"assistant_id\">";
         echo "<option value=\"\">- Tidak ada -</option>";
-        foreach ($peopleSorted as $p) {
+        foreach ($leaderCandidatesSorted as $p) {
             $pid = $p['id'] ?? '';
             echo "<option value=\"" . h($pid) . "\">" . h($p['name'] ?? '') . "</option>";
         }

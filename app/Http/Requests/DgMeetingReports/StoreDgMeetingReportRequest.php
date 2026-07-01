@@ -382,7 +382,6 @@ class StoreDgMeetingReportRequest extends FormRequest
         }
 
         $id = DiscipleshipPerson::query()
-            ->where('branch_id', branch_id_from_slug($this->publicBranch))
             ->whereKey($personId)
             ->value('id');
 

@@ -197,6 +197,53 @@ class DgMeetingReportRecapTest extends TestCase
         ]], json_decode((string) $report->meditation_sharers, true));
     }
 
+    public function test_public_dg_report_accepts_cross_branch_leader_for_branch_group(): void
+    {
+        $this->createTables();
+        DB::table('discipleship_people')->insert([
+            ['id' => 626, 'branch_id' => 2, 'full_name' => 'Yakub Tri Handoko', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 641, 'branch_id' => 1, 'full_name' => 'Anggota Kutisari', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        DB::table('discipleship_groups')->insert([
+            'id' => 175,
+            'branch_id' => 1,
+            'name' => 'Kelompok Kutisari Lintas',
+            'status' => 'active',
+            'start_stage' => 'DG 1',
+            'current_stage' => 'DG 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            ['branch_id' => 1, 'discipleship_group_id' => 175, 'person_id' => 626, 'role' => 'leader', 'stage' => null, 'status' => 'active', 'started_on' => '2026-07-01', 'created_at' => now(), 'updated_at' => now()],
+            ['branch_id' => 1, 'discipleship_group_id' => 175, 'person_id' => 641, 'role' => 'member', 'stage' => 'DG 1', 'status' => 'active', 'started_on' => '2026-07-01', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $response = $this->post('/publik/jurnal-dg/kutisari/laporan', [
+            'public_cabang' => 'kutisari',
+            'leader_id' => '626',
+            'group_id' => '175',
+            'meeting_date' => '2026-07-01',
+            'material_topic' => 'Sesi 1',
+            'sharing_openness' => '9',
+            'quality_prepare' => '1',
+            'quality_pray' => '1',
+            'quality_share_meditation' => '1',
+            'quality_relational' => '1',
+            'meditation_sharer_ids' => ['641'],
+        ]);
+
+        $response->assertRedirect(route('public.dg.report', ['branch' => 'kutisari', 'submitted' => 1]));
+        $response->assertSessionMissing('public_dg_report_error');
+
+        $report = DB::table('discipleship_meeting_reports')->orderByDesc('id')->first();
+        $this->assertNotNull($report);
+        $this->assertSame(1, (int) $report->branch_id);
+        $this->assertSame(626, (int) $report->leader_person_id);
+        $this->assertSame('Yakub Tri Handoko (GM)', $report->leader_name_snapshot);
+        $this->assertSame(175, (int) $report->discipleship_group_id);
+    }
+
     public function test_public_dg_report_uploads_a_real_meeting_photo_without_server_error(): void
     {
         $this->createTables();

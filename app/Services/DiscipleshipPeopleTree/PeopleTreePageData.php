@@ -32,6 +32,7 @@ class PeopleTreePageData
             $mskClasses = $this->modelStore->participantsForBranches($branchCodes, $centralReadOnly);
             $discipleshipV2Model = $this->modelStore->modelForContext($branchCodes, $centralReadOnly);
             $people = $this->modelStore->peopleForModel($discipleshipV2Model, $members, $mskClasses, $centralReadOnly);
+            $currentBranchCode = normalize_public_branch_code(current_user_branch());
             $branchIds = branch_ids_from_slugs($branchCodes);
             $treeProfileRows = $this->treeProfileRows($people, $mskClasses);
             $treeProfileHistories = $this->historyData->forParticipants($treeProfileRows, $branchIds);
@@ -55,6 +56,7 @@ class PeopleTreePageData
                 'members' => $members,
                 'mskClasses' => $mskClasses,
                 'people' => $people,
+                'leaderCandidates' => $centralReadOnly ? [] : $this->modelStore->leaderCandidatesForBranch($currentBranchCode),
                 'treePersonProfiles' => $treePersonProfiles,
                 'groups' => $this->modelStore->groupsForModel($discipleshipV2Model, $people, $centralReadOnly),
                 'dgMeetingReports' => $this->modelStore->meetingReportsForBranches($branchCodes, $centralReadOnly),

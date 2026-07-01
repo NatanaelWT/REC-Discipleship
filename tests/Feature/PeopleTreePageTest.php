@@ -50,6 +50,71 @@ class PeopleTreePageTest extends TestCase
         $response->assertDontSee('data-tree-v2-proxy="view-person-journey"', false);
     }
 
+    public function test_people_tree_renders_cross_branch_leader_without_local_duplicate(): void
+    {
+        $this->createTables();
+        $memberId = DB::table('discipleship_people')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Anggota Kutisari Lintas',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_people')->insert([
+            'id' => 626,
+            'branch_id' => 2,
+            'full_name' => 'Yakub Tri Handoko',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $groupId = DB::table('discipleship_groups')->insertGetId([
+            'branch_id' => 1,
+            'name' => 'Kelompok Lintas Cabang',
+            'status' => 'active',
+            'start_stage' => 'DG 1',
+            'current_stage' => 'DG 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => 626,
+                'role' => 'leader',
+                'stage' => null,
+                'status' => 'active',
+                'started_on' => '2026-07-01',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $memberId,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'active',
+                'started_on' => '2026-07-01',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/pohon')
+            ->assertOk()
+            ->assertSee('Yakub Tri Handoko (GM)')
+            ->assertSee('Anggota Kutisari Lintas');
+
+        $this->assertSame(
+            0,
+            DB::table('discipleship_people')->where('branch_id', 1)->where('full_name', 'Yakub Tri Handoko')->count(),
+        );
+    }
+
     public function test_central_all_branch_tree_renders_people_from_every_branch(): void
     {
         $this->createTables();
@@ -299,6 +364,72 @@ class PeopleTreePageTest extends TestCase
         $this->assertDatabaseHas('discipleship_group_people', [
             'discipleship_group_id' => $groupId,
             'person_id' => $memberId,
+            'role' => 'member',
+        ]);
+    }
+
+    public function test_people_tree_save_group_accepts_cross_branch_leader_but_rejects_cross_branch_member(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        DB::table('discipleship_people')->insert([
+            'id' => 626,
+            'branch_id' => 2,
+            'full_name' => 'Yakub Tri Handoko',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_people')->insert([
+            'id' => 900,
+            'branch_id' => 2,
+            'full_name' => 'Anggota GM Tidak Valid',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAsRecUser();
+
+        $this->post('/pemuridan/pohon/kelompok', [
+            'leader_id' => '626',
+            'assistant_id' => '',
+            'progress' => 'DG 1',
+            'parent_group_id' => '',
+            'notes' => 'Kelompok dipimpin lintas cabang',
+            'return_page' => 'people_tree',
+        ])->assertRedirect('/pemuridan/pohon?saved=1');
+
+        $newGroupId = (int) DB::table('discipleship_groups')
+            ->where('notes', 'Kelompok dipimpin lintas cabang')
+            ->value('id');
+        $this->assertGreaterThan(0, $newGroupId);
+        $this->assertDatabaseHas('discipleship_group_people', [
+            'branch_id' => 1,
+            'discipleship_group_id' => $newGroupId,
+            'person_id' => 626,
+            'role' => 'leader',
+        ]);
+        $this->assertSame(
+            0,
+            DB::table('discipleship_people')->where('branch_id', 1)->where('full_name', 'Yakub Tri Handoko')->count(),
+        );
+
+        $beforeGroupCount = DB::table('discipleship_groups')->count();
+        $this->post('/pemuridan/pohon/kelompok', [
+            'leader_id' => '626',
+            'assistant_id' => '',
+            'progress' => 'DG 1',
+            'parent_group_id' => '',
+            'member_ids' => ['900'],
+            'notes' => 'Kelompok dengan member lintas cabang',
+            'return_page' => 'people_tree',
+        ])->assertRedirect('/pemuridan/pohon?error=invalid_group');
+
+        $this->assertSame($beforeGroupCount, DB::table('discipleship_groups')->count());
+        $this->assertDatabaseMissing('discipleship_group_people', [
+            'branch_id' => 1,
+            'person_id' => 900,
             'role' => 'member',
         ]);
     }

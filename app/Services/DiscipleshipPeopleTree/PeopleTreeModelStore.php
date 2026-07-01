@@ -54,6 +54,7 @@ class PeopleTreeModelStore
 
         $groups = $this->groupRows($branchIds);
         $groupPeople = $this->groupPeopleRows($branchIds);
+        $relationships = $this->relationshipRows($branchIds);
         $memberships = [];
         $leaderships = [];
         foreach ($groupPeople as $row) {
@@ -66,9 +67,9 @@ class PeopleTreeModelStore
         $memberships = array_merge($memberships, $this->manualJourneyRows($branchIds));
 
         return dgv2_normalize_model([
-            'discipleship_persons' => $this->peopleRows($branchIds),
+            'discipleship_persons' => $this->peopleRows($branchIds, $this->referencedPersonIds($groups, $groupPeople, $relationships)),
             'discipleship_groups' => $groups,
-            'discipleship_relations' => $this->relationshipRows($branchIds),
+            'discipleship_relations' => $relationships,
             'group_memberships' => $memberships,
             'group_leaderships' => $leaderships,
             'group_multiplications' => $this->multiplicationRows($groups),
@@ -83,6 +84,57 @@ class PeopleTreeModelStore
         }
 
         return $this->modelForContext([$branchCode], false);
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function leaderCandidatesForBranch(string $branchCode): array
+    {
+        $branchCode = normalize_public_branch_code($branchCode);
+        $branchIds = branch_ids_from_slugs(array_map(
+            static fn (array $option): string => normalize_public_branch_code((string) ($option['code'] ?? '')),
+            public_dg_branch_options(),
+        ));
+        if ($branchIds === []) {
+            return [];
+        }
+
+        $labels = $this->branchLabels();
+
+        try {
+            return DiscipleshipPerson::query()
+                ->whereIn('branch_id', $branchIds)
+                ->where('status', 'active')
+                ->orderBy('full_name')
+                ->orderBy('id')
+                ->get(['id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'created_at', 'updated_at'])
+                ->map(static function (DiscipleshipPerson $person) use ($branchCode, $labels): array {
+                    $personBranchCode = normalize_public_branch_code((string) $person->branch_code);
+                    $branchLabel = $labels[$personBranchCode] ?? strtoupper($personBranchCode);
+                    $name = trim((string) $person->full_name);
+                    if ($personBranchCode !== '' && $personBranchCode !== $branchCode) {
+                        $name = append_branch_suffix($name, $branchLabel);
+                    }
+
+                    return [
+                        'id' => (string) $person->getKey(),
+                        'member_id' => (string) $person->getKey(),
+                        'branch_code' => $personBranchCode,
+                        'branch_label' => $branchLabel,
+                        'name' => $name,
+                        'full_name' => trim((string) $person->full_name),
+                        'phone' => trim((string) $person->phone),
+                        'gender' => trim((string) $person->gender),
+                        'status' => trim((string) ($person->status ?? 'active')) ?: 'active',
+                        'notes' => trim((string) $person->notes),
+                        'created_at' => optional($person->created_at)->toIso8601String(),
+                        'updated_at' => optional($person->updated_at)->toIso8601String(),
+                    ];
+                })
+                ->values()
+                ->all();
+        } catch (Throwable) {
+            return [];
+        }
     }
 
     /**
@@ -141,12 +193,13 @@ class PeopleTreeModelStore
             }
         }
 
+        $contextBranchCode = normalize_public_branch_code(current_user_branch());
         foreach ($people as &$row) {
             $id = trim((string) ($row['id'] ?? ''));
             [$branchCode, $branchLabel] = $branches[$id] ?? [normalize_public_branch_code(current_user_branch()), ''];
             $row['branch_code'] = $branchCode;
             $row['branch_label'] = $branchLabel;
-            if ($centralReadOnly && $branchLabel !== '') {
+            if ($branchLabel !== '' && ($centralReadOnly || ($contextBranchCode !== '' && $branchCode !== '' && $branchCode !== $contextBranchCode))) {
                 $row['name'] = append_branch_suffix((string) ($row['name'] ?? ''), $branchLabel);
             }
         }
@@ -272,6 +325,12 @@ class PeopleTreeModelStore
             DiscipleshipGroupPerson::query()->where('branch_id', $branchId)->delete();
 
             $personMap = $this->syncPeople($branchId, $model['discipleship_persons'] ?? []);
+            $this->mapExistingPeople($personMap, $this->referencedPersonIds(
+                $model['discipleship_groups'] ?? [],
+                array_merge($model['group_memberships'] ?? [], $model['group_leaderships'] ?? []),
+                $model['discipleship_relations'] ?? [],
+                $model['group_multiplications'] ?? [],
+            ));
             $groupMap = $this->syncGroups($branchId, $model['discipleship_groups'] ?? [], $personMap);
 
             $this->insertRelationships($branchId, $model['discipleship_relations'] ?? [], $personMap, $groupMap);
@@ -282,14 +341,19 @@ class PeopleTreeModelStore
     }
 
     /** @return array<int, array<string, mixed>> */
-    private function peopleRows(array $branchIds): array
+    private function peopleRows(array $branchIds, array $extraPersonIds = []): array
     {
         return DiscipleshipPerson::query()
             ->select([
                 'id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'campus', 'major',
                 'occupation', 'created_at', 'updated_at',
             ])
-            ->whereIn('branch_id', $branchIds)
+            ->where(function ($query) use ($branchIds, $extraPersonIds): void {
+                $query->whereIn('branch_id', $branchIds);
+                if ($extraPersonIds !== []) {
+                    $query->orWhereIn('id', $extraPersonIds);
+                }
+            })
             ->orderBy('id')
             ->get()
             ->map(static fn (DiscipleshipPerson $person): array => [
@@ -491,6 +555,22 @@ class PeopleTreeModelStore
             }
 
             $sourceId = trim((string) ($row['id'] ?? ''));
+            $sourceBranchCode = normalize_public_branch_code((string) ($row['branch_code'] ?? ''));
+            $sourceBranchId = $sourceBranchCode !== '' ? branch_id_from_slug($sourceBranchCode) : $branchId;
+            if (ctype_digit($sourceId) && $sourceBranchId !== null && $sourceBranchId !== $branchId) {
+                $person = DiscipleshipPerson::query()
+                    ->whereKey((int) $sourceId)
+                    ->where('branch_id', $sourceBranchId)
+                    ->first();
+                if ($person !== null) {
+                    $actualId = (int) $person->getKey();
+                    $map[$sourceId] = $actualId;
+                    $map[(string) $actualId] = $actualId;
+                }
+
+                continue;
+            }
+
             $person = ctype_digit($sourceId)
                 ? DiscipleshipPerson::query()->where('branch_id', $branchId)->whereKey((int) $sourceId)->first()
                 : null;
@@ -520,6 +600,23 @@ class PeopleTreeModelStore
             ->delete();
 
         return $map;
+    }
+
+    /**
+     * @param array<string, int> $map
+     * @param array<int, int> $personIds
+     */
+    private function mapExistingPeople(array &$map, array $personIds): void
+    {
+        $missingIds = array_values(array_filter(array_unique($personIds), static fn (int $id): bool => $id > 0 && ! isset($map[(string) $id])));
+        if ($missingIds === []) {
+            return;
+        }
+
+        foreach (DiscipleshipPerson::query()->whereIn('id', $missingIds)->get(['id']) as $person) {
+            $actualId = (int) $person->getKey();
+            $map[(string) $actualId] = $actualId;
+        }
     }
 
     /**
@@ -676,6 +773,48 @@ class PeopleTreeModelStore
             static fn (string $branchCode): string => normalize_public_branch_code($branchCode),
             $branchCodes,
         ))));
+    }
+
+    /**
+     * @param array<int, mixed> $groups
+     * @param array<int, mixed> $groupPeople
+     * @param array<int, mixed> $relationships
+     * @param array<int, mixed> $multiplications
+     * @return array<int, int>
+     */
+    private function referencedPersonIds(array $groups, array $groupPeople, array $relationships, array $multiplications = []): array
+    {
+        $ids = [];
+        $add = static function (mixed $value) use (&$ids): void {
+            $value = trim((string) $value);
+            if (ctype_digit($value) && (int) $value > 0) {
+                $ids[(int) $value] = (int) $value;
+            }
+        };
+
+        foreach ($groups as $row) {
+            if (is_array($row)) {
+                $add($row['initiated_by_person_id'] ?? null);
+            }
+        }
+        foreach ($groupPeople as $row) {
+            if (is_array($row)) {
+                $add($row['person_id'] ?? $row['leader_person_id'] ?? null);
+            }
+        }
+        foreach ($relationships as $row) {
+            if (is_array($row)) {
+                $add($row['mentor_person_id'] ?? null);
+                $add($row['disciple_person_id'] ?? null);
+            }
+        }
+        foreach ($multiplications as $row) {
+            if (is_array($row)) {
+                $add($row['initiated_by_person_id'] ?? null);
+            }
+        }
+
+        return array_values($ids);
     }
 
     /** @param iterable<int, array<string, mixed>> $rows */

@@ -1,7 +1,8 @@
 <?php
 
-function dgv2_save_group(array &$model, array $payload, array $peopleById): array
+function dgv2_save_group(array &$model, array $payload, array $leaderPeopleById, ?array $memberPeopleById = null): array
 {
+    $memberPeopleById ??= $leaderPeopleById;
     $id = trim((string) ($payload['id'] ?? ''));
     $leaderId = trim((string) ($payload['leader_id'] ?? ''));
     $assistantId = trim((string) ($payload['assistant_id'] ?? ''));
@@ -16,17 +17,17 @@ function dgv2_save_group(array &$model, array $payload, array $peopleById): arra
         return trim($value) !== '';
     })));
 
-    if ($leaderId === '' || ! isset($peopleById[$leaderId])) {
+    if ($leaderId === '' || ! isset($leaderPeopleById[$leaderId])) {
         return ['ok' => false, 'error' => 'invalid_group'];
     }
     if ($assistantId === $leaderId) {
         $assistantId = '';
     }
-    if ($assistantId !== '' && ! isset($peopleById[$assistantId])) {
+    if ($assistantId !== '' && ! isset($leaderPeopleById[$assistantId])) {
         return ['ok' => false, 'error' => 'invalid_group'];
     }
     foreach ($memberIds as $personId) {
-        if (! isset($peopleById[$personId])) {
+        if (! isset($memberPeopleById[$personId])) {
             return ['ok' => false, 'error' => 'invalid_group'];
         }
     }

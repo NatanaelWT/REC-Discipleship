@@ -31,7 +31,7 @@ class DiscipleshipGroupPublicFormData
             ->orderBy('name')
             ->orderBy('id')
             ->get()
-            ->each(function (DiscipleshipGroup $group) use (&$groupsById, &$leadersById): void {
+            ->each(function (DiscipleshipGroup $group) use ($branchCode, &$groupsById, &$leadersById): void {
                 $groupId = (int) $group->getKey();
 
                 $leader = $this->leaderForGroup($group);
@@ -41,6 +41,10 @@ class DiscipleshipGroupPublicFormData
 
                 $leaderId = (int) $leader->getKey();
                 $leaderName = trim((string) $leader->full_name);
+                $leaderBranchCode = normalize_public_branch_code((string) $leader->branch_code);
+                if ($leaderBranchCode !== '' && $leaderBranchCode !== $branchCode) {
+                    $leaderName = append_branch_suffix($leaderName, public_branch_label($leaderBranchCode));
+                }
                 if ($leaderId < 1 || $leaderName === '') {
                     return;
                 }

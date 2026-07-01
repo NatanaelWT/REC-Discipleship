@@ -92,10 +92,7 @@ class DiscipleshipGroupIndexData
                     ->orWhereExists(function ($subquery) use ($search): void {
                         $subquery->selectRaw('1')
                             ->from('discipleship_group_people as search_gp')
-                            ->join('discipleship_people as search_person', function ($join): void {
-                                $join->on('search_person.id', '=', 'search_gp.person_id')
-                                    ->on('search_person.branch_id', '=', 'search_gp.branch_id');
-                            })
+                            ->join('discipleship_people as search_person', 'search_person.id', '=', 'search_gp.person_id')
                             ->whereColumn('search_gp.discipleship_group_id', 'discipleship_groups.id')
                             ->whereColumn('search_gp.branch_id', 'discipleship_groups.branch_id')
                             ->whereRaw('LOWER(search_person.full_name) LIKE ?', ['%'.$search.'%']);
@@ -204,11 +201,24 @@ class DiscipleshipGroupIndexData
             return [];
         }
 
+        $branchOptions = $this->scope->optionsById();
+        $contextBranchIds = $this->scope->branchIds();
+
         return DiscipleshipPerson::query()
             ->whereIn('id', $personIds)
-            ->whereIn('branch_id', $this->scope->branchIds())
-            ->pluck('full_name', 'id')
-            ->map(static fn ($name): string => trim((string) $name))
+            ->get(['id', 'branch_id', 'full_name'])
+            ->mapWithKeys(function (DiscipleshipPerson $person) use ($branchOptions, $contextBranchIds): array {
+                $name = trim((string) $person->full_name);
+                $personBranchId = (int) $person->branch_id;
+                if (! $this->scope->includesAllBranches() && ! in_array($personBranchId, $contextBranchIds, true)) {
+                    $branchLabel = $branchOptions[$personBranchId]['label'] ?? '';
+                    if ($branchLabel !== '') {
+                        $name = append_branch_suffix($name, $branchLabel);
+                    }
+                }
+
+                return [(int) $person->id => $name];
+            })
             ->all();
     }
 

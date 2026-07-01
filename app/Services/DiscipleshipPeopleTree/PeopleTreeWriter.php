@@ -147,15 +147,20 @@ class PeopleTreeWriter
         $result = ['ok' => false, 'error' => 'invalid_action'];
 
         $payload = $request->all();
-        $projectionPeople = dgv2_people_projection($model, $members, $mskClasses);
+        $projectionPeople = $this->modelStore->peopleForModel($model, $members, $mskClasses, false);
         $projectionPeopleById = index_by_id($projectionPeople);
+        $localProjectionPeopleById = array_filter(
+            $projectionPeopleById,
+            static fn (array $row): bool => normalize_public_branch_code((string) ($row['branch_code'] ?? $branchCode)) === $branchCode,
+        );
+        $leaderCandidatesById = index_by_id($this->modelStore->leaderCandidatesForBranch($branchCode));
 
         if ($action === 'save_person') {
             $result = dgv2_save_person($model, $payload, $members, $mskClasses);
         } elseif ($action === 'delete_person') {
             $result = dgv2_archive_person($model, trim((string) $request->input('id', '')));
         } elseif ($action === 'save_group') {
-            $result = dgv2_save_group($model, $payload, $projectionPeopleById);
+            $result = dgv2_save_group($model, $payload, $leaderCandidatesById, $localProjectionPeopleById);
         } elseif ($action === 'delete_group') {
             $result = dgv2_archive_group($model, trim((string) $request->input('id', '')));
         } elseif ($action === 'leave_person_group') {

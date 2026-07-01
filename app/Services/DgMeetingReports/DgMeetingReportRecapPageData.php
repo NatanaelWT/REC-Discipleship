@@ -28,8 +28,8 @@ class DgMeetingReportRecapPageData
         $branchCodes = $this->branchCodes($selectedBranch, $centralReadOnly);
         $data = $this->cache->remember('meeting-report-recap', [...$branchCodes, $centralReadOnly ? 'central' : 'branch'], function () use ($branchCodes, $centralReadOnly): array {
             $branchLabels = $this->branchLabels();
-            $people = $this->people($branchCodes, $centralReadOnly, $branchLabels);
             [$leadershipsByGroup, $membershipsByGroup] = $this->groupPeopleByGroup($branchCodes);
+            $people = $this->people($branchCodes, $centralReadOnly, $branchLabels, $this->personIdsFromGroupPeople($leadershipsByGroup, $membershipsByGroup));
 
             return [
                 'page' => 'dg_reports_recap',
@@ -82,17 +82,24 @@ class DgMeetingReportRecapPageData
      * @param  array<string, string>  $branchLabels
      * @return array<string, array<string, mixed>>
      */
-    private function people(array $branchCodes, bool $centralReadOnly, array $branchLabels): array
+    private function people(array $branchCodes, bool $centralReadOnly, array $branchLabels, array $extraPersonIds = []): array
     {
         $people = [];
+        $branchIds = branch_ids_from_slugs($branchCodes);
         try {
             $records = DiscipleshipPerson::query()
-                ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+                ->where(function ($query) use ($branchIds, $extraPersonIds): void {
+                    $query->whereIn('branch_id', $branchIds);
+                    if ($extraPersonIds !== []) {
+                        $query->orWhereIn('id', $extraPersonIds);
+                    }
+                })
                 ->orderBy('id')
                 ->get(['id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'created_at', 'updated_at']);
         } catch (Throwable) {
             return [];
         }
+        $singleContextBranchCode = count($branchCodes) === 1 ? normalize_public_branch_code((string) $branchCodes[0]) : '';
         foreach ($records as $person) {
             $branchCode = normalize_public_branch_code((string) $person->branch_code);
             $effectiveId = $this->effectiveId($branchCode, (string) $person->getKey());
@@ -104,7 +111,7 @@ class DgMeetingReportRecapPageData
             if ($name === '') {
                 $name = '-';
             }
-            if ($centralReadOnly) {
+            if ($centralReadOnly || ($singleContextBranchCode !== '' && $branchCode !== '' && $branchCode !== $singleContextBranchCode)) {
                 $name = append_branch_suffix($name, $branchLabels[$branchCode] ?? strtoupper($branchCode));
             }
 
@@ -218,6 +225,26 @@ class DgMeetingReportRecapPageData
         }
 
         return [$leaderships, $memberships];
+    }
+
+    /**
+     * @param array<string, array<int, DiscipleshipGroupPerson>> $leadershipsByGroup
+     * @param array<string, array<int, DiscipleshipGroupPerson>> $membershipsByGroup
+     * @return array<int, int>
+     */
+    private function personIdsFromGroupPeople(array $leadershipsByGroup, array $membershipsByGroup): array
+    {
+        $ids = [];
+        foreach (array_merge($leadershipsByGroup, $membershipsByGroup) as $records) {
+            foreach ($records as $record) {
+                $personId = (int) ($record->person_id ?? 0);
+                if ($personId > 0) {
+                    $ids[$personId] = $personId;
+                }
+            }
+        }
+
+        return array_values($ids);
     }
 
     /**
