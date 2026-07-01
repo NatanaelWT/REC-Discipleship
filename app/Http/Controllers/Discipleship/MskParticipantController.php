@@ -37,9 +37,18 @@ class MskParticipantController extends Controller
         RuntimeBootstrap::boot($request);
 
         $data = $pageData->paginatedRowsForCurrentContext($request);
+        $participants = is_array($data['participantsFilteredByBatch'] ?? null)
+            ? $data['participantsFilteredByBatch']
+            : [];
 
         return response()->json([
             'html' => view('discipleship.msk-participants.partials.rows', $data)->render(),
+            'templates_html' => view('discipleship.msk-participants.partials.view-templates', [
+                'participantsFilteredByBatch' => $participants,
+                'participantProfiles' => $data['participantProfiles'] ?? [],
+                'centralReadOnly' => (bool) ($data['centralReadOnly'] ?? false),
+                'batchMonthFilterParam' => (string) ($data['batchMonthFilterParam'] ?? ''),
+            ])->render(),
             'has_more' => (bool) ($data['hasMoreMskRows'] ?? false),
             'next_page' => $data['nextMskPage'] ?? null,
             'stats' => [

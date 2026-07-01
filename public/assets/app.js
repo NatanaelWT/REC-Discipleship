@@ -926,6 +926,7 @@
       const body = root.querySelector('[data-msk-list-body]');
       const emptyRow = root.querySelector('[data-msk-search-empty]');
       const loadingRow = root.querySelector('[data-msk-loading]');
+      const templatesContainer = document.querySelector('[data-msk-view-templates]');
       const rowsUrl = root.getAttribute('data-rows-url') || '';
       if (!input || !body || !rowsUrl) {
         return;
@@ -1018,6 +1019,19 @@
         }
       };
 
+      const insertTemplates = (html, mode) => {
+        if (!templatesContainer) {
+          return;
+        }
+        if (mode === 'replace') {
+          templatesContainer.innerHTML = '';
+        }
+        const content = String(html || '').trim();
+        if (content !== '') {
+          templatesContainer.insertAdjacentHTML('beforeend', content);
+        }
+      };
+
       const syncUrl = () => {
         if (!window.history || typeof window.history.replaceState !== 'function') {
           return;
@@ -1062,6 +1076,7 @@
           clearRows();
         }
         insertRows(data && data.html);
+        insertTemplates(data && data.templates_html, mode);
         hasMore = Boolean(data && data.has_more);
         nextPage = hasMore ? (parseInt(String(data.next_page || ''), 10) || null) : null;
         root.setAttribute('data-has-more', hasMore ? '1' : '0');
@@ -1599,11 +1614,9 @@
         if (!key) {
           return false;
         }
-        if (!templateMap.has(key)) {
-          const freshTemplate = queryTemplateByAttribute('data-msk-view-template', key);
-          if (freshTemplate) {
-            templateMap.set(key, freshTemplate);
-          }
+        const freshTemplate = queryTemplateByAttribute('data-msk-view-template', key);
+        if (freshTemplate) {
+          templateMap.set(key, freshTemplate);
         }
         if (!templateMap.has(key)) {
           return false;

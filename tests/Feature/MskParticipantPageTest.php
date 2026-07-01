@@ -233,6 +233,55 @@ class MskParticipantPageTest extends TestCase
         $this->assertStringNotContainsString('Peserta MSK 001', (string) $search->json('html'));
     }
 
+    public function test_msk_rows_search_includes_profile_templates_for_returned_rows(): void
+    {
+        $this->createMskTables();
+        $participantId = DB::table('msk_participants')->insertGetId(array_merge(
+            $this->participantRow('Nofida Lassa', '2024-01'),
+            [
+                'branch_id' => 4,
+                'email' => 'novida.lassa@gmail.com',
+                'whatsapp' => '8113321904',
+                'session_numbers' => json_encode(range(1, 12)),
+            ],
+        ));
+
+        $this->actingAsRecUser('developer', null, 'developer');
+        $response = $this->get('/pemuridan/msk/rows?branch_id=all&batch_month=all&q=novida');
+
+        $response->assertOk()
+            ->assertJsonPath('has_more', false)
+            ->assertJsonPath('stats.total', 1);
+
+        $this->assertStringContainsString('Nofida Lassa', (string) $response->json('html'));
+        $this->assertStringContainsString('data-msk-view-open="'.$participantId.'"', (string) $response->json('html'));
+        $this->assertStringContainsString('data-msk-view-template="'.$participantId.'"', (string) $response->json('templates_html'));
+        $this->assertStringContainsString('Profil peserta', (string) $response->json('templates_html'));
+    }
+
+    public function test_developer_all_branch_view_query_opens_selected_msk_profile(): void
+    {
+        $this->createMskTables();
+        $participantId = DB::table('msk_participants')->insertGetId(array_merge(
+            $this->participantRow('Nofida Lassa', '2024-01'),
+            [
+                'branch_id' => 4,
+                'email' => 'novida.lassa@gmail.com',
+                'whatsapp' => '8113321904',
+                'session_numbers' => json_encode(range(1, 12)),
+            ],
+        ));
+
+        $this->actingAsRecUser('developer', null, 'developer');
+        $response = $this->get('/pemuridan/msk?branch_id=all&batch_month=all&view='.$participantId);
+
+        $response->assertOk()
+            ->assertDontSee('Data peserta kelas MSK yang ingin dilihat tidak ditemukan.')
+            ->assertSee('data-msk-view-auto-open="'.$participantId.'"', false)
+            ->assertSee('data-msk-view-template="'.$participantId.'"', false)
+            ->assertSee('Nofida Lassa');
+    }
+
     public function test_batch_filter_lists_all_batches_not_only_the_active_batch(): void
     {
         $this->createMskTables();

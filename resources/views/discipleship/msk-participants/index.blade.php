@@ -40,18 +40,20 @@ if ($page === 'msk_classes') {
         return strcasecmp((string) ($a['full_name'] ?? ''), (string) ($b['full_name'] ?? ''));
     });
 
-    $participantsById = index_by_id($mskClasses);
-    $editId = trim((string) ($_GET['edit'] ?? ''));
-    $editParticipant = $editId !== '' ? ($participantsById[$editId] ?? null) : null;
-    $autoOpenEditParticipantId = '';
+    $participantsById = is_array($participantsById ?? null) ? $participantsById : index_by_id($mskClasses);
+    $editId = trim((string) ($editId ?? request()->query('edit', '')));
+    $editParticipant = is_array($editParticipant ?? null)
+        ? $editParticipant
+        : ($editId !== '' ? ($participantsById[$editId] ?? null) : null);
+    $autoOpenEditParticipantId = trim((string) ($autoOpenEditParticipantId ?? ''));
     if ($editParticipant !== null) {
         $autoOpenEditParticipantId = $editId;
     }
     if ($editId !== '' && $editParticipant === null && $error === '') {
         echo "<div class=\"alert danger\">Data peserta kelas MSK yang ingin diedit tidak ditemukan.</div>\n";
     }
-    $requestedViewId = trim((string) ($_GET['view'] ?? ''));
-    $autoOpenViewParticipantId = '';
+    $requestedViewId = trim((string) ($requestedViewId ?? request()->query('view', '')));
+    $autoOpenViewParticipantId = trim((string) ($autoOpenViewParticipantId ?? ''));
     if ($requestedViewId !== '') {
         if (isset($participantsById[$requestedViewId])) {
             $autoOpenViewParticipantId = $requestedViewId;
@@ -699,40 +701,38 @@ if ($page === 'msk_classes') {
     echo "  </div>\n";
     echo "</section>\n";
 
-    if (count($mskModalTemplates) > 0) {
-        echo "<div class=\"is-hidden\" data-msk-view-templates>\n";
-        foreach ($mskModalTemplates as $templateId => $templateData) {
-            $templateTitle = trim((string) ($templateData['title'] ?? 'Detail Peserta MSK'));
-            if ($templateTitle === '') {
-                $templateTitle = 'Detail Peserta MSK';
-            }
-            $templateEditHref = (string) ($templateData['edit_href'] ?? '');
-            $templateContent = (string) ($templateData['content'] ?? '');
-            echo '<template data-msk-view-template="'.h($templateId).'" data-msk-view-template-title="'.h($templateTitle).'" data-msk-view-template-edit="'.h($templateEditHref).'">'.$templateContent."</template>\n";
+    echo "<div class=\"is-hidden\" data-msk-view-templates>\n";
+    foreach ($mskModalTemplates as $templateId => $templateData) {
+        $templateTitle = trim((string) ($templateData['title'] ?? 'Detail Peserta MSK'));
+        if ($templateTitle === '') {
+            $templateTitle = 'Detail Peserta MSK';
         }
-        echo "</div>\n";
-
-        $mskViewFooterHtml = '';
-        if (! $centralReadOnly) {
-            $mskViewFooterHtml .= '<a class="btn tiny secondary is-hidden" href="#" data-msk-view-edit-link>Edit</a>';
-        }
-        $mskViewFooterHtml .= '<button class="btn tiny ghost" type="button" data-msk-view-close>Tutup</button>';
-        echo view('partials.modal', [
-            'id' => 'msk-view-modal',
-            'size' => 'standard',
-            'modalAttrs' => [
-                'data-msk-view-modal' => true,
-                'data-msk-view-auto-open' => $autoOpenViewParticipantId,
-            ],
-            'cardClass' => 'member-view-modal-card msk-view-modal-card',
-            'title' => 'Detail Peserta MSK',
-            'titleAttrs' => ['data-msk-view-title' => true],
-            'closeAttrs' => ['data-msk-view-close' => true],
-            'bodyAttrs' => ['data-msk-view-body' => true],
-            'bodyHtml' => '<div class="panel-note msk-modal-empty-state">Pilih tombol Lihat pada baris peserta untuk membuka detail peserta MSK.</div>',
-            'footerHtml' => $mskViewFooterHtml,
-        ])->render();
+        $templateEditHref = (string) ($templateData['edit_href'] ?? '');
+        $templateContent = (string) ($templateData['content'] ?? '');
+        echo '<template data-msk-view-template="'.h($templateId).'" data-msk-view-template-title="'.h($templateTitle).'" data-msk-view-template-edit="'.h($templateEditHref).'">'.$templateContent."</template>\n";
     }
+    echo "</div>\n";
+
+    $mskViewFooterHtml = '';
+    if (! $centralReadOnly) {
+        $mskViewFooterHtml .= '<a class="btn tiny secondary is-hidden" href="#" data-msk-view-edit-link>Edit</a>';
+    }
+    $mskViewFooterHtml .= '<button class="btn tiny ghost" type="button" data-msk-view-close>Tutup</button>';
+    echo view('partials.modal', [
+        'id' => 'msk-view-modal',
+        'size' => 'standard',
+        'modalAttrs' => [
+            'data-msk-view-modal' => true,
+            'data-msk-view-auto-open' => $autoOpenViewParticipantId,
+        ],
+        'cardClass' => 'member-view-modal-card msk-view-modal-card',
+        'title' => 'Detail Peserta MSK',
+        'titleAttrs' => ['data-msk-view-title' => true],
+        'closeAttrs' => ['data-msk-view-close' => true],
+        'bodyAttrs' => ['data-msk-view-body' => true],
+        'bodyHtml' => '<div class="panel-note msk-modal-empty-state">Pilih tombol Lihat pada baris peserta untuk membuka detail peserta MSK.</div>',
+        'footerHtml' => $mskViewFooterHtml,
+    ])->render();
 
     if (! $centralReadOnly) {
         echo view('partials.modal', [
