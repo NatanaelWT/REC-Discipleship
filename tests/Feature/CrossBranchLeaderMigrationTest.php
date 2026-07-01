@@ -290,6 +290,81 @@ class CrossBranchLeaderMigrationTest extends TestCase
         ]);
     }
 
+    public function test_relinked_external_people_are_hard_deleted_after_history_moves_to_canonical_people(): void
+    {
+        $this->createTables();
+        $this->seedYakubRows();
+        $this->seedMarlianaRows();
+        $this->seedDavidAndAnnekeRows();
+
+        foreach ([
+            '2026_07_01_000001_relink_yakub_tri_handoko_cross_branch_leader.php',
+            '2026_07_01_000003_relink_yakub_tri_handoko_darmo_to_gm.php',
+            '2026_07_01_000004_relink_marliana_nginden_to_kutisari.php',
+            '2026_07_01_000005_relink_david_antonius_and_anneke_to_gm.php',
+        ] as $migrationFile) {
+            $migration = require database_path('migrations/'.$migrationFile);
+            $migration->up();
+        }
+
+        $migration = require database_path('migrations/2026_07_01_000006_hard_delete_relinked_external_people.php');
+        $migration->up();
+        $migration->up();
+
+        foreach ([790, 776, 854, 850, 774] as $externalPersonId) {
+            $this->assertDatabaseMissing('discipleship_people', [
+                'id' => $externalPersonId,
+            ]);
+        }
+
+        $this->assertNoExternalPersonReferences([790, 776, 854, 850, 774]);
+
+        $this->assertDatabaseHas('discipleship_relationships', [
+            'branch_id' => 1,
+            'mentor_person_id' => null,
+            'disciple_person_id' => 626,
+            'status' => 'closed',
+            'reason_end' => 'converted_to_cross_branch_leader',
+        ]);
+        $this->assertDatabaseHas('discipleship_relationships', [
+            'branch_id' => 3,
+            'mentor_person_id' => null,
+            'disciple_person_id' => 626,
+            'status' => 'closed',
+            'reason_end' => 'converted_to_cross_branch_leader',
+        ]);
+        $this->assertDatabaseHas('discipleship_relationships', [
+            'branch_id' => 6,
+            'mentor_person_id' => null,
+            'disciple_person_id' => 664,
+            'status' => 'closed',
+            'reason_end' => 'converted_to_cross_branch_leader',
+        ]);
+        $this->assertDatabaseHas('discipleship_relationships', [
+            'branch_id' => 4,
+            'mentor_person_id' => null,
+            'disciple_person_id' => 587,
+            'status' => 'closed',
+            'reason_end' => 'converted_to_cross_branch_leader',
+        ]);
+        $this->assertDatabaseHas('discipleship_relationships', [
+            'branch_id' => 3,
+            'mentor_person_id' => null,
+            'disciple_person_id' => 583,
+            'status' => 'closed',
+            'reason_end' => 'converted_to_cross_branch_leader',
+        ]);
+
+        $report = DB::table('discipleship_meeting_reports')
+            ->where('branch_id', 4)
+            ->where('leader_person_id', 587)
+            ->first(['absences', 'meditation_sharers']);
+
+        $this->assertNotNull($report);
+        $this->assertStringContainsString('"person_id":587', (string) $report->absences);
+        $this->assertStringContainsString('"person_id":"587"', (string) $report->meditation_sharers);
+    }
+
     private function createTables(): void
     {
         Schema::dropIfExists('discipleship_feedbacks');
@@ -353,6 +428,8 @@ class CrossBranchLeaderMigrationTest extends TestCase
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('leader_person_id')->nullable();
+            $table->longText('absences')->nullable();
+            $table->longText('meditation_sharers')->nullable();
             $table->timestamps();
         });
 
@@ -474,12 +551,45 @@ class CrossBranchLeaderMigrationTest extends TestCase
             ['branch_id' => 4, 'initiated_by_person_id' => 850, 'created_at' => now(), 'updated_at' => now()],
         ]);
         DB::table('discipleship_meeting_reports')->insert([
-            ['branch_id' => 3, 'leader_person_id' => 774, 'created_at' => now(), 'updated_at' => now()],
-            ['branch_id' => 4, 'leader_person_id' => 850, 'created_at' => now(), 'updated_at' => now()],
+            [
+                'branch_id' => 3,
+                'leader_person_id' => 774,
+                'absences' => null,
+                'meditation_sharers' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 4,
+                'leader_person_id' => 850,
+                'absences' => '[{"person_id":850,"person_name_snapshot":"David Antonius"}]',
+                'meditation_sharers' => '[{"person_id":"850","person_name_snapshot":"David Antonius"}]',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
         DB::table('discipleship_feedbacks')->insert([
             ['branch_id' => 3, 'leader_person_id' => 774, 'respondent_person_id' => 774, 'created_at' => now(), 'updated_at' => now()],
             ['branch_id' => 4, 'leader_person_id' => 850, 'respondent_person_id' => 850, 'created_at' => now(), 'updated_at' => now()],
         ]);
+    }
+
+    /** @param array<int, int> $externalPersonIds */
+    private function assertNoExternalPersonReferences(array $externalPersonIds): void
+    {
+        foreach ([
+            ['discipleship_group_people', 'person_id'],
+            ['discipleship_relationships', 'mentor_person_id'],
+            ['discipleship_relationships', 'disciple_person_id'],
+            ['discipleship_groups', 'initiated_by_person_id'],
+            ['discipleship_group_multiplications', 'initiated_by_person_id'],
+            ['discipleship_meeting_reports', 'leader_person_id'],
+            ['discipleship_feedbacks', 'leader_person_id'],
+            ['discipleship_feedbacks', 'respondent_person_id'],
+        ] as [$table, $column]) {
+            $count = DB::table($table)->whereIn($column, $externalPersonIds)->count();
+
+            $this->assertSame(0, $count, $table.'.'.$column.' still references an external person');
+        }
     }
 }
