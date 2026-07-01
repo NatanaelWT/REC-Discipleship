@@ -1395,6 +1395,20 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
                 'created_at' => '2026-05-05 13:02:57',
                 'updated_at' => '2026-05-05 13:02:57',
             ],
+            854 => [
+                'id' => 854,
+                'branch_id' => 6,
+                'full_name' => 'Marliana',
+                'phone' => null,
+                'gender' => null,
+                'status' => 'inactive',
+                'notes' => null,
+                'campus' => null,
+                'major' => null,
+                'occupation' => null,
+                'created_at' => '2026-04-09 12:58:43',
+                'updated_at' => '2026-04-09 12:58:43',
+            ],
         ],
         'discipleship_groups' => [
             0 => [
