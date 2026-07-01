@@ -46,7 +46,6 @@ class MskParticipantHistoryData
 
         $personIds = array_values(array_unique($participantPersonIds));
         $targetPeople = DiscipleshipPerson::query()
-            ->whereIn('branch_id', $branchIds)
             ->whereIn('id', $personIds)
             ->get(['id', 'full_name']);
         $validPersonIds = $targetPeople->pluck('id')->map(static fn ($id): int => (int) $id)->all();
@@ -93,7 +92,6 @@ class MskParticipantHistoryData
             ->unique()
             ->all();
         $names = DiscipleshipPerson::query()
-            ->whereIn('branch_id', $branchIds)
             ->whereIn('id', $relatedPersonIds)
             ->pluck('full_name', 'id')
             ->map(static fn ($name): string => trim((string) $name) ?: '-')
