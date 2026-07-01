@@ -53,54 +53,7 @@ class PeopleTreePageTest extends TestCase
     public function test_people_tree_renders_cross_branch_leader_without_local_duplicate(): void
     {
         $this->createTables();
-        $memberId = DB::table('discipleship_people')->insertGetId([
-            'branch_id' => 1,
-            'full_name' => 'Anggota Kutisari Lintas',
-            'status' => 'active',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        DB::table('discipleship_people')->insert([
-            'id' => 626,
-            'branch_id' => 2,
-            'full_name' => 'Yakub Tri Handoko',
-            'status' => 'active',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        $groupId = DB::table('discipleship_groups')->insertGetId([
-            'branch_id' => 1,
-            'name' => 'Kelompok Lintas Cabang',
-            'status' => 'active',
-            'start_stage' => 'DG 1',
-            'current_stage' => 'DG 1',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        DB::table('discipleship_group_people')->insert([
-            [
-                'branch_id' => 1,
-                'discipleship_group_id' => $groupId,
-                'person_id' => 626,
-                'role' => 'leader',
-                'stage' => null,
-                'status' => 'active',
-                'started_on' => '2026-07-01',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'branch_id' => 1,
-                'discipleship_group_id' => $groupId,
-                'person_id' => $memberId,
-                'role' => 'member',
-                'stage' => 'DG 1',
-                'status' => 'active',
-                'started_on' => '2026-07-01',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+        $this->seedCrossBranchLeaderGroup();
 
         $this->actingAsRecUser();
 
@@ -113,6 +66,20 @@ class PeopleTreePageTest extends TestCase
             0,
             DB::table('discipleship_people')->where('branch_id', 1)->where('full_name', 'Yakub Tri Handoko')->count(),
         );
+    }
+
+    public function test_central_selected_branch_tree_renders_cross_branch_leader_in_branch_context(): void
+    {
+        $this->createTables();
+        $this->seedCrossBranchLeaderGroup();
+
+        $this->actingAsRecUser('central_reader', null, 'pemuridan_pusat');
+
+        $this->get('/pemuridan/pohon?branch_id=1')
+            ->assertOk()
+            ->assertSee('Yakub Tri Handoko (GM)')
+            ->assertSee('Anggota Kutisari Lintas')
+            ->assertSee('Kelompok Lintas Cabang');
     }
 
     public function test_central_all_branch_tree_renders_people_from_every_branch(): void
@@ -590,6 +557,58 @@ class PeopleTreePageTest extends TestCase
             'started_on' => '2026-01-01',
             'created_at' => now(),
             'updated_at' => now(),
+        ]);
+    }
+
+    private function seedCrossBranchLeaderGroup(): void
+    {
+        $memberId = DB::table('discipleship_people')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Anggota Kutisari Lintas',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_people')->insert([
+            'id' => 626,
+            'branch_id' => 2,
+            'full_name' => 'Yakub Tri Handoko',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $groupId = DB::table('discipleship_groups')->insertGetId([
+            'branch_id' => 1,
+            'name' => 'Kelompok Lintas Cabang',
+            'status' => 'active',
+            'start_stage' => 'DG 1',
+            'current_stage' => 'DG 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('discipleship_group_people')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => 626,
+                'role' => 'leader',
+                'stage' => null,
+                'status' => 'active',
+                'started_on' => '2026-07-01',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $memberId,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'active',
+                'started_on' => '2026-07-01',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
     }
 }

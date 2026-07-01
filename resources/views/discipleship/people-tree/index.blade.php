@@ -166,9 +166,25 @@ if ($page === 'people_tree') {
     }
     $treeGroups = build_people_tree_group_rows($discipleshipV2Model, $peopleById);
     $groupAssignedPersonIds = [];
+    $leaderContextRootByPersonId = [];
     foreach ($treeGroups as $groupRow) {
         if (!is_array($groupRow)) {
             continue;
+        }
+        $groupLeaderId = trim((string) ($groupRow['leader_id'] ?? ''));
+        $groupId = trim((string) ($groupRow['id'] ?? ''));
+        $groupBranchCode = '';
+        if ($centralReadOnly && $groupId !== '') {
+            foreach (($discipleshipV2Model['discipleship_groups'] ?? []) as $sourceGroupRow) {
+                if (!is_array($sourceGroupRow) || trim((string) ($sourceGroupRow['id'] ?? '')) !== $groupId) {
+                    continue;
+                }
+                $groupBranchCode = normalize_public_branch_code((string) ($sourceGroupRow['branch_code'] ?? ''));
+                break;
+            }
+        }
+        if ($centralReadOnly && $groupLeaderId !== '' && $groupBranchCode !== '' && isset($branchRootConfigByCode[$groupBranchCode])) {
+            $leaderContextRootByPersonId[$groupLeaderId] = (string) ($branchRootConfigByCode[$groupBranchCode]['id'] ?? '');
         }
         $groupMemberIds = $groupRow['member_ids'] ?? [];
         if (!is_array($groupMemberIds)) {
@@ -193,7 +209,10 @@ if ($page === 'people_tree') {
         $personBranchCode = normalize_public_branch_code((string) ($personRow['branch_code'] ?? current_user_branch()));
         $rootParentId = $rootLeaderId;
         if ($centralReadOnly) {
-            $branchRootConfig = $branchRootConfigByCode[$personBranchCode] ?? null;
+            $contextRootId = trim((string) ($leaderContextRootByPersonId[$personRowId] ?? ''));
+            $branchRootConfig = $contextRootId !== '' && isset($peopleById[$contextRootId])
+                ? ['id' => $contextRootId]
+                : ($branchRootConfigByCode[$personBranchCode] ?? null);
             if (!is_array($branchRootConfig)) {
                 continue;
             }
@@ -208,6 +227,7 @@ if ($page === 'people_tree') {
                 !isset($peopleById[$primaryParent])
                 || normalize_public_branch_code((string) ($peopleById[$primaryParent]['branch_code'] ?? '')) !== $personBranchCode
             )
+            && !isset($leaderContextRootByPersonId[$personRowId])
         ) {
             $primaryParent = '';
         }
