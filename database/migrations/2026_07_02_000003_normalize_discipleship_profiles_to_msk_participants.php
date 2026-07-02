@@ -121,25 +121,49 @@ return new class extends Migration
 
     private function matchingUnlinkedParticipant(object $person): ?object
     {
-        $name = trim((string) ($person->full_name ?? ''));
-        $phone = trim((string) ($person->phone ?? ''));
-
-        if ($name === '') {
+        $identityKey = $this->participantIdentityKey(
+            (string) ($person->full_name ?? ''),
+            (string) ($person->phone ?? ''),
+        );
+        if ($identityKey === '') {
             return null;
         }
 
-        $query = DB::table('msk_participants')
+        $matches = DB::table('msk_participants')
             ->where('branch_id', (int) $person->branch_id)
             ->whereNull('discipleship_person_id')
-            ->where('full_name', $name);
-
-        if ($phone !== '') {
-            $query->where('whatsapp', $phone);
-        }
-
-        $matches = $query->limit(2)->get();
+            ->get()
+            ->filter(fn (object $participant): bool => $this->participantIdentityKey(
+                (string) ($participant->full_name ?? ''),
+                (string) ($participant->whatsapp ?? ''),
+            ) === $identityKey)
+            ->values();
 
         return $matches->count() === 1 ? $matches->first() : null;
+    }
+
+    private function participantIdentityKey(string $fullName, string $whatsapp): string
+    {
+        $nameKey = strtolower(trim(preg_replace('/\s+/', ' ', $fullName) ?? $fullName));
+        $whatsappKey = $this->normalizeWhatsappDigits($whatsapp);
+        if ($nameKey === '' || $whatsappKey === '') {
+            return '';
+        }
+
+        return $nameKey.'|'.$whatsappKey;
+    }
+
+    private function normalizeWhatsappDigits(string $value): string
+    {
+        $digits = preg_replace('/\D+/', '', $value) ?? '';
+        if ($digits !== '' && strpos($digits, '0') === 0) {
+            return '62'.substr($digits, 1);
+        }
+        if ($digits !== '' && strpos($digits, '8') === 0) {
+            return '62'.$digits;
+        }
+
+        return $digits;
     }
 
     private function updateParticipantProfile(object $participant, object $person, bool $linkToPerson): void

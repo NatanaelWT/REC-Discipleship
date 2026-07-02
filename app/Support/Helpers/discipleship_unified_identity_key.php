@@ -1,13 +1,11 @@
 <?php
 
 function discipleship_unified_identity_key(string $fullName, string $whatsapp): string {
-    $nameKey = strtolower(trim($fullName));
+    $nameKey = strtolower(trim(preg_replace('/\s+/', ' ', $fullName) ?? $fullName));
     if ($nameKey === '') {
         return '';
     }
-    $waKey = preg_replace('/\D+/', '', $whatsapp) ?? '';
-    if ($waKey !== '' && strpos($waKey, '0') === 0) {
-        $waKey = '62' . substr($waKey, 1);
-    }
+    $waKey = normalize_whatsapp_digits($whatsapp);
+
     return $nameKey . '|' . $waKey;
 }

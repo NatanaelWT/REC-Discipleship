@@ -37,6 +37,17 @@ class DiscipleshipProfileNormalizationMigrationTest extends TestCase
                 'created_at' => '2026-07-01 08:00:00',
                 'updated_at' => '2026-07-01 09:00:00',
             ],
+            [
+                'id' => 3,
+                'branch_id' => 1,
+                'full_name' => 'Unlinked MSK',
+                'phone' => '833333333',
+                'gender' => 'Perempuan',
+                'status' => 'active',
+                'notes' => null,
+                'created_at' => '2026-07-01 08:00:00',
+                'updated_at' => '2026-07-01 09:00:00',
+            ],
         ]);
 
         DB::table('msk_participants')->insert([
@@ -108,9 +119,10 @@ class DiscipleshipProfileNormalizationMigrationTest extends TestCase
         ]);
         $this->assertDatabaseHas('msk_participants', [
             'id' => 21,
-            'discipleship_person_id' => null,
+            'discipleship_person_id' => 3,
             'full_name' => 'Unlinked MSK',
         ]);
+        $this->assertSame(3, DB::table('msk_participants')->count());
         $this->assertTrue(Schema::hasIndex('msk_participants', ['discipleship_person_id'], 'unique'));
     }
 

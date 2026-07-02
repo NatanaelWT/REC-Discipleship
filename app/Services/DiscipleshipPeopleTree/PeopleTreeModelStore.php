@@ -628,6 +628,9 @@ class PeopleTreeModelStore
         $profile = MskParticipant::query()
             ->where('discipleship_person_id', $person->getKey())
             ->first();
+        if (! $profile instanceof MskParticipant) {
+            $profile = $this->matchingUnlinkedParticipantProfile((int) $person->branch_id, $row);
+        }
         $profile ??= new MskParticipant([
             'discipleship_person_id' => (int) $person->getKey(),
             'status' => 'active',
@@ -654,6 +657,36 @@ class PeopleTreeModelStore
         }
 
         $profile->save();
+    }
+
+    /** @param array<string, mixed> $row */
+    private function matchingUnlinkedParticipantProfile(int $branchId, array $row): ?MskParticipant
+    {
+        $identityKey = $this->participantIdentityKey(
+            (string) ($row['full_name'] ?? $row['name'] ?? ''),
+            (string) ($row['phone'] ?? $row['whatsapp'] ?? ''),
+        );
+        if ($identityKey === '') {
+            return null;
+        }
+
+        return MskParticipant::query()
+            ->where('branch_id', $branchId)
+            ->whereNull('discipleship_person_id')
+            ->get()
+            ->first(fn (MskParticipant $participant): bool => $this->participantIdentityKey(
+                (string) ($participant->full_name ?? ''),
+                (string) ($participant->whatsapp ?? ''),
+            ) === $identityKey);
+    }
+
+    private function participantIdentityKey(string $fullName, string $whatsapp): string
+    {
+        if (normalize_whatsapp_digits($whatsapp) === '') {
+            return '';
+        }
+
+        return discipleship_unified_identity_key($fullName, $whatsapp);
     }
 
     /**

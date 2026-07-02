@@ -342,6 +342,48 @@ class MskParticipantPageTest extends TestCase
         $this->assertSame([1, 2], $sessions);
     }
 
+    public function test_store_msk_participant_updates_existing_placeholder_with_same_identity(): void
+    {
+        $this->createMskTables();
+        $placeholderId = DB::table('msk_participants')->insertGetId([
+            'branch_id' => 1,
+            'discipleship_person_id' => 77,
+            'full_name' => 'Axel Christmas Eltho',
+            'gender' => null,
+            'whatsapp' => '081326729382',
+            'batch_month' => null,
+            'journey_bridge_status' => 'belum',
+            'status' => 'active',
+            'session_numbers' => json_encode([]),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAsRecUser();
+
+        $response = $this->post('/pemuridan/msk/peserta', [
+            'action' => 'save_msk_participant',
+            'full_name' => 'Axel Christmas Eltho',
+            'gender' => 'Laki-laki',
+            'whatsapp' => '81326729382',
+            'batch_month' => '2025-06',
+            'session_numbers' => range(1, 12),
+        ]);
+
+        $response->assertRedirect('/pemuridan/msk?batch_month=2025-06&saved=1');
+        $this->assertSame(1, DB::table('msk_participants')->where('full_name', 'Axel Christmas Eltho')->count());
+        $this->assertDatabaseHas('msk_participants', [
+            'id' => $placeholderId,
+            'discipleship_person_id' => 77,
+            'full_name' => 'Axel Christmas Eltho',
+            'batch_month' => '2025-06',
+        ]);
+
+        $sessions = json_decode((string) DB::table('msk_participants')->where('id', $placeholderId)->value('session_numbers'), true);
+        $this->assertSame(range(1, 12), $sessions);
+    }
+
     public function test_update_msk_participant_persists_selected_batch_month_and_other_fields(): void
     {
         $this->createMskTables();

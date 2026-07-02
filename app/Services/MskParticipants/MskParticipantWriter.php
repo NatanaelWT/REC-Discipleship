@@ -180,15 +180,22 @@ class MskParticipantWriter
         return DB::transaction(function () use ($branchCode, $participantData): MskParticipant {
             $participantId = (int) ($participantData['id'] ?? 0);
             $participant = $participantId > 0 ? $this->participantForBranch($branchCode, $participantId) : null;
+            if (! $participant instanceof MskParticipant && $participantId < 1) {
+                $participant = $this->matchingParticipantForIdentity($branchCode, $participantData);
+            }
             $participant ??= new MskParticipant([
                 'branch_id' => branch_id_from_slug($branchCode),
             ]);
 
             $birthDate = normalize_ymd_date((string) ($participantData['birth_date'] ?? ''));
             $batchMonth = import_normalize_month_strict((string) ($participantData['msk_month'] ?? ''));
+            $linkedPersonId = (int) ($participantData['member_id'] ?? 0);
+            if ($linkedPersonId < 1 && $participant instanceof MskParticipant && $participant->discipleship_person_id !== null) {
+                $linkedPersonId = (int) $participant->discipleship_person_id;
+            }
             $fill = [
                 'branch_id' => branch_id_from_slug($branchCode),
-                'discipleship_person_id' => (int) ($participantData['member_id'] ?? 0) ?: null,
+                'discipleship_person_id' => $linkedPersonId > 0 ? $linkedPersonId : null,
                 'full_name' => $this->nullableString($participantData['full_name'] ?? null),
                 'gender' => $this->nullableString(normalize_member_gender_value((string) ($participantData['gender'] ?? ''))),
                 'birth_date' => $birthDate !== '' ? $birthDate : null,
@@ -316,6 +323,47 @@ class MskParticipantWriter
             ->whereKey($participantId);
 
         return $query->first();
+    }
+
+    /**
+     * @param  array<string, mixed>  $participantData
+     */
+    private function matchingParticipantForIdentity(string $branchCode, array $participantData): ?MskParticipant
+    {
+        $identityKey = $this->identityKey(
+            (string) ($participantData['full_name'] ?? ''),
+            (string) ($participantData['whatsapp'] ?? ''),
+        );
+        $branchId = branch_id_from_slug($branchCode);
+        if ($identityKey === '' || $branchId === null) {
+            return null;
+        }
+
+        return MskParticipant::query()
+            ->where('branch_id', $branchId)
+            ->get()
+            ->filter(fn (MskParticipant $participant): bool => $this->identityKey(
+                (string) ($participant->full_name ?? ''),
+                (string) ($participant->whatsapp ?? ''),
+            ) === $identityKey)
+            ->sortByDesc(fn (MskParticipant $participant): int => $this->participantCompletenessScore($participant))
+            ->first();
+    }
+
+    private function identityKey(string $fullName, string $whatsapp): string
+    {
+        if (normalize_whatsapp_digits($whatsapp) === '') {
+            return '';
+        }
+
+        return discipleship_unified_identity_key($fullName, $whatsapp);
+    }
+
+    private function participantCompletenessScore(MskParticipant $participant): int
+    {
+        return (count(normalize_msk_session_numbers($participant->session_numbers ?? [])) * 100)
+            + (trim((string) ($participant->batch_month ?? '')) !== '' ? 10 : 0)
+            + ($participant->discipleship_person_id !== null ? 1 : 0);
     }
 
     /**
