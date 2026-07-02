@@ -18,9 +18,6 @@ class DiscipleshipPerson extends Model
         'gender',
         'status',
         'notes',
-        'campus',
-        'major',
-        'occupation',
     ];
 
     public function branch(): BelongsTo

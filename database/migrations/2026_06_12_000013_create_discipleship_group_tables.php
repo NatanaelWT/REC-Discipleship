@@ -18,9 +18,6 @@ return new class extends Migration
             $table->string('gender', 40)->nullable();
             $table->string('status', 80)->default('active');
             $table->longText('notes')->nullable();
-            $table->string('campus')->nullable();
-            $table->string('major')->nullable();
-            $table->string('occupation')->nullable();
             $table->timestamps();
 
             $table->unique(['branch_code', 'public_id'], 'discipleship_people_branch_public_unique');

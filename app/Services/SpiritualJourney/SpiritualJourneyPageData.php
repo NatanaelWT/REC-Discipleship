@@ -299,7 +299,7 @@ class SpiritualJourneyPageData
         $branches = $this->scope->optionsById();
         $rows = [];
         foreach (DiscipleshipPerson::query()->whereIn('id', $personIds)->get([
-            'id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'campus', 'major', 'occupation', 'created_at', 'updated_at',
+            'id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'created_at', 'updated_at',
         ]) as $person) {
             $name = trim((string) $person->full_name) ?: '-';
             $branch = $branches[(int) $person->branch_id] ?? ['slug' => '', 'label' => 'Tanpa cabang'];
@@ -311,8 +311,7 @@ class SpiritualJourneyPageData
                 'branch_code' => $branch['slug'], 'branch_label' => $branch['label'],
                 'name' => $name, 'full_name' => $name, 'phone' => trim((string) $person->phone),
                 'gender' => trim((string) $person->gender), 'status' => (string) $person->status,
-                'notes' => trim((string) $person->notes), 'campus' => trim((string) $person->campus),
-                'major' => trim((string) $person->major), 'occupation' => trim((string) $person->occupation),
+                'notes' => trim((string) $person->notes),
                 'created_at' => (string) $person->created_at, 'updated_at' => (string) $person->updated_at,
             ];
         }

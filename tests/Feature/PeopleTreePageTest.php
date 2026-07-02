@@ -425,9 +425,6 @@ class PeopleTreePageTest extends TestCase
             $table->string('gender')->nullable();
             $table->string('status')->default('active');
             $table->text('notes')->nullable();
-            $table->string('campus')->nullable();
-            $table->string('major')->nullable();
-            $table->string('occupation')->nullable();
             $table->timestamps();
         });
 

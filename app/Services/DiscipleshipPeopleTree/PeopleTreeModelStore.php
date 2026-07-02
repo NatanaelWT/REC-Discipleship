@@ -345,8 +345,7 @@ class PeopleTreeModelStore
     {
         return DiscipleshipPerson::query()
             ->select([
-                'id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'campus', 'major',
-                'occupation', 'created_at', 'updated_at',
+                'id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'created_at', 'updated_at',
             ])
             ->where(function ($query) use ($branchIds, $extraPersonIds): void {
                 $query->whereIn('branch_id', $branchIds);
@@ -365,9 +364,6 @@ class PeopleTreeModelStore
                 'gender' => trim((string) $person->gender),
                 'status' => trim((string) ($person->status ?? 'active')) ?: 'active',
                 'notes' => trim((string) $person->notes),
-                'campus' => trim((string) $person->campus),
-                'major' => trim((string) $person->major),
-                'occupation' => trim((string) $person->occupation),
                 'created_at' => optional($person->created_at)->toIso8601String(),
                 'updated_at' => optional($person->updated_at)->toIso8601String(),
             ])
@@ -582,9 +578,6 @@ class PeopleTreeModelStore
                 'gender' => $this->nullableString($row['gender'] ?? null),
                 'status' => $this->nullableString($row['status'] ?? null) ?? 'active',
                 'notes' => $this->nullableString($row['notes'] ?? null),
-                'campus' => $this->nullableString($row['campus'] ?? null),
-                'major' => $this->nullableString($row['major'] ?? null),
-                'occupation' => $this->nullableString($row['occupation'] ?? null),
             ]);
             $person->save();
 

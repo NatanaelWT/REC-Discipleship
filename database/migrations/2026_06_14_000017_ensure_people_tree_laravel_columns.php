@@ -36,9 +36,6 @@ return new class extends Migration
             $this->nullableString($table, 'gender', 40);
             $this->string($table, 'status', 80, 'active');
             $this->nullableLongText($table, 'notes');
-            $this->nullableString($table, 'campus');
-            $this->nullableString($table, 'major');
-            $this->nullableString($table, 'occupation');
             $this->timestamps($table, 'discipleship_people');
         });
     }
