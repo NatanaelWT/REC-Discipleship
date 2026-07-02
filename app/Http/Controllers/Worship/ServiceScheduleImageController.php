@@ -51,7 +51,7 @@ class ServiceScheduleImageController extends Controller
         $activity->record(
             'export',
             'worship.schedule_image.exported',
-            'worship_schedules',
+            'worship_service_schedules',
             $selectedMonth,
             $downloadName,
             'Jadwal penatalayan diekspor sebagai gambar.',

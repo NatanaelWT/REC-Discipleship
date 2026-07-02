@@ -14,7 +14,6 @@ use App\Models\DiscipleshipRelationship;
 use App\Models\MskParticipant;
 use App\Models\PublicMaterialFile;
 use App\Models\User;
-use App\Models\WorshipSchedule;
 use App\Models\WorshipServiceAssignment;
 use App\Models\WorshipServiceSchedule;
 use App\Models\WorshipServiceScheduleRole;
@@ -67,7 +66,6 @@ class AppServiceProvider extends ServiceProvider
             MskParticipant::class,
             PublicMaterialFile::class,
             User::class,
-            WorshipSchedule::class,
             WorshipServiceAssignment::class,
             WorshipServiceSchedule::class,
             WorshipServiceScheduleRole::class,

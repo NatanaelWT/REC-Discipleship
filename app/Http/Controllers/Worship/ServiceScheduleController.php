@@ -77,7 +77,7 @@ class ServiceScheduleController extends Controller
         $activity->record(
             'data',
             $before === null ? 'worship.schedule.created' : 'worship.schedule.updated',
-            'worship_schedules',
+            'worship_service_schedules',
             $month,
             default_worship_penatalayan_title($month),
             'Jadwal penatalayan disimpan.',
@@ -159,7 +159,7 @@ class ServiceScheduleController extends Controller
         $activity->record(
             'data',
             'worship.schedule.deleted',
-            'worship_schedules',
+            'worship_service_schedules',
             $month,
             default_worship_penatalayan_title($month),
             'Jadwal penatalayan dihapus.',

@@ -3,7 +3,6 @@
 namespace App\Services\WorshipServiceSchedules;
 
 use App\Support\RuntimeBootstrap;
-use stdClass;
 
 class WorshipServiceScheduleNormalizer
 {
@@ -77,34 +76,6 @@ class WorshipServiceScheduleNormalizer
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    public function fromDatabaseRow(stdClass $row): array
-    {
-        RuntimeBootstrap::load();
-
-        $month = normalize_month_value((string) ($row->month ?? date('Y-m')));
-        $rows = json_decode((string) ($row->rows_payload ?? '[]'), true);
-        if (! is_array($rows)) {
-            $rows = [];
-        }
-
-        return [
-            'month' => $month,
-            'update_note' => trim((string) ($row->update_note ?? '')),
-            'rows' => normalize_worship_penatalayan_rows($rows, count(worship_penatalayan_week_dates($month))),
-            'branch_code' => $this->nullableString($row->branch ?? null),
-            'created_at' => $this->firstNonEmpty([
-                $row->created_at ?? null,
-            ]),
-            'updated_at' => $this->firstNonEmpty([
-                $row->record_updated_at ?? null,
-                $row->updated_at ?? null,
-            ]),
-        ];
-    }
-
-    /**
      * @return array<int, string>
      */
     public function splitAssignmentLines(string $value): array
@@ -121,25 +92,4 @@ class WorshipServiceScheduleNormalizer
         return $names;
     }
 
-    /**
-     * @param  array<int, mixed>  $values
-     */
-    private function firstNonEmpty(array $values): string
-    {
-        foreach ($values as $value) {
-            $stringValue = trim((string) $value);
-            if ($stringValue !== '') {
-                return $stringValue;
-            }
-        }
-
-        return '';
-    }
-
-    private function nullableString(mixed $value): ?string
-    {
-        $stringValue = trim((string) $value);
-
-        return $stringValue !== '' ? $stringValue : null;
-    }
 }

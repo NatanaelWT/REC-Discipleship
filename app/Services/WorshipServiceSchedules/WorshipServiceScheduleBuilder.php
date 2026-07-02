@@ -2,7 +2,6 @@
 
 namespace App\Services\WorshipServiceSchedules;
 
-use App\Models\WorshipSchedule;
 use App\Models\WorshipServiceSchedule;
 use App\Models\WorshipServiceScheduleRole;
 use App\Models\WorshipServiceScheduleWeek;
@@ -10,7 +9,6 @@ use App\Support\RuntimeBootstrap;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class WorshipServiceScheduleBuilder
 {
@@ -23,20 +21,10 @@ class WorshipServiceScheduleBuilder
     {
         RuntimeBootstrap::load();
 
-        if ($this->usesNewTable()) {
-            return WorshipSchedule::query()
-                ->orderByDesc('month')
-                ->get()
-                ->map(fn (WorshipSchedule $schedule): array => $this->recordFromJsonModel($schedule))
-                ->all();
-        }
-
-        $schedules = WorshipServiceSchedule::query()
+        return WorshipServiceSchedule::query()
             ->with(['roles.assignments', 'weeks'])
             ->orderByDesc('month')
-            ->get();
-
-        return $schedules
+            ->get()
             ->map(fn (WorshipServiceSchedule $schedule): array => $this->recordFromModel($schedule))
             ->all();
     }
@@ -48,18 +36,9 @@ class WorshipServiceScheduleBuilder
     {
         RuntimeBootstrap::load();
 
-        $month = normalize_month_value($month);
-        if ($this->usesNewTable()) {
-            $schedule = WorshipSchedule::query()
-                ->where('month', $month)
-                ->first();
-
-            return $schedule instanceof WorshipSchedule ? $this->recordFromJsonModel($schedule) : null;
-        }
-
         $schedule = WorshipServiceSchedule::query()
             ->with(['roles.assignments', 'weeks'])
-            ->where('month', $month)
+            ->where('month', normalize_month_value($month))
             ->first();
 
         return $schedule instanceof WorshipServiceSchedule ? $this->recordFromModel($schedule) : null;
@@ -84,38 +63,8 @@ class WorshipServiceScheduleBuilder
         RuntimeBootstrap::load();
 
         $month = normalize_month_value((string) ($record['month'] ?? date('Y-m')));
-        if ($this->usesNewTable()) {
-            /** @var WorshipSchedule $schedule */
-            $schedule = DB::transaction(function () use ($record, $month, $preserveTimestamps): WorshipSchedule {
-                $schedule = WorshipSchedule::query()->firstOrNew([
-                    'month' => $month,
-                ]);
-                $schedule->fill([
-                    'update_note' => trim((string) ($record['update_note'] ?? '')),
-                    'rows' => is_array($record['rows'] ?? null) ? normalize_worship_penatalayan_rows($record['rows'], count(worship_penatalayan_week_dates($month))) : [],
-                ]);
 
-                if ($preserveTimestamps) {
-                    $createdAt = $this->parseTimestamp((string) ($record['created_at'] ?? ''));
-                    $updatedAt = $this->parseTimestamp((string) ($record['updated_at'] ?? ''));
-                    if ($createdAt instanceof Carbon) {
-                        $schedule->created_at = $createdAt;
-                    }
-                    if ($updatedAt instanceof Carbon) {
-                        $schedule->updated_at = $updatedAt;
-                    }
-                }
-
-                $schedule->save();
-
-                return $schedule->fresh() ?? $schedule;
-            });
-
-            return $this->legacyScheduleProxy($schedule);
-        }
-
-        /** @var WorshipServiceSchedule $schedule */
-        $schedule = DB::transaction(function () use ($record, $month, $preserveTimestamps): WorshipServiceSchedule {
+        return DB::transaction(function () use ($record, $month, $preserveTimestamps): WorshipServiceSchedule {
             $schedule = WorshipServiceSchedule::query()->firstOrNew(['month' => $month]);
             $schedule->fill([
                 'update_note' => trim((string) ($record['update_note'] ?? '')),
@@ -137,34 +86,23 @@ class WorshipServiceScheduleBuilder
 
             return $schedule->fresh(['roles.assignments', 'weeks']) ?? $schedule;
         });
-
-        return $schedule;
     }
 
     public function deleteMonth(string $month): bool
     {
         RuntimeBootstrap::load();
 
-        $month = normalize_month_value($month);
-        if ($this->usesNewTable()) {
-            $schedule = WorshipSchedule::query()
-                ->where('month', $month)
-                ->first();
-            if (! $schedule instanceof WorshipSchedule) {
-                return false;
-            }
-
-            $schedule->delete();
-
-            return true;
-        }
-
-        $schedule = WorshipServiceSchedule::query()->where('month', $month)->first();
+        $schedule = WorshipServiceSchedule::query()
+            ->where('month', normalize_month_value($month))
+            ->first();
         if (! $schedule instanceof WorshipServiceSchedule) {
             return false;
         }
 
-        $schedule->delete();
+        DB::transaction(function () use ($schedule): void {
+            $this->deleteChildren($schedule);
+            $schedule->delete();
+        });
 
         return true;
     }
@@ -236,31 +174,11 @@ class WorshipServiceScheduleBuilder
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    public function recordFromJsonModel(WorshipSchedule $schedule): array
-    {
-        RuntimeBootstrap::load();
-
-        $month = normalize_month_value((string) $schedule->month);
-        $rows = is_array($schedule->rows ?? null) ? $schedule->rows : [];
-
-        return [
-            'month' => $month,
-            'update_note' => trim((string) ($schedule->update_note ?? '')),
-            'rows' => normalize_worship_penatalayan_rows($rows, count(worship_penatalayan_week_dates($month))),
-            'created_at' => $this->timestampString($schedule->created_at),
-            'updated_at' => $this->timestampString($schedule->updated_at),
-        ];
-    }
-
-    /**
      * @param  array<int, mixed>  $rows
      */
     private function replaceChildren(WorshipServiceSchedule $schedule, array $rows): void
     {
-        $schedule->roles()->delete();
-        $schedule->weeks()->delete();
+        $this->deleteChildren($schedule);
 
         $month = normalize_month_value((string) $schedule->month);
         $weekDates = worship_penatalayan_week_dates($month);
@@ -320,23 +238,24 @@ class WorshipServiceScheduleBuilder
         }
     }
 
-    private function usesNewTable(): bool
+    private function deleteChildren(WorshipServiceSchedule $schedule): void
     {
-        return Schema::hasTable('worship_schedules');
-    }
+        $roleIds = $schedule->roles()->pluck('id')->all();
+        $weekIds = $schedule->weeks()->pluck('id')->all();
 
-    private function legacyScheduleProxy(WorshipSchedule $schedule): WorshipServiceSchedule
-    {
-        $proxy = new WorshipServiceSchedule;
-        $proxy->forceFill([
-            'id' => $schedule->id,
-            'month' => $schedule->month,
-            'update_note' => $schedule->update_note,
-            'created_at' => $schedule->created_at,
-            'updated_at' => $schedule->updated_at,
-        ]);
+        if ($roleIds !== []) {
+            DB::table('worship_service_assignments')
+                ->whereIn('worship_service_schedule_role_id', $roleIds)
+                ->delete();
+        }
+        if ($weekIds !== []) {
+            DB::table('worship_service_assignments')
+                ->whereIn('worship_service_schedule_week_id', $weekIds)
+                ->delete();
+        }
 
-        return $proxy;
+        $schedule->roles()->delete();
+        $schedule->weeks()->delete();
     }
 
     /**
