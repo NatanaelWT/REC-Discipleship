@@ -7,6 +7,7 @@ use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipPerson;
 use App\Services\Discipleship\DiscipleshipReadCache;
+use App\Support\DiscipleshipPersonProfile;
 use DateTimeInterface;
 use Illuminate\Http\Request;
 use Throwable;
@@ -527,11 +528,7 @@ class MemberFeedbackRecapPageData
         $personNames = [];
         if ($personIds !== []) {
             try {
-                $personNames = DiscipleshipPerson::query()
-                    ->whereIn('id', $personIds)
-                    ->pluck('full_name', 'id')
-                    ->map(static fn ($name): string => trim((string) $name))
-                    ->all();
+                $personNames = DiscipleshipPersonProfile::namesByPersonIds($personIds);
             } catch (Throwable) {
                 $personNames = [];
             }

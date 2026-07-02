@@ -11,6 +11,7 @@ use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DiscipleshipTargets\DiscipleshipTargetReader;
 use App\Services\MskParticipants\MskParticipantHistoryData;
 use App\Services\MskParticipants\MskParticipantProfileData;
+use App\Support\DiscipleshipPersonProfile;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -298,8 +299,19 @@ class SpiritualJourneyPageData
         }
         $branches = $this->scope->optionsById();
         $rows = [];
-        foreach (DiscipleshipPerson::query()->whereIn('id', $personIds)->get([
-            'id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'created_at', 'updated_at',
+        $query = DiscipleshipPerson::query();
+        DiscipleshipPersonProfile::join($query);
+
+        foreach ($query->whereIn('discipleship_people.id', $personIds)->get([
+            'discipleship_people.id',
+            'discipleship_people.branch_id',
+            'discipleship_people.status',
+            'discipleship_people.notes',
+            'discipleship_people.created_at',
+            'discipleship_people.updated_at',
+            DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
+            DB::raw(DiscipleshipPersonProfile::expression('phone').' as phone'),
+            DB::raw(DiscipleshipPersonProfile::expression('gender').' as gender'),
         ]) as $person) {
             $name = trim((string) $person->full_name) ?: '-';
             $branch = $branches[(int) $person->branch_id] ?? ['slug' => '', 'label' => 'Tanpa cabang'];

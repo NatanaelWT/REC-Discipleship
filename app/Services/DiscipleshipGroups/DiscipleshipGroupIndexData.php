@@ -6,9 +6,11 @@ use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipPerson;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
+use App\Support\DiscipleshipPersonProfile;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class DiscipleshipGroupIndexData
 {
@@ -92,10 +94,12 @@ class DiscipleshipGroupIndexData
                     ->orWhereExists(function ($subquery) use ($search): void {
                         $subquery->selectRaw('1')
                             ->from('discipleship_group_people as search_gp')
-                            ->join('discipleship_people as search_person', 'search_person.id', '=', 'search_gp.person_id')
+                            ->join('discipleship_people as search_person', 'search_person.id', '=', 'search_gp.person_id');
+                        DiscipleshipPersonProfile::join($subquery, 'search_person', 'search_profile');
+                        $subquery
                             ->whereColumn('search_gp.discipleship_group_id', 'discipleship_groups.id')
                             ->whereColumn('search_gp.branch_id', 'discipleship_groups.branch_id')
-                            ->whereRaw('LOWER(search_person.full_name) LIKE ?', ['%'.$search.'%']);
+                            ->whereRaw('LOWER('.DiscipleshipPersonProfile::expression('full_name', 'search_person', 'search_profile').') LIKE ?', ['%'.$search.'%']);
                     });
             });
         }
@@ -204,9 +208,16 @@ class DiscipleshipGroupIndexData
         $branchOptions = $this->scope->optionsById();
         $contextBranchIds = $this->scope->branchIds();
 
-        return DiscipleshipPerson::query()
-            ->whereIn('id', $personIds)
-            ->get(['id', 'branch_id', 'full_name'])
+        $query = DiscipleshipPerson::query();
+        DiscipleshipPersonProfile::join($query);
+
+        return $query
+            ->whereIn('discipleship_people.id', $personIds)
+            ->get([
+                'discipleship_people.id',
+                'discipleship_people.branch_id',
+                DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
+            ])
             ->mapWithKeys(function (DiscipleshipPerson $person) use ($branchOptions, $contextBranchIds): array {
                 $name = trim((string) $person->full_name);
                 $personBranchId = (int) $person->branch_id;

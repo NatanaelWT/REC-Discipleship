@@ -6,6 +6,7 @@ use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipPerson;
 use App\Models\DiscipleshipRelationship;
+use App\Support\DiscipleshipPersonProfile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -47,7 +48,7 @@ class MskParticipantHistoryData
         $personIds = array_values(array_unique($participantPersonIds));
         $targetPeople = DiscipleshipPerson::query()
             ->whereIn('id', $personIds)
-            ->get(['id', 'full_name']);
+            ->get(['id']);
         $validPersonIds = $targetPeople->pluck('id')->map(static fn ($id): int => (int) $id)->all();
         if ($validPersonIds === []) {
             return $histories;
@@ -91,11 +92,10 @@ class MskParticipantHistoryData
             ->map(static fn ($id): int => (int) $id)
             ->unique()
             ->all();
-        $names = DiscipleshipPerson::query()
-            ->whereIn('id', $relatedPersonIds)
-            ->pluck('full_name', 'id')
-            ->map(static fn ($name): string => trim((string) $name) ?: '-')
-            ->all();
+        $names = array_map(
+            static fn (string $name): string => $name !== '' ? $name : '-',
+            DiscipleshipPersonProfile::namesByPersonIds($relatedPersonIds),
+        );
 
         foreach ($participantPersonIds as $participantId => $personId) {
             if (! in_array($personId, $validPersonIds, true)) {

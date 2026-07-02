@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Models\Concerns\ResolvesBranchSlug;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DiscipleshipPerson extends Model
 {
@@ -13,9 +15,6 @@ class DiscipleshipPerson extends Model
 
     protected $fillable = [
         'branch_id',
-        'full_name',
-        'phone',
-        'gender',
         'status',
         'notes',
     ];
@@ -35,5 +34,36 @@ class DiscipleshipPerson extends Model
     {
         return $this->hasMany(DiscipleshipGroupPerson::class, 'person_id')
             ->where('role', '!=', 'member');
+    }
+
+    public function mskParticipant(): HasOne
+    {
+        return $this->hasOne(MskParticipant::class, 'discipleship_person_id');
+    }
+
+    protected function fullName(): Attribute
+    {
+        return Attribute::get(fn (mixed $value): ?string => $value !== null ? (string) $value : $this->profileValue('full_name'));
+    }
+
+    protected function phone(): Attribute
+    {
+        return Attribute::get(fn (mixed $value): ?string => $value !== null ? (string) $value : $this->profileValue('whatsapp'));
+    }
+
+    protected function gender(): Attribute
+    {
+        return Attribute::get(fn (mixed $value): ?string => $value !== null ? (string) $value : $this->profileValue('gender'));
+    }
+
+    private function profileValue(string $column): ?string
+    {
+        $participant = $this->relationLoaded('mskParticipant')
+            ? $this->getRelation('mskParticipant')
+            : $this->mskParticipant()->first();
+
+        $value = $participant?->{$column};
+
+        return $value !== null ? (string) $value : null;
     }
 }

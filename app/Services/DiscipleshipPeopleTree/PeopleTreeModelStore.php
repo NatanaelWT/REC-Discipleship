@@ -8,6 +8,7 @@ use App\Models\DiscipleshipMeetingReport;
 use App\Models\DiscipleshipPerson;
 use App\Models\DiscipleshipRelationship;
 use App\Models\MskParticipant;
+use App\Support\DiscipleshipPersonProfile;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -101,12 +102,25 @@ class PeopleTreeModelStore
         $labels = $this->branchLabels();
 
         try {
-            return DiscipleshipPerson::query()
-                ->whereIn('branch_id', $branchIds)
-                ->where('status', 'active')
-                ->orderBy('full_name')
-                ->orderBy('id')
-                ->get(['id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'created_at', 'updated_at'])
+            $query = DiscipleshipPerson::query();
+            DiscipleshipPersonProfile::join($query);
+
+            return $query
+                ->whereIn('discipleship_people.branch_id', $branchIds)
+                ->where('discipleship_people.status', 'active')
+                ->orderByRaw(DiscipleshipPersonProfile::expression('full_name'))
+                ->orderBy('discipleship_people.id')
+                ->get([
+                    'discipleship_people.id',
+                    'discipleship_people.branch_id',
+                    'discipleship_people.status',
+                    'discipleship_people.notes',
+                    'discipleship_people.created_at',
+                    'discipleship_people.updated_at',
+                    DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
+                    DB::raw(DiscipleshipPersonProfile::expression('phone').' as phone'),
+                    DB::raw(DiscipleshipPersonProfile::expression('gender').' as gender'),
+                ])
                 ->map(static function (DiscipleshipPerson $person) use ($branchCode, $labels): array {
                     $personBranchCode = normalize_public_branch_code((string) $person->branch_code);
                     $branchLabel = $labels[$personBranchCode] ?? strtoupper($personBranchCode);
@@ -343,17 +357,28 @@ class PeopleTreeModelStore
     /** @return array<int, array<string, mixed>> */
     private function peopleRows(array $branchIds, array $extraPersonIds = []): array
     {
-        return DiscipleshipPerson::query()
+        $query = DiscipleshipPerson::query();
+        DiscipleshipPersonProfile::join($query);
+
+        return $query
             ->select([
-                'id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'created_at', 'updated_at',
+                'discipleship_people.id',
+                'discipleship_people.branch_id',
+                'discipleship_people.status',
+                'discipleship_people.notes',
+                'discipleship_people.created_at',
+                'discipleship_people.updated_at',
+                DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
+                DB::raw(DiscipleshipPersonProfile::expression('phone').' as phone'),
+                DB::raw(DiscipleshipPersonProfile::expression('gender').' as gender'),
             ])
             ->where(function ($query) use ($branchIds, $extraPersonIds): void {
-                $query->whereIn('branch_id', $branchIds);
+                $query->whereIn('discipleship_people.branch_id', $branchIds);
                 if ($extraPersonIds !== []) {
-                    $query->orWhereIn('id', $extraPersonIds);
+                    $query->orWhereIn('discipleship_people.id', $extraPersonIds);
                 }
             })
-            ->orderBy('id')
+            ->orderBy('discipleship_people.id')
             ->get()
             ->map(static fn (DiscipleshipPerson $person): array => [
                 'id' => (string) $person->getKey(),
@@ -573,13 +598,11 @@ class PeopleTreeModelStore
             $person ??= new DiscipleshipPerson;
             $person->fill([
                 'branch_id' => $branchId,
-                'full_name' => $this->nullableString($row['full_name'] ?? $row['name'] ?? null),
-                'phone' => $this->nullableString($row['phone'] ?? $row['whatsapp'] ?? null),
-                'gender' => $this->nullableString($row['gender'] ?? null),
                 'status' => $this->nullableString($row['status'] ?? null) ?? 'active',
                 'notes' => $this->nullableString($row['notes'] ?? null),
             ]);
             $person->save();
+            $this->syncPersonProfile($person, $row);
 
             $actualId = (int) $person->getKey();
             $map[$sourceId !== '' ? $sourceId : (string) $actualId] = $actualId;
@@ -593,6 +616,44 @@ class PeopleTreeModelStore
             ->delete();
 
         return $map;
+    }
+
+    /** @param array<string, mixed> $row */
+    private function syncPersonProfile(DiscipleshipPerson $person, array $row): void
+    {
+        if (! Schema::hasTable('msk_participants')) {
+            return;
+        }
+
+        $profile = MskParticipant::query()
+            ->where('discipleship_person_id', $person->getKey())
+            ->first();
+        $profile ??= new MskParticipant([
+            'discipleship_person_id' => (int) $person->getKey(),
+            'status' => 'active',
+            'journey_bridge_status' => 'belum',
+            'session_numbers' => [],
+            'photos' => [],
+        ]);
+
+        $profile->fill([
+            'branch_id' => (int) $person->branch_id,
+            'discipleship_person_id' => (int) $person->getKey(),
+            'full_name' => $this->nullableString($row['full_name'] ?? $row['name'] ?? null),
+            'whatsapp' => $this->nullableString($row['phone'] ?? $row['whatsapp'] ?? null),
+            'gender' => $this->nullableString(normalize_member_gender_value((string) ($row['gender'] ?? ''))),
+        ]);
+
+        if (! $profile->exists) {
+            $profile->fill([
+                'status' => 'active',
+                'journey_bridge_status' => 'belum',
+                'session_numbers' => [],
+                'photos' => [],
+            ]);
+        }
+
+        $profile->save();
     }
 
     /**

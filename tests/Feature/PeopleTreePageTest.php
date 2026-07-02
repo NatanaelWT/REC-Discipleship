@@ -318,13 +318,21 @@ class PeopleTreePageTest extends TestCase
             'group_multiplications' => [],
         ]);
 
-        $leaderId = (int) DB::table('discipleship_people')->where('full_name', 'Leader Baru')->value('id');
-        $memberId = (int) DB::table('discipleship_people')->where('full_name', 'Anggota Baru')->value('id');
+        $leaderId = (int) DB::table('msk_participants')->where('full_name', 'Leader Baru')->value('discipleship_person_id');
+        $memberId = (int) DB::table('msk_participants')->where('full_name', 'Anggota Baru')->value('discipleship_person_id');
         $groupId = (int) DB::table('discipleship_groups')->where('name', 'Kelompok Baru')->value('id');
 
         $this->assertGreaterThan(0, $leaderId);
         $this->assertGreaterThan(0, $memberId);
         $this->assertGreaterThan(0, $groupId);
+        $this->assertDatabaseHas('msk_participants', [
+            'discipleship_person_id' => $leaderId,
+            'full_name' => 'Leader Baru',
+        ]);
+        $this->assertDatabaseHas('msk_participants', [
+            'discipleship_person_id' => $memberId,
+            'full_name' => 'Anggota Baru',
+        ]);
         $this->assertDatabaseHas('discipleship_relationships', [
             'mentor_person_id' => $leaderId,
             'disciple_person_id' => $memberId,

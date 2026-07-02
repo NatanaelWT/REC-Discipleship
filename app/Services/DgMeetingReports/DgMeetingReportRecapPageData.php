@@ -7,8 +7,10 @@ use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipMeetingReport;
 use App\Models\DiscipleshipPerson;
 use App\Services\Discipleship\DiscipleshipReadCache;
+use App\Support\DiscipleshipPersonProfile;
 use DateTimeInterface;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class DgMeetingReportRecapPageData
@@ -87,15 +89,28 @@ class DgMeetingReportRecapPageData
         $people = [];
         $branchIds = branch_ids_from_slugs($branchCodes);
         try {
-            $records = DiscipleshipPerson::query()
+            $query = DiscipleshipPerson::query();
+            DiscipleshipPersonProfile::join($query);
+
+            $records = $query
                 ->where(function ($query) use ($branchIds, $extraPersonIds): void {
-                    $query->whereIn('branch_id', $branchIds);
+                    $query->whereIn('discipleship_people.branch_id', $branchIds);
                     if ($extraPersonIds !== []) {
-                        $query->orWhereIn('id', $extraPersonIds);
+                        $query->orWhereIn('discipleship_people.id', $extraPersonIds);
                     }
                 })
-                ->orderBy('id')
-                ->get(['id', 'branch_id', 'full_name', 'phone', 'gender', 'status', 'notes', 'created_at', 'updated_at']);
+                ->orderBy('discipleship_people.id')
+                ->get([
+                    'discipleship_people.id',
+                    'discipleship_people.branch_id',
+                    'discipleship_people.status',
+                    'discipleship_people.notes',
+                    'discipleship_people.created_at',
+                    'discipleship_people.updated_at',
+                    DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
+                    DB::raw(DiscipleshipPersonProfile::expression('phone').' as phone'),
+                    DB::raw(DiscipleshipPersonProfile::expression('gender').' as gender'),
+                ]);
         } catch (Throwable) {
             return [];
         }

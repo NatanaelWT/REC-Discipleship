@@ -4342,6 +4342,7 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
             $this->seedTable('discipleship_group_people', self::DATA['discipleship_group_people']);
             $this->seedTable('discipleship_relationships', self::DATA['discipleship_relationships']);
             $this->seedTable('msk_participants', self::DATA['msk_participants']);
+            $this->ensureMskParticipantProfiles(self::DATA['discipleship_people']);
             $this->seedTable('discipleship_meeting_reports', self::DATA['discipleship_meeting_reports']);
             $this->seedTable('discipleship_feedbacks', self::DATA['discipleship_feedbacks']);
             $this->seedTable('public_material_files', self::DATA['public_material_files']);
@@ -4368,6 +4369,79 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
             $updateColumns = array_values(array_diff(array_keys($chunk[0]), ['id']));
             DB::table($table)->upsert($chunk, ['id'], $updateColumns);
         }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $people
+     */
+    private function ensureMskParticipantProfiles(array $people): void
+    {
+        if ($people === []
+            || ! Schema::hasTable('msk_participants')
+            || ! Schema::hasColumn('msk_participants', 'discipleship_person_id')) {
+            return;
+        }
+
+        foreach ($people as $person) {
+            $personId = (int) ($person['id'] ?? 0);
+            if ($personId < 1) {
+                continue;
+            }
+
+            $participant = DB::table('msk_participants')
+                ->where('discipleship_person_id', $personId)
+                ->first();
+
+            $profile = [
+                'branch_id' => (int) ($person['branch_id'] ?? 0),
+                'discipleship_person_id' => $personId,
+                'full_name' => trim((string) ($person['full_name'] ?? '')) ?: null,
+                'gender' => trim((string) ($person['gender'] ?? '')) ?: null,
+                'whatsapp' => trim((string) ($person['phone'] ?? '')) ?: null,
+            ];
+
+            if ($participant !== null) {
+                $updates = [];
+                foreach ([
+                    'full_name' => 'full_name',
+                    'gender' => 'gender',
+                    'whatsapp' => 'whatsapp',
+                ] as $column => $source) {
+                    if (trim((string) ($participant->{$column} ?? '')) === '' && ($profile[$source] ?? null) !== null) {
+                        $updates[$column] = $profile[$source];
+                    }
+                }
+
+                if ($updates !== []) {
+                    DB::table('msk_participants')
+                        ->where('id', (int) $participant->id)
+                        ->update($this->existingColumnValues('msk_participants', $updates));
+                }
+
+                continue;
+            }
+
+            DB::table('msk_participants')->insert($this->existingColumnValues('msk_participants', $profile + [
+                'batch_month' => null,
+                'notes' => null,
+                'completed_at' => null,
+                'journey_bridge_status' => 'belum',
+                'status' => 'active',
+                'session_numbers' => json_encode([]),
+                'photos' => json_encode([]),
+                'created_at' => $person['created_at'] ?? now(),
+                'updated_at' => $person['updated_at'] ?? now(),
+            ]));
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    private function existingColumnValues(string $table, array $values): array
+    {
+        return array_intersect_key($values, array_flip(Schema::getColumnListing($table)));
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipPerson;
 use App\Models\DiscipleshipRelationship;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
+use App\Support\DiscipleshipPersonProfile;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -39,9 +40,14 @@ class DiscipleshipPeopleListData
         $page = $this->page($request);
         $perPage = $this->perPage($request);
         $query = $this->filteredPeopleQuery($search, $progress)
-            ->select(['id', 'branch_id', 'full_name', 'status'])
-            ->orderBy('full_name')
-            ->orderBy('id');
+            ->select([
+                'discipleship_people.id',
+                'discipleship_people.branch_id',
+                'discipleship_people.status',
+                DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
+            ])
+            ->orderByRaw(DiscipleshipPersonProfile::expression('full_name'))
+            ->orderBy('discipleship_people.id');
 
         $people = $query
             ->offset(($page - 1) * $perPage)
@@ -77,9 +83,14 @@ class DiscipleshipPeopleListData
         $search = $this->search($request);
         $progress = $this->progressFilter($request);
         $people = $this->filteredPeopleQuery($search, $progress)
-            ->select(['id', 'branch_id', 'full_name', 'status'])
-            ->orderBy('full_name')
-            ->orderBy('id')
+            ->select([
+                'discipleship_people.id',
+                'discipleship_people.branch_id',
+                'discipleship_people.status',
+                DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
+            ])
+            ->orderByRaw(DiscipleshipPersonProfile::expression('full_name'))
+            ->orderBy('discipleship_people.id')
             ->get();
         $stats = $this->progressStats($search, $progress);
 
@@ -97,9 +108,12 @@ class DiscipleshipPeopleListData
 
     private function filteredPeopleQuery(string $search, string $progress): Builder
     {
-        $query = DiscipleshipPerson::query()
-            ->whereIn('branch_id', $this->scope->branchIds())
-            ->where('status', 'active')
+        $query = DiscipleshipPerson::query();
+        DiscipleshipPersonProfile::join($query);
+
+        $query
+            ->whereIn('discipleship_people.branch_id', $this->scope->branchIds())
+            ->where('discipleship_people.status', 'active')
             ->where(function (Builder $condition): void {
                 $condition->whereExists(static function ($subquery): void {
                     $subquery->selectRaw('1')
@@ -119,7 +133,7 @@ class DiscipleshipPeopleListData
             });
 
         if ($search !== '') {
-            $query->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%']);
+            $query->whereRaw('LOWER('.DiscipleshipPersonProfile::expression('full_name').') LIKE ?', ['%'.$search.'%']);
         }
 
         $this->applyProgressFilter($query, $progress);
@@ -188,7 +202,7 @@ class DiscipleshipPeopleListData
         $groupPeople = $this->groupPeople($personIds);
         $relatedIds = $relationships->flatMap(static fn (DiscipleshipRelationship $row): array => [(int) $row->mentor_person_id, (int) $row->disciple_person_id])
             ->merge($groupPeople->pluck('person_id'))->filter()->unique()->all();
-        $names = DiscipleshipPerson::query()->whereIn('id', $relatedIds)->pluck('full_name', 'id')->all();
+        $names = DiscipleshipPersonProfile::namesByPersonIds($relatedIds);
         $branchOptions = $this->scope->optionsById();
 
         return $people->map(function (DiscipleshipPerson $person) use ($relationships, $groupPeople, $names, $branchOptions): array {

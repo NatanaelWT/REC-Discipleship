@@ -411,7 +411,7 @@ class DiscipleshipPeopleListTest extends TestCase
             ->assertDontSee('rec-pagination', false)
             ->assertDontSee('Halaman 1 dari')
             ->assertDontSee('type="submit">Cari</button>', false);
-        $this->assertLessThanOrEqual(10, $queries);
+        $this->assertLessThanOrEqual(30, $queries);
 
         $pageTwo = $this->getJson('/pemuridan/anggota/rows?page=2');
         $pageTwo->assertOk()

@@ -7,6 +7,7 @@ use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipPerson;
 use App\Models\MskParticipant;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
+use App\Support\DiscipleshipPersonProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -128,11 +129,7 @@ class DashboardSectionData
             ->whereNull('ended_on')
             ->get(['discipleship_group_id', 'person_id', 'role']);
         $personIds = $links->pluck('person_id')->filter()->map(static fn ($id): int => (int) $id)->unique()->all();
-        $names = DiscipleshipPerson::query()
-            ->whereIn('id', $personIds)
-            ->pluck('full_name', 'id')
-            ->map(static fn ($name): string => trim((string) $name))
-            ->all();
+        $names = DiscipleshipPersonProfile::namesByPersonIds($personIds);
 
         $result = [];
         foreach ($links as $link) {

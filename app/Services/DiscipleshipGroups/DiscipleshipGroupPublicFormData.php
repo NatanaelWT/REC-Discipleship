@@ -4,6 +4,7 @@ namespace App\Services\DiscipleshipGroups;
 
 use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipPerson;
+use Illuminate\Support\Facades\Schema;
 
 class DiscipleshipGroupPublicFormData
 {
@@ -20,10 +21,12 @@ class DiscipleshipGroupPublicFormData
         $groupsById = [];
         $leadersById = [];
 
+        $personRelation = Schema::hasTable('msk_participants') ? '.person.mskParticipant' : '.person';
+
         DiscipleshipGroup::query()
             ->with([
-                'leaderships.person',
-                'memberships.person',
+                'leaderships'.$personRelation,
+                'memberships'.$personRelation,
             ])
             ->where('branch_id', branch_id_from_slug($branchCode))
             ->where('status', 'active')
