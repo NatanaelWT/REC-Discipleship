@@ -278,6 +278,27 @@ class MskParticipantPageTest extends TestCase
             ->assertSee('Nofida Lassa');
     }
 
+    public function test_stale_edit_query_resolves_to_single_search_result_after_duplicate_cleanup(): void
+    {
+        $this->createMskTables();
+        $participantId = DB::table('people')->insertGetId(array_merge(
+            $this->participantRow('Marliana', '2024-01'),
+            [
+                'whatsapp' => '082233698003',
+                'session_numbers' => json_encode(range(1, 12)),
+            ],
+        ));
+
+        $this->actingAsRecUser();
+        $response = $this->get('/pemuridan/msk?batch_month=all&q=marliana&edit='.($participantId + 999));
+
+        $response->assertOk()
+            ->assertDontSee('Data peserta kelas MSK yang ingin diedit tidak ditemukan.')
+            ->assertSee('data-msk-edit-auto-open="'.$participantId.'"', false)
+            ->assertSee('data-msk-edit-template="'.$participantId.'"', false)
+            ->assertSee('Marliana');
+    }
+
     public function test_batch_filter_lists_all_batches_not_only_the_active_batch(): void
     {
         $this->createMskTables();

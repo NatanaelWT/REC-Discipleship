@@ -1000,6 +1000,18 @@
         emptyRow.hidden = visibleRowCount() !== 0;
       };
 
+      const clearStaleSelectionAlerts = () => {
+        document.querySelectorAll('.alert.danger').forEach((alertEl) => {
+          const message = String(alertEl.textContent || '').trim();
+          if (
+            message === 'Data peserta kelas MSK yang ingin diedit tidak ditemukan.' ||
+            message === 'Data peserta kelas MSK yang ingin dilihat tidak ditemukan.'
+          ) {
+            alertEl.remove();
+          }
+        });
+      };
+
       const clearRows = () => {
         body.querySelectorAll('[data-msk-search-row]').forEach((row) => {
           row.remove();
@@ -1073,6 +1085,7 @@
 
       const applyResult = (data, mode) => {
         if (mode === 'replace') {
+          clearStaleSelectionAlerts();
           clearRows();
         }
         insertRows(data && data.html);
@@ -1315,6 +1328,8 @@
         }
         url.searchParams.delete('page');
         url.searchParams.delete('per_page');
+        url.searchParams.delete('edit');
+        url.searchParams.delete('view');
         window.history.replaceState(window.history.state, '', url.toString());
       };
 

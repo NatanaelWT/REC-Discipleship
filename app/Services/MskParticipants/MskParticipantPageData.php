@@ -108,6 +108,7 @@ class MskParticipantPageData
             ->values()
             ->all();
         $selectedParticipants = [];
+        $resolvedSelectedIds = [];
         foreach (array_unique(array_filter([$editId, $requestedViewId])) as $selectedId) {
             if (! ctype_digit((string) $selectedId)) {
                 continue;
@@ -118,12 +119,29 @@ class MskParticipantPageData
                 ->whereKey((int) $selectedId)
                 ->first();
             if ($selected instanceof Person) {
-                $selectedParticipants[(string) $selected->getKey()] = $this->participantViewRow($selected);
+                $resolvedId = (string) $selected->getKey();
+                $selectedParticipants[$resolvedId] = $this->participantViewRow($selected);
+                $resolvedSelectedIds[(string) $selectedId] = $resolvedId;
+            }
+        }
+        if ($search !== '' && $totalParticipantsFiltered === 1 && count($pageParticipants) === 1) {
+            $fallbackId = (string) ($pageParticipants[0]['id'] ?? '');
+            if ($fallbackId !== '') {
+                if ($editId !== '' && ! isset($resolvedSelectedIds[$editId])) {
+                    $resolvedSelectedIds[$editId] = $fallbackId;
+                    $selectedParticipants[$fallbackId] = $pageParticipants[0];
+                }
+                if ($requestedViewId !== '' && ! isset($resolvedSelectedIds[$requestedViewId])) {
+                    $resolvedSelectedIds[$requestedViewId] = $fallbackId;
+                    $selectedParticipants[$fallbackId] = $pageParticipants[0];
+                }
             }
         }
         $participantsById = array_merge(index_by_id($pageParticipants), $selectedParticipants);
-        $editParticipant = $editId !== '' ? ($participantsById[$editId] ?? null) : null;
-        foreach ([$editParticipant, $participantsById[$requestedViewId] ?? null] as $selectedParticipant) {
+        $resolvedEditId = $editId !== '' ? (string) ($resolvedSelectedIds[$editId] ?? $editId) : '';
+        $resolvedViewId = $requestedViewId !== '' ? (string) ($resolvedSelectedIds[$requestedViewId] ?? $requestedViewId) : '';
+        $editParticipant = $resolvedEditId !== '' ? ($participantsById[$resolvedEditId] ?? null) : null;
+        foreach ([$editParticipant, $participantsById[$resolvedViewId] ?? null] as $selectedParticipant) {
             if (! is_array($selectedParticipant)) {
                 continue;
             }
@@ -145,11 +163,11 @@ class MskParticipantPageData
             'participantsSorted' => $pageParticipants,
             'participantsFilteredByBatch' => $pageParticipants,
             'participantsSearch' => $search,
-            'editId' => $editId,
+            'editId' => $resolvedEditId,
             'editParticipant' => $editParticipant,
-            'autoOpenEditParticipantId' => $editParticipant !== null ? $editId : '',
-            'requestedViewId' => $requestedViewId,
-            'autoOpenViewParticipantId' => $requestedViewId !== '' && isset($participantsById[$requestedViewId]) ? $requestedViewId : '',
+            'autoOpenEditParticipantId' => $editParticipant !== null ? $resolvedEditId : '',
+            'requestedViewId' => $resolvedViewId,
+            'autoOpenViewParticipantId' => $resolvedViewId !== '' && isset($participantsById[$resolvedViewId]) ? $resolvedViewId : '',
             'batchMonthMap' => $batchMonthMap,
             'batchMonthOptions' => $batchMonthOptions,
             'latestBatchMonth' => $latestBatchMonth,
