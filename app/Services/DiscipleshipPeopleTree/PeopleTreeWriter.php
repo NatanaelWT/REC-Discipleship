@@ -259,7 +259,7 @@ class PeopleTreeWriter
     private function recordLogicalChanges(string $branchCode, string $requestedAction, array $beforeModel, array $afterModel): void
     {
         $collections = [
-            'discipleship_persons' => 'discipleship_people',
+            'discipleship_persons' => 'people',
             'discipleship_groups' => 'discipleship_groups',
             'discipleship_relations' => 'discipleship_relationships',
             'group_memberships' => 'discipleship_group_people',

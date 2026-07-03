@@ -2,7 +2,7 @@
 
 namespace App\Services\MskParticipants;
 
-use App\Models\MskParticipant;
+use App\Models\Person;
 use Illuminate\Http\Request;
 
 class MskParticipantPageData
@@ -42,7 +42,7 @@ class MskParticipantPageData
         $editId = trim((string) $request->query('edit', ''));
         $requestedViewId = trim((string) $request->query('view', ''));
 
-        $rawBatchMonthMap = MskParticipant::query()
+        $rawBatchMonthMap = Person::query()
             ->whereIn('branch_id', $branchIds)
             ->selectRaw('batch_month, COUNT(*) AS aggregate')
             ->groupBy('batch_month')
@@ -72,8 +72,8 @@ class MskParticipantPageData
         $batchMonthFilterParam = $batchMonthFilterIsAll ? 'all' : $batchMonthFilter;
         $batchMonthFilterLabel = $batchMonthFilterIsAll ? 'Semua Batch' : format_indo_month($batchMonthFilter);
         $search = strtolower(trim((string) $request->query('q', '')));
-        $filteredQuery = MskParticipant::query()
-            ->select(MskParticipant::VIEW_COLUMNS)
+        $filteredQuery = Person::query()
+            ->select(Person::VIEW_COLUMNS)
             ->whereIn('branch_id', $branchIds)
             ->when(! $batchMonthFilterIsAll, static fn ($query) => $query->where('batch_month', $batchMonthFilter));
 
@@ -88,7 +88,7 @@ class MskParticipantPageData
         $totalParticipantsFiltered = (clone $filteredQuery)->count();
         $completedParticipantsFiltered = (clone $filteredQuery)
             ->get(['session_numbers'])
-            ->filter(static fn (MskParticipant $participant): bool => count(normalize_msk_session_numbers($participant->session_numbers ?? [])) === 12)
+            ->filter(static fn (Person $participant): bool => count(normalize_msk_session_numbers($participant->session_numbers ?? [])) === 12)
             ->count();
 
         $page = $this->page($request);
@@ -112,12 +112,12 @@ class MskParticipantPageData
             if (! ctype_digit((string) $selectedId)) {
                 continue;
             }
-            $selected = MskParticipant::query()
-                ->select(MskParticipant::VIEW_COLUMNS)
+            $selected = Person::query()
+                ->select(Person::VIEW_COLUMNS)
                 ->whereIn('branch_id', $branchIds)
                 ->whereKey((int) $selectedId)
                 ->first();
-            if ($selected instanceof MskParticipant) {
+            if ($selected instanceof Person) {
                 $selectedParticipants[(string) $selected->getKey()] = $this->participantViewRow($selected);
             }
         }
@@ -188,7 +188,7 @@ class MskParticipantPageData
     }
 
     /** @return array<string, mixed> */
-    private function participantViewRow(MskParticipant $participant): array
+    private function participantViewRow(Person $participant): array
     {
         $row = $participant->toViewArray();
         $row['branch_code'] = normalize_public_branch_code((string) $participant->branch_code);

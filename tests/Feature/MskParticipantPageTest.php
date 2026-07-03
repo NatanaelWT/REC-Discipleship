@@ -73,7 +73,7 @@ class MskParticipantPageTest extends TestCase
         $this->createMskTables();
         $this->createDiscipleshipHistoryTables();
 
-        DB::table('discipleship_people')->insert([
+        DB::table('people')->insert([
             ['id' => 10, 'branch_id' => 1, 'full_name' => 'Pembina Modal', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 11, 'branch_id' => 1, 'full_name' => 'Peserta Modal', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 12, 'branch_id' => 1, 'full_name' => 'Binaan Modal', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
@@ -100,10 +100,7 @@ class MskParticipantPageTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('msk_participants')->insert([
-            'branch_id' => 1,
-            'discipleship_person_id' => 11,
-            'full_name' => 'Peserta Modal',
+        DB::table('people')->where('id', 11)->update([
             'gender' => 'Perempuan',
             'whatsapp' => '08123456789',
             'batch_month' => '2026-06',
@@ -111,7 +108,6 @@ class MskParticipantPageTest extends TestCase
             'status' => 'active',
             'session_numbers' => json_encode(range(1, 12)),
             'photos' => json_encode([]),
-            'created_at' => now(),
             'updated_at' => now(),
         ]);
 
@@ -195,7 +191,7 @@ class MskParticipantPageTest extends TestCase
                 'updated_at' => now(),
             ];
         }
-        DB::table('msk_participants')->insert($rows);
+        DB::table('people')->insert($rows);
         $this->actingAsRecUser();
 
         $response = $this->get('/pemuridan/msk?batch_month=all');
@@ -236,7 +232,7 @@ class MskParticipantPageTest extends TestCase
     public function test_msk_rows_search_includes_profile_templates_for_returned_rows(): void
     {
         $this->createMskTables();
-        $participantId = DB::table('msk_participants')->insertGetId(array_merge(
+        $participantId = DB::table('people')->insertGetId(array_merge(
             $this->participantRow('Nofida Lassa', '2024-01'),
             [
                 'branch_id' => 4,
@@ -262,7 +258,7 @@ class MskParticipantPageTest extends TestCase
     public function test_developer_all_branch_view_query_opens_selected_msk_profile(): void
     {
         $this->createMskTables();
-        $participantId = DB::table('msk_participants')->insertGetId(array_merge(
+        $participantId = DB::table('people')->insertGetId(array_merge(
             $this->participantRow('Nofida Lassa', '2024-01'),
             [
                 'branch_id' => 4,
@@ -285,7 +281,7 @@ class MskParticipantPageTest extends TestCase
     public function test_batch_filter_lists_all_batches_not_only_the_active_batch(): void
     {
         $this->createMskTables();
-        DB::table('msk_participants')->insert([
+        DB::table('people')->insert([
             $this->participantRow('Peserta Batch Terbaru', '2026-06'),
             $this->participantRow('Peserta Batch Menengah', '2025-01'),
             $this->participantRow('Peserta Batch Lama', '2024-11'),
@@ -328,26 +324,25 @@ class MskParticipantPageTest extends TestCase
         ]);
 
         $response->assertRedirect('/pemuridan/msk?batch_month=2026-06&saved=1');
-        $this->assertDatabaseHas('msk_participants', [
+        $this->assertDatabaseHas('people', [
             'branch_id' => 1,
             'full_name' => 'Peserta MSK Baru',
             'batch_month' => '2026-06',
         ]);
 
-        $participantId = (int) DB::table('msk_participants')
+        $participantId = (int) DB::table('people')
             ->where('full_name', 'Peserta MSK Baru')
             ->value('id');
 
-        $sessions = json_decode((string) DB::table('msk_participants')->where('id', $participantId)->value('session_numbers'), true);
+        $sessions = json_decode((string) DB::table('people')->where('id', $participantId)->value('session_numbers'), true);
         $this->assertSame([1, 2], $sessions);
     }
 
     public function test_store_msk_participant_updates_existing_placeholder_with_same_identity(): void
     {
         $this->createMskTables();
-        $placeholderId = DB::table('msk_participants')->insertGetId([
+        $placeholderId = DB::table('people')->insertGetId([
             'branch_id' => 1,
-            'discipleship_person_id' => 77,
             'full_name' => 'Axel Christmas Eltho',
             'gender' => null,
             'whatsapp' => '081326729382',
@@ -372,22 +367,21 @@ class MskParticipantPageTest extends TestCase
         ]);
 
         $response->assertRedirect('/pemuridan/msk?batch_month=2025-06&saved=1');
-        $this->assertSame(1, DB::table('msk_participants')->where('full_name', 'Axel Christmas Eltho')->count());
-        $this->assertDatabaseHas('msk_participants', [
+        $this->assertSame(1, DB::table('people')->where('full_name', 'Axel Christmas Eltho')->count());
+        $this->assertDatabaseHas('people', [
             'id' => $placeholderId,
-            'discipleship_person_id' => 77,
             'full_name' => 'Axel Christmas Eltho',
             'batch_month' => '2025-06',
         ]);
 
-        $sessions = json_decode((string) DB::table('msk_participants')->where('id', $placeholderId)->value('session_numbers'), true);
+        $sessions = json_decode((string) DB::table('people')->where('id', $placeholderId)->value('session_numbers'), true);
         $this->assertSame(range(1, 12), $sessions);
     }
 
     public function test_update_msk_participant_persists_selected_batch_month_and_other_fields(): void
     {
         $this->createMskTables();
-        $participantId = DB::table('msk_participants')->insertGetId($this->participantRow('Peserta Lama', '2026-06'));
+        $participantId = DB::table('people')->insertGetId($this->participantRow('Peserta Lama', '2026-06'));
         $this->actingAsRecUser();
 
         $this->get('/pemuridan/msk?batch_month=all')
@@ -416,7 +410,7 @@ class MskParticipantPageTest extends TestCase
         $this->get($response->headers->get('Location'))
             ->assertOk()
             ->assertSee('data-msk-edit-auto-open=""', false);
-        $this->assertDatabaseHas('msk_participants', [
+        $this->assertDatabaseHas('people', [
             'id' => $participantId,
             'full_name' => 'Peserta Lama Diedit',
             'gender' => 'Perempuan',
@@ -430,14 +424,14 @@ class MskParticipantPageTest extends TestCase
             'notes' => 'Catatan edit',
         ]);
 
-        $sessions = json_decode((string) DB::table('msk_participants')->where('id', $participantId)->value('session_numbers'), true);
+        $sessions = json_decode((string) DB::table('people')->where('id', $participantId)->value('session_numbers'), true);
         $this->assertSame([1, 3, 12], $sessions);
     }
 
     public function test_update_msk_participant_rejects_invalid_batch_or_birth_date_without_current_month_fallback(): void
     {
         $this->createMskTables();
-        $participantId = DB::table('msk_participants')->insertGetId($this->participantRow('Peserta Aman', '2025-01'));
+        $participantId = DB::table('people')->insertGetId($this->participantRow('Peserta Aman', '2025-01'));
         $this->actingAsRecUser();
 
         $this->post('/pemuridan/msk/peserta', [
@@ -449,7 +443,7 @@ class MskParticipantPageTest extends TestCase
             'session_numbers' => ['1'],
         ])->assertRedirect('/pemuridan/msk?edit='.$participantId.'&batch_month=all&error=invalid_msk_batch_month');
 
-        $this->assertDatabaseHas('msk_participants', [
+        $this->assertDatabaseHas('people', [
             'id' => $participantId,
             'batch_month' => '2025-01',
         ]);
@@ -464,7 +458,7 @@ class MskParticipantPageTest extends TestCase
             'session_numbers' => ['1'],
         ])->assertRedirect('/pemuridan/msk?edit='.$participantId.'&batch_month=all&error=invalid_msk_birth_date');
 
-        $this->assertDatabaseHas('msk_participants', [
+        $this->assertDatabaseHas('people', [
             'id' => $participantId,
             'batch_month' => '2025-01',
             'birth_date' => null,
@@ -474,7 +468,7 @@ class MskParticipantPageTest extends TestCase
     public function test_branch_user_cannot_update_participant_from_another_branch(): void
     {
         $this->createMskTables();
-        $participantId = DB::table('msk_participants')->insertGetId([
+        $participantId = DB::table('people')->insertGetId([
             'branch_id' => 2,
             'full_name' => 'Peserta GM',
             'batch_month' => '2026-06',
@@ -493,18 +487,17 @@ class MskParticipantPageTest extends TestCase
             'session_numbers' => [1, 2, 3],
         ])->assertRedirect('/pemuridan/msk?error=invalid_msk_participant');
 
-        $sessions = json_decode((string) DB::table('msk_participants')->where('id', $participantId)->value('session_numbers'), true);
+        $sessions = json_decode((string) DB::table('people')->where('id', $participantId)->value('session_numbers'), true);
         $this->assertSame([1], $sessions);
     }
 
     private function createMskTables(): void
     {
-        Schema::dropIfExists('msk_participants');
+        Schema::dropIfExists('people');
 
-        Schema::create('msk_participants', function (Blueprint $table): void {
+        Schema::create('people', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
-            $table->unsignedBigInteger('discipleship_person_id')->nullable()->unique();
             $table->string('full_name')->nullable();
             $table->string('gender')->nullable();
             $table->date('birth_date')->nullable();
@@ -529,15 +522,6 @@ class MskParticipantPageTest extends TestCase
         Schema::dropIfExists('discipleship_relationships');
         Schema::dropIfExists('discipleship_group_people');
         Schema::dropIfExists('discipleship_groups');
-        Schema::dropIfExists('discipleship_people');
-
-        Schema::create('discipleship_people', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('branch_id');
-            $table->string('full_name')->nullable();
-            $table->string('status')->default('active');
-            $table->timestamps();
-        });
         Schema::create('discipleship_groups', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
@@ -593,3 +577,4 @@ class MskParticipantPageTest extends TestCase
         ];
     }
 }
+

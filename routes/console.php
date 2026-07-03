@@ -47,13 +47,13 @@ Artisan::command('identifiers:audit', function (): int {
     $references = [
         ['discipleship_groups', 'parent_group_id', 'parent_group_public_id', 'discipleship_groups'],
         ['discipleship_groups', 'source_group_id', 'source_group_public_id', 'discipleship_groups'],
-        ['discipleship_groups', 'initiated_by_person_id', 'initiated_by_person_public_id', 'discipleship_people'],
-        ['discipleship_relationships', 'mentor_person_id', 'mentor_person_public_id', 'discipleship_people'],
-        ['discipleship_relationships', 'disciple_person_id', 'disciple_person_public_id', 'discipleship_people'],
+        ['discipleship_groups', 'initiated_by_person_id', 'initiated_by_person_public_id', 'people'],
+        ['discipleship_relationships', 'mentor_person_id', 'mentor_person_public_id', 'people'],
+        ['discipleship_relationships', 'disciple_person_id', 'disciple_person_public_id', 'people'],
         ['discipleship_relationships', 'context_group_id', 'context_group_public_id', 'discipleship_groups'],
         ['discipleship_group_people', 'discipleship_group_id', 'group_public_id', 'discipleship_groups'],
-        ['discipleship_group_people', 'person_id', 'person_public_id', 'discipleship_people'],
-        ['discipleship_meeting_reports', 'leader_person_id', 'leader_person_public_id', 'discipleship_people'],
+        ['discipleship_group_people', 'person_id', 'person_public_id', 'people'],
+        ['discipleship_meeting_reports', 'leader_person_id', 'leader_person_public_id', 'people'],
         ['discipleship_meeting_reports', 'discipleship_group_id', 'discipleship_group_public_id', 'discipleship_groups'],
     ];
 
@@ -95,18 +95,17 @@ Artisan::command('identifiers:audit', function (): int {
     $numericReferences = [
         ['discipleship_groups', 'parent_group_id', 'discipleship_groups'],
         ['discipleship_groups', 'source_group_id', 'discipleship_groups'],
-        ['discipleship_groups', 'initiated_by_person_id', 'discipleship_people'],
-        ['discipleship_relationships', 'mentor_person_id', 'discipleship_people'],
-        ['discipleship_relationships', 'disciple_person_id', 'discipleship_people'],
+        ['discipleship_groups', 'initiated_by_person_id', 'people'],
+        ['discipleship_relationships', 'mentor_person_id', 'people'],
+        ['discipleship_relationships', 'disciple_person_id', 'people'],
         ['discipleship_relationships', 'context_group_id', 'discipleship_groups'],
         ['discipleship_group_people', 'discipleship_group_id', 'discipleship_groups'],
-        ['discipleship_group_people', 'person_id', 'discipleship_people'],
-        ['discipleship_meeting_reports', 'leader_person_id', 'discipleship_people'],
+        ['discipleship_group_people', 'person_id', 'people'],
+        ['discipleship_meeting_reports', 'leader_person_id', 'people'],
         ['discipleship_meeting_reports', 'discipleship_group_id', 'discipleship_groups'],
         ['discipleship_feedbacks', 'discipleship_group_id', 'discipleship_groups'],
-        ['discipleship_feedbacks', 'leader_person_id', 'discipleship_people'],
-        ['discipleship_feedbacks', 'respondent_person_id', 'discipleship_people'],
-        ['msk_participants', 'discipleship_person_id', 'discipleship_people'],
+        ['discipleship_feedbacks', 'leader_person_id', 'people'],
+        ['discipleship_feedbacks', 'respondent_person_id', 'people'],
     ];
 
     foreach ($numericReferences as [$table, $foreignColumn, $targetTable]) {
@@ -133,14 +132,14 @@ Artisan::command('identifiers:audit', function (): int {
         }
     }
 
-    if (Schema::hasTable('msk_participants')
-        && Schema::hasColumn('msk_participants', 'member_public_id')
-        && Schema::hasTable('discipleship_people')
-        && Schema::hasColumn('discipleship_people', 'member_public_id')
-        && Schema::hasColumn('discipleship_people', 'public_id')) {
+    if (Schema::hasTable('people')
+        && Schema::hasColumn('people', 'member_public_id')
+        && Schema::hasTable('people')
+        && Schema::hasColumn('people', 'member_public_id')
+        && Schema::hasColumn('people', 'public_id')) {
         $peopleByLegacyId = [];
-        foreach (DB::table('discipleship_people')
-            ->select(['id', 'branch_id', 'public_id', 'member_public_id', 'full_name', 'phone', 'status'])
+        foreach (DB::table('people')
+            ->select(['id', 'branch_id', 'public_id', 'member_public_id', 'full_name', 'whatsapp', 'status'])
             ->get() as $person) {
             foreach (array_unique([(string) $person->public_id, (string) $person->member_public_id]) as $legacyId) {
                 $legacyId = trim($legacyId);
@@ -151,7 +150,7 @@ Artisan::command('identifiers:audit', function (): int {
         }
 
         $claimedPeople = [];
-        foreach (DB::table('msk_participants')
+        foreach (DB::table('people')
             ->select(['id', 'branch_id', 'member_public_id', 'full_name', 'whatsapp'])
             ->orderBy('id')
             ->get() as $participant) {
@@ -166,7 +165,7 @@ Artisan::command('identifiers:audit', function (): int {
                 $identityMatches = array_values(array_filter(
                     $matches,
                     static fn (object $person): bool => (string) $person->full_name === (string) $participant->full_name
-                        && ($participantPhone === '' || (string) $person->phone === $participantPhone),
+                        && ($participantPhone === '' || (string) $person->whatsapp === $participantPhone),
                 ));
                 if ($identityMatches !== []) {
                     $matches = $identityMatches;
@@ -188,30 +187,19 @@ Artisan::command('identifiers:audit', function (): int {
             }
 
             if (count($matches) !== 1) {
-                $issues[] = ['msk_participants', (string) $participant->id, 'member_public_id', 'ambiguous_person_match'];
+                $issues[] = ['people', (string) $participant->id, 'member_public_id', 'ambiguous_person_match'];
 
                 continue;
             }
 
             $personId = (int) $matches[0]->id;
             if (isset($claimedPeople[$personId])) {
-                $issues[] = ['msk_participants', (string) $participant->id, 'member_public_id', 'duplicate_person_link'];
+                $issues[] = ['people', (string) $participant->id, 'member_public_id', 'duplicate_person_link'];
 
                 continue;
             }
 
             $claimedPeople[$personId] = true;
-        }
-    }
-
-    if (Schema::hasTable('msk_participants') && Schema::hasColumn('msk_participants', 'discipleship_person_id')) {
-        foreach (DB::table('msk_participants')
-            ->whereNotNull('discipleship_person_id')
-            ->select('discipleship_person_id', DB::raw('count(*) as total'))
-            ->groupBy('discipleship_person_id')
-            ->havingRaw('count(*) > 1')
-            ->get() as $duplicate) {
-            $issues[] = ['msk_participants', (string) $duplicate->discipleship_person_id, 'duplicate_person_link', (string) $duplicate->total];
         }
     }
 

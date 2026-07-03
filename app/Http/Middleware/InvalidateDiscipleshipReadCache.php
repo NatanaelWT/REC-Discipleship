@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\MskParticipant;
+use App\Models\Person;
 use App\Services\Branches\BranchCatalog;
 use App\Services\Discipleship\DiscipleshipReadCache;
 use Closure;
@@ -48,7 +48,7 @@ class InvalidateDiscipleshipReadCache
         }
 
         $participant = $request->route('participant');
-        if ($participant instanceof MskParticipant && (int) $participant->branch_id > 0) {
+        if ($participant instanceof Person && (int) $participant->branch_id > 0) {
             $ids[(int) $participant->branch_id] = (int) $participant->branch_id;
         }
 

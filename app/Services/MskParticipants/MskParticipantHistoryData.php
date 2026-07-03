@@ -4,7 +4,7 @@ namespace App\Services\MskParticipants;
 
 use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
-use App\Models\DiscipleshipPerson;
+use App\Models\Person;
 use App\Models\DiscipleshipRelationship;
 use App\Support\DiscipleshipPersonProfile;
 use Illuminate\Support\Collection;
@@ -37,7 +37,7 @@ class MskParticipantHistoryData
         if (
             $participantPersonIds === []
             || $branchIds === []
-            || ! Schema::hasTable('discipleship_people')
+            || ! Schema::hasTable('people')
             || ! Schema::hasTable('discipleship_groups')
             || ! Schema::hasTable('discipleship_group_people')
             || ! Schema::hasTable('discipleship_relationships')
@@ -46,7 +46,7 @@ class MskParticipantHistoryData
         }
 
         $personIds = array_values(array_unique($participantPersonIds));
-        $targetPeople = DiscipleshipPerson::query()
+        $targetPeople = Person::query()
             ->whereIn('id', $personIds)
             ->get(['id']);
         $validPersonIds = $targetPeople->pluck('id')->map(static fn ($id): int => (int) $id)->all();

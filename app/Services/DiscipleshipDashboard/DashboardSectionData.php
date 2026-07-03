@@ -4,8 +4,7 @@ namespace App\Services\DiscipleshipDashboard;
 
 use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
-use App\Models\DiscipleshipPerson;
-use App\Models\MskParticipant;
+use App\Models\Person;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Support\DiscipleshipPersonProfile;
 use Illuminate\Http\Request;
@@ -25,10 +24,16 @@ class DashboardSectionData
             ? "json_array_length(COALESCE(session_numbers, '[]'))"
             : "JSON_LENGTH(COALESCE(session_numbers, '[]'))";
 
-        $participants = MskParticipant::query()
+        $participants = Person::query()
             ->select(['id', 'branch_id', 'full_name', 'whatsapp', 'batch_month', 'session_numbers'])
             ->whereIn('branch_id', $this->scope->branchIds())
             ->where('status', 'active')
+            ->where(function ($query) use ($sessions): void {
+                $query->whereRaw("COALESCE(batch_month, '') <> ''")
+                    ->orWhereRaw("COALESCE(completed_at, '') <> ''")
+                    ->orWhereRaw($sessions.' > 0')
+                    ->orWhereIn('journey_bridge_status', ['sudah_rg', 'sudah_kgap', 'ikut_keduanya']);
+            })
             ->whereRaw($sessions.' < 12')
             ->orderBy('branch_id')
             ->orderBy('batch_month')
@@ -36,7 +41,7 @@ class DashboardSectionData
             ->get();
 
         $branches = $this->scope->optionsById();
-        $participants = $participants->map(static function (MskParticipant $participant) use ($branches): array {
+        $participants = $participants->map(static function (Person $participant) use ($branches): array {
             $sessions = normalize_msk_session_numbers($participant->session_numbers ?? []);
             $phone = trim((string) $participant->whatsapp);
             $phoneDigits = preg_replace('/\D+/', '', $phone) ?? '';

@@ -5,7 +5,7 @@ namespace App\Services\DgMeetingReports;
 use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipMeetingReport;
-use App\Models\DiscipleshipPerson;
+use App\Models\Person;
 use App\Services\Discipleship\DiscipleshipReadCache;
 use App\Support\DiscipleshipPersonProfile;
 use DateTimeInterface;
@@ -89,24 +89,24 @@ class DgMeetingReportRecapPageData
         $people = [];
         $branchIds = branch_ids_from_slugs($branchCodes);
         try {
-            $query = DiscipleshipPerson::query();
+            $query = Person::query();
             DiscipleshipPersonProfile::join($query);
 
             $records = $query
                 ->where(function ($query) use ($branchIds, $extraPersonIds): void {
-                    $query->whereIn('discipleship_people.branch_id', $branchIds);
+                    $query->whereIn('people.branch_id', $branchIds);
                     if ($extraPersonIds !== []) {
-                        $query->orWhereIn('discipleship_people.id', $extraPersonIds);
+                        $query->orWhereIn('people.id', $extraPersonIds);
                     }
                 })
-                ->orderBy('discipleship_people.id')
+                ->orderBy('people.id')
                 ->get([
-                    'discipleship_people.id',
-                    'discipleship_people.branch_id',
-                    'discipleship_people.status',
-                    'discipleship_people.notes',
-                    'discipleship_people.created_at',
-                    'discipleship_people.updated_at',
+                    'people.id',
+                    'people.branch_id',
+                    'people.status',
+                    'people.notes',
+                    'people.created_at',
+                    'people.updated_at',
                     DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
                     DB::raw(DiscipleshipPersonProfile::expression('phone').' as phone'),
                     DB::raw(DiscipleshipPersonProfile::expression('gender').' as gender'),

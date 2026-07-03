@@ -176,7 +176,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
                 'updated_at' => '2026-06-17 15:35:19',
             ],
         ],
-        'discipleship_people' => [
+        'people_profiles' => [
             0 => [
                 'id' => 401,
                 'branch_id' => 3,
@@ -3465,11 +3465,11 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
                 'updated_at' => '2026-06-17 14:46:35',
             ],
         ],
-        'msk_participants' => [
+        'msk_people' => [
             0 => [
                 'id' => 2446,
                 'branch_id' => 3,
-                'discipleship_person_id' => 401,
+                'linked_person_id' => 401,
                 'full_name' => 'Ananda Tiara Kusuma',
                 'gender' => 'Perempuan',
                 'birth_date' => null,
@@ -3491,7 +3491,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             1 => [
                 'id' => 2456,
                 'branch_id' => 3,
-                'discipleship_person_id' => 407,
+                'linked_person_id' => 407,
                 'full_name' => 'David Benjamin Martin',
                 'gender' => 'Laki-laki',
                 'birth_date' => null,
@@ -3513,7 +3513,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             2 => [
                 'id' => 2463,
                 'branch_id' => 3,
-                'discipleship_person_id' => 775,
+                'linked_person_id' => 775,
                 'full_name' => 'Eunike Giovanni Santoso',
                 'gender' => 'Perempuan',
                 'birth_date' => null,
@@ -3535,7 +3535,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             3 => [
                 'id' => 2772,
                 'branch_id' => 2,
-                'discipleship_person_id' => 614,
+                'linked_person_id' => 614,
                 'full_name' => 'Michelle Heidy Widjaya',
                 'gender' => 'Perempuan',
                 'birth_date' => '1998-09-28',
@@ -3557,7 +3557,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             4 => [
                 'id' => 2788,
                 'branch_id' => 2,
-                'discipleship_person_id' => 623,
+                'linked_person_id' => 623,
                 'full_name' => 'Rosalina Widyasih Tjendraputra',
                 'gender' => 'Perempuan',
                 'birth_date' => '1967-05-03',
@@ -3579,7 +3579,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             5 => [
                 'id' => 2789,
                 'branch_id' => 2,
-                'discipleship_person_id' => 624,
+                'linked_person_id' => 624,
                 'full_name' => 'Melly Winata',
                 'gender' => 'Perempuan',
                 'birth_date' => '1970-01-20',
@@ -3601,7 +3601,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             6 => [
                 'id' => 2868,
                 'branch_id' => 1,
-                'discipleship_person_id' => null,
+                'linked_person_id' => null,
                 'full_name' => 'Liem Husin Gunawan',
                 'gender' => 'Laki-laki',
                 'birth_date' => null,
@@ -3623,7 +3623,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             7 => [
                 'id' => 2869,
                 'branch_id' => 1,
-                'discipleship_person_id' => null,
+                'linked_person_id' => null,
                 'full_name' => 'Endang Chandra Dewi Hoetomo',
                 'gender' => 'Perempuan',
                 'birth_date' => null,
@@ -3645,7 +3645,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             8 => [
                 'id' => 2939,
                 'branch_id' => 1,
-                'discipleship_person_id' => null,
+                'linked_person_id' => null,
                 'full_name' => 'Kristina Ruwe',
                 'gender' => 'Perempuan',
                 'birth_date' => '2006-07-24',
@@ -3667,7 +3667,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             9 => [
                 'id' => 2948,
                 'branch_id' => 6,
-                'discipleship_person_id' => 672,
+                'linked_person_id' => 672,
                 'full_name' => 'Agus Swandono',
                 'gender' => 'Laki-laki',
                 'birth_date' => null,
@@ -3689,7 +3689,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             10 => [
                 'id' => 3078,
                 'branch_id' => 6,
-                'discipleship_person_id' => 771,
+                'linked_person_id' => 771,
                 'full_name' => 'Anton',
                 'gender' => 'Laki-laki',
                 'birth_date' => null,
@@ -3711,7 +3711,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             11 => [
                 'id' => 3080,
                 'branch_id' => 6,
-                'discipleship_person_id' => 773,
+                'linked_person_id' => 773,
                 'full_name' => 'Ruth Widyati Suwito',
                 'gender' => 'Perempuan',
                 'birth_date' => '1996-01-15',
@@ -3733,7 +3733,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             12 => [
                 'id' => 3105,
                 'branch_id' => 5,
-                'discipleship_person_id' => 806,
+                'linked_person_id' => 806,
                 'full_name' => 'Marion Desma Rajagukguk',
                 'gender' => null,
                 'birth_date' => null,
@@ -3755,7 +3755,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             13 => [
                 'id' => 3109,
                 'branch_id' => 5,
-                'discipleship_person_id' => 809,
+                'linked_person_id' => 809,
                 'full_name' => 'Musrimah',
                 'gender' => null,
                 'birth_date' => null,
@@ -3777,7 +3777,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             14 => [
                 'id' => 3113,
                 'branch_id' => 5,
-                'discipleship_person_id' => 811,
+                'linked_person_id' => 811,
                 'full_name' => 'Peni Simanjuntak',
                 'gender' => null,
                 'birth_date' => null,
@@ -3799,7 +3799,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             15 => [
                 'id' => 3155,
                 'branch_id' => 4,
-                'discipleship_person_id' => 846,
+                'linked_person_id' => 846,
                 'full_name' => 'Charles Bronson Yaas',
                 'gender' => null,
                 'birth_date' => null,
@@ -3821,7 +3821,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             16 => [
                 'id' => 3156,
                 'branch_id' => 4,
-                'discipleship_person_id' => 847,
+                'linked_person_id' => 847,
                 'full_name' => 'Naeson Unani',
                 'gender' => null,
                 'birth_date' => null,
@@ -3843,7 +3843,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             17 => [
                 'id' => 3157,
                 'branch_id' => 4,
-                'discipleship_person_id' => 848,
+                'linked_person_id' => 848,
                 'full_name' => 'Eduardo Menufandu',
                 'gender' => null,
                 'birth_date' => null,
@@ -4333,18 +4333,18 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
         DB::transaction(function (): void {
             $this->seedTable('branches', self::DATA['branches']);
             $this->seedTable('users', self::DATA['users']);
-            $this->seedTable('discipleship_people', self::DATA['discipleship_people']);
 
-            $groups = self::DATA['discipleship_groups'];
+            $personIdMap = $this->canonicalPersonIdMap();
+            $this->seedTable('people', $this->mergedPeopleRows($personIdMap));
+
+            $groups = $this->remapPersonReferences(self::DATA['discipleship_groups'], $personIdMap);
             $this->seedTable('discipleship_groups', $this->withoutDeferredGroupKeys($groups));
             $this->seedTable('discipleship_groups', $groups);
 
-            $this->seedTable('discipleship_group_people', self::DATA['discipleship_group_people']);
-            $this->seedTable('discipleship_relationships', self::DATA['discipleship_relationships']);
-            $this->seedTable('msk_participants', self::DATA['msk_participants']);
-            $this->ensureMskParticipantProfiles(self::DATA['discipleship_people']);
-            $this->seedTable('discipleship_meeting_reports', self::DATA['discipleship_meeting_reports']);
-            $this->seedTable('discipleship_feedbacks', self::DATA['discipleship_feedbacks']);
+            $this->seedTable('discipleship_group_people', $this->remapPersonReferences(self::DATA['discipleship_group_people'], $personIdMap));
+            $this->seedTable('discipleship_relationships', $this->remapPersonReferences(self::DATA['discipleship_relationships'], $personIdMap));
+            $this->seedTable('discipleship_meeting_reports', $this->remapMeetingReportPeople(self::DATA['discipleship_meeting_reports'], $personIdMap));
+            $this->seedTable('discipleship_feedbacks', $this->remapPersonReferences(self::DATA['discipleship_feedbacks'], $personIdMap));
             $this->seedTable('public_material_files', self::DATA['public_material_files']);
             $this->seedWorshipServiceSchedules(self::DATA['legacy_worship_service_schedule_rows']);
         });
@@ -4372,56 +4372,75 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
     }
 
     /**
-     * @param  array<int, array<string, mixed>>  $people
+     * @return array<int, int>
      */
-    private function ensureMskParticipantProfiles(array $people): void
+    private function canonicalPersonIdMap(): array
     {
-        if ($people === []
-            || ! Schema::hasTable('msk_participants')
-            || ! Schema::hasColumn('msk_participants', 'discipleship_person_id')) {
-            return;
+        $linkedMskIds = [];
+        $maxMskId = 0;
+
+        foreach (self::DATA['msk_people'] as $row) {
+            $mskId = (int) ($row['id'] ?? 0);
+            $maxMskId = max($maxMskId, $mskId);
+
+            $profileId = (int) ($row['linked_person_id'] ?? 0);
+            if ($profileId > 0) {
+                $linkedMskIds[$profileId] = $mskId;
+            }
         }
 
-        foreach ($people as $person) {
+        $nextPlaceholderId = $maxMskId + 1;
+        $map = [];
+
+        foreach (self::DATA['people_profiles'] as $person) {
             $personId = (int) ($person['id'] ?? 0);
             if ($personId < 1) {
                 continue;
             }
 
-            $participant = DB::table('msk_participants')
-                ->where('discipleship_person_id', $personId)
-                ->first();
+            $map[$personId] = $linkedMskIds[$personId] ?? $nextPlaceholderId++;
+        }
 
-            $profile = [
-                'branch_id' => (int) ($person['branch_id'] ?? 0),
-                'discipleship_person_id' => $personId,
-                'full_name' => trim((string) ($person['full_name'] ?? '')) ?: null,
-                'gender' => trim((string) ($person['gender'] ?? '')) ?: null,
-                'whatsapp' => trim((string) ($person['phone'] ?? '')) ?: null,
-            ];
+        return $map;
+    }
 
-            if ($participant !== null) {
-                $updates = [];
-                foreach ([
-                    'full_name' => 'full_name',
-                    'gender' => 'gender',
-                    'whatsapp' => 'whatsapp',
-                ] as $column => $source) {
-                    if (trim((string) ($participant->{$column} ?? '')) === '' && ($profile[$source] ?? null) !== null) {
-                        $updates[$column] = $profile[$source];
-                    }
-                }
-
-                if ($updates !== []) {
-                    DB::table('msk_participants')
-                        ->where('id', (int) $participant->id)
-                        ->update($this->existingColumnValues('msk_participants', $updates));
-                }
-
-                continue;
+    /**
+     * @param  array<int, int>  $personIdMap
+     * @return array<int, array<string, mixed>>
+     */
+    private function mergedPeopleRows(array $personIdMap): array
+    {
+        $profileRows = [];
+        foreach (self::DATA['people_profiles'] as $profile) {
+            $profileId = (int) ($profile['id'] ?? 0);
+            if ($profileId > 0) {
+                $profileRows[$profileId] = $profile;
             }
+        }
 
-            DB::table('msk_participants')->insert($this->existingColumnValues('msk_participants', $profile + [
+        $mskRowsByProfile = [];
+        $mergedRows = [];
+
+        foreach (self::DATA['msk_people'] as $mskRow) {
+            $profileId = (int) ($mskRow['linked_person_id'] ?? 0);
+            if ($profileId > 0) {
+                $mskRowsByProfile[$profileId] = $mskRow;
+            }
+        }
+
+        foreach ($profileRows as $profileId => $profile) {
+            $mskRow = $mskRowsByProfile[$profileId] ?? null;
+            $row = $mskRow !== null ? $this->normalizeMskPersonRow($mskRow) : [
+                'id' => $personIdMap[$profileId],
+                'branch_id' => $profile['branch_id'] ?? null,
+                'full_name' => $this->blankToNull($profile['full_name'] ?? null),
+                'gender' => $this->blankToNull($profile['gender'] ?? null),
+                'birth_date' => null,
+                'birth_day_month' => null,
+                'birth_place' => null,
+                'address' => null,
+                'email' => null,
+                'whatsapp' => $this->blankToNull($profile['phone'] ?? null),
                 'batch_month' => null,
                 'notes' => null,
                 'completed_at' => null,
@@ -4429,10 +4448,143 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
                 'status' => 'active',
                 'session_numbers' => json_encode([]),
                 'photos' => json_encode([]),
-                'created_at' => $person['created_at'] ?? now(),
-                'updated_at' => $person['updated_at'] ?? now(),
-            ]));
+                'created_at' => $profile['created_at'] ?? now(),
+                'updated_at' => $profile['updated_at'] ?? now(),
+            ];
+
+            $row['id'] = $personIdMap[$profileId];
+            $row['branch_id'] = $row['branch_id'] ?? $profile['branch_id'] ?? null;
+            $row['full_name'] = $this->blankToNull($row['full_name'] ?? null) ?? $this->blankToNull($profile['full_name'] ?? null);
+            $row['gender'] = $this->blankToNull($row['gender'] ?? null) ?? $this->blankToNull($profile['gender'] ?? null);
+            $row['whatsapp'] = $this->blankToNull($row['whatsapp'] ?? null) ?? $this->blankToNull($profile['phone'] ?? null);
+            $row['notes'] = $this->mergedNotes($row['notes'] ?? null, $profile['notes'] ?? null);
+            $row['status'] = $this->mergedStatus($row['status'] ?? null, $profile['status'] ?? null);
+            $row['updated_at'] = max((string) ($row['updated_at'] ?? ''), (string) ($profile['updated_at'] ?? '')) ?: now();
+
+            $mergedRows[$row['id']] = $row;
         }
+
+        foreach (self::DATA['msk_people'] as $mskRow) {
+            if ((int) ($mskRow['linked_person_id'] ?? 0) > 0) {
+                continue;
+            }
+
+            $row = $this->normalizeMskPersonRow($mskRow);
+            $mergedRows[(int) $row['id']] = $row;
+        }
+
+        ksort($mergedRows);
+
+        return array_values($mergedRows);
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    private function normalizeMskPersonRow(array $row): array
+    {
+        unset($row['linked_person_id']);
+        $row['journey_bridge_status'] = $row['journey_bridge_status'] ?? 'belum';
+        $row['status'] = $row['status'] ?? 'active';
+        $row['session_numbers'] = $row['session_numbers'] ?? json_encode([]);
+        $row['photos'] = $row['photos'] ?? json_encode([]);
+
+        return $row;
+    }
+
+    private function blankToNull(mixed $value): ?string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        return $value === '' ? null : $value;
+    }
+
+    private function mergedNotes(mixed $peopleNotes, mixed $profileNotes): ?string
+    {
+        $peopleNotes = $this->blankToNull($peopleNotes);
+        $profileNotes = $this->blankToNull($profileNotes);
+
+        if ($profileNotes === null) {
+            return $peopleNotes;
+        }
+
+        if ($peopleNotes === null || $peopleNotes === $profileNotes) {
+            return $profileNotes;
+        }
+
+        return $peopleNotes."\n\nCatatan pemuridan:\n".$profileNotes;
+    }
+
+    private function mergedStatus(mixed $peopleStatus, mixed $profileStatus): string
+    {
+        return $peopleStatus === 'inactive' || $profileStatus === 'inactive' ? 'inactive' : 'active';
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     * @param  array<int, int>  $personIdMap
+     * @return array<int, array<string, mixed>>
+     */
+    private function remapPersonReferences(array $rows, array $personIdMap): array
+    {
+        $columns = [
+            'person_id',
+            'leader_person_id',
+            'respondent_person_id',
+            'mentor_person_id',
+            'disciple_person_id',
+            'initiated_by_person_id',
+        ];
+
+        return array_map(function (array $row) use ($columns, $personIdMap): array {
+            foreach ($columns as $column) {
+                if (array_key_exists($column, $row) && $row[$column] !== null) {
+                    $row[$column] = $this->canonicalPersonId($row[$column], $personIdMap);
+                }
+            }
+
+            return $row;
+        }, $rows);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $reports
+     * @param  array<int, int>  $personIdMap
+     * @return array<int, array<string, mixed>>
+     */
+    private function remapMeetingReportPeople(array $reports, array $personIdMap): array
+    {
+        $reports = $this->remapPersonReferences($reports, $personIdMap);
+
+        return array_map(function (array $report) use ($personIdMap): array {
+            foreach (['absences', 'meditation_sharers'] as $column) {
+                $items = json_decode((string) ($report[$column] ?? '[]'), true);
+                if (! is_array($items)) {
+                    continue;
+                }
+
+                foreach ($items as $index => $item) {
+                    if (is_array($item) && array_key_exists('person_id', $item)) {
+                        $items[$index]['person_id'] = $this->canonicalPersonId($item['person_id'], $personIdMap);
+                    }
+                }
+
+                $report[$column] = json_encode($items, JSON_UNESCAPED_UNICODE);
+            }
+
+            return $report;
+        }, $reports);
+    }
+
+    /**
+     * @param  array<int, int>  $personIdMap
+     */
+    private function canonicalPersonId(mixed $personId, array $personIdMap): int
+    {
+        $personId = (int) $personId;
+
+        return $personIdMap[$personId] ?? $personId;
     }
 
     /**

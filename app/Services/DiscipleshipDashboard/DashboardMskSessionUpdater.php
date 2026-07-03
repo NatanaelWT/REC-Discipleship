@@ -2,7 +2,7 @@
 
 namespace App\Services\DiscipleshipDashboard;
 
-use App\Models\MskParticipant;
+use App\Models\Person;
 use App\Services\MskParticipants\MskParticipantWriter;
 
 class DashboardMskSessionUpdater
@@ -21,12 +21,12 @@ class DashboardMskSessionUpdater
             return ['auto_converted' => false, 'error' => 'invalid_msk_participant'];
         }
 
-        $participant = MskParticipant::query()
+        $participant = Person::query()
             ->where('branch_id', current_user_branch_id())
             ->whereKey($participantId)
             ->first();
 
-        if (! $participant instanceof MskParticipant) {
+        if (! $participant instanceof Person) {
             return ['auto_converted' => false, 'error' => 'invalid_msk_participant'];
         }
 

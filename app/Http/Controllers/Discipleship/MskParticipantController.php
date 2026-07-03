@@ -11,7 +11,7 @@ use App\Http\Requests\MskParticipants\ReactivateMskParticipantRequest;
 use App\Http\Requests\MskParticipants\StoreMskParticipantRequest;
 use App\Http\Requests\MskParticipants\UpdateMskParticipantRequest;
 use App\Http\Requests\MskParticipants\UpdateMskParticipantSessionsRequest;
-use App\Models\MskParticipant;
+use App\Models\Person;
 use App\Services\MskParticipants\MskParticipantExportService;
 use App\Services\MskParticipants\MskParticipantImportService;
 use App\Services\MskParticipants\MskParticipantPageData;
@@ -72,7 +72,7 @@ class MskParticipantController extends Controller
 
     public function update(
         UpdateMskParticipantRequest $request,
-        MskParticipant $participant,
+        Person $participant,
         MskParticipantWriter $writer,
     ): RedirectResponse {
         RuntimeBootstrap::boot($request);
@@ -83,7 +83,7 @@ class MskParticipantController extends Controller
 
     public function updateSessions(
         UpdateMskParticipantSessionsRequest $request,
-        MskParticipant $participant,
+        Person $participant,
         MskParticipantWriter $writer,
     ): RedirectResponse {
         RuntimeBootstrap::boot($request);
@@ -103,7 +103,7 @@ class MskParticipantController extends Controller
 
     public function deactivate(
         DeactivateMskParticipantRequest $request,
-        MskParticipant $participant,
+        Person $participant,
         MskParticipantWriter $writer,
     ): RedirectResponse {
         RuntimeBootstrap::boot($request);
@@ -119,7 +119,7 @@ class MskParticipantController extends Controller
 
     public function reactivate(
         ReactivateMskParticipantRequest $request,
-        MskParticipant $participant,
+        Person $participant,
         MskParticipantWriter $writer,
     ): RedirectResponse {
         RuntimeBootstrap::boot($request);

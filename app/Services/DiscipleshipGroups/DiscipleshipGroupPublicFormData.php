@@ -3,8 +3,7 @@
 namespace App\Services\DiscipleshipGroups;
 
 use App\Models\DiscipleshipGroup;
-use App\Models\DiscipleshipPerson;
-use Illuminate\Support\Facades\Schema;
+use App\Models\Person;
 
 class DiscipleshipGroupPublicFormData
 {
@@ -21,12 +20,10 @@ class DiscipleshipGroupPublicFormData
         $groupsById = [];
         $leadersById = [];
 
-        $personRelation = Schema::hasTable('msk_participants') ? '.person.mskParticipant' : '.person';
-
         DiscipleshipGroup::query()
             ->with([
-                'leaderships'.$personRelation,
-                'memberships'.$personRelation,
+                'leaderships.person',
+                'memberships.person',
             ])
             ->where('branch_id', branch_id_from_slug($branchCode))
             ->where('status', 'active')
@@ -103,7 +100,7 @@ class DiscipleshipGroupPublicFormData
         ];
     }
 
-    private function leaderForGroup(DiscipleshipGroup $group): ?DiscipleshipPerson
+    private function leaderForGroup(DiscipleshipGroup $group): ?Person
     {
         $leaderships = $group->leaderships
             ->filter(static fn (object $leadership): bool => strtolower(trim((string) $leadership->status)) === 'active');
@@ -112,7 +109,7 @@ class DiscipleshipGroupPublicFormData
             ->first(static fn (object $leadership): bool => strtolower(trim((string) $leadership->role)) === 'leader')
             ?? $leaderships->first();
 
-        if (is_object($leader) && $leader->person instanceof DiscipleshipPerson) {
+        if (is_object($leader) && $leader->person instanceof Person) {
             return $leader->person;
         }
 
@@ -120,7 +117,7 @@ class DiscipleshipGroupPublicFormData
             ->filter(static fn (object $membership): bool => strtolower(trim((string) $membership->status)) === 'active')
             ->first(static fn (object $membership): bool => strtolower(trim((string) $membership->role)) === 'leader');
 
-        return is_object($membershipLeader) && $membershipLeader->person instanceof DiscipleshipPerson
+        return is_object($membershipLeader) && $membershipLeader->person instanceof Person
             ? $membershipLeader->person
             : null;
     }
@@ -140,7 +137,7 @@ class DiscipleshipGroupPublicFormData
                 continue;
             }
 
-            if (! $membership->person instanceof DiscipleshipPerson) {
+            if (! $membership->person instanceof Person) {
                 continue;
             }
 

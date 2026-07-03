@@ -9,7 +9,7 @@ function central_readonly_action_map(): array
             'change_password' => true,
             'export_pohon_pemuridan_dot' => true,
             'export_pemuridan_excel' => true,
-            'export_discipleship_people_excel' => true,
+            'export_people_excel' => true,
             'save_difficult_question_answer' => true,
         ];
     }

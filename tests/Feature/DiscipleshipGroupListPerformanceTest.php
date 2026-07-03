@@ -16,7 +16,7 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
         for ($index = 1; $index <= 600; $index++) {
             $people[] = ['branch_id' => 1, 'full_name' => sprintf('Orang %04d', $index), 'status' => 'active'];
         }
-        DB::table('discipleship_people')->insert($people);
+        DB::table('people')->insert($people);
         $groups = [];
         for ($index = 1; $index <= 300; $index++) {
             $groups[] = ['branch_id' => 1, 'name' => sprintf('Kelompok %04d', $index), 'status' => 'active', 'current_stage' => 'DG 1'];
@@ -73,7 +73,7 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
     public function test_inactive_group_shows_its_last_leader_and_members(): void
     {
         $this->createTables();
-        DB::table('discipleship_people')->insert([
+        DB::table('people')->insert([
             ['id' => 1, 'branch_id' => 1, 'full_name' => 'Pemimpin Historis', 'status' => 'active'],
             ['id' => 2, 'branch_id' => 1, 'full_name' => 'Pendamping Historis', 'status' => 'active'],
             ['id' => 3, 'branch_id' => 1, 'full_name' => 'Anggota Historis', 'status' => 'active'],
@@ -124,8 +124,8 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
     {
         Schema::dropIfExists('discipleship_group_people');
         Schema::dropIfExists('discipleship_groups');
-        Schema::dropIfExists('discipleship_people');
-        Schema::create('discipleship_people', function (Blueprint $table): void {
+        Schema::dropIfExists('people');
+        Schema::create('people', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('full_name');
@@ -152,3 +152,4 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
         });
     }
 }
+

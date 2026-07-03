@@ -162,7 +162,7 @@ class MskParticipantImportService
             $this->activity->record(
                 'import',
                 'msk.import.row_'.$operation,
-                'msk_participants',
+                'people',
                 $row['id'] ?? $key,
                 trim((string) ($row['full_name'] ?? '')) ?: null,
                 'Baris import MSK '.$operation.'.',

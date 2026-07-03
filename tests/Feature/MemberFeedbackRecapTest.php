@@ -178,7 +178,7 @@ class MemberFeedbackRecapTest extends TestCase
         Schema::dropIfExists('discipleship_feedbacks');
         Schema::dropIfExists('discipleship_group_people');
         Schema::dropIfExists('discipleship_groups');
-        Schema::dropIfExists('discipleship_people');
+        Schema::dropIfExists('people');
         Schema::dropIfExists('branches');
 
         Schema::create('branches', function (Blueprint $table): void {
@@ -194,11 +194,11 @@ class MemberFeedbackRecapTest extends TestCase
         ]);
         app(BranchCatalog::class)->clearCache();
 
-        Schema::create('discipleship_people', function (Blueprint $table): void {
+        Schema::create('people', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('full_name')->nullable();
-            $table->string('phone')->nullable();
+            $table->string('whatsapp')->nullable();
             $table->string('gender')->nullable();
             $table->string('status')->default('active');
             $table->text('notes')->nullable();
@@ -258,7 +258,7 @@ class MemberFeedbackRecapTest extends TestCase
         string $groupName = 'Kelompok Test',
     ): array
     {
-        $leaderId = DB::table('discipleship_people')->insertGetId([
+        $leaderId = DB::table('people')->insertGetId([
             'branch_id' => $branchId,
             'full_name' => $leaderName,
             'status' => 'active',
@@ -266,7 +266,7 @@ class MemberFeedbackRecapTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $memberId = DB::table('discipleship_people')->insertGetId([
+        $memberId = DB::table('people')->insertGetId([
             'branch_id' => $branchId,
             'full_name' => $memberName,
             'status' => 'active',
@@ -386,3 +386,4 @@ class MemberFeedbackRecapTest extends TestCase
         return $rows;
     }
 }
+

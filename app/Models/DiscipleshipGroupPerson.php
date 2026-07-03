@@ -39,6 +39,6 @@ class DiscipleshipGroupPerson extends Model
 
     public function person(): BelongsTo
     {
-        return $this->belongsTo(DiscipleshipPerson::class, 'person_id');
+        return $this->belongsTo(Person::class, 'person_id');
     }
 }

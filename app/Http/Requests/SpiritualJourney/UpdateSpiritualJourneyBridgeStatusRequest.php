@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\SpiritualJourney;
 
-use App\Models\MskParticipant;
+use App\Models\Person;
 use App\Services\Auth\CurrentUserContext;
 use App\Services\Routing\AppPageRouteMap;
 use App\Support\RuntimeBootstrap;
@@ -36,7 +36,7 @@ class UpdateSpiritualJourneyBridgeStatusRequest extends FormRequest
     public function participantId(): int
     {
         $participant = $this->route('participant');
-        if ($participant instanceof MskParticipant) {
+        if ($participant instanceof Person) {
             return (int) $participant->getKey();
         }
 

@@ -5,7 +5,7 @@ namespace App\Services\MemberFeedbackJournals;
 use App\Models\DiscipleshipFeedback;
 use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
-use App\Models\DiscipleshipPerson;
+use App\Models\Person;
 use App\Services\Discipleship\DiscipleshipReadCache;
 use App\Support\DiscipleshipPersonProfile;
 use DateTimeInterface;

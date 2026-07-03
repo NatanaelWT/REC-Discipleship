@@ -52,8 +52,8 @@ class DiscipleshipPeopleExportService
             $error = $errorCode === 'zip_unavailable' ? 'export_zip_unavailable' : 'export_failed';
             $this->activity->record(
                 'export',
-                'discipleship_people.export.failed',
-                'discipleship_people_export',
+                'people.export.failed',
+                'people_export',
                 $this->scope->selectedSlug(),
                 null,
                 'Ekspor Anggota DG gagal.',
@@ -70,8 +70,8 @@ class DiscipleshipPeopleExportService
 
         $this->activity->record(
             'export',
-            'discipleship_people.export.completed',
-            'discipleship_people_export',
+            'people.export.completed',
+            'people_export',
             $this->scope->selectedSlug(),
             $downloadName,
             'Data Anggota DG diekspor.',

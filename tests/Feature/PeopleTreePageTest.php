@@ -64,7 +64,7 @@ class PeopleTreePageTest extends TestCase
 
         $this->assertSame(
             0,
-            DB::table('discipleship_people')->where('branch_id', 1)->where('full_name', 'Yakub Tri Handoko')->count(),
+            DB::table('people')->where('branch_id', 1)->where('full_name', 'Yakub Tri Handoko')->count(),
         );
     }
 
@@ -114,9 +114,9 @@ class PeopleTreePageTest extends TestCase
         $this->createTables();
         $this->seedPeopleTree();
 
-        $leaderId = (int) DB::table('discipleship_people')->where('full_name', 'Leader Test')->value('id');
+        $leaderId = (int) DB::table('people')->where('full_name', 'Leader Test')->value('id');
         $oldGroupId = (int) DB::table('discipleship_groups')->where('name', 'Kelompok Test')->value('id');
-        $personId = DB::table('discipleship_people')->insertGetId([
+        $personId = DB::table('people')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Anggota Riwayat Terakhir',
             'status' => 'active',
@@ -213,28 +213,23 @@ class PeopleTreePageTest extends TestCase
         $this->createTables();
         $this->seedPeopleTree();
 
-        $leaderId = (int) DB::table('discipleship_people')->where('full_name', 'Leader Test')->value('id');
+        $leaderId = (int) DB::table('people')->where('full_name', 'Leader Test')->value('id');
         $groupId = (int) DB::table('discipleship_groups')->where('name', 'Kelompok Test')->value('id');
-        $archivedPersonId = DB::table('discipleship_people')->insertGetId([
+        $archivedPersonId = DB::table('people')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Peserta Arsip MSK',
-            'phone' => '081298765432',
+            'whatsapp' => '081298765432',
             'gender' => 'Perempuan',
             'status' => 'inactive',
             'created_at' => now()->subMonth(),
             'updated_at' => now()->subDay(),
         ]);
-        DB::table('msk_participants')->insert([
-            'branch_id' => 1,
-            'discipleship_person_id' => $archivedPersonId,
-            'full_name' => 'Peserta Arsip MSK',
+        DB::table('people')->where('id', $archivedPersonId)->update([
             'gender' => 'Perempuan',
             'whatsapp' => '081298765432',
             'batch_month' => '2026-01',
-            'status' => 'active',
             'session_numbers' => json_encode(range(1, 12)),
             'photos' => json_encode([]),
-            'created_at' => now()->subMonth(),
             'updated_at' => now(),
         ]);
 
@@ -248,14 +243,11 @@ class PeopleTreePageTest extends TestCase
 
         $this->assertSame(
             1,
-            DB::table('discipleship_people')->where('full_name', 'Peserta Arsip MSK')->count(),
+            DB::table('people')->where('full_name', 'Peserta Arsip MSK')->count(),
         );
-        $this->assertDatabaseHas('discipleship_people', [
+        $this->assertDatabaseHas('people', [
             'id' => $archivedPersonId,
             'status' => 'active',
-        ]);
-        $this->assertDatabaseHas('msk_participants', [
-            'discipleship_person_id' => $archivedPersonId,
         ]);
         $this->assertDatabaseHas('discipleship_group_people', [
             'discipleship_group_id' => $groupId,
@@ -318,19 +310,17 @@ class PeopleTreePageTest extends TestCase
             'group_multiplications' => [],
         ]);
 
-        $leaderId = (int) DB::table('msk_participants')->where('full_name', 'Leader Baru')->value('discipleship_person_id');
-        $memberId = (int) DB::table('msk_participants')->where('full_name', 'Anggota Baru')->value('discipleship_person_id');
+        $leaderId = (int) DB::table('people')->where('full_name', 'Leader Baru')->value('id');
+        $memberId = (int) DB::table('people')->where('full_name', 'Anggota Baru')->value('id');
         $groupId = (int) DB::table('discipleship_groups')->where('name', 'Kelompok Baru')->value('id');
 
         $this->assertGreaterThan(0, $leaderId);
         $this->assertGreaterThan(0, $memberId);
         $this->assertGreaterThan(0, $groupId);
-        $this->assertDatabaseHas('msk_participants', [
-            'discipleship_person_id' => $leaderId,
+        $this->assertDatabaseHas('people', [
             'full_name' => 'Leader Baru',
         ]);
-        $this->assertDatabaseHas('msk_participants', [
-            'discipleship_person_id' => $memberId,
+        $this->assertDatabaseHas('people', [
             'full_name' => 'Anggota Baru',
         ]);
         $this->assertDatabaseHas('discipleship_relationships', [
@@ -354,7 +344,7 @@ class PeopleTreePageTest extends TestCase
     {
         $this->createTables();
         $this->seedPeopleTree();
-        DB::table('discipleship_people')->insert([
+        DB::table('people')->insert([
             'id' => 626,
             'branch_id' => 2,
             'full_name' => 'Yakub Tri Handoko',
@@ -363,7 +353,7 @@ class PeopleTreePageTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_people')->insert([
+        DB::table('people')->insert([
             'id' => 900,
             'branch_id' => 2,
             'full_name' => 'Anggota GM Tidak Valid',
@@ -395,7 +385,7 @@ class PeopleTreePageTest extends TestCase
         ]);
         $this->assertSame(
             0,
-            DB::table('discipleship_people')->where('branch_id', 1)->where('full_name', 'Yakub Tri Handoko')->count(),
+            DB::table('people')->where('branch_id', 1)->where('full_name', 'Yakub Tri Handoko')->count(),
         );
 
         $beforeGroupCount = DB::table('discipleship_groups')->count();
@@ -419,20 +409,29 @@ class PeopleTreePageTest extends TestCase
 
     private function createTables(): void
     {
-        Schema::dropIfExists('msk_participants');
         Schema::dropIfExists('discipleship_group_people');
         Schema::dropIfExists('discipleship_relationships');
         Schema::dropIfExists('discipleship_groups');
-        Schema::dropIfExists('discipleship_people');
+        Schema::dropIfExists('people');
 
-        Schema::create('discipleship_people', function (Blueprint $table): void {
+        Schema::create('people', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('full_name')->nullable();
-            $table->string('phone')->nullable();
             $table->string('gender')->nullable();
+            $table->date('birth_date')->nullable();
+            $table->string('birth_day_month')->nullable();
+            $table->string('birth_place')->nullable();
+            $table->text('address')->nullable();
+            $table->string('email')->nullable();
+            $table->string('whatsapp')->nullable();
+            $table->string('batch_month')->nullable();
+            $table->string('completed_at')->nullable();
+            $table->string('journey_bridge_status')->default('belum');
             $table->string('status')->default('active');
             $table->text('notes')->nullable();
+            $table->json('session_numbers')->nullable();
+            $table->json('photos')->nullable();
             $table->timestamps();
         });
 
@@ -481,45 +480,24 @@ class PeopleTreePageTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('msk_participants', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('branch_id');
-            $table->unsignedBigInteger('discipleship_person_id')->nullable()->unique();
-            $table->string('full_name')->nullable();
-            $table->string('gender')->nullable();
-            $table->date('birth_date')->nullable();
-            $table->string('birth_day_month')->nullable();
-            $table->string('birth_place')->nullable();
-            $table->text('address')->nullable();
-            $table->string('email')->nullable();
-            $table->string('whatsapp')->nullable();
-            $table->string('batch_month')->nullable();
-            $table->text('notes')->nullable();
-            $table->string('completed_at')->nullable();
-            $table->string('journey_bridge_status')->default('belum');
-            $table->string('status')->default('active');
-            $table->json('session_numbers')->nullable();
-            $table->json('photos')->nullable();
-            $table->timestamps();
-        });
     }
 
     private function seedPeopleTree(): void
     {
-        $leaderId = DB::table('discipleship_people')->insertGetId([
+        $leaderId = DB::table('people')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Leader Test',
-            'phone' => '0811111111',
+            'whatsapp' => '0811111111',
             'gender' => 'Laki-laki',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        $memberId = DB::table('discipleship_people')->insertGetId([
+        $memberId = DB::table('people')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Anggota Test',
-            'phone' => '0822222222',
+            'whatsapp' => '0822222222',
             'gender' => 'Perempuan',
             'status' => 'active',
             'created_at' => now(),
@@ -575,14 +553,14 @@ class PeopleTreePageTest extends TestCase
 
     private function seedCrossBranchLeaderGroup(): void
     {
-        $memberId = DB::table('discipleship_people')->insertGetId([
+        $memberId = DB::table('people')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Anggota Kutisari Lintas',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_people')->insert([
+        DB::table('people')->insert([
             'id' => 626,
             'branch_id' => 2,
             'full_name' => 'Yakub Tri Handoko',
@@ -626,3 +604,5 @@ class PeopleTreePageTest extends TestCase
         ]);
     }
 }
+
+

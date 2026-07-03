@@ -3,7 +3,7 @@
 namespace App\Services\DiscipleshipPeople;
 
 use App\Models\DiscipleshipGroupPerson;
-use App\Models\DiscipleshipPerson;
+use App\Models\Person;
 use App\Models\DiscipleshipRelationship;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Support\DiscipleshipPersonProfile;
@@ -41,13 +41,13 @@ class DiscipleshipPeopleListData
         $perPage = $this->perPage($request);
         $query = $this->filteredPeopleQuery($search, $progress)
             ->select([
-                'discipleship_people.id',
-                'discipleship_people.branch_id',
-                'discipleship_people.status',
+                'people.id',
+                'people.branch_id',
+                'people.status',
                 DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
             ])
             ->orderByRaw(DiscipleshipPersonProfile::expression('full_name'))
-            ->orderBy('discipleship_people.id');
+            ->orderBy('people.id');
 
         $people = $query
             ->offset(($page - 1) * $perPage)
@@ -84,13 +84,13 @@ class DiscipleshipPeopleListData
         $progress = $this->progressFilter($request);
         $people = $this->filteredPeopleQuery($search, $progress)
             ->select([
-                'discipleship_people.id',
-                'discipleship_people.branch_id',
-                'discipleship_people.status',
+                'people.id',
+                'people.branch_id',
+                'people.status',
                 DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
             ])
             ->orderByRaw(DiscipleshipPersonProfile::expression('full_name'))
-            ->orderBy('discipleship_people.id')
+            ->orderBy('people.id')
             ->get();
         $stats = $this->progressStats($search, $progress);
 
@@ -108,26 +108,26 @@ class DiscipleshipPeopleListData
 
     private function filteredPeopleQuery(string $search, string $progress): Builder
     {
-        $query = DiscipleshipPerson::query();
+        $query = Person::query();
         DiscipleshipPersonProfile::join($query);
 
         $query
-            ->whereIn('discipleship_people.branch_id', $this->scope->branchIds())
-            ->where('discipleship_people.status', 'active')
+            ->whereIn('people.branch_id', $this->scope->branchIds())
+            ->where('people.status', 'active')
             ->where(function (Builder $condition): void {
                 $condition->whereExists(static function ($subquery): void {
                     $subquery->selectRaw('1')
                         ->from('discipleship_group_people as participant_history')
-                        ->whereColumn('participant_history.person_id', 'discipleship_people.id')
-                        ->whereColumn('participant_history.branch_id', 'discipleship_people.branch_id')
+                        ->whereColumn('participant_history.person_id', 'people.id')
+                        ->whereColumn('participant_history.branch_id', 'people.branch_id')
                         ->where('participant_history.role', 'member');
                 });
                 if (Schema::hasTable('discipleship_manual_journey_records')) {
                     $condition->orWhereExists(static function ($subquery): void {
                         $subquery->selectRaw('1')
                             ->from('discipleship_manual_journey_records as manual_journey')
-                            ->whereColumn('manual_journey.person_id', 'discipleship_people.id')
-                            ->whereColumn('manual_journey.branch_id', 'discipleship_people.branch_id');
+                            ->whereColumn('manual_journey.person_id', 'people.id')
+                            ->whereColumn('manual_journey.branch_id', 'people.branch_id');
                     });
                 }
             });
@@ -148,8 +148,8 @@ class DiscipleshipPeopleListData
             $stage = $activeStages[$progress];
             $query->whereExists(static function ($subquery) use ($stage): void {
                 $subquery->selectRaw('1')->from('discipleship_group_people as filter_gp')
-                    ->whereColumn('filter_gp.person_id', 'discipleship_people.id')
-                    ->whereColumn('filter_gp.branch_id', 'discipleship_people.branch_id')
+                    ->whereColumn('filter_gp.person_id', 'people.id')
+                    ->whereColumn('filter_gp.branch_id', 'people.branch_id')
                     ->where('filter_gp.role', 'member')->where('filter_gp.stage', $stage)
                     ->where('filter_gp.status', 'active')->whereNull('filter_gp.ended_on');
             });
@@ -163,8 +163,8 @@ class DiscipleshipPeopleListData
             $query->where(static function (Builder $completion) use ($rank): void {
                 $completion->whereExists(static function ($subquery) use ($rank): void {
                     $subquery->selectRaw('1')->from('discipleship_group_people as filter_gp')
-                        ->whereColumn('filter_gp.person_id', 'discipleship_people.id')
-                        ->whereColumn('filter_gp.branch_id', 'discipleship_people.branch_id')
+                        ->whereColumn('filter_gp.person_id', 'people.id')
+                        ->whereColumn('filter_gp.branch_id', 'people.branch_id')
                         ->where('filter_gp.role', 'member')
                         ->where(function ($condition) use ($rank): void {
                             if ($rank === 1) {
@@ -182,8 +182,8 @@ class DiscipleshipPeopleListData
                     $stages = $rank === 1 ? ['DG 1', 'DG 2', 'DG 3'] : ($rank === 2 ? ['DG 2', 'DG 3'] : ['DG 3']);
                     $completion->orWhereExists(static function ($subquery) use ($stages): void {
                         $subquery->selectRaw('1')->from('discipleship_manual_journey_records as manual_journey')
-                            ->whereColumn('manual_journey.person_id', 'discipleship_people.id')
-                            ->whereColumn('manual_journey.branch_id', 'discipleship_people.branch_id')
+                            ->whereColumn('manual_journey.person_id', 'people.id')
+                            ->whereColumn('manual_journey.branch_id', 'people.branch_id')
                             ->whereIn('manual_journey.stage', $stages);
                     });
                 }
@@ -192,7 +192,7 @@ class DiscipleshipPeopleListData
     }
 
     /**
-     * @param Collection<int, DiscipleshipPerson> $people
+     * @param Collection<int, Person> $people
      * @return Collection<int, array<string, mixed>>
      */
     private function rows(Collection $people): Collection
@@ -205,7 +205,7 @@ class DiscipleshipPeopleListData
         $names = DiscipleshipPersonProfile::namesByPersonIds($relatedIds);
         $branchOptions = $this->scope->optionsById();
 
-        return $people->map(function (DiscipleshipPerson $person) use ($relationships, $groupPeople, $names, $branchOptions): array {
+        return $people->map(function (Person $person) use ($relationships, $groupPeople, $names, $branchOptions): array {
             $personId = (int) $person->id;
             $parents = $relationships->where('disciple_person_id', $personId)
                 ->where('status', 'active')
@@ -361,7 +361,7 @@ class DiscipleshipPeopleListData
     private function progressStats(string $search, string $progress): array
     {
         $people = $this->filteredPeopleQuery($search, $progress)
-            ->select(['discipleship_people.id', 'discipleship_people.branch_id']);
+            ->select(['people.id', 'people.branch_id']);
 
         $journeyRows = DB::query()
             ->fromSub((clone $people), 'p')

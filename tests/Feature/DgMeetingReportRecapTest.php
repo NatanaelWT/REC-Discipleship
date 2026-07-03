@@ -200,7 +200,7 @@ class DgMeetingReportRecapTest extends TestCase
     public function test_public_dg_report_accepts_cross_branch_leader_for_branch_group(): void
     {
         $this->createTables();
-        DB::table('discipleship_people')->insert([
+        DB::table('people')->insert([
             ['id' => 626, 'branch_id' => 2, 'full_name' => 'Yakub Tri Handoko', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 641, 'branch_id' => 1, 'full_name' => 'Anggota Kutisari', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
         ]);
@@ -400,13 +400,13 @@ class DgMeetingReportRecapTest extends TestCase
         Schema::dropIfExists('discipleship_meeting_reports');
         Schema::dropIfExists('discipleship_group_people');
         Schema::dropIfExists('discipleship_groups');
-        Schema::dropIfExists('discipleship_people');
+        Schema::dropIfExists('people');
 
-        Schema::create('discipleship_people', function (Blueprint $table): void {
+        Schema::create('people', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('full_name')->nullable();
-            $table->string('phone')->nullable();
+            $table->string('whatsapp')->nullable();
             $table->string('gender')->nullable();
             $table->string('status')->default('active');
             $table->text('notes')->nullable();
@@ -480,7 +480,7 @@ class DgMeetingReportRecapTest extends TestCase
     /** @return array{leader_id:int,member_id:int,group_id:int,report_id:int} */
     private function seedReport(): array
     {
-        $leaderId = DB::table('discipleship_people')->insertGetId([
+        $leaderId = DB::table('people')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Pemimpin Test',
             'status' => 'active',
@@ -488,7 +488,7 @@ class DgMeetingReportRecapTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $memberId = DB::table('discipleship_people')->insertGetId([
+        $memberId = DB::table('people')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Anggota Test',
             'status' => 'active',
@@ -567,7 +567,7 @@ class DgMeetingReportRecapTest extends TestCase
 
     private function seedOtherLeaderGroup(): int
     {
-        $leaderId = DB::table('discipleship_people')->insertGetId([
+        $leaderId = DB::table('people')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Pemimpin Lain',
             'status' => 'active',
@@ -600,7 +600,7 @@ class DgMeetingReportRecapTest extends TestCase
     /** @return array{leader_id:int,member_id:int,group_id:int} */
     private function seedGmReportFormData(): array
     {
-        DB::table('discipleship_people')->insert([
+        DB::table('people')->insert([
             ['id' => 605, 'branch_id' => 2, 'full_name' => 'Veronica Lahindah', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 510, 'branch_id' => 2, 'full_name' => 'Carlini Fan Hardi', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 525, 'branch_id' => 2, 'full_name' => 'Pris Cilla Sandy', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
@@ -635,3 +635,6 @@ class DgMeetingReportRecapTest extends TestCase
         return $png;
     }
 }
+
+
+

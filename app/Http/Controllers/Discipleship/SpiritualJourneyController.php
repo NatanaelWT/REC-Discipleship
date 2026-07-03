@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Discipleship;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SpiritualJourney\UpdateSpiritualJourneyBridgeStatusRequest;
-use App\Models\MskParticipant;
+use App\Models\Person;
 use App\Services\SpiritualJourney\SpiritualJourneyBridgeStatusService;
 use App\Services\SpiritualJourney\SpiritualJourneyPageData;
 use App\Support\RuntimeBootstrap;
@@ -51,7 +51,7 @@ class SpiritualJourneyController extends Controller
 
     public function updateBridgeStatus(
         UpdateSpiritualJourneyBridgeStatusRequest $request,
-        MskParticipant $participant,
+        Person $participant,
         SpiritualJourneyBridgeStatusService $service,
     ): RedirectResponse {
         RuntimeBootstrap::boot($request);

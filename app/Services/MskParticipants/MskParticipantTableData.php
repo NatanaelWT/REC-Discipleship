@@ -2,7 +2,7 @@
 
 namespace App\Services\MskParticipants;
 
-use App\Models\MskParticipant;
+use App\Models\Person;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -13,7 +13,7 @@ class MskParticipantTableData
     /** @param array<int, string>|null $branchCodes */
     public function countParticipants(?array $branchCodes = null): int
     {
-        $query = MskParticipant::query();
+        $query = Person::query();
         if ($branchCodes !== null) {
             $branchCodes = $this->normalizeBranchCodes($branchCodes);
             if ($branchCodes === []) {
@@ -42,13 +42,13 @@ class MskParticipantTableData
         }
 
         try {
-            return MskParticipant::query()
-                ->select(MskParticipant::VIEW_COLUMNS)
+            return Person::query()
+                ->select(Person::VIEW_COLUMNS)
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
                 ->orderBy('full_name')
                 ->orderBy('id')
                 ->get()
-                ->map(static function (MskParticipant $participant): array {
+                ->map(static function (Person $participant): array {
                     $row = $participant->toViewArray();
                     $row['branch_code'] = normalize_public_branch_code((string) $participant->branch_code);
 
@@ -83,10 +83,10 @@ class MskParticipantTableData
 
                 $participantId = (int) ($row['id'] ?? 0);
                 $participant = $participantId > 0
-                    ? MskParticipant::query()->where('branch_id', $branchId)->whereKey($participantId)->first()
+                    ? Person::query()->where('branch_id', $branchId)->whereKey($participantId)->first()
                     : null;
-                $isNew = ! $participant instanceof MskParticipant;
-                $participant ??= new MskParticipant;
+                $isNew = ! $participant instanceof Person;
+                $participant ??= new Person;
                 $participant->fill($this->participantAttributes($branchId, $row));
                 $participant->save();
 
@@ -97,7 +97,7 @@ class MskParticipantTableData
             }
 
             if ($deleteMissing) {
-                MskParticipant::query()
+                Person::query()
                     ->where('branch_id', $branchId)
                     ->when($seenIds !== [], static fn ($query) => $query->whereNotIn('id', $seenIds))
                     ->delete();
@@ -109,7 +109,7 @@ class MskParticipantTableData
 
     public function hasTables(): bool
     {
-        return Schema::hasTable('msk_participants');
+        return Schema::hasTable('people');
     }
 
     /**
@@ -142,7 +142,6 @@ class MskParticipantTableData
 
         return [
             'branch_id' => $branchId,
-            'discipleship_person_id' => (int) ($row['member_id'] ?? 0) ?: null,
             'full_name' => $this->nullableString($row['full_name'] ?? null),
             'gender' => $this->nullableString(normalize_member_gender_value((string) ($row['gender'] ?? ''))),
             'birth_date' => $birthDate !== '' ? $birthDate : null,

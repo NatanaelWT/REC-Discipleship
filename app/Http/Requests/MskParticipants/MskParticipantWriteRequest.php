@@ -37,6 +37,7 @@ abstract class MskParticipantWriteRequest extends FormRequest
 
         return [
             'id' => (int) $this->input('id', 0),
+            'person_id' => (int) $this->input('member_id', 0),
             'discipleship_person_id' => (int) $this->input('member_id', 0),
             'full_name' => trim((string) $this->input('full_name', '')),
             'gender' => normalize_member_gender_value((string) $this->input('gender', '')),

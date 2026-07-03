@@ -3,7 +3,7 @@
 namespace App\Http\Requests\DgMeetingReports;
 
 use App\Models\DiscipleshipGroup;
-use App\Models\DiscipleshipPerson;
+use App\Models\Person;
 use App\Services\DgMeetingReports\DgMeetingReportFormData;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Contracts\Validation\Validator;
@@ -381,7 +381,7 @@ class StoreDgMeetingReportRequest extends FormRequest
             return null;
         }
 
-        $id = DiscipleshipPerson::query()
+        $id = Person::query()
             ->whereKey($personId)
             ->value('id');
 

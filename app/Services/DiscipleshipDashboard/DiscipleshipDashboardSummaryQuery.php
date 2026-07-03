@@ -109,7 +109,7 @@ class DiscipleshipDashboardSummaryQuery
     /** @param array<int, int> $branchIds */
     private function peopleRows(array $branchIds): Collection
     {
-        return $this->query(static fn () => DB::table('discipleship_people')
+        return $this->query(static fn () => DB::table('people')
             ->whereIn('branch_id', $branchIds)
             ->selectRaw("branch_id, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS people_count")
             ->groupBy('branch_id')->get());
@@ -195,7 +195,7 @@ class DiscipleshipDashboardSummaryQuery
     /** @param array<int, int> $branchIds */
     private function groupPeopleRows(array $branchIds): Collection
     {
-        return $this->query(static fn () => DB::table('discipleship_people as p')
+        return $this->query(static fn () => DB::table('people as p')
             ->leftJoin('discipleship_group_people as gp', function ($join): void {
                 $join->on('gp.person_id', '=', 'p.id')
                     ->on('gp.branch_id', '=', 'p.branch_id')
@@ -219,7 +219,7 @@ class DiscipleshipDashboardSummaryQuery
     /** @param array<int, int> $branchIds */
     private function leaderRows(array $branchIds): Collection
     {
-        return $this->query(static fn () => DB::table('discipleship_people as p')
+        return $this->query(static fn () => DB::table('people as p')
             ->leftJoin('discipleship_group_people as gp', function ($join): void {
                 $join->on('gp.person_id', '=', 'p.id')
                     ->on('gp.branch_id', '=', 'p.branch_id')
@@ -255,8 +255,14 @@ class DiscipleshipDashboardSummaryQuery
             ? "json_array_length(COALESCE(session_numbers, '[]'))"
             : "JSON_LENGTH(COALESCE(session_numbers, '[]'))";
 
-        return $this->query(static fn () => DB::table('msk_participants')
+        return $this->query(static fn () => DB::table('people')
             ->whereIn('branch_id', $branchIds)
+            ->where(function ($query) use ($sessions): void {
+                $query->whereRaw("COALESCE(batch_month, '') <> ''")
+                    ->orWhereRaw("COALESCE(completed_at, '') <> ''")
+                    ->orWhereRaw($sessions.' > 0')
+                    ->orWhereIn('journey_bridge_status', ['sudah_rg', 'sudah_kgap', 'ikut_keduanya']);
+            })
             ->selectRaw("branch_id,
                 SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS msk_active_count,
                 SUM(CASE WHEN {$sessions} >= 12 THEN 1 ELSE 0 END) AS completed_msk_count,
@@ -271,14 +277,14 @@ class DiscipleshipDashboardSummaryQuery
     {
         $reasons = "'continued_to_child_group', 'group_completed', 'stage_transition'";
 
-        return $this->query(static fn () => DB::table('msk_participants as mp')
+        return $this->query(static fn () => DB::table('people as mp')
             ->leftJoin('discipleship_group_people as gp', function ($join): void {
-                $join->on('gp.person_id', '=', 'mp.discipleship_person_id')
+                $join->on('gp.person_id', '=', 'mp.id')
                     ->on('gp.branch_id', '=', 'mp.branch_id')
                     ->where('gp.role', '=', 'member');
             })
             ->leftJoin('discipleship_manual_journey_records as manual_journey', function ($join): void {
-                $join->on('manual_journey.person_id', '=', 'mp.discipleship_person_id')
+                $join->on('manual_journey.person_id', '=', 'mp.id')
                     ->on('manual_journey.branch_id', '=', 'mp.branch_id');
             })
             ->whereIn('mp.branch_id', $branchIds)

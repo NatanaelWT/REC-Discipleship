@@ -24,14 +24,14 @@ function dgv2_identity_sources(array $members, array $mskClasses): array {
         if (!is_array($participant)) {
             continue;
         }
-        if (normalize_msk_participant_status((string) ($participant['status'] ?? 'active')) !== 'active') {
+        $completed = function_exists('msk_is_complete') ? msk_is_complete($participant) : false;
+        if (normalize_msk_participant_status((string) ($participant['status'] ?? 'active')) !== 'active' && ! $completed) {
             continue;
         }
         $memberId = trim((string) ($participant['member_id'] ?? ''));
         if ($memberId === '') {
             continue;
         }
-        $completed = function_exists('msk_is_complete') ? msk_is_complete($participant) : false;
         if (!isset($sources[$memberId])) {
             $sources[$memberId] = [
                 'id' => $memberId,

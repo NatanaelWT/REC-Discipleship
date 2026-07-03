@@ -5,9 +5,8 @@ namespace App\Services\DiscipleshipPeopleTree;
 use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipMeetingReport;
-use App\Models\DiscipleshipPerson;
+use App\Models\Person;
 use App\Models\DiscipleshipRelationship;
-use App\Models\MskParticipant;
 use App\Support\DiscipleshipPersonProfile;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
@@ -102,26 +101,26 @@ class PeopleTreeModelStore
         $labels = $this->branchLabels();
 
         try {
-            $query = DiscipleshipPerson::query();
+            $query = Person::query();
             DiscipleshipPersonProfile::join($query);
 
             return $query
-                ->whereIn('discipleship_people.branch_id', $branchIds)
-                ->where('discipleship_people.status', 'active')
+                ->whereIn('people.branch_id', $branchIds)
+                ->where('people.status', 'active')
                 ->orderByRaw(DiscipleshipPersonProfile::expression('full_name'))
-                ->orderBy('discipleship_people.id')
+                ->orderBy('people.id')
                 ->get([
-                    'discipleship_people.id',
-                    'discipleship_people.branch_id',
-                    'discipleship_people.status',
-                    'discipleship_people.notes',
-                    'discipleship_people.created_at',
-                    'discipleship_people.updated_at',
+                    'people.id',
+                    'people.branch_id',
+                    'people.status',
+                    'people.notes',
+                    'people.created_at',
+                    'people.updated_at',
                     DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
                     DB::raw(DiscipleshipPersonProfile::expression('phone').' as phone'),
                     DB::raw(DiscipleshipPersonProfile::expression('gender').' as gender'),
                 ])
-                ->map(static function (DiscipleshipPerson $person) use ($branchCode, $labels): array {
+                ->map(static function (Person $person) use ($branchCode, $labels): array {
                     $personBranchCode = normalize_public_branch_code((string) $person->branch_code);
                     $branchLabel = $labels[$personBranchCode] ?? strtoupper($personBranchCode);
                     $name = trim((string) $person->full_name);
@@ -165,13 +164,13 @@ class PeopleTreeModelStore
         $labels = $this->branchLabels();
 
         try {
-            return MskParticipant::query()
-                ->select(MskParticipant::VIEW_COLUMNS)
+            return Person::query()
+                ->select(Person::VIEW_COLUMNS)
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
                 ->orderBy('full_name')
                 ->orderBy('id')
                 ->get()
-                ->map(static function (MskParticipant $participant) use ($centralReadOnly, $labels): array {
+                ->map(static function (Person $participant) use ($centralReadOnly, $labels): array {
                     $row = $participant->toViewArray();
                     $branchCode = normalize_public_branch_code((string) $participant->branch_code);
                     $branchLabel = $labels[$branchCode] ?? strtoupper($branchCode);
@@ -357,30 +356,30 @@ class PeopleTreeModelStore
     /** @return array<int, array<string, mixed>> */
     private function peopleRows(array $branchIds, array $extraPersonIds = []): array
     {
-        $query = DiscipleshipPerson::query();
+        $query = Person::query();
         DiscipleshipPersonProfile::join($query);
 
         return $query
             ->select([
-                'discipleship_people.id',
-                'discipleship_people.branch_id',
-                'discipleship_people.status',
-                'discipleship_people.notes',
-                'discipleship_people.created_at',
-                'discipleship_people.updated_at',
+                'people.id',
+                'people.branch_id',
+                'people.status',
+                'people.notes',
+                'people.created_at',
+                'people.updated_at',
                 DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
                 DB::raw(DiscipleshipPersonProfile::expression('phone').' as phone'),
                 DB::raw(DiscipleshipPersonProfile::expression('gender').' as gender'),
             ])
             ->where(function ($query) use ($branchIds, $extraPersonIds): void {
-                $query->whereIn('discipleship_people.branch_id', $branchIds);
+                $query->whereIn('people.branch_id', $branchIds);
                 if ($extraPersonIds !== []) {
-                    $query->orWhereIn('discipleship_people.id', $extraPersonIds);
+                    $query->orWhereIn('people.id', $extraPersonIds);
                 }
             })
-            ->orderBy('discipleship_people.id')
+            ->orderBy('people.id')
             ->get()
-            ->map(static fn (DiscipleshipPerson $person): array => [
+            ->map(static fn (Person $person): array => [
                 'id' => (string) $person->getKey(),
                 'member_id' => (string) $person->getKey(),
                 'branch_code' => $person->branch_code,
@@ -496,7 +495,7 @@ class PeopleTreeModelStore
         }
 
         return DB::table('discipleship_manual_journey_records as manual')
-            ->join('discipleship_people as person', function ($join): void {
+            ->join('people as person', function ($join): void {
                 $join->on('person.id', '=', 'manual.person_id')
                     ->on('person.branch_id', '=', 'manual.branch_id');
             })
@@ -579,7 +578,7 @@ class PeopleTreeModelStore
             $sourceBranchCode = normalize_public_branch_code((string) ($row['branch_code'] ?? ''));
             $sourceBranchId = $sourceBranchCode !== '' ? branch_id_from_slug($sourceBranchCode) : $branchId;
             if (ctype_digit($sourceId) && $sourceBranchId !== null && $sourceBranchId !== $branchId) {
-                $person = DiscipleshipPerson::query()
+                $person = Person::query()
                     ->whereKey((int) $sourceId)
                     ->where('branch_id', $sourceBranchId)
                     ->first();
@@ -593,13 +592,18 @@ class PeopleTreeModelStore
             }
 
             $person = ctype_digit($sourceId)
-                ? DiscipleshipPerson::query()->where('branch_id', $branchId)->whereKey((int) $sourceId)->first()
-                : null;
-            $person ??= new DiscipleshipPerson;
+                ? Person::query()->where('branch_id', $branchId)->whereKey((int) $sourceId)->first()
+                : $this->matchingPersonForIdentity($branchId, $row);
+            $person ??= new Person;
             $person->fill([
                 'branch_id' => $branchId,
                 'status' => $this->nullableString($row['status'] ?? null) ?? 'active',
                 'notes' => $this->nullableString($row['notes'] ?? null),
+                'journey_bridge_status' => $person->exists
+                    ? normalize_journey_bridge_status((string) ($person->journey_bridge_status ?? 'belum'))
+                    : 'belum',
+                'session_numbers' => $person->exists ? normalize_msk_session_numbers($person->session_numbers ?? []) : [],
+                'photos' => $person->exists ? extract_msk_participant_photos($person->toViewArray()) : [],
             ]);
             $person->save();
             $this->syncPersonProfile($person, $row);
@@ -610,7 +614,7 @@ class PeopleTreeModelStore
             $kept[] = $actualId;
         }
 
-        DiscipleshipPerson::query()
+        Person::query()
             ->where('branch_id', $branchId)
             ->when($kept !== [], static fn ($query) => $query->whereNotIn('id', $kept))
             ->delete();
@@ -619,48 +623,20 @@ class PeopleTreeModelStore
     }
 
     /** @param array<string, mixed> $row */
-    private function syncPersonProfile(DiscipleshipPerson $person, array $row): void
+    private function syncPersonProfile(Person $person, array $row): void
     {
-        if (! Schema::hasTable('msk_participants')) {
-            return;
-        }
-
-        $profile = MskParticipant::query()
-            ->where('discipleship_person_id', $person->getKey())
-            ->first();
-        if (! $profile instanceof MskParticipant) {
-            $profile = $this->matchingUnlinkedParticipantProfile((int) $person->branch_id, $row);
-        }
-        $profile ??= new MskParticipant([
-            'discipleship_person_id' => (int) $person->getKey(),
-            'status' => 'active',
-            'journey_bridge_status' => 'belum',
-            'session_numbers' => [],
-            'photos' => [],
-        ]);
-
-        $profile->fill([
+        $person->fill([
             'branch_id' => (int) $person->branch_id,
-            'discipleship_person_id' => (int) $person->getKey(),
             'full_name' => $this->nullableString($row['full_name'] ?? $row['name'] ?? null),
             'whatsapp' => $this->nullableString($row['phone'] ?? $row['whatsapp'] ?? null),
             'gender' => $this->nullableString(normalize_member_gender_value((string) ($row['gender'] ?? ''))),
         ]);
 
-        if (! $profile->exists) {
-            $profile->fill([
-                'status' => 'active',
-                'journey_bridge_status' => 'belum',
-                'session_numbers' => [],
-                'photos' => [],
-            ]);
-        }
-
-        $profile->save();
+        $person->save();
     }
 
     /** @param array<string, mixed> $row */
-    private function matchingUnlinkedParticipantProfile(int $branchId, array $row): ?MskParticipant
+    private function matchingPersonForIdentity(int $branchId, array $row): ?Person
     {
         $identityKey = $this->participantIdentityKey(
             (string) ($row['full_name'] ?? $row['name'] ?? ''),
@@ -670,11 +646,10 @@ class PeopleTreeModelStore
             return null;
         }
 
-        return MskParticipant::query()
+        return Person::query()
             ->where('branch_id', $branchId)
-            ->whereNull('discipleship_person_id')
             ->get()
-            ->first(fn (MskParticipant $participant): bool => $this->participantIdentityKey(
+            ->first(fn (Person $participant): bool => $this->participantIdentityKey(
                 (string) ($participant->full_name ?? ''),
                 (string) ($participant->whatsapp ?? ''),
             ) === $identityKey);
@@ -700,7 +675,7 @@ class PeopleTreeModelStore
             return;
         }
 
-        foreach (DiscipleshipPerson::query()->whereIn('id', $missingIds)->get(['id']) as $person) {
+        foreach (Person::query()->whereIn('id', $missingIds)->get(['id']) as $person) {
             $actualId = (int) $person->getKey();
             $map[(string) $actualId] = $actualId;
         }

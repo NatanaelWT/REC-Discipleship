@@ -46,11 +46,11 @@ class DiscipleshipFeedback extends Model
 
     public function leader(): BelongsTo
     {
-        return $this->belongsTo(DiscipleshipPerson::class, 'leader_person_id');
+        return $this->belongsTo(Person::class, 'leader_person_id');
     }
 
     public function respondent(): BelongsTo
     {
-        return $this->belongsTo(DiscipleshipPerson::class, 'respondent_person_id');
+        return $this->belongsTo(Person::class, 'respondent_person_id');
     }
 }

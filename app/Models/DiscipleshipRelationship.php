@@ -31,12 +31,12 @@ class DiscipleshipRelationship extends Model
 
     public function mentor(): BelongsTo
     {
-        return $this->belongsTo(DiscipleshipPerson::class, 'mentor_person_id');
+        return $this->belongsTo(Person::class, 'mentor_person_id');
     }
 
     public function disciple(): BelongsTo
     {
-        return $this->belongsTo(DiscipleshipPerson::class, 'disciple_person_id');
+        return $this->belongsTo(Person::class, 'disciple_person_id');
     }
 
     public function contextGroup(): BelongsTo

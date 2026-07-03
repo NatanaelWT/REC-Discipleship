@@ -242,9 +242,29 @@ return new class extends Migration
             return;
         }
 
+        $this->dropIndexesUsingColumns('discipleship_people', $columns);
+
         Schema::table('discipleship_people', function (Blueprint $table) use ($columns): void {
             $table->dropColumn($columns);
         });
+    }
+
+    /** @param array<int, string> $columns */
+    private function dropIndexesUsingColumns(string $tableName, array $columns): void
+    {
+        foreach (Schema::getIndexes($tableName) as $index) {
+            if (($index['primary'] ?? false) || array_intersect($columns, $index['columns'] ?? []) === []) {
+                continue;
+            }
+
+            Schema::table($tableName, static function (Blueprint $table) use ($index): void {
+                if ($index['unique']) {
+                    $table->dropUnique($index['name']);
+                } else {
+                    $table->dropIndex($index['name']);
+                }
+            });
+        }
     }
 
     /** @param array<string, mixed> $values */

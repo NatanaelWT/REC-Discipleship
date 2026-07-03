@@ -3,22 +3,25 @@
 namespace App\Models;
 
 use App\Models\Concerns\ResolvesBranchSlug;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class MskParticipant extends Model
+class Person extends Model
 {
     use ResolvesBranchSlug;
 
     public const VIEW_COLUMNS = [
-        'id', 'branch_id', 'discipleship_person_id', 'full_name', 'gender', 'birth_date', 'birth_day_month',
+        'id', 'branch_id', 'full_name', 'gender', 'birth_date', 'birth_day_month',
         'birth_place', 'address', 'email', 'whatsapp', 'batch_month', 'notes', 'completed_at',
         'journey_bridge_status', 'status', 'session_numbers', 'photos', 'created_at', 'updated_at',
     ];
 
+    protected $table = 'people';
+
     protected $fillable = [
         'branch_id',
-        'discipleship_person_id',
         'full_name',
         'gender',
         'birth_date',
@@ -42,9 +45,31 @@ class MskParticipant extends Model
         'photos' => 'array',
     ];
 
-    public function discipleshipPerson(): BelongsTo
+    public function branch(): BelongsTo
     {
-        return $this->belongsTo(DiscipleshipPerson::class);
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(DiscipleshipGroupPerson::class, 'person_id')
+            ->where('role', 'member');
+    }
+
+    public function leaderships(): HasMany
+    {
+        return $this->hasMany(DiscipleshipGroupPerson::class, 'person_id')
+            ->where('role', '!=', 'member');
+    }
+
+    protected function phone(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->whatsapp !== null ? (string) $this->whatsapp : null);
+    }
+
+    protected function discipleshipPersonId(): Attribute
+    {
+        return Attribute::get(fn (): int => (int) $this->getKey());
     }
 
     /**
@@ -54,10 +79,12 @@ class MskParticipant extends Model
     {
         $photos = $this->jsonPhotos();
         $sessionNumbers = normalize_msk_session_numbers($this->session_numbers ?? []);
+        $personId = (string) $this->getKey();
 
         return [
-            'id' => (string) $this->getKey(),
-            'member_id' => $this->discipleship_person_id !== null ? (string) $this->discipleship_person_id : '',
+            'id' => $personId,
+            'member_id' => $personId,
+            'discipleship_person_id' => $personId,
             'full_name' => (string) ($this->full_name ?? ''),
             'gender' => (string) ($this->gender ?? ''),
             'birth_date' => $this->birth_date !== null ? $this->birth_date->format('Y-m-d') : '',
@@ -66,6 +93,7 @@ class MskParticipant extends Model
             'address' => (string) ($this->address ?? ''),
             'email' => (string) ($this->email ?? ''),
             'whatsapp' => (string) ($this->whatsapp ?? ''),
+            'phone' => (string) ($this->whatsapp ?? ''),
             'photos' => $photos,
             'msk_month' => (string) ($this->batch_month ?? ''),
             'session_numbers' => $sessionNumbers,

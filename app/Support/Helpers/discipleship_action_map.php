@@ -19,7 +19,7 @@ function discipleship_action_map(): array
             'reactivate_msk_participant' => true,
             'import_pemuridan_excel' => true,
             'export_pemuridan_excel' => true,
-            'export_discipleship_people_excel' => true,
+            'export_people_excel' => true,
         ];
     }
 

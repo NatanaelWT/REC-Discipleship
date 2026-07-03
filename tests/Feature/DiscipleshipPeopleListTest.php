@@ -23,7 +23,7 @@ class DiscipleshipPeopleListTest extends TestCase
     public function test_people_list_page_renders_for_logged_in_branch_user(): void
     {
         $this->createDiscipleshipTables();
-        DB::table('discipleship_people')->insert([
+        DB::table('people')->insert([
             [
                 'id' => 1,
                 'branch_id' => 1,
@@ -95,12 +95,12 @@ class DiscipleshipPeopleListTest extends TestCase
     public function test_people_list_hides_archived_duplicate_identity(): void
     {
         $this->createDiscipleshipTables();
-        DB::table('discipleship_people')->insert([
+        DB::table('people')->insert([
             [
                 'id' => 1,
                 'branch_id' => 1,
                 'full_name' => 'Identitas DG Sama',
-                'phone' => '081234567890',
+                'whatsapp' => '081234567890',
                 'status' => 'inactive',
                 'created_at' => now()->subDay(),
                 'updated_at' => now()->subDay(),
@@ -109,7 +109,7 @@ class DiscipleshipPeopleListTest extends TestCase
                 'id' => 2,
                 'branch_id' => 1,
                 'full_name' => 'Identitas DG Sama',
-                'phone' => '081234567890',
+                'whatsapp' => '081234567890',
                 'status' => 'active',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -153,7 +153,7 @@ class DiscipleshipPeopleListTest extends TestCase
     public function test_people_list_shows_dg_only_progress_track_and_ignores_legacy_bridge_filter(): void
     {
         $this->createDiscipleshipTables();
-        $personId = DB::table('discipleship_people')->insertGetId([
+        $personId = DB::table('people')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Peserta Progres DG',
             'status' => 'active',
@@ -205,7 +205,7 @@ class DiscipleshipPeopleListTest extends TestCase
     public function test_people_list_counts_active_and_historical_participants_by_their_last_stage(): void
     {
         $this->createDiscipleshipTables();
-        DB::table('discipleship_people')->insert([
+        DB::table('people')->insert([
             [
                 'id' => 1,
                 'branch_id' => 1,
@@ -346,9 +346,9 @@ class DiscipleshipPeopleListTest extends TestCase
             ];
         }
         foreach (array_chunk($rows, 200) as $chunk) {
-            DB::table('discipleship_people')->insert($chunk);
+            DB::table('people')->insert($chunk);
         }
-        $participantRows = DB::table('discipleship_people')
+        $participantRows = DB::table('people')
             ->where('branch_id', 1)
             ->orderBy('id')
             ->get(['id'])
@@ -367,7 +367,7 @@ class DiscipleshipPeopleListTest extends TestCase
         foreach (array_chunk($participantRows, 200) as $chunk) {
             DB::table('discipleship_group_people')->insert($chunk);
         }
-        $otherBranchPersonId = DB::table('discipleship_people')->insertGetId([
+        $otherBranchPersonId = DB::table('people')->insertGetId([
             'branch_id' => 2,
             'full_name' => 'Peserta 1000 Rahasia',
             'status' => 'active',
@@ -442,7 +442,7 @@ class DiscipleshipPeopleListTest extends TestCase
     public function test_people_list_exports_filtered_rows_to_a_valid_excel_file(): void
     {
         $this->createDiscipleshipTables();
-        DB::table('discipleship_people')->insert([
+        DB::table('people')->insert([
             [
                 'id' => 1,
                 'branch_id' => 1,
@@ -523,7 +523,7 @@ class DiscipleshipPeopleListTest extends TestCase
         }
     }
 
-    public function test_central_and_developer_can_export_discipleship_people(): void
+    public function test_central_and_developer_can_export_people(): void
     {
         $this->mock(DiscipleshipPeopleExportService::class)
             ->shouldReceive('export')
@@ -544,13 +544,13 @@ class DiscipleshipPeopleListTest extends TestCase
         Schema::dropIfExists('discipleship_group_people');
         Schema::dropIfExists('discipleship_relationships');
         Schema::dropIfExists('discipleship_groups');
-        Schema::dropIfExists('discipleship_people');
+        Schema::dropIfExists('people');
 
-        Schema::create('discipleship_people', function (Blueprint $table): void {
+        Schema::create('people', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('full_name')->nullable();
-            $table->string('phone')->nullable();
+            $table->string('whatsapp')->nullable();
             $table->string('status', 40)->default('active');
             $table->timestamps();
         });
@@ -601,3 +601,6 @@ class DiscipleshipPeopleListTest extends TestCase
         });
     }
 }
+
+
+

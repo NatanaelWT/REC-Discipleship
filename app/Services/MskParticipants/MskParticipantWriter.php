@@ -3,7 +3,7 @@
 namespace App\Services\MskParticipants;
 
 use App\Http\Requests\MskParticipants\MskParticipantWriteRequest;
-use App\Models\MskParticipant;
+use App\Models\Person;
 use App\Services\Activity\ActivityRecorder;
 use Illuminate\Support\Facades\DB;
 
@@ -13,7 +13,7 @@ class MskParticipantWriter
 
     /**
      * @return array{
-     *     participant?: MskParticipant,
+     *     participant?: Person,
      *     batch_month: string,
      *     auto_converted: bool,
      *     error: string
@@ -26,7 +26,7 @@ class MskParticipantWriter
         $participantId = (int) ($payload['id'] ?? 0);
         $existing = $participantId > 0 ? $this->participantForBranch($branchCode, $participantId) : null;
         $existingViewRow = $existing?->toViewArray() ?? [];
-        $existingLinkedPersonId = (int) ($existingViewRow['member_id'] ?? 0);
+        $existingLinkedPersonId = $existing instanceof Person ? (int) $existing->getKey() : 0;
 
         $uploadResult = $this->uploadedPhotos();
         if ($uploadResult['error'] !== '') {
@@ -44,22 +44,9 @@ class MskParticipantWriter
         $participantData = $this->participantData($participantId, $payload, $existingViewRow, $finalPhotos);
         $wasLinkedMember = $existingLinkedPersonId > 0;
 
-        $finalLinkedPersonId = (int) ($participantData['member_id'] ?? 0);
-        if ($this->memberAlreadyRegisteredInAnotherParticipant($branchCode, $participantId, $finalLinkedPersonId)) {
-            $this->deleteUploadedPhotos($uploadResult['photos']);
-
-            return [
-                'batch_month' => (string) ($payload['batch_month'] ?? ''),
-                'auto_converted' => false,
-                'error' => 'duplicate_msk_member',
-            ];
-        }
-
         $savedParticipant = $this->persistParticipant($branchCode, $participantData);
 
-        $autoConverted = ! $wasLinkedMember
-            && $finalLinkedPersonId > 0
-            && msk_is_complete($participantData);
+        $autoConverted = false;
 
         $removePhotoPaths = $payload['remove_photo_paths'] ?? [];
         if ($removePhotoPaths !== []) {
@@ -83,7 +70,7 @@ class MskParticipantWriter
      * @param  array<int, int>  $sessionNumbers
      * @return array{auto_converted: bool, error: string}
      */
-    public function updateSessions(MskParticipant $participant, array $sessionNumbers): array
+    public function updateSessions(Person $participant, array $sessionNumbers): array
     {
         $branchCode = normalize_public_branch_code(current_user_branch());
         $participant = $this->currentBranchParticipant($participant);
@@ -95,14 +82,10 @@ class MskParticipantWriter
         $participantData['session_numbers'] = normalize_msk_session_numbers($sessionNumbers);
         $participantData['updated_at'] = now_iso();
 
-        $wasLinkedMember = (int) ($participantData['member_id'] ?? 0) > 0;
-
         $this->persistParticipant($branchCode, $participantData);
 
         return [
-            'auto_converted' => ! $wasLinkedMember
-                && (int) ($participantData['member_id'] ?? 0) > 0
-                && msk_is_complete($participantData),
+            'auto_converted' => false,
             'error' => '',
         ];
     }
@@ -110,7 +93,7 @@ class MskParticipantWriter
     /**
      * @return array{error: string}
      */
-    public function setStatus(MskParticipant $participant, string $status): array
+    public function setStatus(Person $participant, string $status): array
     {
         $branchCode = normalize_public_branch_code(current_user_branch());
         $participant = $this->currentBranchParticipant($participant);
@@ -125,7 +108,7 @@ class MskParticipantWriter
         return ['error' => ''];
     }
 
-    public function currentBranchParticipant(MskParticipant $participant): ?MskParticipant
+    public function currentBranchParticipant(Person $participant): ?Person
     {
         $branchCode = normalize_public_branch_code(current_user_branch());
         if ((string) $participant->branch_code === $branchCode) {
@@ -151,7 +134,7 @@ class MskParticipantWriter
 
         return [
             'id' => $participantId,
-            'member_id' => (int) ($existing['member_id'] ?? $payload['discipleship_person_id'] ?? 0),
+            'member_id' => (int) ($existing['member_id'] ?? $payload['person_id'] ?? $payload['discipleship_person_id'] ?? 0),
             'full_name' => (string) ($payload['full_name'] ?? ''),
             'gender' => (string) ($payload['gender'] ?? ''),
             'birth_date' => $birthDate,
@@ -175,27 +158,25 @@ class MskParticipantWriter
     /**
      * @param  array<string, mixed>  $participantData
      */
-    private function persistParticipant(string $branchCode, array $participantData): MskParticipant
+    private function persistParticipant(string $branchCode, array $participantData): Person
     {
-        return DB::transaction(function () use ($branchCode, $participantData): MskParticipant {
+        return DB::transaction(function () use ($branchCode, $participantData): Person {
             $participantId = (int) ($participantData['id'] ?? 0);
-            $participant = $participantId > 0 ? $this->participantForBranch($branchCode, $participantId) : null;
-            if (! $participant instanceof MskParticipant && $participantId < 1) {
+            $requestedPersonId = (int) ($participantData['member_id'] ?? 0);
+            $participant = $participantId > 0
+                ? $this->participantForBranch($branchCode, $participantId)
+                : ($requestedPersonId > 0 ? $this->participantForBranch($branchCode, $requestedPersonId) : null);
+            if (! $participant instanceof Person && $participantId < 1) {
                 $participant = $this->matchingParticipantForIdentity($branchCode, $participantData);
             }
-            $participant ??= new MskParticipant([
+            $participant ??= new Person([
                 'branch_id' => branch_id_from_slug($branchCode),
             ]);
 
             $birthDate = normalize_ymd_date((string) ($participantData['birth_date'] ?? ''));
             $batchMonth = import_normalize_month_strict((string) ($participantData['msk_month'] ?? ''));
-            $linkedPersonId = (int) ($participantData['member_id'] ?? 0);
-            if ($linkedPersonId < 1 && $participant instanceof MskParticipant && $participant->discipleship_person_id !== null) {
-                $linkedPersonId = (int) $participant->discipleship_person_id;
-            }
             $fill = [
                 'branch_id' => branch_id_from_slug($branchCode),
-                'discipleship_person_id' => $linkedPersonId > 0 ? $linkedPersonId : null,
                 'full_name' => $this->nullableString($participantData['full_name'] ?? null),
                 'gender' => $this->nullableString(normalize_member_gender_value((string) ($participantData['gender'] ?? ''))),
                 'birth_date' => $birthDate !== '' ? $birthDate : null,
@@ -303,22 +284,9 @@ class MskParticipantWriter
         }
     }
 
-    private function memberAlreadyRegisteredInAnotherParticipant(string $branchCode, int $participantId, int $personId): bool
+    private function participantForBranch(string $branchCode, int $participantId): ?Person
     {
-        if ($personId < 1) {
-            return false;
-        }
-
-        return MskParticipant::query()
-            ->where('branch_id', branch_id_from_slug($branchCode))
-            ->where('discipleship_person_id', $personId)
-            ->when($participantId > 0, static fn ($query) => $query->where('id', '!=', $participantId))
-            ->exists();
-    }
-
-    private function participantForBranch(string $branchCode, int $participantId): ?MskParticipant
-    {
-        $query = MskParticipant::query()
+        $query = Person::query()
             ->where('branch_id', branch_id_from_slug($branchCode))
             ->whereKey($participantId);
 
@@ -328,7 +296,7 @@ class MskParticipantWriter
     /**
      * @param  array<string, mixed>  $participantData
      */
-    private function matchingParticipantForIdentity(string $branchCode, array $participantData): ?MskParticipant
+    private function matchingParticipantForIdentity(string $branchCode, array $participantData): ?Person
     {
         $identityKey = $this->identityKey(
             (string) ($participantData['full_name'] ?? ''),
@@ -339,14 +307,14 @@ class MskParticipantWriter
             return null;
         }
 
-        return MskParticipant::query()
+        return Person::query()
             ->where('branch_id', $branchId)
             ->get()
-            ->filter(fn (MskParticipant $participant): bool => $this->identityKey(
+            ->filter(fn (Person $participant): bool => $this->identityKey(
                 (string) ($participant->full_name ?? ''),
                 (string) ($participant->whatsapp ?? ''),
             ) === $identityKey)
-            ->sortByDesc(fn (MskParticipant $participant): int => $this->participantCompletenessScore($participant))
+            ->sortByDesc(fn (Person $participant): int => $this->participantCompletenessScore($participant))
             ->first();
     }
 
@@ -359,11 +327,10 @@ class MskParticipantWriter
         return discipleship_unified_identity_key($fullName, $whatsapp);
     }
 
-    private function participantCompletenessScore(MskParticipant $participant): int
+    private function participantCompletenessScore(Person $participant): int
     {
         return (count(normalize_msk_session_numbers($participant->session_numbers ?? [])) * 100)
-            + (trim((string) ($participant->batch_month ?? '')) !== '' ? 10 : 0)
-            + ($participant->discipleship_person_id !== null ? 1 : 0);
+            + (trim((string) ($participant->batch_month ?? '')) !== '' ? 10 : 0);
     }
 
     /**
@@ -371,13 +338,13 @@ class MskParticipantWriter
      */
     private function participantsForBranch(string $branchCode): array
     {
-        $query = MskParticipant::query()
+        $query = Person::query()
             ->where('branch_id', branch_id_from_slug($branchCode))
             ->orderBy('full_name')
             ->orderBy('id');
 
         return $query->get()
-            ->map(static fn (MskParticipant $participant): array => $participant->toViewArray())
+            ->map(static fn (Person $participant): array => $participant->toViewArray())
             ->values()
             ->all();
     }

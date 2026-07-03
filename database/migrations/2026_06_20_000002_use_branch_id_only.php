@@ -325,8 +325,12 @@ return new class extends Migration
                 continue;
             }
 
-            Schema::table($table, static function (Blueprint $blueprint) use ($foreignKey): void {
-                $blueprint->dropForeign($foreignKey['name']);
+            $dropTarget = DB::getDriverName() === 'sqlite'
+                ? ($foreignKey['columns'] ?? ['branch_id'])
+                : $foreignKey['name'];
+
+            Schema::table($table, static function (Blueprint $blueprint) use ($dropTarget): void {
+                $blueprint->dropForeign($dropTarget);
             });
         }
 

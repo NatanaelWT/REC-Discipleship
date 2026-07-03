@@ -45,7 +45,7 @@ class DiscipleshipGroup extends Model
 
     public function initiator(): BelongsTo
     {
-        return $this->belongsTo(DiscipleshipPerson::class, 'initiated_by_person_id');
+        return $this->belongsTo(Person::class, 'initiated_by_person_id');
     }
 
     public function childGroups(): HasMany

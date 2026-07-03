@@ -17,7 +17,7 @@ class ExportDiscipleshipPeopleRequest extends FormRequest
 
         return $context->isLoggedIn()
             && $context->canAccessPage('people_list')
-            && $context->canUseAction('export_discipleship_people_excel');
+            && $context->canUseAction('export_people_excel');
     }
 
     /** @return array<string, mixed> */
