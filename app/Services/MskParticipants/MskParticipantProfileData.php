@@ -103,6 +103,7 @@ class MskParticipantProfileData
             'current_stage' => normalize_dg_progress_value((string) ($history['current_stage'] ?? '')),
             'member_items' => is_array($history['member_items'] ?? null) ? $history['member_items'] : [],
             'leader_items' => is_array($history['leader_items'] ?? null) ? $history['leader_items'] : [],
+            'is_external_context' => ! empty($history['is_external_context']),
         ];
     }
 }

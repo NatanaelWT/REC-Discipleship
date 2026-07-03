@@ -48,7 +48,8 @@ class MskParticipantHistoryData
         $personIds = array_values(array_unique($participantPersonIds));
         $targetPeople = Person::query()
             ->whereIn('id', $personIds)
-            ->get(['id']);
+            ->get(['id', 'branch_id'])
+            ->keyBy('id');
         $validPersonIds = $targetPeople->pluck('id')->map(static fn ($id): int => (int) $id)->all();
         if ($validPersonIds === []) {
             return $histories;
@@ -110,6 +111,7 @@ class MskParticipantHistoryData
                 $groups,
                 $allGroupLinks,
                 $names,
+                $this->externalContextBranchId($personId, $targetPeople, $branchIds),
             );
         }
 
@@ -127,7 +129,23 @@ class MskParticipantHistoryData
             'current_stage' => '',
             'member_items' => [],
             'leader_items' => [],
+            'is_external_context' => false,
         ];
+    }
+
+    /**
+     * @param  Collection<int, Person>  $people
+     * @param  array<int, int>  $branchIds
+     */
+    private function externalContextBranchId(int $personId, Collection $people, array $branchIds): int
+    {
+        $person = $people->get($personId);
+        $personBranchId = $person instanceof Person ? (int) $person->branch_id : 0;
+        $branchIds = array_values(array_unique(array_map(static fn (mixed $branchId): int => (int) $branchId, $branchIds)));
+
+        return count($branchIds) === 1 && $personBranchId > 0 && $branchIds[0] !== $personBranchId
+            ? $branchIds[0]
+            : 0;
     }
 
     /**
@@ -145,6 +163,7 @@ class MskParticipantHistoryData
         Collection $groups,
         Collection $allGroupLinks,
         array $names,
+        int $externalContextBranchId,
     ): array {
         $activeRelations = $relations->filter(fn (DiscipleshipRelationship $row): bool => $this->isActive($row->status, $row->end_date));
         $currentMentors = $activeRelations->map(fn (DiscipleshipRelationship $row): string => $names[(int) $row->mentor_person_id] ?? '-')
@@ -227,6 +246,7 @@ class MskParticipantHistoryData
             'current_stage' => $currentStage,
             'member_items' => $memberItems,
             'leader_items' => $leaderItems,
+            'is_external_context' => $externalContextBranchId > 0,
         ];
     }
 

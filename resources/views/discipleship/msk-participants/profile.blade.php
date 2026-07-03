@@ -9,6 +9,7 @@
     if ($batchBadgeLabel === '') {
         $batchBadgeLabel = 'Batch '.(string) ($profile['batch'] ?? '-');
     }
+    $isExternalContext = ! empty($profile['is_external_context']);
     $renderHistory = static function (array $items): string {
         if ($items === []) {
             return '';
@@ -91,33 +92,37 @@
     </section>
   </div>
 
-  <section class="msk-view-summary-card">
-    <div class="msk-view-section-head"><span class="msk-view-section-kicker">Perjalanan</span><h4>MSK dan pemuridan aktif</h4></div>
-    <div class="msk-view-summary-grid">
-      <div class="msk-view-summary-item"><span>Sesi MSK</span><strong>{{ $profile['session_progress'] }}</strong></div>
-      <div class="msk-view-summary-item"><span>Mentor Aktif</span><strong>{{ $profile['current_mentors'] !== [] ? implode(', ', $profile['current_mentors']) : '-' }}</strong></div>
-      <div class="msk-view-summary-item"><span>Kelompok Aktif</span><strong>{{ $profile['current_groups'] !== [] ? implode(', ', $profile['current_groups']) : '-' }}</strong></div>
-      <div class="msk-view-summary-item"><span>Tahap DG</span><strong>{{ $stage !== '' ? $stage : 'Belum DG' }}</strong></div>
-    </div>
-    <div class="msk-view-progress">
-      <div class="msk-progress-top"><span class="msk-progress-value">{{ $profile['session_progress'] }}</span><span class="msk-progress-percent">{{ $profile['session_percent'] }}%</span></div>
-      <div class="msk-progress-bar" aria-hidden="true"><span style="width:{{ $profile['session_percent'] }}%"></span></div>
-      <div class="msk-progress-meta">{{ $profile['session_label'] }}</div>
-    </div>
-  </section>
+  @if(! $isExternalContext)
+    <section class="msk-view-summary-card">
+      <div class="msk-view-section-head"><span class="msk-view-section-kicker">Perjalanan</span><h4>MSK dan pemuridan aktif</h4></div>
+      <div class="msk-view-summary-grid">
+        <div class="msk-view-summary-item"><span>Sesi MSK</span><strong>{{ $profile['session_progress'] }}</strong></div>
+        <div class="msk-view-summary-item"><span>Mentor Aktif</span><strong>{{ $profile['current_mentors'] !== [] ? implode(', ', $profile['current_mentors']) : '-' }}</strong></div>
+        <div class="msk-view-summary-item"><span>Kelompok Aktif</span><strong>{{ $profile['current_groups'] !== [] ? implode(', ', $profile['current_groups']) : '-' }}</strong></div>
+        <div class="msk-view-summary-item"><span>Tahap DG</span><strong>{{ $stage !== '' ? $stage : 'Belum DG' }}</strong></div>
+      </div>
+      <div class="msk-view-progress">
+        <div class="msk-progress-top"><span class="msk-progress-value">{{ $profile['session_progress'] }}</span><span class="msk-progress-percent">{{ $profile['session_percent'] }}%</span></div>
+        <div class="msk-progress-bar" aria-hidden="true"><span style="width:{{ $profile['session_percent'] }}%"></span></div>
+        <div class="msk-progress-meta">{{ $profile['session_label'] }}</div>
+      </div>
+    </section>
+  @endif
 
   <section class="msk-view-section is-wide msk-view-history-section">
     <div class="msk-view-section-head"><span class="msk-view-section-kicker">Pemuridan</span><h4>Riwayat pemuridan</h4></div>
     @if(! $profile['linked'])
       <div class="journey-history-empty">Peserta ini belum terhubung ke data pemuridan. Setelah peserta dihubungkan ke Anggota DG, riwayat kelompok, mentor, dan kepemimpinan akan muncul di sini.</div>
-    @elseif($profile['member_items'] === [] && $profile['leader_items'] === [])
+    @elseif((! $isExternalContext && $profile['member_items'] === []) && $profile['leader_items'] === [])
       <div class="journey-history-empty">Peserta sudah terhubung ke data pemuridan, tetapi belum memiliki riwayat kelompok atau kepemimpinan.</div>
     @else
-      <div class="journey-history-split-section">
-        <div class="journey-history-split-header">Riwayat Sebagai Anggota</div>
-        {!! $profile['member_items'] !== [] ? $renderHistory($profile['member_items']) : '<div class="journey-history-empty">Belum ada riwayat sebagai anggota.</div>' !!}
-      </div>
-      <div class="journey-history-split-divider"></div>
+      @if(! $isExternalContext)
+        <div class="journey-history-split-section">
+          <div class="journey-history-split-header">Riwayat Sebagai Anggota</div>
+          {!! $profile['member_items'] !== [] ? $renderHistory($profile['member_items']) : '<div class="journey-history-empty">Belum ada riwayat sebagai anggota.</div>' !!}
+        </div>
+        <div class="journey-history-split-divider"></div>
+      @endif
       <div class="journey-history-split-section">
         <div class="journey-history-split-header">Riwayat Memimpin</div>
         {!! $profile['leader_items'] !== [] ? $renderHistory($profile['leader_items']) : '<div class="journey-history-empty">Belum ada riwayat memimpin kelompok.</div>' !!}

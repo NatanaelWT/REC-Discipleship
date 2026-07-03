@@ -57,10 +57,16 @@ class PeopleTreePageTest extends TestCase
 
         $this->actingAsRecUser();
 
-        $this->get('/pemuridan/pohon')
+        $response = $this->get('/pemuridan/pohon')
             ->assertOk()
             ->assertSee('Yakub Tri Handoko (GM)')
             ->assertSee('Anggota Kutisari Lintas');
+
+        $profileHtml = $this->profileTemplateHtml($response->getContent(), '626');
+        $this->assertStringNotContainsString('MSK dan pemuridan aktif', $profileHtml);
+        $this->assertStringNotContainsString('Riwayat Sebagai Anggota', $profileHtml);
+        $this->assertStringContainsString('Riwayat Memimpin', $profileHtml);
+        $this->assertStringContainsString('Anggota Kutisari Lintas', $profileHtml);
 
         $this->assertSame(
             0,
@@ -591,6 +597,15 @@ class PeopleTreePageTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    private function profileTemplateHtml(string $content, string $personId): string
+    {
+        $pattern = '/<template[^>]*data-tree-v2-person-profile-template="'.preg_quote($personId, '/').'"[^>]*>(.*?)<\/template>/s';
+        $this->assertMatchesRegularExpression($pattern, $content);
+        preg_match($pattern, $content, $matches);
+
+        return (string) ($matches[1] ?? '');
     }
 
     private function seedCrossBranchLeaderGroup(): void
