@@ -65,10 +65,16 @@ return new class extends Migration
             $this->ensureParticipantLinkColumn();
             $this->assertNoDuplicateParticipantLinks();
 
-            DB::transaction(function (): void {
+            $personIdMap = [];
+            DB::transaction(function () use (&$personIdMap): void {
                 $this->ensureEveryDiscipleshipPersonHasParticipant();
                 $personIdMap = $this->personIdMap();
                 $this->mergeDiscipleshipPeopleIntoParticipants($personIdMap);
+            });
+
+            $this->dropLegacyForeignKeys();
+
+            DB::transaction(function () use ($personIdMap): void {
                 $this->remapPersonReferences($personIdMap);
                 $this->remapMeetingReportJson($personIdMap);
             });
@@ -77,7 +83,6 @@ return new class extends Migration
         Schema::disableForeignKeyConstraints();
 
         try {
-            $this->dropLegacyForeignKeys();
             Schema::dropIfExists('msk_participant_photos');
             Schema::dropIfExists('msk_participant_sessions');
 
