@@ -55,6 +55,7 @@ class PeopleTreeModelStore
         $groups = $this->groupRows($branchIds);
         $groupPeople = $this->groupPeopleRows($branchIds);
         $relationships = $this->relationshipRows($branchIds);
+        $manualJourneyRows = $this->manualJourneyRows($branchIds);
         $memberships = [];
         $leaderships = [];
         foreach ($groupPeople as $row) {
@@ -64,10 +65,14 @@ class PeopleTreeModelStore
                 $leaderships[] = $row;
             }
         }
-        $memberships = array_merge($memberships, $this->manualJourneyRows($branchIds));
+        $memberships = array_merge($memberships, $manualJourneyRows);
 
         return dgv2_normalize_model([
-            'discipleship_persons' => $this->peopleRows($branchIds, $this->referencedPersonIds($groups, $groupPeople, $relationships)),
+            'discipleship_persons' => $this->peopleRows($this->referencedPersonIds(
+                $groups,
+                array_merge($groupPeople, $manualJourneyRows),
+                $relationships,
+            )),
             'discipleship_groups' => $groups,
             'discipleship_relations' => $relationships,
             'group_memberships' => $memberships,
@@ -354,8 +359,16 @@ class PeopleTreeModelStore
     }
 
     /** @return array<int, array<string, mixed>> */
-    private function peopleRows(array $branchIds, array $extraPersonIds = []): array
+    private function peopleRows(array $personIds): array
     {
+        $personIds = array_values(array_filter(array_unique(array_map(
+            static fn (mixed $personId): int => (int) $personId,
+            $personIds,
+        )), static fn (int $personId): bool => $personId > 0));
+        if ($personIds === []) {
+            return [];
+        }
+
         $query = Person::query();
         DiscipleshipPersonProfile::join($query);
 
@@ -371,12 +384,7 @@ class PeopleTreeModelStore
                 DB::raw(DiscipleshipPersonProfile::expression('phone').' as phone'),
                 DB::raw(DiscipleshipPersonProfile::expression('gender').' as gender'),
             ])
-            ->where(function ($query) use ($branchIds, $extraPersonIds): void {
-                $query->whereIn('people.branch_id', $branchIds);
-                if ($extraPersonIds !== []) {
-                    $query->orWhereIn('people.id', $extraPersonIds);
-                }
-            })
+            ->whereIn('people.id', $personIds)
             ->orderBy('people.id')
             ->get()
             ->map(static fn (Person $person): array => [
@@ -568,7 +576,6 @@ class PeopleTreeModelStore
     private function syncPeople(int $branchId, array $rows): array
     {
         $map = [];
-        $kept = [];
         foreach ($rows as $row) {
             if (! is_array($row)) {
                 continue;
@@ -611,13 +618,7 @@ class PeopleTreeModelStore
             $actualId = (int) $person->getKey();
             $map[$sourceId !== '' ? $sourceId : (string) $actualId] = $actualId;
             $map[(string) $actualId] = $actualId;
-            $kept[] = $actualId;
         }
-
-        Person::query()
-            ->where('branch_id', $branchId)
-            ->when($kept !== [], static fn ($query) => $query->whereNotIn('id', $kept))
-            ->delete();
 
         return $map;
     }

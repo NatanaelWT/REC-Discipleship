@@ -68,6 +68,48 @@ class PeopleTreePageTest extends TestCase
         );
     }
 
+    public function test_people_tree_excludes_msk_only_people_from_tree_nodes(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $mskOnlyId = DB::table('people')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Peserta MSK Saja',
+            'whatsapp' => '089999999999',
+            'batch_month' => '2026-06',
+            'status' => 'active',
+            'session_numbers' => json_encode(range(1, 12)),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $store = app(PeopleTreeModelStore::class);
+        $model = $store->modelForBranch('kutisari');
+        $participants = $store->participantsForBranches(['kutisari'], false);
+        $people = $store->peopleForModel($model, [], $participants, false);
+
+        $this->assertContains((string) $mskOnlyId, array_map(
+            static fn (array $row): string => (string) ($row['member_id'] ?? ''),
+            $participants,
+        ));
+        $this->assertNotContains((string) $mskOnlyId, array_map(
+            static fn (array $row): string => (string) ($row['id'] ?? ''),
+            $model['discipleship_persons'],
+        ));
+        $this->assertNotContains('Peserta MSK Saja', array_map(
+            static fn (array $row): string => (string) ($row['name'] ?? ''),
+            $people,
+        ));
+
+        $store->replaceBranchModel('kutisari', $model);
+
+        $this->assertDatabaseHas('people', [
+            'id' => $mskOnlyId,
+            'full_name' => 'Peserta MSK Saja',
+        ]);
+    }
+
     public function test_central_selected_branch_tree_renders_cross_branch_leader_in_branch_context(): void
     {
         $this->createTables();
