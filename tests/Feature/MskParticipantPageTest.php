@@ -219,6 +219,8 @@ class MskParticipantPageTest extends TestCase
         $this->assertStringContainsString('Peserta MSK 051', (string) $pageTwo->json('html'));
         $this->assertStringContainsString('Peserta MSK 100', (string) $pageTwo->json('html'));
         $this->assertStringNotContainsString('Peserta MSK 101', (string) $pageTwo->json('html'));
+        $this->assertStringContainsString('data-msk-edit-template=', (string) $pageTwo->json('edit_templates_html'));
+        $this->assertStringContainsString('Peserta MSK 051', (string) $pageTwo->json('edit_templates_html'));
 
         $search = $this->get('/pemuridan/msk/rows?batch_month=all&q=MSK+120');
         $search->assertOk()
@@ -226,6 +228,7 @@ class MskParticipantPageTest extends TestCase
             ->assertJsonPath('stats.total', 1)
             ->assertJsonPath('stats.progress', 1);
         $this->assertStringContainsString('Peserta MSK 120', (string) $search->json('html'));
+        $this->assertStringContainsString('Peserta MSK 120', (string) $search->json('edit_templates_html'));
         $this->assertStringNotContainsString('Peserta MSK 001', (string) $search->json('html'));
     }
 

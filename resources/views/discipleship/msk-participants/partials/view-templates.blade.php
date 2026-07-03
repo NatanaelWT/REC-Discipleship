@@ -10,10 +10,17 @@
       }
       $templateEditHref = '';
       if (! $centralReadOnly && $templateId !== '') {
-          $templateEditHref = route('discipleship.msk-classes', [
+          $editRouteParams = [
               'edit' => $templateId,
               'batch_month' => $batchMonthFilterParam,
-          ]);
+          ];
+          if (request()->filled('branch_id')) {
+              $editRouteParams['branch_id'] = request()->query('branch_id');
+          }
+          if (request()->filled('q')) {
+              $editRouteParams['q'] = request()->query('q');
+          }
+          $templateEditHref = route('discipleship.msk-classes', $editRouteParams);
       }
   @endphp
   @if ($templateId !== '' && $profile !== null)

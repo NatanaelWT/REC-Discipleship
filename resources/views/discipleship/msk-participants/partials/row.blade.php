@@ -33,8 +33,18 @@
         $waHtml = '<span class="msk-wa-empty">Tidak ada nomor</span>';
     }
     $searchText = trim($fullName.' '.$whatsapp.' '.(string) ($participant['email'] ?? ''));
-    $viewHref = route('discipleship.msk-classes', ['view' => $participantId, 'batch_month' => $batchMonthFilterParam]);
-    $editHref = route('discipleship.msk-classes', ['edit' => $participantId, 'batch_month' => $batchMonthFilterParam]);
+    $viewRouteParams = ['view' => $participantId, 'batch_month' => $batchMonthFilterParam];
+    $editRouteParams = ['edit' => $participantId, 'batch_month' => $batchMonthFilterParam];
+    if (request()->filled('branch_id')) {
+        $viewRouteParams['branch_id'] = request()->query('branch_id');
+        $editRouteParams['branch_id'] = request()->query('branch_id');
+    }
+    if (request()->filled('q')) {
+        $viewRouteParams['q'] = request()->query('q');
+        $editRouteParams['q'] = request()->query('q');
+    }
+    $viewHref = route('discipleship.msk-classes', $viewRouteParams);
+    $editHref = route('discipleship.msk-classes', $editRouteParams);
     $nameSubLabel = $participantStatus === 'inactive' ? 'Peserta kelas MSK - Nonaktif' : 'Peserta kelas MSK';
 @endphp
 <tr data-msk-search-row data-search-text="{{ $searchText }}">

@@ -927,6 +927,7 @@
       const emptyRow = root.querySelector('[data-msk-search-empty]');
       const loadingRow = root.querySelector('[data-msk-loading]');
       const templatesContainer = document.querySelector('[data-msk-view-templates]');
+      const editTemplatesContainer = document.querySelector('[data-msk-edit-templates]');
       const rowsUrl = root.getAttribute('data-rows-url') || '';
       if (!input || !body || !rowsUrl) {
         return;
@@ -1044,6 +1045,19 @@
         }
       };
 
+      const insertEditTemplates = (html, mode) => {
+        if (!editTemplatesContainer) {
+          return;
+        }
+        if (mode === 'replace') {
+          editTemplatesContainer.innerHTML = '';
+        }
+        const content = String(html || '').trim();
+        if (content !== '') {
+          editTemplatesContainer.insertAdjacentHTML('beforeend', content);
+        }
+      };
+
       const syncUrl = () => {
         if (!window.history || typeof window.history.replaceState !== 'function') {
           return;
@@ -1063,6 +1077,8 @@
         }
         url.searchParams.delete('page');
         url.searchParams.delete('per_page');
+        url.searchParams.delete('edit');
+        url.searchParams.delete('view');
         window.history.replaceState(window.history.state, '', url.toString());
       };
 
@@ -1090,6 +1106,7 @@
         }
         insertRows(data && data.html);
         insertTemplates(data && data.templates_html, mode);
+        insertEditTemplates(data && data.edit_templates_html, mode);
         hasMore = Boolean(data && data.has_more);
         nextPage = hasMore ? (parseInt(String(data.next_page || ''), 10) || null) : null;
         root.setAttribute('data-has-more', hasMore ? '1' : '0');
@@ -1711,6 +1728,17 @@
       const titleEl = mskEditModal.querySelector('[data-msk-edit-title]');
       const bodyEl = mskEditModal.querySelector('[data-msk-edit-body]');
       const templateMap = new Map();
+      const clearMskEditSelectionAlerts = () => {
+        document.querySelectorAll('.alert.danger').forEach((alertEl) => {
+          const message = String(alertEl.textContent || '').trim();
+          if (
+            message === 'Data peserta kelas MSK yang ingin diedit tidak ditemukan.' ||
+            message === 'Data peserta kelas MSK yang ingin dilihat tidak ditemukan.'
+          ) {
+            alertEl.remove();
+          }
+        });
+      };
 
       document.querySelectorAll('template[data-msk-edit-template]').forEach((templateEl) => {
         const participantId = templateEl.getAttribute('data-msk-edit-template') || '';
@@ -1724,11 +1752,9 @@
         if (!key) {
           return false;
         }
-        if (!templateMap.has(key)) {
-          const freshTemplate = queryTemplateByAttribute('data-msk-edit-template', key);
-          if (freshTemplate) {
-            templateMap.set(key, freshTemplate);
-          }
+        const freshTemplate = queryTemplateByAttribute('data-msk-edit-template', key);
+        if (freshTemplate) {
+          templateMap.set(key, freshTemplate);
         }
         if (!templateMap.has(key)) {
           return false;
@@ -1748,6 +1774,7 @@
         mskEditModal.classList.add('is-open');
         mskEditModal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('modal-open');
+        clearMskEditSelectionAlerts();
 
         if (bodyEl) {
           const firstInput = bodyEl.querySelector('input, select, textarea');

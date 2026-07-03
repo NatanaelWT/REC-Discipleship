@@ -49,6 +49,11 @@ class MskParticipantController extends Controller
                 'centralReadOnly' => (bool) ($data['centralReadOnly'] ?? false),
                 'batchMonthFilterParam' => (string) ($data['batchMonthFilterParam'] ?? ''),
             ])->render(),
+            'edit_templates_html' => view('discipleship.msk-participants.partials.edit-templates', [
+                'participantsFilteredByBatch' => $participants,
+                'centralReadOnly' => (bool) ($data['centralReadOnly'] ?? false),
+                'batchMonthFilterParam' => (string) ($data['batchMonthFilterParam'] ?? ''),
+            ])->render(),
             'has_more' => (bool) ($data['hasMoreMskRows'] ?? false),
             'next_page' => $data['nextMskPage'] ?? null,
             'stats' => [
