@@ -56,10 +56,6 @@ return new class extends Migration
             }
         }
 
-        if (count($linkedPersonIds) > 1) {
-            throw new RuntimeException('Duplicate MSK participants share identity but point to different discipleship people.');
-        }
-
         $target = $this->targetParticipant($rows);
         $losers = array_values(array_filter(
             $rows,
@@ -69,13 +65,24 @@ return new class extends Migration
             return;
         }
 
-        $updates = $this->mergedValues($target, $losers, array_values($linkedPersonIds)[0] ?? null);
+        $canonicalPersonId = $this->canonicalPersonId($target, $rows, $linkedPersonIds);
+        $duplicatePersonIds = $canonicalPersonId !== null
+            ? array_values(array_diff(array_values($linkedPersonIds), [$canonicalPersonId]))
+            : [];
+        $this->mergeDiscipleshipPeople($canonicalPersonId, $duplicatePersonIds);
+
+        $updates = $this->mergedValues($target, $losers, $canonicalPersonId);
         $loserIds = array_map(static fn (object $row): int => (int) $row->id, $losers);
 
         if (Schema::hasColumn('msk_participants', 'discipleship_person_id')) {
             DB::table('msk_participants')
                 ->whereIn('id', $loserIds)
                 ->update(['discipleship_person_id' => null]);
+            if ($duplicatePersonIds !== []) {
+                DB::table('msk_participants')
+                    ->whereIn('discipleship_person_id', $duplicatePersonIds)
+                    ->update(['discipleship_person_id' => null]);
+            }
         }
 
         DB::table('msk_participants')
@@ -85,6 +92,8 @@ return new class extends Migration
         DB::table('msk_participants')
             ->whereIn('id', $loserIds)
             ->delete();
+
+        $this->deleteDuplicatePeople($duplicatePersonIds);
     }
 
     /** @param array<int, object> $rows */
@@ -108,6 +117,233 @@ return new class extends Migration
             + ($this->stringValue($row, 'email') !== '' ? 5 : 0)
             + ($this->stringValue($row, 'birth_date') !== '' ? 5 : 0)
             + ((int) ($row->discipleship_person_id ?? 0) > 0 ? 1 : 0);
+    }
+
+    /** @param array<int, object> $rows @param array<int, int> $linkedPersonIds */
+    private function canonicalPersonId(object $target, array $rows, array $linkedPersonIds): ?int
+    {
+        $targetPersonId = (int) ($target->discipleship_person_id ?? 0);
+        if ($targetPersonId > 0) {
+            return $targetPersonId;
+        }
+
+        if ($linkedPersonIds === []) {
+            return null;
+        }
+
+        usort($rows, function (object $left, object $right): int {
+            $score = $this->participantScore($right) <=> $this->participantScore($left);
+
+            return $score !== 0 ? $score : ((int) $left->id <=> (int) $right->id);
+        });
+
+        foreach ($rows as $row) {
+            $personId = (int) ($row->discipleship_person_id ?? 0);
+            if ($personId > 0) {
+                return $personId;
+            }
+        }
+
+        return array_values($linkedPersonIds)[0] ?? null;
+    }
+
+    /** @param array<int, int> $duplicatePersonIds */
+    private function mergeDiscipleshipPeople(?int $canonicalPersonId, array $duplicatePersonIds): void
+    {
+        if ($canonicalPersonId === null || $duplicatePersonIds === []) {
+            return;
+        }
+
+        $this->mergePersonRowValues($canonicalPersonId, $duplicatePersonIds);
+        $this->remapColumn('discipleship_group_people', 'person_id', $canonicalPersonId, $duplicatePersonIds);
+        $this->remapColumn('discipleship_relationships', 'mentor_person_id', $canonicalPersonId, $duplicatePersonIds);
+        $this->remapColumn('discipleship_relationships', 'disciple_person_id', $canonicalPersonId, $duplicatePersonIds);
+        $this->remapColumn('discipleship_groups', 'initiated_by_person_id', $canonicalPersonId, $duplicatePersonIds);
+        $this->remapColumn('discipleship_group_multiplications', 'initiated_by_person_id', $canonicalPersonId, $duplicatePersonIds);
+        $this->remapColumn('discipleship_meeting_reports', 'leader_person_id', $canonicalPersonId, $duplicatePersonIds);
+        $this->remapColumn('discipleship_feedbacks', 'leader_person_id', $canonicalPersonId, $duplicatePersonIds);
+        $this->remapColumn('discipleship_feedbacks', 'respondent_person_id', $canonicalPersonId, $duplicatePersonIds);
+        $this->remapColumn('discipleship_meeting_report_absences', 'person_id', $canonicalPersonId, $duplicatePersonIds);
+        $this->remapColumn('discipleship_meeting_report_meditation_sharers', 'person_id', $canonicalPersonId, $duplicatePersonIds);
+        $this->mergeManualJourneyRecords($canonicalPersonId, $duplicatePersonIds);
+        $this->remapReportJsonPersonIds($canonicalPersonId, $duplicatePersonIds);
+        $this->deleteSelfRelationships($canonicalPersonId);
+    }
+
+    /** @param array<int, int> $duplicatePersonIds */
+    private function mergePersonRowValues(int $canonicalPersonId, array $duplicatePersonIds): void
+    {
+        if (! Schema::hasTable('discipleship_people')) {
+            return;
+        }
+
+        $personIds = array_values(array_unique(array_merge([$canonicalPersonId], $duplicatePersonIds)));
+        $people = DB::table('discipleship_people')
+            ->whereIn('id', $personIds)
+            ->orderByRaw('CASE WHEN id = ? THEN 0 ELSE 1 END', [$canonicalPersonId])
+            ->orderBy('id')
+            ->get()
+            ->all();
+        if ($people === []) {
+            return;
+        }
+
+        $updates = [];
+        if (Schema::hasColumn('discipleship_people', 'notes')) {
+            $updates['notes'] = $this->mergedNotes($people);
+        }
+        if (Schema::hasColumn('discipleship_people', 'status')) {
+            $updates['status'] = $this->mergedPersonStatus($people);
+        }
+        if (Schema::hasColumn('discipleship_people', 'created_at')) {
+            $updates['created_at'] = $this->timestampBoundary($people, 'created_at', 'min');
+        }
+        if (Schema::hasColumn('discipleship_people', 'updated_at')) {
+            $updates['updated_at'] = $this->timestampBoundary($people, 'updated_at', 'max') ?? now();
+        }
+
+        if ($updates !== []) {
+            DB::table('discipleship_people')
+                ->where('id', $canonicalPersonId)
+                ->update($this->existingColumnValues('discipleship_people', $updates));
+        }
+    }
+
+    /** @param array<int, object> $people */
+    private function mergedPersonStatus(array $people): string
+    {
+        foreach ($people as $person) {
+            if ($this->stringValue($person, 'status') === 'active') {
+                return 'active';
+            }
+        }
+
+        return $this->firstFilled($people, 'status') ?: 'active';
+    }
+
+    /** @param array<int, int> $duplicatePersonIds */
+    private function remapColumn(string $table, string $column, int $canonicalPersonId, array $duplicatePersonIds): void
+    {
+        if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $column)) {
+            return;
+        }
+
+        DB::table($table)
+            ->whereIn($column, $duplicatePersonIds)
+            ->update([$column => $canonicalPersonId]);
+    }
+
+    /** @param array<int, int> $duplicatePersonIds */
+    private function mergeManualJourneyRecords(int $canonicalPersonId, array $duplicatePersonIds): void
+    {
+        if (! $this->hasColumns('discipleship_manual_journey_records', ['id', 'branch_id', 'person_id', 'stage'])) {
+            return;
+        }
+
+        foreach (DB::table('discipleship_manual_journey_records')->whereIn('person_id', $duplicatePersonIds)->orderBy('id')->get() as $row) {
+            $existing = DB::table('discipleship_manual_journey_records')
+                ->where('branch_id', (int) $row->branch_id)
+                ->where('person_id', $canonicalPersonId)
+                ->where('stage', (string) $row->stage)
+                ->first();
+
+            if ($existing === null) {
+                DB::table('discipleship_manual_journey_records')
+                    ->where('id', (int) $row->id)
+                    ->update(['person_id' => $canonicalPersonId]);
+
+                continue;
+            }
+
+            DB::table('discipleship_manual_journey_records')
+                ->where('id', (int) $existing->id)
+                ->update($this->existingColumnValues('discipleship_manual_journey_records', [
+                    'completed_on' => $this->earliestDate($this->stringValue($existing, 'completed_on'), $this->stringValue($row, 'completed_on')),
+                    'notes' => $this->mergedNotes([$existing, $row]),
+                    'created_at' => $this->timestampBoundary([$existing, $row], 'created_at', 'min'),
+                    'updated_at' => $this->timestampBoundary([$existing, $row], 'updated_at', 'max') ?? now(),
+                ]));
+            DB::table('discipleship_manual_journey_records')->where('id', (int) $row->id)->delete();
+        }
+    }
+
+    private function earliestDate(string $left, string $right): ?string
+    {
+        $dates = array_values(array_filter([$left, $right], static fn (string $value): bool => $value !== ''));
+        if ($dates === []) {
+            return null;
+        }
+
+        sort($dates, SORT_STRING);
+
+        return $dates[0];
+    }
+
+    /** @param array<int, int> $duplicatePersonIds */
+    private function remapReportJsonPersonIds(int $canonicalPersonId, array $duplicatePersonIds): void
+    {
+        if (! $this->hasColumns('discipleship_meeting_reports', ['id'])) {
+            return;
+        }
+
+        $columns = array_values(array_filter(
+            ['absences', 'meditation_sharers'],
+            static fn (string $column): bool => Schema::hasColumn('discipleship_meeting_reports', $column),
+        ));
+        if ($columns === []) {
+            return;
+        }
+
+        foreach (DB::table('discipleship_meeting_reports')->select(array_merge(['id'], $columns))->orderBy('id')->get() as $report) {
+            $updates = [];
+            foreach ($columns as $column) {
+                $items = $this->jsonArray($report->{$column} ?? []);
+                $changed = false;
+                foreach ($items as &$item) {
+                    if (! is_array($item)) {
+                        continue;
+                    }
+                    $personId = (int) ($item['person_id'] ?? 0);
+                    if (in_array($personId, $duplicatePersonIds, true)) {
+                        $item['person_id'] = $canonicalPersonId;
+                        $changed = true;
+                    }
+                }
+                unset($item);
+
+                if ($changed) {
+                    $updates[$column] = json_encode(array_values($items), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                }
+            }
+
+            if ($updates !== []) {
+                DB::table('discipleship_meeting_reports')->where('id', (int) $report->id)->update($updates);
+            }
+        }
+    }
+
+    private function deleteSelfRelationships(int $canonicalPersonId): void
+    {
+        if (! $this->hasColumns('discipleship_relationships', ['mentor_person_id', 'disciple_person_id'])) {
+            return;
+        }
+
+        DB::table('discipleship_relationships')
+            ->where('mentor_person_id', $canonicalPersonId)
+            ->where('disciple_person_id', $canonicalPersonId)
+            ->delete();
+    }
+
+    /** @param array<int, int> $duplicatePersonIds */
+    private function deleteDuplicatePeople(array $duplicatePersonIds): void
+    {
+        if ($duplicatePersonIds === [] || ! Schema::hasTable('discipleship_people')) {
+            return;
+        }
+
+        DB::table('discipleship_people')
+            ->whereIn('id', $duplicatePersonIds)
+            ->delete();
     }
 
     /** @param array<int, object> $losers @return array<string, mixed> */
@@ -331,5 +567,21 @@ return new class extends Migration
             static fn (string $column): bool => Schema::hasColumn($table, $column),
             ARRAY_FILTER_USE_KEY,
         );
+    }
+
+    /** @param array<int, string> $columns */
+    private function hasColumns(string $table, array $columns): bool
+    {
+        if (! Schema::hasTable($table)) {
+            return false;
+        }
+
+        foreach ($columns as $column) {
+            if (! Schema::hasColumn($table, $column)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 };
