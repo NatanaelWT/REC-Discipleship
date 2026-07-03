@@ -1,6 +1,5 @@
 @php
     $stage = (string) ($profile['current_stage'] ?? '');
-    $stageClass = $stage !== '' ? 'is-'.strtolower(str_replace(' ', '', $stage)) : 'is-muted';
     $subtitle = trim((string) ($profile['subtitle'] ?? ''));
     if ($subtitle === '') {
         $subtitle = 'Peserta Kelas MSK';
@@ -10,6 +9,8 @@
         $batchBadgeLabel = 'Batch '.(string) ($profile['batch'] ?? '-');
     }
     $isExternalContext = ! empty($profile['is_external_context']);
+    $stageLabel = $stage !== '' ? $stage : ($isExternalContext ? 'External' : 'Belum DG');
+    $stageClass = $stage !== '' ? 'is-'.strtolower(str_replace(' ', '', $stage)) : 'is-muted';
     $renderHistory = static function (array $items): string {
         if ($items === []) {
             return '';
@@ -61,7 +62,7 @@
     <div class="msk-view-person-badges">
       <span class="msk-status-badge {{ $profile['status_class'] }}">{{ $profile['status_label'] }}</span>
       <span class="journey-track-badge is-msk">{{ $batchBadgeLabel }}</span>
-      <span class="journey-track-badge {{ $stageClass }}">{{ $stage !== '' ? $stage : 'Belum DG' }}</span>
+      <span class="journey-track-badge {{ $stageClass }}">{{ $stageLabel }}</span>
     </div>
   </section>
 
@@ -99,7 +100,7 @@
         <div class="msk-view-summary-item"><span>Sesi MSK</span><strong>{{ $profile['session_progress'] }}</strong></div>
         <div class="msk-view-summary-item"><span>Mentor Aktif</span><strong>{{ $profile['current_mentors'] !== [] ? implode(', ', $profile['current_mentors']) : '-' }}</strong></div>
         <div class="msk-view-summary-item"><span>Kelompok Aktif</span><strong>{{ $profile['current_groups'] !== [] ? implode(', ', $profile['current_groups']) : '-' }}</strong></div>
-        <div class="msk-view-summary-item"><span>Tahap DG</span><strong>{{ $stage !== '' ? $stage : 'Belum DG' }}</strong></div>
+        <div class="msk-view-summary-item"><span>Tahap DG</span><strong>{{ $stageLabel }}</strong></div>
       </div>
       <div class="msk-view-progress">
         <div class="msk-progress-top"><span class="msk-progress-value">{{ $profile['session_progress'] }}</span><span class="msk-progress-percent">{{ $profile['session_percent'] }}%</span></div>

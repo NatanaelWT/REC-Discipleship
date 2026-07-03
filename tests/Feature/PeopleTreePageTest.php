@@ -65,6 +65,8 @@ class PeopleTreePageTest extends TestCase
         $profileHtml = $this->profileTemplateHtml($response->getContent(), '626');
         $this->assertStringNotContainsString('MSK dan pemuridan aktif', $profileHtml);
         $this->assertStringNotContainsString('Riwayat Sebagai Anggota', $profileHtml);
+        $this->assertStringNotContainsString('Belum DG', $profileHtml);
+        $this->assertStringContainsString('External', $profileHtml);
         $this->assertStringContainsString('Riwayat Memimpin', $profileHtml);
         $this->assertStringContainsString('Anggota Kutisari Lintas', $profileHtml);
 
