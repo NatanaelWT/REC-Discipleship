@@ -52,7 +52,7 @@ class MaterialDownloadController extends Controller
         $activity->record(
             'file',
             'material.downloaded',
-            'public_material_files',
+            'materi_publik',
             $churchFile->getKey(),
             (string) $churchFile->title,
             'Materi diunduh.',

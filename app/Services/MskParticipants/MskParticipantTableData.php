@@ -109,7 +109,7 @@ class MskParticipantTableData
 
     public function hasTables(): bool
     {
-        return Schema::hasTable('people');
+        return Schema::hasTable('orang');
     }
 
     /**

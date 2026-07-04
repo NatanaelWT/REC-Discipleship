@@ -10,7 +10,7 @@ class DiscipleshipFeedback extends Model
 {
     use ResolvesBranchSlug;
 
-    protected $table = 'discipleship_feedbacks';
+    protected $table = 'jurnal_umpan_balik';
 
     protected $fillable = [
         'branch_id',

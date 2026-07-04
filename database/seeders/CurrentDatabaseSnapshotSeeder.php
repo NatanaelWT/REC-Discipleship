@@ -4331,21 +4331,21 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
     public function run(): void
     {
         DB::transaction(function (): void {
-            $this->seedTable('branches', self::DATA['branches']);
+            $this->seedTable('cabang', self::DATA['branches']);
             $this->seedTable('users', self::DATA['users']);
 
             $personIdMap = $this->canonicalPersonIdMap();
-            $this->seedTable('people', $this->mergedPeopleRows($personIdMap));
+            $this->seedTable('orang', $this->mergedPeopleRows($personIdMap));
 
             $groups = $this->remapPersonReferences(self::DATA['discipleship_groups'], $personIdMap);
-            $this->seedTable('discipleship_groups', $this->withoutDeferredGroupKeys($groups));
-            $this->seedTable('discipleship_groups', $groups);
+            $this->seedTable('kelompok_dg', $this->withoutDeferredGroupKeys($groups));
+            $this->seedTable('kelompok_dg', $groups);
 
-            $this->seedTable('discipleship_group_people', $this->remapPersonReferences(self::DATA['discipleship_group_people'], $personIdMap));
-            $this->seedTable('discipleship_relationships', $this->remapPersonReferences(self::DATA['discipleship_relationships'], $personIdMap));
-            $this->seedTable('discipleship_meeting_reports', $this->remapMeetingReportPeople(self::DATA['discipleship_meeting_reports'], $personIdMap));
-            $this->seedTable('discipleship_feedbacks', $this->remapPersonReferences(self::DATA['discipleship_feedbacks'], $personIdMap));
-            $this->seedTable('public_material_files', self::DATA['public_material_files']);
+            $this->seedTable('keanggotaan_kelompok_dg', $this->remapPersonReferences(self::DATA['discipleship_group_people'], $personIdMap));
+            $this->seedTable('relasi_dg', $this->remapPersonReferences(self::DATA['discipleship_relationships'], $personIdMap));
+            $this->seedTable('jurnal_temu_dg', $this->remapMeetingReportPeople(self::DATA['discipleship_meeting_reports'], $personIdMap));
+            $this->seedTable('jurnal_umpan_balik', $this->remapPersonReferences(self::DATA['discipleship_feedbacks'], $personIdMap));
+            $this->seedTable('materi_publik', self::DATA['public_material_files']);
             $this->seedWorshipServiceSchedules(self::DATA['legacy_worship_service_schedule_rows']);
         });
     }
@@ -4602,8 +4602,8 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
     private function seedWorshipServiceSchedules(array $schedules): void
     {
         if ($schedules === []
-            || ! Schema::hasTable('worship_service_schedules')
-            || ! Schema::hasColumn('worship_service_schedules', 'lw_1_name')) {
+            || ! Schema::hasTable('jadwal_pelayanan_ibadah')
+            || ! Schema::hasColumn('jadwal_pelayanan_ibadah', 'lw_1_name')) {
             return;
         }
 
@@ -4616,7 +4616,7 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
         }
 
         if ($months !== []) {
-            DB::table('worship_service_schedules')
+            DB::table('jadwal_pelayanan_ibadah')
                 ->whereIn('month', array_values(array_unique($months)))
                 ->delete();
         }
@@ -4629,7 +4629,7 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
         }
 
         foreach (array_chunk($weeklyRows, 100) as $chunk) {
-            DB::table('worship_service_schedules')->insert($chunk);
+            DB::table('jadwal_pelayanan_ibadah')->insert($chunk);
         }
     }
 

@@ -126,10 +126,10 @@ class MemberFeedbackJournalController extends Controller
                     'source' => 'public_form',
                 ];
 
-                if (Schema::hasColumn('discipleship_feedbacks', 'ratings')) {
+                if (Schema::hasColumn('jurnal_umpan_balik', 'ratings')) {
                     $journalData['ratings'] = [];
                 }
-                if (Schema::hasColumn('discipleship_feedbacks', 'notes')) {
+                if (Schema::hasColumn('jurnal_umpan_balik', 'notes')) {
                     $journalData['notes'] = [];
                 }
 
@@ -161,10 +161,10 @@ class MemberFeedbackJournalController extends Controller
                 }
 
                 $updateData = [];
-                if (Schema::hasColumn('discipleship_feedbacks', 'ratings')) {
+                if (Schema::hasColumn('jurnal_umpan_balik', 'ratings')) {
                     $updateData['ratings'] = $ratings ?? [];
                 }
-                if (Schema::hasColumn('discipleship_feedbacks', 'notes')) {
+                if (Schema::hasColumn('jurnal_umpan_balik', 'notes')) {
                     $updateData['notes'] = $notes ?? [];
                 }
                 if ($updateData !== []) {

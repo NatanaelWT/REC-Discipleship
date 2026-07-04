@@ -210,7 +210,7 @@ class RecordActivityRequest
     private function tablesAvailable(): bool
     {
         try {
-            return Schema::hasTable('activity_requests') && Schema::hasTable('activity_events');
+            return Schema::hasTable('permintaan_aktivitas') && Schema::hasTable('peristiwa_aktivitas');
         } catch (Throwable) {
             return false;
         }

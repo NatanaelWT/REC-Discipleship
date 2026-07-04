@@ -27,6 +27,8 @@ class ActivityAuditTest extends TestCase
         $this->createCoreTables();
         $migration = require database_path('migrations/2026_06_21_000001_create_activity_audit_tables.php');
         $migration->up();
+        $renameMigration = require database_path('migrations/2026_07_04_000003_rename_domain_tables_to_indonesian.php');
+        $renameMigration->up();
         $this->registerAuditTestRoutes();
     }
 
@@ -40,14 +42,14 @@ class ActivityAuditTest extends TestCase
         $secondId = $second->headers->get('X-Activity-Request-Id');
         $this->assertNotNull($firstId);
         $this->assertNotSame($firstId, $secondId);
-        $this->assertDatabaseHas('activity_requests', [
+        $this->assertDatabaseHas('permintaan_aktivitas', [
             'id' => $firstId,
             'route_name' => 'audit-test.view',
             'category' => 'navigation',
             'outcome' => 'succeeded',
             'http_status' => 200,
         ]);
-        $this->assertDatabaseHas('activity_requests', [
+        $this->assertDatabaseHas('permintaan_aktivitas', [
             'path' => '/alamat-tidak-ada',
             'outcome' => 'failed',
             'http_status' => 404,
@@ -481,7 +483,7 @@ class ActivityAuditTest extends TestCase
 
     private function createCoreTables(): void
     {
-        Schema::create('branches', static function (Blueprint $table): void {
+        Schema::create('cabang', static function (Blueprint $table): void {
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
@@ -498,7 +500,7 @@ class ActivityAuditTest extends TestCase
             $table->rememberToken();
             $table->timestamps();
         });
-        Schema::create('login_attempts', static function (Blueprint $table): void {
+        Schema::create('percobaan_login', static function (Blueprint $table): void {
             $table->id();
             $table->string('attempt_key', 120)->unique();
             $table->unsignedInteger('failed_attempt_count')->default(0);
@@ -507,14 +509,14 @@ class ActivityAuditTest extends TestCase
             $table->timestamp('last_attempted_at')->nullable();
             $table->timestamps();
         });
-        Schema::create('app_configs', static function (Blueprint $table): void {
+        Schema::create('konfigurasi', static function (Blueprint $table): void {
             $table->id();
             $table->string('key', 80)->unique();
             $table->text('value')->nullable();
             $table->string('updated_by', 120)->nullable();
             $table->timestamps();
         });
-        \DB::table('branches')->insert([
+        \DB::table('cabang')->insert([
             'id' => 1,
             'label' => 'Kutisari',
             'is_active' => true,

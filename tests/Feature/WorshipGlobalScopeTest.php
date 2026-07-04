@@ -30,7 +30,7 @@ class WorshipGlobalScopeTest extends TestCase
     public function test_steward_and_developer_share_the_same_global_schedule(): void
     {
         $this->createWorshipServiceScheduleTables();
-        DB::table('worship_service_schedules')->insert([
+        DB::table('jadwal_pelayanan_ibadah')->insert([
             'month' => '2026-06',
             'update_note' => null,
             'week_index' => 0,
@@ -52,11 +52,11 @@ class WorshipGlobalScopeTest extends TestCase
         ]);
 
         $this->assertFalse(Schema::hasTable('worship_schedules'));
-        $this->assertDatabaseHas('worship_service_schedules', [
+        $this->assertDatabaseHas('jadwal_pelayanan_ibadah', [
             'month' => '2026-06',
             'update_note' => 'Diperbarui developer',
         ]);
-        $this->assertSame(4, DB::table('worship_service_schedules')->where('month', '2026-06')->count());
+        $this->assertSame(4, DB::table('jadwal_pelayanan_ibadah')->where('month', '2026-06')->count());
     }
 
     public function test_worship_schedule_save_replace_and_delete_use_weekly_rows(): void
@@ -74,7 +74,7 @@ class WorshipGlobalScopeTest extends TestCase
             ],
         ]);
 
-        $this->assertDatabaseHas('worship_service_schedules', [
+        $this->assertDatabaseHas('jadwal_pelayanan_ibadah', [
             'month' => '2026-06',
             'update_note' => 'Catatan awal',
             'week_index' => 0,
@@ -84,7 +84,7 @@ class WorshipGlobalScopeTest extends TestCase
             'singer_2_name' => 'Zerren',
             'training_date' => '2026-06-05',
         ]);
-        $this->assertDatabaseHas('worship_service_schedules', [
+        $this->assertDatabaseHas('jadwal_pelayanan_ibadah', [
             'month' => '2026-06',
             'week_index' => 1,
             'service_date' => '2026-06-14',
@@ -93,7 +93,7 @@ class WorshipGlobalScopeTest extends TestCase
             'singer_2_name' => null,
             'training_date' => null,
         ]);
-        $this->assertSame(4, DB::table('worship_service_schedules')->where('month', '2026-06')->count());
+        $this->assertSame(4, DB::table('jadwal_pelayanan_ibadah')->where('month', '2026-06')->count());
         $this->assertFalse(Schema::hasTable('worship_service_schedule_roles'));
         $this->assertFalse(Schema::hasTable('worship_service_schedule_weeks'));
         $this->assertFalse(Schema::hasTable('worship_service_assignments'));
@@ -107,17 +107,17 @@ class WorshipGlobalScopeTest extends TestCase
             ],
         ]);
 
-        $this->assertDatabaseHas('worship_service_schedules', [
+        $this->assertDatabaseHas('jadwal_pelayanan_ibadah', [
             'month' => '2026-06',
             'update_note' => 'Catatan final',
             'week_index' => 0,
             'lw_1_name' => 'Budi',
         ]);
-        $this->assertDatabaseMissing('worship_service_schedules', ['lw_1_name' => 'Cia']);
-        $this->assertDatabaseMissing('worship_service_schedules', ['singer_1_name' => 'Ryan']);
+        $this->assertDatabaseMissing('jadwal_pelayanan_ibadah', ['lw_1_name' => 'Cia']);
+        $this->assertDatabaseMissing('jadwal_pelayanan_ibadah', ['singer_1_name' => 'Ryan']);
 
         $this->assertTrue($builder->deleteMonth('2026-06'));
-        $this->assertDatabaseCount('worship_service_schedules', 0);
+        $this->assertDatabaseCount('jadwal_pelayanan_ibadah', 0);
     }
 
     public function test_worship_page_uses_the_shared_page_header(): void
@@ -162,15 +162,15 @@ class WorshipGlobalScopeTest extends TestCase
 
     private function createWorshipServiceScheduleTables(): void
     {
-        Schema::dropIfExists('worship_service_schedules_weekly');
-        Schema::dropIfExists('worship_service_schedules_flat');
+        Schema::dropIfExists('jadwal_pelayanan_ibadah_weekly');
+        Schema::dropIfExists('jadwal_pelayanan_ibadah_flat');
         Schema::dropIfExists('worship_service_assignments');
         Schema::dropIfExists('worship_service_schedule_weeks');
         Schema::dropIfExists('worship_service_schedule_roles');
-        Schema::dropIfExists('worship_service_schedules');
+        Schema::dropIfExists('jadwal_pelayanan_ibadah');
         Schema::dropIfExists('worship_schedules');
 
-        Schema::create('worship_service_schedules', function (Blueprint $table): void {
+        Schema::create('jadwal_pelayanan_ibadah', function (Blueprint $table): void {
             $table->id();
             $table->string('month', 7)->index();
             $table->longText('update_note')->nullable();

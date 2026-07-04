@@ -99,14 +99,14 @@ class AuthLoginTest extends TestCase
             'password' => 'wrong-password',
         ])->assertRedirectContains('/login?error=locked&wait=');
 
-        $this->assertDatabaseHas('login_attempts', [
+        $this->assertDatabaseHas('percobaan_login', [
             'failed_attempt_count' => 0,
         ]);
     }
 
     private function createAuthTables(): void
     {
-        Schema::dropIfExists('login_attempts');
+        Schema::dropIfExists('percobaan_login');
         Schema::dropIfExists('users');
 
         Schema::create('users', function (Blueprint $table): void {
@@ -121,7 +121,7 @@ class AuthLoginTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('login_attempts', function (Blueprint $table): void {
+        Schema::create('percobaan_login', function (Blueprint $table): void {
             $table->id();
             $table->string('attempt_key', 120)->unique();
             $table->unsignedInteger('failed_attempt_count')->default(0);

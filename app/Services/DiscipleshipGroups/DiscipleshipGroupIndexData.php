@@ -72,10 +72,11 @@ class DiscipleshipGroupIndexData
     private function filteredGroupQuery(string $search, string $status): Builder
     {
         $query = DiscipleshipGroup::query()
+            ->from('kelompok_dg as discipleship_groups')
             ->whereIn('branch_id', $this->scope->branchIds())
             ->whereExists(static function ($subquery): void {
                 $subquery->selectRaw('1')
-                    ->from('discipleship_group_people as existing_gp')
+                    ->from('keanggotaan_kelompok_dg as existing_gp')
                     ->whereColumn('existing_gp.discipleship_group_id', 'discipleship_groups.id')
                     ->whereColumn('existing_gp.branch_id', 'discipleship_groups.branch_id');
             });
@@ -93,8 +94,8 @@ class DiscipleshipGroupIndexData
                     ->orWhereRaw('LOWER(current_stage) LIKE ?', ['%'.$search.'%'])
                     ->orWhereExists(function ($subquery) use ($search): void {
                         $subquery->selectRaw('1')
-                            ->from('discipleship_group_people as search_gp')
-                            ->join('people as search_person', 'search_person.id', '=', 'search_gp.person_id');
+                            ->from('keanggotaan_kelompok_dg as search_gp')
+                            ->join('orang as search_person', 'search_person.id', '=', 'search_gp.person_id');
                         DiscipleshipPersonProfile::join($subquery, 'search_person', 'search_profile');
                         $subquery
                             ->whereColumn('search_gp.discipleship_group_id', 'discipleship_groups.id')
@@ -208,7 +209,7 @@ class DiscipleshipGroupIndexData
         $branchOptions = $this->scope->optionsById();
         $contextBranchIds = $this->scope->branchIds();
 
-        $query = Person::query();
+        $query = Person::query()->from('orang as people');
         DiscipleshipPersonProfile::join($query);
 
         return $query

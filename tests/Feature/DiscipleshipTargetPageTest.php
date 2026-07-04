@@ -105,14 +105,14 @@ class DiscipleshipTargetPageTest extends TestCase
             ])->assertRedirect();
         }
 
-        $this->assertSame(111, (int) DB::table('branches')
+        $this->assertSame(111, (int) DB::table('cabang')
             ->where('id', 1)
             ->value('camp_gap_participant_target'));
     }
 
     private function createBranchTable(): void
     {
-        Schema::create('branches', function (Blueprint $table): void {
+        Schema::create('cabang', function (Blueprint $table): void {
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
@@ -127,7 +127,7 @@ class DiscipleshipTargetPageTest extends TestCase
 
     private function seedTargets(): void
     {
-        DB::table('branches')->insert([
+        DB::table('cabang')->insert([
             [
                 'id' => 1,
                 'label' => 'Kutisari',

@@ -37,10 +37,10 @@ class MskParticipantHistoryData
         if (
             $participantPersonIds === []
             || $branchIds === []
-            || ! Schema::hasTable('people')
-            || ! Schema::hasTable('discipleship_groups')
-            || ! Schema::hasTable('discipleship_group_people')
-            || ! Schema::hasTable('discipleship_relationships')
+            || ! Schema::hasTable('orang')
+            || ! Schema::hasTable('kelompok_dg')
+            || ! Schema::hasTable('keanggotaan_kelompok_dg')
+            || ! Schema::hasTable('relasi_dg')
         ) {
             return $histories;
         }
@@ -294,11 +294,11 @@ class MskParticipantHistoryData
     /** @param array<int, int> $personIds */
     private function manualLinks(array $personIds, array $branchIds): Collection
     {
-        if (! Schema::hasTable('discipleship_manual_journey_records')) {
+        if (! Schema::hasTable('dg_manual')) {
             return collect();
         }
 
-        return DB::table('discipleship_manual_journey_records')
+        return DB::table('dg_manual')
             ->whereIn('branch_id', $branchIds)
             ->whereIn('person_id', $personIds)
             ->orderBy('id')

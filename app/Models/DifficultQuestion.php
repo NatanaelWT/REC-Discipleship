@@ -11,6 +11,8 @@ class DifficultQuestion extends Model
 
     public const STATUS_ANSWERED = 'answered';
 
+    protected $table = 'pertanyaan_sulit';
+
     protected $fillable = [
         'asker_name',
         'asker_whatsapp',

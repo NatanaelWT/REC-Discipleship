@@ -11,6 +11,8 @@ class WebsiteSession extends Model
 {
     use HasUlids;
 
+    protected $table = 'sesi';
+
     public $incrementing = false;
 
     public $timestamps = false;

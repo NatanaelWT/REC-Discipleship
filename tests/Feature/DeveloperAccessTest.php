@@ -158,11 +158,11 @@ class DeveloperAccessTest extends TestCase
             'developer_debug_banner' => '1',
         ])->assertRedirect('/developer/config?status=saved');
 
-        $this->assertDatabaseHas('app_configs', [
+        $this->assertDatabaseHas('konfigurasi', [
             'key' => 'church_name',
             'value' => 'REC Internal',
         ]);
-        $this->assertDatabaseHas('app_configs', [
+        $this->assertDatabaseHas('konfigurasi', [
             'key' => 'developer_debug_banner',
             'value' => '1',
         ]);
@@ -282,7 +282,7 @@ class DeveloperAccessTest extends TestCase
     {
         $this->createCoreTables();
 
-        DB::table('branches')->insert([
+        DB::table('cabang')->insert([
             [
                 'label' => 'Pusat',
                 'is_active' => true,
@@ -375,12 +375,12 @@ class DeveloperAccessTest extends TestCase
 
     private function createCoreTables(): void
     {
-        Schema::dropIfExists('website_page_views');
-        Schema::dropIfExists('activity_events');
-        Schema::dropIfExists('activity_requests');
-        Schema::dropIfExists('app_configs');
-        Schema::dropIfExists('login_attempts');
-        Schema::dropIfExists('branches');
+        Schema::dropIfExists('kunjungan_halaman');
+        Schema::dropIfExists('peristiwa_aktivitas');
+        Schema::dropIfExists('permintaan_aktivitas');
+        Schema::dropIfExists('konfigurasi');
+        Schema::dropIfExists('percobaan_login');
+        Schema::dropIfExists('cabang');
         Schema::dropIfExists('users');
 
         Schema::create('users', function (Blueprint $table): void {
@@ -395,7 +395,7 @@ class DeveloperAccessTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('login_attempts', function (Blueprint $table): void {
+        Schema::create('percobaan_login', function (Blueprint $table): void {
             $table->id();
             $table->string('attempt_key', 120)->unique();
             $table->unsignedInteger('failed_attempt_count')->default(0);
@@ -405,14 +405,14 @@ class DeveloperAccessTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('branches', function (Blueprint $table): void {
+        Schema::create('cabang', function (Blueprint $table): void {
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
 
-        Schema::create('app_configs', function (Blueprint $table): void {
+        Schema::create('konfigurasi', function (Blueprint $table): void {
             $table->id();
             $table->string('key', 80)->unique();
             $table->text('value')->nullable();
@@ -421,7 +421,7 @@ class DeveloperAccessTest extends TestCase
         });
 
         foreach (['Kutisari', 'GM', 'Darmo'] as $label) {
-            DB::table('branches')->insert([
+            DB::table('cabang')->insert([
                 'label' => $label,
                 'is_active' => true,
                 'created_at' => '2026-06-19 08:00:00',
@@ -432,11 +432,11 @@ class DeveloperAccessTest extends TestCase
 
     private function createDashboardTelemetryTables(): void
     {
-        Schema::dropIfExists('website_page_views');
-        Schema::dropIfExists('activity_events');
-        Schema::dropIfExists('activity_requests');
+        Schema::dropIfExists('kunjungan_halaman');
+        Schema::dropIfExists('peristiwa_aktivitas');
+        Schema::dropIfExists('permintaan_aktivitas');
 
-        Schema::create('activity_requests', function (Blueprint $table): void {
+        Schema::create('permintaan_aktivitas', function (Blueprint $table): void {
             $table->ulid('id')->primary();
             $table->string('actor_type', 20)->default('anonymous');
             $table->unsignedBigInteger('user_id')->nullable();
@@ -472,7 +472,7 @@ class DeveloperAccessTest extends TestCase
             $table->dateTime('completed_at', 6)->nullable();
         });
 
-        Schema::create('activity_events', function (Blueprint $table): void {
+        Schema::create('peristiwa_aktivitas', function (Blueprint $table): void {
             $table->id();
             $table->ulid('request_id');
             $table->string('category', 60);
@@ -487,7 +487,7 @@ class DeveloperAccessTest extends TestCase
             $table->index(['request_id', 'id']);
         });
 
-        Schema::create('website_page_views', function (Blueprint $table): void {
+        Schema::create('kunjungan_halaman', function (Blueprint $table): void {
             $table->ulid('request_id')->primary();
             $table->ulid('session_id')->index();
             $table->char('visitor_hash', 64)->index();
@@ -509,7 +509,7 @@ class DeveloperAccessTest extends TestCase
         $errorId = (string) Str::ulid();
         $now = now('UTC');
 
-        DB::table('activity_requests')->insert([
+        DB::table('permintaan_aktivitas')->insert([
             [
                 'id' => $recentId,
                 'actor_type' => 'user',
@@ -563,13 +563,13 @@ class DeveloperAccessTest extends TestCase
             ],
         ]);
 
-        DB::table('activity_events')->insert([
+        DB::table('peristiwa_aktivitas')->insert([
             ['request_id' => $recentId, 'category' => 'data', 'action' => 'people.updated', 'subject_label' => 'Peserta Test', 'description' => 'Updated person', 'occurred_at' => $now->copy()->subMinutes(20)->format('Y-m-d H:i:s.u')],
             ['request_id' => $recentId, 'category' => 'data', 'action' => 'audit.logged', 'subject_label' => 'Peserta Test', 'description' => 'Audit logged', 'occurred_at' => $now->copy()->subMinutes(20)->format('Y-m-d H:i:s.u')],
             ['request_id' => $errorId, 'category' => 'request', 'action' => 'request.failed', 'subject_label' => 'Error Test', 'description' => 'Failure logged', 'occurred_at' => $now->copy()->subMinutes(5)->format('Y-m-d H:i:s.u')],
         ]);
 
-        DB::table('website_page_views')->insert([
+        DB::table('kunjungan_halaman')->insert([
             [
                 'request_id' => (string) Str::ulid(),
                 'session_id' => (string) Str::ulid(),

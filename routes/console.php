@@ -45,16 +45,16 @@ Artisan::command('developer:ensure-user', function (DeveloperUserService $users)
 
 Artisan::command('identifiers:audit', function (): int {
     $references = [
-        ['discipleship_groups', 'parent_group_id', 'parent_group_public_id', 'discipleship_groups'],
-        ['discipleship_groups', 'source_group_id', 'source_group_public_id', 'discipleship_groups'],
-        ['discipleship_groups', 'initiated_by_person_id', 'initiated_by_person_public_id', 'people'],
-        ['discipleship_relationships', 'mentor_person_id', 'mentor_person_public_id', 'people'],
-        ['discipleship_relationships', 'disciple_person_id', 'disciple_person_public_id', 'people'],
-        ['discipleship_relationships', 'context_group_id', 'context_group_public_id', 'discipleship_groups'],
-        ['discipleship_group_people', 'discipleship_group_id', 'group_public_id', 'discipleship_groups'],
-        ['discipleship_group_people', 'person_id', 'person_public_id', 'people'],
-        ['discipleship_meeting_reports', 'leader_person_id', 'leader_person_public_id', 'people'],
-        ['discipleship_meeting_reports', 'discipleship_group_id', 'discipleship_group_public_id', 'discipleship_groups'],
+        ['kelompok_dg', 'parent_group_id', 'parent_group_public_id', 'kelompok_dg'],
+        ['kelompok_dg', 'source_group_id', 'source_group_public_id', 'kelompok_dg'],
+        ['kelompok_dg', 'initiated_by_person_id', 'initiated_by_person_public_id', 'orang'],
+        ['relasi_dg', 'mentor_person_id', 'mentor_person_public_id', 'orang'],
+        ['relasi_dg', 'disciple_person_id', 'disciple_person_public_id', 'orang'],
+        ['relasi_dg', 'context_group_id', 'context_group_public_id', 'kelompok_dg'],
+        ['keanggotaan_kelompok_dg', 'discipleship_group_id', 'group_public_id', 'kelompok_dg'],
+        ['keanggotaan_kelompok_dg', 'person_id', 'person_public_id', 'orang'],
+        ['jurnal_temu_dg', 'leader_person_id', 'leader_person_public_id', 'orang'],
+        ['jurnal_temu_dg', 'discipleship_group_id', 'discipleship_group_public_id', 'kelompok_dg'],
     ];
 
     $issues = [];
@@ -93,19 +93,19 @@ Artisan::command('identifiers:audit', function (): int {
     }
 
     $numericReferences = [
-        ['discipleship_groups', 'parent_group_id', 'discipleship_groups'],
-        ['discipleship_groups', 'source_group_id', 'discipleship_groups'],
-        ['discipleship_groups', 'initiated_by_person_id', 'people'],
-        ['discipleship_relationships', 'mentor_person_id', 'people'],
-        ['discipleship_relationships', 'disciple_person_id', 'people'],
-        ['discipleship_relationships', 'context_group_id', 'discipleship_groups'],
-        ['discipleship_group_people', 'discipleship_group_id', 'discipleship_groups'],
-        ['discipleship_group_people', 'person_id', 'people'],
-        ['discipleship_meeting_reports', 'leader_person_id', 'people'],
-        ['discipleship_meeting_reports', 'discipleship_group_id', 'discipleship_groups'],
-        ['discipleship_feedbacks', 'discipleship_group_id', 'discipleship_groups'],
-        ['discipleship_feedbacks', 'leader_person_id', 'people'],
-        ['discipleship_feedbacks', 'respondent_person_id', 'people'],
+        ['kelompok_dg', 'parent_group_id', 'kelompok_dg'],
+        ['kelompok_dg', 'source_group_id', 'kelompok_dg'],
+        ['kelompok_dg', 'initiated_by_person_id', 'orang'],
+        ['relasi_dg', 'mentor_person_id', 'orang'],
+        ['relasi_dg', 'disciple_person_id', 'orang'],
+        ['relasi_dg', 'context_group_id', 'kelompok_dg'],
+        ['keanggotaan_kelompok_dg', 'discipleship_group_id', 'kelompok_dg'],
+        ['keanggotaan_kelompok_dg', 'person_id', 'orang'],
+        ['jurnal_temu_dg', 'leader_person_id', 'orang'],
+        ['jurnal_temu_dg', 'discipleship_group_id', 'kelompok_dg'],
+        ['jurnal_umpan_balik', 'discipleship_group_id', 'kelompok_dg'],
+        ['jurnal_umpan_balik', 'leader_person_id', 'orang'],
+        ['jurnal_umpan_balik', 'respondent_person_id', 'orang'],
     ];
 
     foreach ($numericReferences as [$table, $foreignColumn, $targetTable]) {
@@ -132,13 +132,13 @@ Artisan::command('identifiers:audit', function (): int {
         }
     }
 
-    if (Schema::hasTable('people')
-        && Schema::hasColumn('people', 'member_public_id')
-        && Schema::hasTable('people')
-        && Schema::hasColumn('people', 'member_public_id')
-        && Schema::hasColumn('people', 'public_id')) {
+    if (Schema::hasTable('orang')
+        && Schema::hasColumn('orang', 'member_public_id')
+        && Schema::hasTable('orang')
+        && Schema::hasColumn('orang', 'member_public_id')
+        && Schema::hasColumn('orang', 'public_id')) {
         $peopleByLegacyId = [];
-        foreach (DB::table('people')
+        foreach (DB::table('orang')
             ->select(['id', 'branch_id', 'public_id', 'member_public_id', 'full_name', 'whatsapp', 'status'])
             ->get() as $person) {
             foreach (array_unique([(string) $person->public_id, (string) $person->member_public_id]) as $legacyId) {
@@ -150,7 +150,7 @@ Artisan::command('identifiers:audit', function (): int {
         }
 
         $claimedPeople = [];
-        foreach (DB::table('people')
+        foreach (DB::table('orang')
             ->select(['id', 'branch_id', 'member_public_id', 'full_name', 'whatsapp'])
             ->orderBy('id')
             ->get() as $participant) {
@@ -187,14 +187,14 @@ Artisan::command('identifiers:audit', function (): int {
             }
 
             if (count($matches) !== 1) {
-                $issues[] = ['people', (string) $participant->id, 'member_public_id', 'ambiguous_person_match'];
+                $issues[] = ['orang', (string) $participant->id, 'member_public_id', 'ambiguous_person_match'];
 
                 continue;
             }
 
             $personId = (int) $matches[0]->id;
             if (isset($claimedPeople[$personId])) {
-                $issues[] = ['people', (string) $participant->id, 'member_public_id', 'duplicate_person_link'];
+                $issues[] = ['orang', (string) $participant->id, 'member_public_id', 'duplicate_person_link'];
 
                 continue;
             }
@@ -203,15 +203,15 @@ Artisan::command('identifiers:audit', function (): int {
         }
     }
 
-    if (Schema::hasTable('discipleship_meeting_reports')
-        && Schema::hasColumn('discipleship_meeting_reports', 'absences')
-        && Schema::hasColumn('discipleship_meeting_reports', 'meditation_sharers')) {
-        foreach (DB::table('discipleship_meeting_reports')->select(['id', 'absences', 'meditation_sharers'])->get() as $report) {
+    if (Schema::hasTable('jurnal_temu_dg')
+        && Schema::hasColumn('jurnal_temu_dg', 'absences')
+        && Schema::hasColumn('jurnal_temu_dg', 'meditation_sharers')) {
+        foreach (DB::table('jurnal_temu_dg')->select(['id', 'absences', 'meditation_sharers'])->get() as $report) {
             foreach (['absences', 'meditation_sharers'] as $column) {
                 $items = json_decode((string) ($report->{$column} ?? '[]'), true);
                 foreach (is_array($items) ? $items : [] as $item) {
                     if (is_array($item) && (int) ($item['person_id'] ?? 0) < 1) {
-                        $issues[] = ['discipleship_meeting_reports', (string) $report->id, $column, 'missing_person_id'];
+                        $issues[] = ['jurnal_temu_dg', (string) $report->id, $column, 'missing_person_id'];
                     }
                 }
             }
@@ -260,13 +260,13 @@ $materialPathBelongsToMenu = static function (PublicMaterialMenuKey $menu, strin
 Artisan::command('materials:audit-files', function () use ($materialPhysicalFiles, $materialPathBelongsToMenu): int {
     RuntimeBootstrap::load();
 
-    if (! Schema::hasTable('public_material_files')) {
-        $this->error('Tabel public_material_files tidak ditemukan.');
+    if (! Schema::hasTable('materi_publik')) {
+        $this->error('Tabel materi_publik tidak ditemukan.');
 
         return Command::FAILURE;
     }
 
-    $files = DB::table('public_material_files')
+    $files = DB::table('materi_publik')
         ->select(['id', 'menu', 'title', 'relative_path'])
         ->orderBy('menu')
         ->orderBy('title')
@@ -299,7 +299,7 @@ Artisan::command('materials:audit-files', function () use ($materialPhysicalFile
         }
     }
 
-    $registeredPaths = DB::table('public_material_files')
+    $registeredPaths = DB::table('materi_publik')
         ->pluck('relative_path')
         ->map(static fn ($path): string => sanitize_relative_upload_path((string) $path))
         ->filter()
@@ -358,8 +358,8 @@ Artisan::command('materials:audit-files', function () use ($materialPhysicalFile
 Artisan::command('materials:sync-files', function (PublicMaterialTextExtractor $textExtractor) use ($materialPhysicalFiles): int {
     RuntimeBootstrap::load();
 
-    if (! Schema::hasTable('public_material_files')) {
-        $this->error('Tabel public_material_files tidak ditemukan.');
+    if (! Schema::hasTable('materi_publik')) {
+        $this->error('Tabel materi_publik tidak ditemukan.');
 
         return Command::FAILURE;
     }
@@ -381,7 +381,7 @@ Artisan::command('materials:sync-files', function (PublicMaterialTextExtractor $
             }
 
             $relativePath = public_material_file_relative_path($menu->folder(), basename($fullPath));
-            if ($relativePath === '' || DB::table('public_material_files')->where('relative_path', $relativePath)->exists()) {
+            if ($relativePath === '' || DB::table('materi_publik')->where('relative_path', $relativePath)->exists()) {
                 continue;
             }
 
@@ -398,7 +398,7 @@ Artisan::command('materials:sync-files', function (PublicMaterialTextExtractor $
                 $title = basename($fullPath);
             }
 
-            $fileId = DB::table('public_material_files')->insertGetId(array_merge([
+            $fileId = DB::table('materi_publik')->insertGetId(array_merge([
                 'menu' => $menu->value,
                 'title' => $title,
                 'category_name' => null,
@@ -433,14 +433,14 @@ Artisan::command('materials:sync-files', function (PublicMaterialTextExtractor $
 Artisan::command('materials:extract-text {--menu= : Public material menu key. Empty means all DG menus} {--force : Re-extract files that already have text}', function (PublicMaterialTextExtractor $textExtractor): int {
     RuntimeBootstrap::load();
 
-    if (! Schema::hasTable('public_material_files')) {
-        $this->error('Tabel public_material_files tidak ditemukan.');
+    if (! Schema::hasTable('materi_publik')) {
+        $this->error('Tabel materi_publik tidak ditemukan.');
 
         return Command::FAILURE;
     }
 
     foreach (['text_content', 'text_extracted_at', 'text_extraction_error'] as $column) {
-        if (! Schema::hasColumn('public_material_files', $column)) {
+        if (! Schema::hasColumn('materi_publik', $column)) {
             $this->error('Kolom teks materi belum tersedia. Jalankan migrasi terlebih dahulu.');
 
             return Command::FAILURE;
@@ -477,7 +477,7 @@ Artisan::command('materials:extract-text {--menu= : Public material menu key. Em
     $skipped = 0;
 
     foreach ($menus as $menu) {
-        $rows = DB::table('public_material_files')
+        $rows = DB::table('materi_publik')
             ->select(['id', 'menu', 'title', 'relative_path', 'text_content'])
             ->where('menu', $menu->value)
             ->orderBy('id')
@@ -499,7 +499,7 @@ Artisan::command('materials:extract-text {--menu= : Public material menu key. Em
 
             $fullPath = public_material_resolve_path($path);
             if ($fullPath === null) {
-                DB::table('public_material_files')
+                DB::table('materi_publik')
                     ->where('id', $row->id)
                     ->update([
                         'text_content' => null,
@@ -519,7 +519,7 @@ Artisan::command('materials:extract-text {--menu= : Public material menu key. Em
                 continue;
             }
 
-            DB::table('public_material_files')
+            DB::table('materi_publik')
                 ->where('id', $row->id)
                 ->update(array_merge($payload, ['updated_at' => now()]));
 

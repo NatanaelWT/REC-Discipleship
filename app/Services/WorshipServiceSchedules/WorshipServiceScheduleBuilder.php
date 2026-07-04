@@ -108,7 +108,7 @@ class WorshipServiceScheduleBuilder
 
             $weeklyRows = $this->weeklyRowsForRecord($record, $month, $timestamps['created_at'], $timestamps['updated_at']);
             foreach (array_chunk($weeklyRows, 100) as $chunk) {
-                DB::table('worship_service_schedules')->insert($chunk);
+                DB::table('jadwal_pelayanan_ibadah')->insert($chunk);
             }
 
             return WorshipServiceSchedule::query()

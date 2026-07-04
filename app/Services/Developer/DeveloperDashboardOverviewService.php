@@ -50,7 +50,7 @@ class DeveloperDashboardOverviewService
             'events' => 0,
         ];
 
-        if (Schema::hasTable('activity_requests')) {
+        if (Schema::hasTable('permintaan_aktivitas')) {
             try {
                 $from = CarbonImmutable::now('UTC')->subDay();
                 $base = ActivityRequest::query()->where('started_at', '>=', $from);
@@ -69,7 +69,7 @@ class DeveloperDashboardOverviewService
             }
         }
 
-        if (Schema::hasTable('activity_events')) {
+        if (Schema::hasTable('peristiwa_aktivitas')) {
             try {
                 $raw['events'] = ActivityEvent::query()
                     ->where('occurred_at', '>=', CarbonImmutable::now('UTC')->subDay())
@@ -102,7 +102,7 @@ class DeveloperDashboardOverviewService
         ];
         $topPages = [];
 
-        if (Schema::hasTable('website_page_views')) {
+        if (Schema::hasTable('kunjungan_halaman')) {
             try {
                 $from = CarbonImmutable::now('UTC')->subDays(7);
                 $human = $this->humanPageViews()->where('occurred_at', '>=', $from);
@@ -152,7 +152,7 @@ class DeveloperDashboardOverviewService
     /** @return array<int, array<string, mixed>> */
     private function recentActivities(): array
     {
-        if (! Schema::hasTable('activity_requests')) {
+        if (! Schema::hasTable('permintaan_aktivitas')) {
             return [];
         }
 
@@ -162,7 +162,7 @@ class DeveloperDashboardOverviewService
                     $roles->whereNull('role')
                         ->orWhere('role', '!=', UserAccessRole::Developer->value);
                 });
-            if (Schema::hasTable('activity_events')) {
+            if (Schema::hasTable('peristiwa_aktivitas')) {
                 $query->withCount('events');
             }
 
@@ -181,7 +181,7 @@ class DeveloperDashboardOverviewService
     /** @return array<int, array<string, mixed>> */
     private function attentionItems(): array
     {
-        if (! Schema::hasTable('activity_requests')) {
+        if (! Schema::hasTable('permintaan_aktivitas')) {
             return [];
         }
 
@@ -191,7 +191,7 @@ class DeveloperDashboardOverviewService
                     $builder->where('http_status', '>=', 500)
                         ->orWhere('outcome', 'error');
                 });
-            if (Schema::hasTable('activity_events')) {
+            if (Schema::hasTable('peristiwa_aktivitas')) {
                 $query->withCount('events');
             }
 

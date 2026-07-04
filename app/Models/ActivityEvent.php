@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ActivityEvent extends Model
 {
+    protected $table = 'peristiwa_aktivitas';
+
     public $timestamps = false;
 
     protected $guarded = [];

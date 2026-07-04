@@ -109,7 +109,7 @@ class DiscipleshipDashboardSummaryQuery
     /** @param array<int, int> $branchIds */
     private function peopleRows(array $branchIds): Collection
     {
-        return $this->query(static fn () => DB::table('people')
+        return $this->query(static fn () => DB::table('orang')
             ->whereIn('branch_id', $branchIds)
             ->selectRaw("branch_id, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS people_count")
             ->groupBy('branch_id')->get());
@@ -118,11 +118,11 @@ class DiscipleshipDashboardSummaryQuery
     /** @param array<int, int> $branchIds */
     private function groupRows(array $branchIds): Collection
     {
-        $groups = $this->query(static fn () => DB::table('discipleship_groups as g')
+        $groups = $this->query(static fn () => DB::table('kelompok_dg as g')
             ->whereIn('branch_id', $branchIds)
             ->whereExists(static function ($subquery): void {
                 $subquery->selectRaw('1')
-                    ->from('discipleship_group_people as group_history')
+                    ->from('keanggotaan_kelompok_dg as group_history')
                     ->whereColumn('group_history.discipleship_group_id', 'g.id');
             })
             ->get(['g.id', 'g.branch_id', 'g.parent_group_id', 'g.status', 'g.start_stage', 'g.current_stage']));
@@ -195,13 +195,13 @@ class DiscipleshipDashboardSummaryQuery
     /** @param array<int, int> $branchIds */
     private function groupPeopleRows(array $branchIds): Collection
     {
-        return $this->query(static fn () => DB::table('people as p')
-            ->leftJoin('discipleship_group_people as gp', function ($join): void {
+        return $this->query(static fn () => DB::table('orang as p')
+            ->leftJoin('keanggotaan_kelompok_dg as gp', function ($join): void {
                 $join->on('gp.person_id', '=', 'p.id')
                     ->on('gp.branch_id', '=', 'p.branch_id')
                     ->where('gp.role', '=', 'member');
             })
-            ->leftJoin('discipleship_manual_journey_records as manual_journey', function ($join): void {
+            ->leftJoin('dg_manual as manual_journey', function ($join): void {
                 $join->on('manual_journey.person_id', '=', 'p.id')
                     ->on('manual_journey.branch_id', '=', 'p.branch_id');
             })
@@ -219,13 +219,13 @@ class DiscipleshipDashboardSummaryQuery
     /** @param array<int, int> $branchIds */
     private function leaderRows(array $branchIds): Collection
     {
-        return $this->query(static fn () => DB::table('people as p')
-            ->leftJoin('discipleship_group_people as gp', function ($join): void {
+        return $this->query(static fn () => DB::table('orang as p')
+            ->leftJoin('keanggotaan_kelompok_dg as gp', function ($join): void {
                 $join->on('gp.person_id', '=', 'p.id')
                     ->on('gp.branch_id', '=', 'p.branch_id')
                     ->where('gp.role', '<>', 'member');
             })
-            ->leftJoin('discipleship_relationships as relationship', function ($join): void {
+            ->leftJoin('relasi_dg as relationship', function ($join): void {
                 $join->on('relationship.mentor_person_id', '=', 'p.id')
                     ->on('relationship.branch_id', '=', 'p.branch_id');
             })
@@ -241,7 +241,7 @@ class DiscipleshipDashboardSummaryQuery
     /** @param array<int, int> $branchIds */
     private function meetingRows(array $branchIds): Collection
     {
-        return $this->query(static fn () => DB::table('discipleship_meeting_reports')
+        return $this->query(static fn () => DB::table('jurnal_temu_dg')
             ->whereIn('branch_id', $branchIds)
             ->whereBetween('meeting_date', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
             ->selectRaw('branch_id, COUNT(*) AS meeting_count')
@@ -255,7 +255,7 @@ class DiscipleshipDashboardSummaryQuery
             ? "json_array_length(COALESCE(session_numbers, '[]'))"
             : "JSON_LENGTH(COALESCE(session_numbers, '[]'))";
 
-        return $this->query(static fn () => DB::table('people')
+        return $this->query(static fn () => DB::table('orang')
             ->whereIn('branch_id', $branchIds)
             ->where(function ($query) use ($sessions): void {
                 $query->whereRaw("COALESCE(batch_month, '') <> ''")
@@ -277,13 +277,13 @@ class DiscipleshipDashboardSummaryQuery
     {
         $reasons = "'continued_to_child_group', 'group_completed', 'stage_transition'";
 
-        return $this->query(static fn () => DB::table('people as mp')
-            ->leftJoin('discipleship_group_people as gp', function ($join): void {
+        return $this->query(static fn () => DB::table('orang as mp')
+            ->leftJoin('keanggotaan_kelompok_dg as gp', function ($join): void {
                 $join->on('gp.person_id', '=', 'mp.id')
                     ->on('gp.branch_id', '=', 'mp.branch_id')
                     ->where('gp.role', '=', 'member');
             })
-            ->leftJoin('discipleship_manual_journey_records as manual_journey', function ($join): void {
+            ->leftJoin('dg_manual as manual_journey', function ($join): void {
                 $join->on('manual_journey.person_id', '=', 'mp.id')
                     ->on('manual_journey.branch_id', '=', 'mp.branch_id');
             })
@@ -299,12 +299,12 @@ class DiscipleshipDashboardSummaryQuery
     /** @param array<int, int> $branchIds */
     private function overdueGroupRows(array $branchIds): Collection
     {
-        $latest = DB::table('discipleship_meeting_reports')
+        $latest = DB::table('jurnal_temu_dg')
             ->selectRaw('branch_id, discipleship_group_id, MAX(meeting_date) AS last_report_date')
             ->whereNotNull('discipleship_group_id')
             ->groupBy('branch_id', 'discipleship_group_id');
 
-        return $this->query(static fn () => DB::table('discipleship_groups as g')
+        return $this->query(static fn () => DB::table('kelompok_dg as g')
             ->leftJoinSub($latest, 'latest_report', function ($join): void {
                 $join->on('latest_report.branch_id', '=', 'g.branch_id')
                     ->on('latest_report.discipleship_group_id', '=', 'g.id');
@@ -322,7 +322,7 @@ class DiscipleshipDashboardSummaryQuery
     /** @param array<int, int> $branchIds */
     private function targetRows(array $branchIds): Collection
     {
-        return $this->query(static fn () => DB::table('branches')
+        return $this->query(static fn () => DB::table('cabang')
             ->whereIn('id', $branchIds)
             ->get([
                 'id as branch_id',

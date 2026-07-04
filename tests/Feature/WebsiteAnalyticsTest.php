@@ -48,11 +48,11 @@ class WebsiteAnalyticsTest extends TestCase
             ->get('/_analytics-test/page');
 
         $first->assertOk()->assertCookie(config('analytics.cookie.name'));
-        $this->assertSame(2, DB::table('website_page_views')->count());
-        $this->assertSame(1, DB::table('website_page_views')->distinct()->count('visitor_hash'));
-        $this->assertSame(1, DB::table('website_sessions')->count());
-        $this->assertSame(2, (int) DB::table('website_sessions')->value('page_views'));
-        $this->assertDatabaseHas('website_page_views', [
+        $this->assertSame(2, DB::table('kunjungan_halaman')->count());
+        $this->assertSame(1, DB::table('kunjungan_halaman')->distinct()->count('visitor_hash'));
+        $this->assertSame(1, DB::table('sesi')->count());
+        $this->assertSame(2, (int) DB::table('sesi')->value('page_views'));
+        $this->assertDatabaseHas('kunjungan_halaman', [
             'segment' => 'publik',
             'is_bot' => false,
             'language_code' => 'id-ID',
@@ -109,7 +109,7 @@ class WebsiteAnalyticsTest extends TestCase
         CarbonImmutable::setTestNow('2026-06-21 10:31:00', 'UTC');
         $this->get('/_analytics-test/page')->assertOk();
 
-        $this->assertSame(2, DB::table('website_sessions')->count());
+        $this->assertSame(2, DB::table('sesi')->count());
     }
 
     public function test_bot_and_prefetch_are_stored_but_technical_requests_are_not_page_views(): void
@@ -124,9 +124,9 @@ class WebsiteAnalyticsTest extends TestCase
         $this->get('/_analytics-test/redirect')->assertRedirect('/_analytics-test/page');
         $this->post('/_analytics-test/post')->assertOk();
 
-        $this->assertSame(2, DB::table('website_page_views')->count());
-        $this->assertSame(1, DB::table('website_page_views')->where('is_bot', true)->count());
-        $this->assertSame(1, DB::table('website_page_views')->where('is_prefetch', true)->count());
+        $this->assertSame(2, DB::table('kunjungan_halaman')->count());
+        $this->assertSame(1, DB::table('kunjungan_halaman')->where('is_bot', true)->count());
+        $this->assertSame(1, DB::table('kunjungan_halaman')->where('is_prefetch', true)->count());
     }
 
     public function test_authenticated_and_internal_page_views_are_not_recorded(): void
@@ -136,8 +136,8 @@ class WebsiteAnalyticsTest extends TestCase
         $this->flushSession();
         $this->get('/_analytics-test/internal')->assertOk();
 
-        $this->assertSame(0, DB::table('website_page_views')->count());
-        $this->assertSame(2, DB::table('activity_requests')->count());
+        $this->assertSame(0, DB::table('kunjungan_halaman')->count());
+        $this->assertSame(2, DB::table('permintaan_aktivitas')->count());
     }
 
     public function test_developer_statistics_page_and_filters_are_available_only_to_developer(): void
@@ -211,8 +211,8 @@ class WebsiteAnalyticsTest extends TestCase
 
         $this->assertSame(0, Artisan::call('analytics:backfill'));
         $this->assertSame(0, Artisan::call('analytics:backfill'));
-        $this->assertSame(1, DB::table('website_page_views')->where('identity_source', 'legacy_session')->count());
-        $this->assertNull(DB::table('website_page_views')->value('language_code'));
+        $this->assertSame(1, DB::table('kunjungan_halaman')->where('identity_source', 'legacy_session')->count());
+        $this->assertNull(DB::table('kunjungan_halaman')->value('language_code'));
     }
 
     public function test_dashboard_defensively_ignores_historical_internal_page_views_and_old_filters(): void
@@ -222,7 +222,7 @@ class WebsiteAnalyticsTest extends TestCase
             ['request_id' => '05'.str_repeat('0', 24), 'session_id' => '06'.str_repeat('0', 24), 'user_id' => null, 'segment' => 'publik'],
             ['request_id' => '05'.str_repeat('1', 24), 'session_id' => '06'.str_repeat('1', 24), 'user_id' => 1, 'segment' => 'developer'],
         ] as $row) {
-            DB::table('website_page_views')->insert(array_merge($row, [
+            DB::table('kunjungan_halaman')->insert(array_merge($row, [
                 'visitor_hash' => hash('sha256', $row['request_id']),
                 'identity_source' => 'legacy_session',
                 'username' => $row['user_id'] === null ? null : 'developer',
@@ -298,7 +298,7 @@ class WebsiteAnalyticsTest extends TestCase
     {
         $occurredAt = CarbonImmutable::now('UTC')->format('Y-m-d H:i:s.u');
         foreach (range(1, 12) as $index) {
-            DB::table('website_page_views')->insert([
+            DB::table('kunjungan_halaman')->insert([
                 'request_id' => sprintf('03%024d', $index),
                 'session_id' => sprintf('04%024d', $index),
                 'visitor_hash' => hash('sha256', 'compact-visitor-'.$index),
@@ -354,7 +354,7 @@ class WebsiteAnalyticsTest extends TestCase
                     'occurred_at' => $baseTime->subDays($index % 30)->format('Y-m-d H:i:s.u'),
                 ];
             }
-            DB::table('website_page_views')->insert($rows);
+            DB::table('kunjungan_halaman')->insert($rows);
         }
 
         $queryCount = 0;
@@ -380,7 +380,7 @@ class WebsiteAnalyticsTest extends TestCase
 
     private function createTables(): void
     {
-        Schema::create('branches', static function (Blueprint $table): void {
+        Schema::create('cabang', static function (Blueprint $table): void {
             $table->id();
             $table->string('label');
             $table->boolean('is_active')->default(true);
@@ -397,7 +397,7 @@ class WebsiteAnalyticsTest extends TestCase
             $table->timestamp('last_login_at')->nullable();
             $table->timestamps();
         });
-        Schema::create('activity_requests', static function (Blueprint $table): void {
+        Schema::create('permintaan_aktivitas', static function (Blueprint $table): void {
             $table->ulid('id')->primary();
             $table->string('actor_type')->default('anonymous');
             $table->unsignedBigInteger('user_id')->nullable();
@@ -432,7 +432,7 @@ class WebsiteAnalyticsTest extends TestCase
             $table->dateTime('started_at', 6);
             $table->dateTime('completed_at', 6)->nullable();
         });
-        Schema::create('activity_events', static function (Blueprint $table): void {
+        Schema::create('peristiwa_aktivitas', static function (Blueprint $table): void {
             $table->id();
             $table->ulid('request_id');
             $table->string('category');
@@ -447,7 +447,7 @@ class WebsiteAnalyticsTest extends TestCase
             $table->json('metadata')->nullable();
             $table->dateTime('occurred_at', 6);
         });
-        Schema::create('website_sessions', static function (Blueprint $table): void {
+        Schema::create('sesi', static function (Blueprint $table): void {
             $table->ulid('id')->primary();
             $table->char('visitor_hash', 64);
             $table->unsignedBigInteger('user_id')->nullable();
@@ -459,7 +459,7 @@ class WebsiteAnalyticsTest extends TestCase
             $table->text('exit_path');
             $table->unsignedInteger('page_views');
         });
-        Schema::create('website_page_views', static function (Blueprint $table): void {
+        Schema::create('kunjungan_halaman', static function (Blueprint $table): void {
             $table->ulid('request_id')->primary();
             $table->ulid('session_id');
             $table->char('visitor_hash', 64);
@@ -482,7 +482,7 @@ class WebsiteAnalyticsTest extends TestCase
             $table->decimal('response_ms', 14, 3)->nullable();
             $table->dateTime('occurred_at', 6);
         });
-        DB::table('branches')->insert(['id' => 1, 'label' => 'Kutisari', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('cabang')->insert(['id' => 1, 'label' => 'Kutisari', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
     }
 
     private function developer(): User

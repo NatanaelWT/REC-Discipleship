@@ -83,7 +83,7 @@ class PublicMaterialManagementTest extends TestCase
 
         $response->assertRedirect('/materi/materi_dg_1?material_status=uploaded');
 
-        $row = DB::table('public_material_files')->where('title', 'Materi Baru Pusat')->first();
+        $row = DB::table('materi_publik')->where('title', 'Materi Baru Pusat')->first();
         $this->assertNotNull($row);
         $this->assertSame(PublicMaterialMenuKey::MateriDg1->value, $row->menu);
         $this->assertSame('Materi Baru Pusat.pdf', $row->original_file_name);
@@ -287,11 +287,11 @@ class PublicMaterialManagementTest extends TestCase
         $exitCode = Artisan::call('materials:sync-files');
 
         $this->assertSame(0, $exitCode);
-        $this->assertDatabaseHas('public_material_files', [
+        $this->assertDatabaseHas('materi_publik', [
             'menu' => PublicMaterialMenuKey::MateriDg1->value,
             'relative_path' => $this->test_relative_folder(PublicMaterialMenuKey::MateriDg1).'/'.$fileName,
         ]);
-        $this->assertDatabaseMissing('public_material_files', [
+        $this->assertDatabaseMissing('materi_publik', [
             'relative_path' => $this->testBasePath.'/Materi-MSK/file_ignored_20260617000000.pdf',
         ]);
     }
@@ -321,17 +321,17 @@ class PublicMaterialManagementTest extends TestCase
         ]);
 
         $this->assertSame(0, $exitCode);
-        $this->assertDatabaseHas('public_material_files', [
+        $this->assertDatabaseHas('materi_publik', [
             'id' => $fileId,
             'text_content' => 'Teks hasil ekstraksi.',
             'text_extraction_error' => null,
         ]);
-        $this->assertDatabaseHas('public_material_files', [
+        $this->assertDatabaseHas('materi_publik', [
             'id' => $dg2FileId,
             'text_content' => 'Teks hasil ekstraksi.',
             'text_extraction_error' => null,
         ]);
-        $this->assertNotNull(DB::table('public_material_files')->where('id', $fileId)->value('text_extracted_at'));
+        $this->assertNotNull(DB::table('materi_publik')->where('id', $fileId)->value('text_extracted_at'));
     }
 
     public function test_developer_can_rename_public_material_file(): void
@@ -344,7 +344,7 @@ class PublicMaterialManagementTest extends TestCase
         ]);
 
         $response->assertRedirect('/materi/materi_dg_1?material_status=renamed');
-        $this->assertDatabaseHas('public_material_files', [
+        $this->assertDatabaseHas('materi_publik', [
             'id' => $fileId,
             'menu' => PublicMaterialMenuKey::MateriDg1->value,
             'title' => 'Nama File Baru',
@@ -362,7 +362,7 @@ class PublicMaterialManagementTest extends TestCase
         ]);
 
         $response->assertForbidden();
-        $this->assertDatabaseMissing('public_material_files', [
+        $this->assertDatabaseMissing('materi_publik', [
             'title' => 'Tidak Boleh',
         ]);
     }
@@ -376,16 +376,16 @@ class PublicMaterialManagementTest extends TestCase
             'material_file' => UploadedFile::fake()->create('tidak-boleh-pusat.pdf', 12, 'application/pdf'),
         ])->assertForbidden();
 
-        $this->assertDatabaseMissing('public_material_files', [
+        $this->assertDatabaseMissing('materi_publik', [
             'title' => 'Tidak Boleh Pusat',
         ]);
     }
 
     private function createMaterialTables(): void
     {
-        Schema::dropIfExists('public_material_files');
+        Schema::dropIfExists('materi_publik');
 
-        Schema::create('public_material_files', function (Blueprint $table): void {
+        Schema::create('materi_publik', function (Blueprint $table): void {
             $table->id();
             $table->string('menu', 80)->index();
             $table->string('title')->nullable();
@@ -458,7 +458,7 @@ class PublicMaterialManagementTest extends TestCase
             $values['text_extraction_error'] = null;
         }
 
-        return DB::table('public_material_files')->insertGetId($values);
+        return DB::table('materi_publik')->insertGetId($values);
     }
 
     private function putPublicMaterialFile(PublicMaterialMenuKey $menu, string $fileName, string $contents): void

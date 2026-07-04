@@ -12,7 +12,7 @@ class DiscipleshipTargetCacheTest extends TestCase
 {
     public function test_target_cache_is_reused_and_invalidated_after_save(): void
     {
-        Schema::create('branches', function (Blueprint $table): void {
+        Schema::create('cabang', function (Blueprint $table): void {
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
@@ -23,7 +23,7 @@ class DiscipleshipTargetCacheTest extends TestCase
             $table->unsignedInteger('dg3_completion_target')->default(50);
             $table->timestamps();
         });
-        DB::table('branches')->insert([
+        DB::table('cabang')->insert([
             'id' => 1,
             'label' => 'Kutisari',
             'is_active' => true,
@@ -41,7 +41,7 @@ class DiscipleshipTargetCacheTest extends TestCase
 
         $targetQueries = 0;
         DB::listen(static function ($query) use (&$targetQueries): void {
-            if (str_contains($query->sql, 'branches')) {
+            if (str_contains($query->sql, 'cabang')) {
                 $targetQueries++;
             }
         });

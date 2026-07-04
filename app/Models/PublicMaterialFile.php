@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class PublicMaterialFile extends Model
 {
-    protected $table = 'public_material_files';
+    protected $table = 'materi_publik';
 
     protected $fillable = [
         'menu',

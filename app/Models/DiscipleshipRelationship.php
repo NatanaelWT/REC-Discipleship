@@ -10,6 +10,8 @@ class DiscipleshipRelationship extends Model
 {
     use ResolvesBranchSlug;
 
+    protected $table = 'relasi_dg';
+
     protected $fillable = [
         'branch_id',
         'mentor_person_id',

@@ -11,6 +11,8 @@ class DiscipleshipGroup extends Model
 {
     use ResolvesBranchSlug;
 
+    protected $table = 'kelompok_dg';
+
     protected $fillable = [
         'branch_id',
         'name',

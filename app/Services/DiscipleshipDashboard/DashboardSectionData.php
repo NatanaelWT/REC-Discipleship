@@ -72,13 +72,13 @@ class DashboardSectionData
     /** @return array<string, mixed> */
     public function overdueGroups(Request $request): array
     {
-        $latest = DB::table('discipleship_meeting_reports')
+        $latest = DB::table('jurnal_temu_dg')
             ->selectRaw('branch_id, discipleship_group_id, MAX(meeting_date) AS last_report_date')
             ->whereNotNull('discipleship_group_id')
             ->groupBy('branch_id', 'discipleship_group_id');
 
         $groups = DiscipleshipGroup::query()
-            ->from('discipleship_groups as g')
+            ->from('kelompok_dg as g')
             ->leftJoinSub($latest, 'latest_report', function ($join): void {
                 $join->on('latest_report.branch_id', '=', 'g.branch_id')
                     ->on('latest_report.discipleship_group_id', '=', 'g.id');

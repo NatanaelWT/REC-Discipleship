@@ -21,7 +21,7 @@ class DifficultQuestionAdminTest extends TestCase
         $this->createDifficultQuestionsTable();
         $this->loginAsCentralDiscipleshipAdmin();
 
-        DB::table('difficult_questions')->insert([
+        DB::table('pertanyaan_sulit')->insert([
             'asker_name' => 'Tester',
             'asker_whatsapp' => '6281234567890',
             'question' => 'Apa arti pemuridan?',
@@ -63,7 +63,7 @@ class DifficultQuestionAdminTest extends TestCase
         ]);
 
         $response->assertRedirect('/publik/pertanyaan-sulit/kirim?submitted=1');
-        $this->assertDatabaseHas('difficult_questions', [
+        $this->assertDatabaseHas('pertanyaan_sulit', [
             'asker_name' => 'Tester',
             'asker_whatsapp' => '6281234567890',
             'question' => 'Apakah nomor WhatsApp tersimpan?',
@@ -76,7 +76,7 @@ class DifficultQuestionAdminTest extends TestCase
         $this->createDifficultQuestionsTable();
         $this->loginAsCentralDiscipleshipAdmin();
 
-        DB::table('difficult_questions')->insert([
+        DB::table('pertanyaan_sulit')->insert([
             [
                 'asker_name' => 'Anna',
                 'asker_whatsapp' => '6281111111111',
@@ -135,7 +135,7 @@ class DifficultQuestionAdminTest extends TestCase
         $this->createDifficultQuestionsTable();
         $this->actingAsRecUser('developer', null, 'developer');
 
-        $questionId = DB::table('difficult_questions')->insertGetId([
+        $questionId = DB::table('pertanyaan_sulit')->insertGetId([
             'asker_name' => 'Tester',
             'question' => 'Pertanyaan uji',
             'password_hash' => null,
@@ -153,7 +153,7 @@ class DifficultQuestionAdminTest extends TestCase
         ]);
 
         $response->assertRedirect('/pemuridan/pertanyaan-sulit?answered=1');
-        $this->assertDatabaseHas('difficult_questions', [
+        $this->assertDatabaseHas('pertanyaan_sulit', [
             'id' => $questionId,
             'status' => 'answered',
             'answer' => 'Jawaban dari admin.',
@@ -172,7 +172,7 @@ class DifficultQuestionAdminTest extends TestCase
 
         session()->put('difficult_answer_lookup_hash', 'lookup-public');
 
-        DB::table('difficult_questions')->insert([
+        DB::table('pertanyaan_sulit')->insert([
             'asker_name' => 'Penanya',
             'question' => 'Apakah jawaban publik tampil?',
             'password_hash' => null,
@@ -198,7 +198,7 @@ class DifficultQuestionAdminTest extends TestCase
         $this->createDifficultQuestionsTable();
         $this->loginAsCentralDiscipleshipAdmin();
 
-        $questionId = DB::table('difficult_questions')->insertGetId([
+        $questionId = DB::table('pertanyaan_sulit')->insertGetId([
             'asker_name' => 'Tester',
             'question' => 'Pertanyaan read only',
             'password_hash' => null,
@@ -215,7 +215,7 @@ class DifficultQuestionAdminTest extends TestCase
             'answer_text' => 'Jawaban dari pusat.',
         ])->assertRedirect('/pemuridan/pertanyaan-sulit?answered=1');
 
-        $this->assertDatabaseHas('difficult_questions', [
+        $this->assertDatabaseHas('pertanyaan_sulit', [
             'id' => $questionId,
             'status' => 'answered',
             'answer' => 'Jawaban dari pusat.',
@@ -225,9 +225,9 @@ class DifficultQuestionAdminTest extends TestCase
 
     private function createDifficultQuestionsTable(): void
     {
-        Schema::dropIfExists('difficult_questions');
+        Schema::dropIfExists('pertanyaan_sulit');
 
-        Schema::create('difficult_questions', function (Blueprint $table): void {
+        Schema::create('pertanyaan_sulit', function (Blueprint $table): void {
             $table->id();
             $table->string('asker_name')->nullable();
             $table->string('asker_whatsapp')->nullable();

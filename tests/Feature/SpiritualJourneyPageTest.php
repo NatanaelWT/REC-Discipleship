@@ -60,7 +60,7 @@ class SpiritualJourneyPageTest extends TestCase
                 'updated_at' => $now,
             ];
         }
-        DB::table('people')->insert($participants);
+        DB::table('orang')->insert($participants);
         $this->actingAsRecUser();
 
         $response = $this->get('/pemuridan/spiritual-journey');
@@ -98,28 +98,28 @@ class SpiritualJourneyPageTest extends TestCase
         $this->createMskTables();
         $this->createDiscipleshipTables();
 
-        $dgWithoutKgapPersonId = DB::table('people')->insertGetId([
+        $dgWithoutKgapPersonId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Peserta DG Belum KGAP',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $dgWithKgapPersonId = DB::table('people')->insertGetId([
+        $dgWithKgapPersonId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Peserta DG Sudah KGAP',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $withoutDgPersonId = DB::table('people')->insertGetId([
+        $withoutDgPersonId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Peserta Belum DG',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $groupId = DB::table('discipleship_groups')->insertGetId([
+        $groupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
             'name' => 'Kelompok DG Test',
             'status' => 'active',
@@ -128,7 +128,7 @@ class SpiritualJourneyPageTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             [
                 'branch_id' => 1,
                 'discipleship_group_id' => $groupId,
@@ -157,7 +157,7 @@ class SpiritualJourneyPageTest extends TestCase
             ],
         ]);
 
-        DB::table('people')->where('id', $dgWithoutKgapPersonId)->update([
+        DB::table('orang')->where('id', $dgWithoutKgapPersonId)->update([
                 'batch_month' => '2026-06',
                 'completed_at' => null,
                 'journey_bridge_status' => 'sudah_rg',
@@ -166,7 +166,7 @@ class SpiritualJourneyPageTest extends TestCase
                 'photos' => json_encode([]),
                 'updated_at' => now(),
         ]);
-        DB::table('people')->where('id', $dgWithKgapPersonId)->update([
+        DB::table('orang')->where('id', $dgWithKgapPersonId)->update([
                 'batch_month' => '2026-06',
                 'completed_at' => null,
                 'journey_bridge_status' => 'sudah_kgap',
@@ -175,7 +175,7 @@ class SpiritualJourneyPageTest extends TestCase
                 'photos' => json_encode([]),
                 'updated_at' => now(),
         ]);
-        DB::table('people')->where('id', $withoutDgPersonId)->update([
+        DB::table('orang')->where('id', $withoutDgPersonId)->update([
                 'batch_month' => '2026-06',
                 'completed_at' => null,
                 'journey_bridge_status' => 'belum',
@@ -184,7 +184,7 @@ class SpiritualJourneyPageTest extends TestCase
                 'photos' => json_encode([]),
                 'updated_at' => now(),
         ]);
-        DB::table('people')->insert([
+        DB::table('orang')->insert([
             [
                 'branch_id' => 1,
                 'full_name' => 'Peserta Belum Terhubung',
@@ -225,7 +225,7 @@ class SpiritualJourneyPageTest extends TestCase
         ]);
 
         $response->assertRedirect('/pemuridan/spiritual-journey?saved=1');
-        $this->assertDatabaseHas('people', [
+        $this->assertDatabaseHas('orang', [
             'branch_id' => 1,
             'id' => $participantId,
             'journey_bridge_status' => 'sudah_kgap',
@@ -234,11 +234,11 @@ class SpiritualJourneyPageTest extends TestCase
 
     private function createMskTables(): void
     {
-        Schema::dropIfExists('discipleship_relationships');
-        Schema::dropIfExists('discipleship_group_people');
-        Schema::dropIfExists('people');
+        Schema::dropIfExists('relasi_dg');
+        Schema::dropIfExists('keanggotaan_kelompok_dg');
+        Schema::dropIfExists('orang');
 
-        Schema::create('people', function (Blueprint $table): void {
+        Schema::create('orang', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('full_name')->nullable();
@@ -259,7 +259,7 @@ class SpiritualJourneyPageTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_group_people', function (Blueprint $table): void {
+        Schema::create('keanggotaan_kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('discipleship_group_id')->nullable();
@@ -273,7 +273,7 @@ class SpiritualJourneyPageTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_relationships', function (Blueprint $table): void {
+        Schema::create('relasi_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('mentor_person_id')->nullable();
@@ -292,11 +292,11 @@ class SpiritualJourneyPageTest extends TestCase
 
     private function createDiscipleshipTables(): void
     {
-        Schema::dropIfExists('discipleship_group_people');
-        Schema::dropIfExists('discipleship_relationships');
-        Schema::dropIfExists('discipleship_groups');
+        Schema::dropIfExists('keanggotaan_kelompok_dg');
+        Schema::dropIfExists('relasi_dg');
+        Schema::dropIfExists('kelompok_dg');
 
-        Schema::create('discipleship_groups', function (Blueprint $table): void {
+        Schema::create('kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('name')->nullable();
@@ -308,7 +308,7 @@ class SpiritualJourneyPageTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_relationships', function (Blueprint $table): void {
+        Schema::create('relasi_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('mentor_person_id')->nullable();
@@ -324,7 +324,7 @@ class SpiritualJourneyPageTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_group_people', function (Blueprint $table): void {
+        Schema::create('keanggotaan_kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('discipleship_group_id')->nullable();
@@ -341,7 +341,7 @@ class SpiritualJourneyPageTest extends TestCase
 
     private function seedParticipant(): int
     {
-        $participantId = DB::table('people')->insertGetId([
+        $participantId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Peserta Journey',
             'batch_month' => '2026-06',

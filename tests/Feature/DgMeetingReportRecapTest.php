@@ -50,7 +50,7 @@ class DgMeetingReportRecapTest extends TestCase
     {
         $this->createTables();
         $ids = $this->seedReport();
-        $inactiveGroupId = DB::table('discipleship_groups')->insertGetId([
+        $inactiveGroupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
             'name' => 'Kelompok Nonaktif',
             'status' => 'completed',
@@ -59,7 +59,7 @@ class DgMeetingReportRecapTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $inactiveGroupId,
             'person_id' => $ids['leader_id'],
@@ -71,7 +71,7 @@ class DgMeetingReportRecapTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_meeting_reports')->insert([
+        DB::table('jurnal_temu_dg')->insert([
             'branch_id' => 1,
             'leader_person_id' => $ids['leader_id'],
             'leader_name_snapshot' => 'Pemimpin Test',
@@ -182,7 +182,7 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertSessionMissing('public_dg_report_error');
         $response->assertSessionMissing('public_dg_report_old');
 
-        $report = DB::table('discipleship_meeting_reports')->orderByDesc('id')->first();
+        $report = DB::table('jurnal_temu_dg')->orderByDesc('id')->first();
         $this->assertNotNull($report);
         $this->assertSame(2, (int) $report->branch_id);
         $this->assertSame($ids['leader_id'], (int) $report->leader_person_id);
@@ -200,11 +200,11 @@ class DgMeetingReportRecapTest extends TestCase
     public function test_public_dg_report_accepts_cross_branch_leader_for_branch_group(): void
     {
         $this->createTables();
-        DB::table('people')->insert([
+        DB::table('orang')->insert([
             ['id' => 626, 'branch_id' => 2, 'full_name' => 'Yakub Tri Handoko', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 641, 'branch_id' => 1, 'full_name' => 'Anggota Kutisari', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
         ]);
-        DB::table('discipleship_groups')->insert([
+        DB::table('kelompok_dg')->insert([
             'id' => 175,
             'branch_id' => 1,
             'name' => 'Kelompok Kutisari Lintas',
@@ -214,7 +214,7 @@ class DgMeetingReportRecapTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             ['branch_id' => 1, 'discipleship_group_id' => 175, 'person_id' => 626, 'role' => 'leader', 'stage' => null, 'status' => 'active', 'started_on' => '2026-07-01', 'created_at' => now(), 'updated_at' => now()],
             ['branch_id' => 1, 'discipleship_group_id' => 175, 'person_id' => 641, 'role' => 'member', 'stage' => 'DG 1', 'status' => 'active', 'started_on' => '2026-07-01', 'created_at' => now(), 'updated_at' => now()],
         ]);
@@ -236,7 +236,7 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertRedirect(route('public.dg.report', ['branch' => 'kutisari', 'submitted' => 1]));
         $response->assertSessionMissing('public_dg_report_error');
 
-        $report = DB::table('discipleship_meeting_reports')->orderByDesc('id')->first();
+        $report = DB::table('jurnal_temu_dg')->orderByDesc('id')->first();
         $this->assertNotNull($report);
         $this->assertSame(1, (int) $report->branch_id);
         $this->assertSame(626, (int) $report->leader_person_id);
@@ -264,7 +264,7 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertRedirect(route('public.dg.report', ['branch' => 'gm', 'submitted' => 1]));
         $response->assertSessionMissing('public_dg_report_error');
 
-        $report = DB::table('discipleship_meeting_reports')->orderByDesc('id')->first();
+        $report = DB::table('jurnal_temu_dg')->orderByDesc('id')->first();
         $this->assertNotNull($report);
         $photos = json_decode((string) $report->photos, true);
         $this->assertIsArray($photos);
@@ -301,7 +301,7 @@ class DgMeetingReportRecapTest extends TestCase
         );
         $response->assertSessionHasErrors('public_dg_report_error');
         $response->assertSessionMissing('public_dg_report_old.meeting_photos');
-        $this->assertSame(0, DB::table('discipleship_meeting_reports')->count());
+        $this->assertSame(0, DB::table('jurnal_temu_dg')->count());
 
         $activity = ActivityRequest::query()->findOrFail($response->headers->get('X-Activity-Request-Id'));
         $this->assertSame('failed', $activity->outcome);
@@ -330,7 +330,7 @@ class DgMeetingReportRecapTest extends TestCase
             'public_dg_report_error',
             'Ukuran foto pertemuan terlalu besar. Maksimal 5 MB per file.',
         );
-        $this->assertSame(0, DB::table('discipleship_meeting_reports')->count());
+        $this->assertSame(0, DB::table('jurnal_temu_dg')->count());
     }
 
     public function test_public_dg_report_cleans_up_previous_files_when_one_of_multiple_uploads_is_invalid(): void
@@ -359,7 +359,7 @@ class DgMeetingReportRecapTest extends TestCase
             'public_dg_report_error',
             'Format foto pertemuan tidak didukung. Gunakan JPG/PNG/WEBP.',
         );
-        $this->assertSame(0, DB::table('discipleship_meeting_reports')->count());
+        $this->assertSame(0, DB::table('jurnal_temu_dg')->count());
 
         $filesAfter = glob($uploadDirectory.'/dg_*') ?: [];
         sort($filesAfter);
@@ -372,7 +372,7 @@ class DgMeetingReportRecapTest extends TestCase
         $ids = $this->seedReport();
         $otherLeaderId = $this->seedOtherLeaderGroup();
         $this->createActivityTables();
-        $initialReportCount = DB::table('discipleship_meeting_reports')->count();
+        $initialReportCount = DB::table('jurnal_temu_dg')->count();
 
         $response = $this->post('/publik/jurnal-dg/kutisari/laporan', [
             'public_cabang' => 'kutisari',
@@ -388,7 +388,7 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertSessionHas('public_dg_report_error', 'Kelompok yang dipilih tidak sesuai dengan pemimpin DG.');
         $response->assertSessionHas('public_dg_report_old.leader_id', (string) $otherLeaderId);
         $response->assertSessionHas('public_dg_report_old.group_id', (string) $ids['group_id']);
-        $this->assertSame($initialReportCount, DB::table('discipleship_meeting_reports')->count());
+        $this->assertSame($initialReportCount, DB::table('jurnal_temu_dg')->count());
 
         $activity = ActivityRequest::query()->findOrFail($response->headers->get('X-Activity-Request-Id'));
         $this->assertSame('failed', $activity->outcome);
@@ -397,12 +397,12 @@ class DgMeetingReportRecapTest extends TestCase
 
     private function createTables(): void
     {
-        Schema::dropIfExists('discipleship_meeting_reports');
-        Schema::dropIfExists('discipleship_group_people');
-        Schema::dropIfExists('discipleship_groups');
-        Schema::dropIfExists('people');
+        Schema::dropIfExists('jurnal_temu_dg');
+        Schema::dropIfExists('keanggotaan_kelompok_dg');
+        Schema::dropIfExists('kelompok_dg');
+        Schema::dropIfExists('orang');
 
-        Schema::create('people', function (Blueprint $table): void {
+        Schema::create('orang', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('full_name')->nullable();
@@ -413,7 +413,7 @@ class DgMeetingReportRecapTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_groups', function (Blueprint $table): void {
+        Schema::create('kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('name');
@@ -428,7 +428,7 @@ class DgMeetingReportRecapTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_group_people', function (Blueprint $table): void {
+        Schema::create('keanggotaan_kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('discipleship_group_id');
@@ -442,7 +442,7 @@ class DgMeetingReportRecapTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_meeting_reports', function (Blueprint $table): void {
+        Schema::create('jurnal_temu_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('leader_person_id')->nullable();
@@ -471,16 +471,20 @@ class DgMeetingReportRecapTest extends TestCase
 
     private function createActivityTables(): void
     {
+        Schema::dropIfExists('peristiwa_aktivitas');
+        Schema::dropIfExists('permintaan_aktivitas');
         Schema::dropIfExists('activity_events');
         Schema::dropIfExists('activity_requests');
         $activityMigration = require database_path('migrations/2026_06_21_000001_create_activity_audit_tables.php');
         $activityMigration->up();
+        $renameMigration = require database_path('migrations/2026_07_04_000003_rename_domain_tables_to_indonesian.php');
+        $renameMigration->up();
     }
 
     /** @return array{leader_id:int,member_id:int,group_id:int,report_id:int} */
     private function seedReport(): array
     {
-        $leaderId = DB::table('people')->insertGetId([
+        $leaderId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Pemimpin Test',
             'status' => 'active',
@@ -488,7 +492,7 @@ class DgMeetingReportRecapTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $memberId = DB::table('people')->insertGetId([
+        $memberId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Anggota Test',
             'status' => 'active',
@@ -496,7 +500,7 @@ class DgMeetingReportRecapTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $groupId = DB::table('discipleship_groups')->insertGetId([
+        $groupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
             'name' => 'Kelompok Test',
             'status' => 'active',
@@ -506,7 +510,7 @@ class DgMeetingReportRecapTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'person_id' => $leaderId,
@@ -517,7 +521,7 @@ class DgMeetingReportRecapTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'person_id' => $memberId,
@@ -529,7 +533,7 @@ class DgMeetingReportRecapTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $reportId = DB::table('discipleship_meeting_reports')->insertGetId([
+        $reportId = DB::table('jurnal_temu_dg')->insertGetId([
             'branch_id' => 1,
             'leader_person_id' => $leaderId,
             'leader_name_snapshot' => 'Pemimpin Test',
@@ -567,14 +571,14 @@ class DgMeetingReportRecapTest extends TestCase
 
     private function seedOtherLeaderGroup(): int
     {
-        $leaderId = DB::table('people')->insertGetId([
+        $leaderId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Pemimpin Lain',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $groupId = DB::table('discipleship_groups')->insertGetId([
+        $groupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
             'name' => 'Kelompok Lain',
             'status' => 'active',
@@ -583,7 +587,7 @@ class DgMeetingReportRecapTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'person_id' => $leaderId,
@@ -600,12 +604,12 @@ class DgMeetingReportRecapTest extends TestCase
     /** @return array{leader_id:int,member_id:int,group_id:int} */
     private function seedGmReportFormData(): array
     {
-        DB::table('people')->insert([
+        DB::table('orang')->insert([
             ['id' => 605, 'branch_id' => 2, 'full_name' => 'Veronica Lahindah', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 510, 'branch_id' => 2, 'full_name' => 'Carlini Fan Hardi', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 525, 'branch_id' => 2, 'full_name' => 'Pris Cilla Sandy', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
         ]);
-        DB::table('discipleship_groups')->insert([
+        DB::table('kelompok_dg')->insert([
             'id' => 322,
             'branch_id' => 2,
             'name' => 'Kelompok',
@@ -615,7 +619,7 @@ class DgMeetingReportRecapTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             ['branch_id' => 2, 'discipleship_group_id' => 322, 'person_id' => 605, 'role' => 'leader', 'stage' => null, 'status' => 'active', 'started_on' => '2026-04-08', 'created_at' => now(), 'updated_at' => now()],
             ['branch_id' => 2, 'discipleship_group_id' => 322, 'person_id' => 510, 'role' => 'member', 'stage' => 'DG 2', 'status' => 'active', 'started_on' => '2026-04-08', 'created_at' => now(), 'updated_at' => now()],
             ['branch_id' => 2, 'discipleship_group_id' => 322, 'person_id' => 525, 'role' => 'member', 'stage' => 'DG 2', 'status' => 'active', 'started_on' => '2026-04-08', 'created_at' => now(), 'updated_at' => now()],

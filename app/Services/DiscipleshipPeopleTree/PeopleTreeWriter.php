@@ -259,11 +259,11 @@ class PeopleTreeWriter
     private function recordLogicalChanges(string $branchCode, string $requestedAction, array $beforeModel, array $afterModel): void
     {
         $collections = [
-            'discipleship_persons' => 'people',
-            'discipleship_groups' => 'discipleship_groups',
-            'discipleship_relations' => 'discipleship_relationships',
-            'group_memberships' => 'discipleship_group_people',
-            'group_leaderships' => 'discipleship_group_people',
+            'discipleship_persons' => 'orang',
+            'discipleship_groups' => 'kelompok_dg',
+            'discipleship_relations' => 'relasi_dg',
+            'group_memberships' => 'keanggotaan_kelompok_dg',
+            'group_leaderships' => 'keanggotaan_kelompok_dg',
             'group_multiplications' => 'discipleship_group_multiplications',
         ];
         $counts = ['created' => 0, 'updated' => 0, 'deleted' => 0];

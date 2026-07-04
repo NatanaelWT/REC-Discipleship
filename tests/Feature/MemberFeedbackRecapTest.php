@@ -175,26 +175,26 @@ class MemberFeedbackRecapTest extends TestCase
 
     private function createTables(): void
     {
-        Schema::dropIfExists('discipleship_feedbacks');
-        Schema::dropIfExists('discipleship_group_people');
-        Schema::dropIfExists('discipleship_groups');
-        Schema::dropIfExists('people');
-        Schema::dropIfExists('branches');
+        Schema::dropIfExists('jurnal_umpan_balik');
+        Schema::dropIfExists('keanggotaan_kelompok_dg');
+        Schema::dropIfExists('kelompok_dg');
+        Schema::dropIfExists('orang');
+        Schema::dropIfExists('cabang');
 
-        Schema::create('branches', function (Blueprint $table): void {
+        Schema::create('cabang', function (Blueprint $table): void {
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
 
-        DB::table('branches')->insert([
+        DB::table('cabang')->insert([
             ['id' => 1, 'label' => 'Kutisari', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 2, 'label' => 'GM', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
         ]);
         app(BranchCatalog::class)->clearCache();
 
-        Schema::create('people', function (Blueprint $table): void {
+        Schema::create('orang', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('full_name')->nullable();
@@ -205,7 +205,7 @@ class MemberFeedbackRecapTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_groups', function (Blueprint $table): void {
+        Schema::create('kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('name');
@@ -215,7 +215,7 @@ class MemberFeedbackRecapTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_group_people', function (Blueprint $table): void {
+        Schema::create('keanggotaan_kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('discipleship_group_id');
@@ -229,7 +229,7 @@ class MemberFeedbackRecapTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_feedbacks', function (Blueprint $table): void {
+        Schema::create('jurnal_umpan_balik', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id')->nullable();
             $table->unsignedTinyInteger('feedback_session');
@@ -258,7 +258,7 @@ class MemberFeedbackRecapTest extends TestCase
         string $groupName = 'Kelompok Test',
     ): array
     {
-        $leaderId = DB::table('people')->insertGetId([
+        $leaderId = DB::table('orang')->insertGetId([
             'branch_id' => $branchId,
             'full_name' => $leaderName,
             'status' => 'active',
@@ -266,7 +266,7 @@ class MemberFeedbackRecapTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $memberId = DB::table('people')->insertGetId([
+        $memberId = DB::table('orang')->insertGetId([
             'branch_id' => $branchId,
             'full_name' => $memberName,
             'status' => 'active',
@@ -274,7 +274,7 @@ class MemberFeedbackRecapTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $groupId = DB::table('discipleship_groups')->insertGetId([
+        $groupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => $branchId,
             'name' => $groupName,
             'status' => 'active',
@@ -284,7 +284,7 @@ class MemberFeedbackRecapTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             [
                 'branch_id' => $branchId,
                 'discipleship_group_id' => $groupId,
@@ -331,7 +331,7 @@ class MemberFeedbackRecapTest extends TestCase
         int $feedbackSession = 3,
     ): void
     {
-        DB::table('discipleship_feedbacks')->insert([
+        DB::table('jurnal_umpan_balik')->insert([
             'branch_id' => $ids['branch_id'],
             'feedback_session' => $feedbackSession,
             'discipleship_group_id' => $ids['group_id'],

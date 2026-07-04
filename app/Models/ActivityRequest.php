@@ -12,6 +12,8 @@ class ActivityRequest extends Model
 {
     use HasUlids;
 
+    protected $table = 'permintaan_aktivitas';
+
     public $incrementing = false;
 
     public $timestamps = false;

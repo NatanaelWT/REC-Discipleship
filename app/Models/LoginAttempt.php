@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class LoginAttempt extends Model
 {
+    protected $table = 'percobaan_login';
+
     protected $guarded = [];
 
     protected function casts(): array

@@ -71,7 +71,7 @@ class MaterialPreviewController extends Controller
         $activity->record(
             'file',
             'material.previewed',
-            'public_material_files',
+            'materi_publik',
             $churchFile->getKey(),
             (string) $churchFile->title,
             'Materi dibuka untuk pratinjau.',

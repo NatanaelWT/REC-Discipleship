@@ -12,14 +12,14 @@ class BranchCatalogPerformanceTest extends TestCase
 {
     public function test_repeated_branch_lookups_use_one_catalog_query(): void
     {
-        Schema::create('branches', function (Blueprint $table): void {
+        Schema::create('cabang', function (Blueprint $table): void {
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
 
-        DB::table('branches')->insert([
+        DB::table('cabang')->insert([
             ['label' => 'Kutisari', 'is_active' => true],
             ['label' => 'GM', 'is_active' => true],
         ]);

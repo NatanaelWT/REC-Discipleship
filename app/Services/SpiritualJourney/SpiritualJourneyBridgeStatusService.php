@@ -9,7 +9,7 @@ class SpiritualJourneyBridgeStatusService
 {
     public function update(int $participantId, string $status): bool
     {
-        if ($participantId < 1 || ! Schema::hasTable('people')) {
+        if ($participantId < 1 || ! Schema::hasTable('orang')) {
             return false;
         }
 

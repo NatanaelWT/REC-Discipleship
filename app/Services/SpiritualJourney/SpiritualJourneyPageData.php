@@ -44,6 +44,7 @@ class SpiritualJourneyPageData
         $search = strtolower(trim((string) $request->query('q', '')));
         $journeyFilter = trim((string) $request->query('journey_filter', 'all'));
         $query = Person::query()
+            ->from('orang as people')
             ->select([
                 'id', 'branch_id', 'full_name', 'gender', 'birth_date', 'birth_day_month',
                 'birth_place', 'address', 'email', 'whatsapp', 'batch_month', 'notes', 'completed_at',
@@ -253,8 +254,8 @@ class SpiritualJourneyPageData
             return;
         }
 
-        $hasGroupPeople = Schema::hasTable('discipleship_group_people');
-        $hasManualJourney = Schema::hasTable('discipleship_manual_journey_records');
+        $hasGroupPeople = Schema::hasTable('keanggotaan_kelompok_dg');
+        $hasManualJourney = Schema::hasTable('dg_manual');
 
         if (! $hasGroupPeople && ! $hasManualJourney) {
             $query->whereRaw('1 = 0');
@@ -270,7 +271,7 @@ class SpiritualJourneyPageData
             if ($hasGroupPeople) {
                 $condition->whereExists(static function ($subquery): void {
                     $subquery->selectRaw('1')
-                        ->from('discipleship_group_people as filter_gp')
+                        ->from('keanggotaan_kelompok_dg as filter_gp')
                         ->whereColumn('filter_gp.person_id', 'people.id')
                         ->whereColumn('filter_gp.branch_id', 'people.branch_id')
                         ->where('filter_gp.role', 'member')
@@ -281,7 +282,7 @@ class SpiritualJourneyPageData
                 $method = $hasGroupPeople ? 'orWhereExists' : 'whereExists';
                 $condition->{$method}(static function ($subquery): void {
                     $subquery->selectRaw('1')
-                        ->from('discipleship_manual_journey_records as manual_journey')
+                        ->from('dg_manual as manual_journey')
                         ->whereColumn('manual_journey.person_id', 'people.id')
                         ->whereColumn('manual_journey.branch_id', 'people.branch_id')
                         ->whereIn('manual_journey.stage', ['DG 1', 'DG 2', 'DG 3']);
@@ -297,7 +298,7 @@ class SpiritualJourneyPageData
         }
         $branches = $this->scope->optionsById();
         $rows = [];
-        $query = Person::query();
+        $query = Person::query()->from('orang as people');
         DiscipleshipPersonProfile::join($query);
 
         foreach ($query->whereIn('people.id', $personIds)->get([
@@ -409,11 +410,11 @@ class SpiritualJourneyPageData
 
     private function manualGroupPeople(array $personIds)
     {
-        if (! Schema::hasTable('discipleship_manual_journey_records')) {
+        if (! Schema::hasTable('dg_manual')) {
             return collect();
         }
 
-        return DB::table('discipleship_manual_journey_records')
+        return DB::table('dg_manual')
             ->whereIn('branch_id', $this->scope->branchIds())
             ->whereIn('person_id', $personIds)
             ->orderBy('id')

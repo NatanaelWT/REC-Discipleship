@@ -72,7 +72,7 @@ class PeopleTreePageTest extends TestCase
 
         $this->assertSame(
             0,
-            DB::table('people')->where('branch_id', 1)->where('full_name', 'Yakub Tri Handoko')->count(),
+            DB::table('orang')->where('branch_id', 1)->where('full_name', 'Yakub Tri Handoko')->count(),
         );
     }
 
@@ -80,7 +80,7 @@ class PeopleTreePageTest extends TestCase
     {
         $this->createTables();
         $this->seedPeopleTree();
-        $mskOnlyId = DB::table('people')->insertGetId([
+        $mskOnlyId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Peserta MSK Saja',
             'whatsapp' => '089999999999',
@@ -112,7 +112,7 @@ class PeopleTreePageTest extends TestCase
 
         $store->replaceBranchModel('kutisari', $model);
 
-        $this->assertDatabaseHas('people', [
+        $this->assertDatabaseHas('orang', [
             'id' => $mskOnlyId,
             'full_name' => 'Peserta MSK Saja',
         ]);
@@ -164,16 +164,16 @@ class PeopleTreePageTest extends TestCase
         $this->createTables();
         $this->seedPeopleTree();
 
-        $leaderId = (int) DB::table('people')->where('full_name', 'Leader Test')->value('id');
-        $oldGroupId = (int) DB::table('discipleship_groups')->where('name', 'Kelompok Test')->value('id');
-        $personId = DB::table('people')->insertGetId([
+        $leaderId = (int) DB::table('orang')->where('full_name', 'Leader Test')->value('id');
+        $oldGroupId = (int) DB::table('kelompok_dg')->where('name', 'Kelompok Test')->value('id');
+        $personId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Anggota Riwayat Terakhir',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $latestGroupId = DB::table('discipleship_groups')->insertGetId([
+        $latestGroupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
             'name' => 'Kelompok Riwayat Terakhir',
             'status' => 'active',
@@ -182,7 +182,7 @@ class PeopleTreePageTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             [
                 'branch_id' => 1,
                 'discipleship_group_id' => $oldGroupId,
@@ -263,9 +263,9 @@ class PeopleTreePageTest extends TestCase
         $this->createTables();
         $this->seedPeopleTree();
 
-        $leaderId = (int) DB::table('people')->where('full_name', 'Leader Test')->value('id');
-        $groupId = (int) DB::table('discipleship_groups')->where('name', 'Kelompok Test')->value('id');
-        $archivedPersonId = DB::table('people')->insertGetId([
+        $leaderId = (int) DB::table('orang')->where('full_name', 'Leader Test')->value('id');
+        $groupId = (int) DB::table('kelompok_dg')->where('name', 'Kelompok Test')->value('id');
+        $archivedPersonId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Peserta Arsip MSK',
             'whatsapp' => '081298765432',
@@ -274,7 +274,7 @@ class PeopleTreePageTest extends TestCase
             'created_at' => now()->subMonth(),
             'updated_at' => now()->subDay(),
         ]);
-        DB::table('people')->where('id', $archivedPersonId)->update([
+        DB::table('orang')->where('id', $archivedPersonId)->update([
             'gender' => 'Perempuan',
             'whatsapp' => '081298765432',
             'batch_month' => '2026-01',
@@ -293,19 +293,19 @@ class PeopleTreePageTest extends TestCase
 
         $this->assertSame(
             1,
-            DB::table('people')->where('full_name', 'Peserta Arsip MSK')->count(),
+            DB::table('orang')->where('full_name', 'Peserta Arsip MSK')->count(),
         );
-        $this->assertDatabaseHas('people', [
+        $this->assertDatabaseHas('orang', [
             'id' => $archivedPersonId,
             'status' => 'active',
         ]);
-        $this->assertDatabaseHas('discipleship_group_people', [
+        $this->assertDatabaseHas('keanggotaan_kelompok_dg', [
             'discipleship_group_id' => $groupId,
             'person_id' => $archivedPersonId,
             'role' => 'member',
             'status' => 'active',
         ]);
-        $this->assertDatabaseHas('discipleship_relationships', [
+        $this->assertDatabaseHas('relasi_dg', [
             'mentor_person_id' => $leaderId,
             'disciple_person_id' => $archivedPersonId,
             'status' => 'active',
@@ -360,30 +360,30 @@ class PeopleTreePageTest extends TestCase
             'group_multiplications' => [],
         ]);
 
-        $leaderId = (int) DB::table('people')->where('full_name', 'Leader Baru')->value('id');
-        $memberId = (int) DB::table('people')->where('full_name', 'Anggota Baru')->value('id');
-        $groupId = (int) DB::table('discipleship_groups')->where('name', 'Kelompok Baru')->value('id');
+        $leaderId = (int) DB::table('orang')->where('full_name', 'Leader Baru')->value('id');
+        $memberId = (int) DB::table('orang')->where('full_name', 'Anggota Baru')->value('id');
+        $groupId = (int) DB::table('kelompok_dg')->where('name', 'Kelompok Baru')->value('id');
 
         $this->assertGreaterThan(0, $leaderId);
         $this->assertGreaterThan(0, $memberId);
         $this->assertGreaterThan(0, $groupId);
-        $this->assertDatabaseHas('people', [
+        $this->assertDatabaseHas('orang', [
             'full_name' => 'Leader Baru',
         ]);
-        $this->assertDatabaseHas('people', [
+        $this->assertDatabaseHas('orang', [
             'full_name' => 'Anggota Baru',
         ]);
-        $this->assertDatabaseHas('discipleship_relationships', [
+        $this->assertDatabaseHas('relasi_dg', [
             'mentor_person_id' => $leaderId,
             'disciple_person_id' => $memberId,
             'context_group_id' => $groupId,
         ]);
-        $this->assertDatabaseHas('discipleship_group_people', [
+        $this->assertDatabaseHas('keanggotaan_kelompok_dg', [
             'discipleship_group_id' => $groupId,
             'person_id' => $leaderId,
             'role' => 'leader',
         ]);
-        $this->assertDatabaseHas('discipleship_group_people', [
+        $this->assertDatabaseHas('keanggotaan_kelompok_dg', [
             'discipleship_group_id' => $groupId,
             'person_id' => $memberId,
             'role' => 'member',
@@ -394,7 +394,7 @@ class PeopleTreePageTest extends TestCase
     {
         $this->createTables();
         $this->seedPeopleTree();
-        DB::table('people')->insert([
+        DB::table('orang')->insert([
             'id' => 626,
             'branch_id' => 2,
             'full_name' => 'Yakub Tri Handoko',
@@ -403,7 +403,7 @@ class PeopleTreePageTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('people')->insert([
+        DB::table('orang')->insert([
             'id' => 900,
             'branch_id' => 2,
             'full_name' => 'Anggota GM Tidak Valid',
@@ -423,11 +423,11 @@ class PeopleTreePageTest extends TestCase
             'return_page' => 'people_tree',
         ])->assertRedirect('/pemuridan/pohon?saved=1');
 
-        $newGroupId = (int) DB::table('discipleship_groups')
+        $newGroupId = (int) DB::table('kelompok_dg')
             ->where('notes', 'Kelompok dipimpin lintas cabang')
             ->value('id');
         $this->assertGreaterThan(0, $newGroupId);
-        $this->assertDatabaseHas('discipleship_group_people', [
+        $this->assertDatabaseHas('keanggotaan_kelompok_dg', [
             'branch_id' => 1,
             'discipleship_group_id' => $newGroupId,
             'person_id' => 626,
@@ -435,10 +435,10 @@ class PeopleTreePageTest extends TestCase
         ]);
         $this->assertSame(
             0,
-            DB::table('people')->where('branch_id', 1)->where('full_name', 'Yakub Tri Handoko')->count(),
+            DB::table('orang')->where('branch_id', 1)->where('full_name', 'Yakub Tri Handoko')->count(),
         );
 
-        $beforeGroupCount = DB::table('discipleship_groups')->count();
+        $beforeGroupCount = DB::table('kelompok_dg')->count();
         $this->post('/pemuridan/pohon/kelompok', [
             'leader_id' => '626',
             'assistant_id' => '',
@@ -449,8 +449,8 @@ class PeopleTreePageTest extends TestCase
             'return_page' => 'people_tree',
         ])->assertRedirect('/pemuridan/pohon?error=invalid_group');
 
-        $this->assertSame($beforeGroupCount, DB::table('discipleship_groups')->count());
-        $this->assertDatabaseMissing('discipleship_group_people', [
+        $this->assertSame($beforeGroupCount, DB::table('kelompok_dg')->count());
+        $this->assertDatabaseMissing('keanggotaan_kelompok_dg', [
             'branch_id' => 1,
             'person_id' => 900,
             'role' => 'member',
@@ -459,12 +459,12 @@ class PeopleTreePageTest extends TestCase
 
     private function createTables(): void
     {
-        Schema::dropIfExists('discipleship_group_people');
-        Schema::dropIfExists('discipleship_relationships');
-        Schema::dropIfExists('discipleship_groups');
-        Schema::dropIfExists('people');
+        Schema::dropIfExists('keanggotaan_kelompok_dg');
+        Schema::dropIfExists('relasi_dg');
+        Schema::dropIfExists('kelompok_dg');
+        Schema::dropIfExists('orang');
 
-        Schema::create('people', function (Blueprint $table): void {
+        Schema::create('orang', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('full_name')->nullable();
@@ -485,7 +485,7 @@ class PeopleTreePageTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_groups', function (Blueprint $table): void {
+        Schema::create('kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('name');
@@ -500,7 +500,7 @@ class PeopleTreePageTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_relationships', function (Blueprint $table): void {
+        Schema::create('relasi_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('mentor_person_id')->nullable();
@@ -516,7 +516,7 @@ class PeopleTreePageTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_group_people', function (Blueprint $table): void {
+        Schema::create('keanggotaan_kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('discipleship_group_id');
@@ -534,7 +534,7 @@ class PeopleTreePageTest extends TestCase
 
     private function seedPeopleTree(): void
     {
-        $leaderId = DB::table('people')->insertGetId([
+        $leaderId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Leader Test',
             'whatsapp' => '0811111111',
@@ -544,7 +544,7 @@ class PeopleTreePageTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $memberId = DB::table('people')->insertGetId([
+        $memberId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Anggota Test',
             'whatsapp' => '0822222222',
@@ -554,7 +554,7 @@ class PeopleTreePageTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $groupId = DB::table('discipleship_groups')->insertGetId([
+        $groupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
             'name' => 'Kelompok Test',
             'status' => 'active',
@@ -564,7 +564,7 @@ class PeopleTreePageTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('discipleship_relationships')->insert([
+        DB::table('relasi_dg')->insert([
             'branch_id' => 1,
             'mentor_person_id' => $leaderId,
             'disciple_person_id' => $memberId,
@@ -577,7 +577,7 @@ class PeopleTreePageTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'person_id' => $leaderId,
@@ -588,7 +588,7 @@ class PeopleTreePageTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'person_id' => $memberId,
@@ -612,14 +612,14 @@ class PeopleTreePageTest extends TestCase
 
     private function seedCrossBranchLeaderGroup(): void
     {
-        $memberId = DB::table('people')->insertGetId([
+        $memberId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Anggota Kutisari Lintas',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('people')->insert([
+        DB::table('orang')->insert([
             'id' => 626,
             'branch_id' => 2,
             'full_name' => 'Yakub Tri Handoko',
@@ -628,7 +628,7 @@ class PeopleTreePageTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $groupId = DB::table('discipleship_groups')->insertGetId([
+        $groupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
             'name' => 'Kelompok Lintas Cabang',
             'status' => 'active',
@@ -637,7 +637,7 @@ class PeopleTreePageTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             [
                 'branch_id' => 1,
                 'discipleship_group_id' => $groupId,

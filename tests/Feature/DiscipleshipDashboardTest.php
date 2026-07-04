@@ -61,7 +61,7 @@ class DiscipleshipDashboardTest extends TestCase
         $this->seedDashboardData();
 
         $this->actingAsRecUser();
-        $participantId = (int) DB::table('people')->where('full_name', 'Peserta MSK Dashboard')->value('id');
+        $participantId = (int) DB::table('orang')->where('full_name', 'Peserta MSK Dashboard')->value('id');
 
         $response = $this->post('/pemuridan/dashboard/msk-sessions', [
             'action' => 'save_msk_sessions',
@@ -72,7 +72,7 @@ class DiscipleshipDashboardTest extends TestCase
 
         $response->assertRedirect('/pemuridan/dashboard?msk_session_saved=1');
 
-        $sessions = json_decode((string) DB::table('people')->where('id', $participantId)->value('session_numbers'), true);
+        $sessions = json_decode((string) DB::table('orang')->where('id', $participantId)->value('session_numbers'), true);
         $this->assertSame([1, 2, 3, 4], $sessions);
     }
 
@@ -81,14 +81,14 @@ class DiscipleshipDashboardTest extends TestCase
         $this->createDashboardTables();
         $this->seedDashboardData();
         $this->actingAsRecUser('recpusat', null, 'pemuridan_pusat');
-        $participantId = (int) DB::table('people')->where('full_name', 'Peserta MSK Dashboard')->value('id');
+        $participantId = (int) DB::table('orang')->where('full_name', 'Peserta MSK Dashboard')->value('id');
 
         $this->post('/pemuridan/dashboard/msk-sessions', [
             'id' => $participantId,
             'session_numbers' => ['1', '2', '3', '4'],
         ])->assertRedirect('/pemuridan/dashboard?error=access_denied');
 
-        $sessions = json_decode((string) DB::table('people')->where('id', $participantId)->value('session_numbers'), true);
+        $sessions = json_decode((string) DB::table('orang')->where('id', $participantId)->value('session_numbers'), true);
         $this->assertSame([1, 2], $sessions);
 
         $this->get('/pemuridan/dashboard/sections/incomplete-msk')
@@ -121,30 +121,30 @@ class DiscipleshipDashboardTest extends TestCase
         $this->createDashboardTables();
         $this->seedDashboardData();
 
-        $memberId = (int) DB::table('people')->where('full_name', 'Anggota Dashboard')->value('id');
-        $groupId = (int) DB::table('discipleship_groups')->where('name', 'Kelompok Dashboard')->value('id');
-        $mentorId = DB::table('people')->insertGetId([
+        $memberId = (int) DB::table('orang')->where('full_name', 'Anggota Dashboard')->value('id');
+        $groupId = (int) DB::table('kelompok_dg')->where('name', 'Kelompok Dashboard')->value('id');
+        $mentorId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Mentor Tanpa Kelompok',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $formerLeaderId = DB::table('people')->insertGetId([
+        $formerLeaderId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Mantan Leader Dashboard',
             'status' => 'inactive',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $formerMemberId = DB::table('people')->insertGetId([
+        $formerMemberId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Mantan Peserta Dashboard',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $archivedMemberId = DB::table('people')->insertGetId([
+        $archivedMemberId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Identitas Peserta Diarsipkan',
             'status' => 'inactive',
@@ -152,7 +152,7 @@ class DiscipleshipDashboardTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('people')->insert([
+        DB::table('orang')->insert([
             'branch_id' => 1,
             'full_name' => 'Alumni MSK Dashboard',
             'journey_bridge_status' => 'sudah_kgap',
@@ -162,7 +162,7 @@ class DiscipleshipDashboardTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'person_id' => $memberId,
@@ -175,7 +175,7 @@ class DiscipleshipDashboardTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'person_id' => $formerLeaderId,
@@ -187,7 +187,7 @@ class DiscipleshipDashboardTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'person_id' => $formerMemberId,
@@ -200,7 +200,7 @@ class DiscipleshipDashboardTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'person_id' => $archivedMemberId,
@@ -213,7 +213,7 @@ class DiscipleshipDashboardTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('discipleship_relationships')->insert([
+        DB::table('relasi_dg')->insert([
             'branch_id' => 1,
             'mentor_person_id' => $mentorId,
             'disciple_person_id' => $memberId,
@@ -242,10 +242,10 @@ class DiscipleshipDashboardTest extends TestCase
     {
         $this->createDashboardTables();
         $this->seedDashboardData();
-        $firstGroupId = (int) DB::table('discipleship_groups')->where('name', 'Kelompok Dashboard')->value('id');
-        DB::table('discipleship_groups')->where('id', $firstGroupId)->update(['status' => 'completed']);
+        $firstGroupId = (int) DB::table('kelompok_dg')->where('name', 'Kelompok Dashboard')->value('id');
+        DB::table('kelompok_dg')->where('id', $firstGroupId)->update(['status' => 'completed']);
 
-        $secondGroupId = DB::table('discipleship_groups')->insertGetId([
+        $secondGroupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
             'name' => 'Kelompok Dashboard DG 2',
             'status' => 'completed',
@@ -256,7 +256,7 @@ class DiscipleshipDashboardTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $thirdGroupId = DB::table('discipleship_groups')->insertGetId([
+        $thirdGroupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
             'name' => 'Kelompok Dashboard DG 3',
             'status' => 'active',
@@ -267,7 +267,7 @@ class DiscipleshipDashboardTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $independentGroupId = DB::table('discipleship_groups')->insertGetId([
+        $independentGroupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
             'name' => 'Kelompok Independen',
             'status' => 'active',
@@ -276,10 +276,10 @@ class DiscipleshipDashboardTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $leaderId = (int) DB::table('people')->where('full_name', 'Leader Dashboard')->value('id');
-        $memberId = (int) DB::table('people')->where('full_name', 'Anggota Dashboard')->value('id');
+        $leaderId = (int) DB::table('orang')->where('full_name', 'Leader Dashboard')->value('id');
+        $memberId = (int) DB::table('orang')->where('full_name', 'Anggota Dashboard')->value('id');
         foreach ([$secondGroupId, $thirdGroupId, $independentGroupId] as $groupId) {
-            DB::table('discipleship_group_people')->insert([
+            DB::table('keanggotaan_kelompok_dg')->insert([
                 'branch_id' => 1,
                 'discipleship_group_id' => $groupId,
                 'person_id' => $groupId === $independentGroupId ? $leaderId : $memberId,
@@ -320,7 +320,7 @@ class DiscipleshipDashboardTest extends TestCase
                 'updated_at' => now(),
             ];
         }
-        DB::table('people')->insert($rows);
+        DB::table('orang')->insert($rows);
         $this->actingAsRecUser();
 
         $response = $this->get('/pemuridan/dashboard/sections/incomplete-msk?per_page=500');
@@ -346,7 +346,7 @@ class DiscipleshipDashboardTest extends TestCase
                 'updated_at' => now(),
             ];
         }
-        DB::table('discipleship_groups')->insert($groups);
+        DB::table('kelompok_dg')->insert($groups);
         $this->actingAsRecUser();
 
         $response = $this->get('/pemuridan/dashboard/sections/overdue-groups?per_page=1');
@@ -360,15 +360,15 @@ class DiscipleshipDashboardTest extends TestCase
 
     private function createDashboardTables(): void
     {
-        Schema::dropIfExists('discipleship_meeting_reports');
-        Schema::dropIfExists('discipleship_manual_journey_records');
-        Schema::dropIfExists('discipleship_group_people');
-        Schema::dropIfExists('discipleship_relationships');
-        Schema::dropIfExists('discipleship_groups');
-        Schema::dropIfExists('people');
-        Schema::dropIfExists('branches');
+        Schema::dropIfExists('jurnal_temu_dg');
+        Schema::dropIfExists('dg_manual');
+        Schema::dropIfExists('keanggotaan_kelompok_dg');
+        Schema::dropIfExists('relasi_dg');
+        Schema::dropIfExists('kelompok_dg');
+        Schema::dropIfExists('orang');
+        Schema::dropIfExists('cabang');
 
-        Schema::create('branches', function (Blueprint $table): void {
+        Schema::create('cabang', function (Blueprint $table): void {
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
@@ -380,7 +380,7 @@ class DiscipleshipDashboardTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('people', function (Blueprint $table): void {
+        Schema::create('orang', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('full_name')->nullable();
@@ -401,7 +401,7 @@ class DiscipleshipDashboardTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_groups', function (Blueprint $table): void {
+        Schema::create('kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->string('name');
@@ -416,7 +416,7 @@ class DiscipleshipDashboardTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_relationships', function (Blueprint $table): void {
+        Schema::create('relasi_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('mentor_person_id')->nullable();
@@ -432,7 +432,7 @@ class DiscipleshipDashboardTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_group_people', function (Blueprint $table): void {
+        Schema::create('keanggotaan_kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('discipleship_group_id');
@@ -446,7 +446,7 @@ class DiscipleshipDashboardTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_manual_journey_records', function (Blueprint $table): void {
+        Schema::create('dg_manual', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('person_id');
@@ -456,7 +456,7 @@ class DiscipleshipDashboardTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('discipleship_meeting_reports', function (Blueprint $table): void {
+        Schema::create('jurnal_temu_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
             $table->unsignedBigInteger('leader_person_id')->nullable();
@@ -484,7 +484,7 @@ class DiscipleshipDashboardTest extends TestCase
 
     private function seedDashboardData(): void
     {
-        DB::table('branches')->insert([
+        DB::table('cabang')->insert([
             'id' => 1,
             'label' => 'Kutisari',
             'is_active' => true,
@@ -497,7 +497,7 @@ class DiscipleshipDashboardTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $leaderId = DB::table('people')->insertGetId([
+        $leaderId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Leader Dashboard',
             'whatsapp' => '0811111111',
@@ -507,7 +507,7 @@ class DiscipleshipDashboardTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $memberId = DB::table('people')->insertGetId([
+        $memberId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Anggota Dashboard',
             'whatsapp' => '0822222222',
@@ -517,7 +517,7 @@ class DiscipleshipDashboardTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $groupId = DB::table('discipleship_groups')->insertGetId([
+        $groupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
             'name' => 'Kelompok Dashboard',
             'status' => 'active',
@@ -527,7 +527,7 @@ class DiscipleshipDashboardTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'person_id' => $leaderId,
@@ -538,7 +538,7 @@ class DiscipleshipDashboardTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('discipleship_group_people')->insert([
+        DB::table('keanggotaan_kelompok_dg')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
             'person_id' => $memberId,
@@ -550,7 +550,7 @@ class DiscipleshipDashboardTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('discipleship_relationships')->insert([
+        DB::table('relasi_dg')->insert([
             'branch_id' => 1,
             'mentor_person_id' => $leaderId,
             'disciple_person_id' => $memberId,
@@ -563,7 +563,7 @@ class DiscipleshipDashboardTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $participantId = DB::table('people')->insertGetId([
+        $participantId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Peserta MSK Dashboard',
             'gender' => 'Laki-laki',

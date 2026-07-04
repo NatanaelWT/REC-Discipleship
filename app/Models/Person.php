@@ -18,7 +18,7 @@ class Person extends Model
         'journey_bridge_status', 'status', 'session_numbers', 'photos', 'created_at', 'updated_at',
     ];
 
-    protected $table = 'people';
+    protected $table = 'orang';
 
     protected $fillable = [
         'branch_id',

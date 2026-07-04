@@ -121,19 +121,19 @@ class DgMeetingReportController extends Controller
                     'source' => 'public_form',
                 ];
 
-                if (Schema::hasColumn('discipleship_meeting_reports', 'absences')) {
+                if (Schema::hasColumn('jurnal_temu_dg', 'absences')) {
                     $reportData['absences'] = array_map(static fn (int $memberId) => [
                         'person_id' => $memberId,
                         'person_name_snapshot' => $request->memberName($memberId),
                     ], $request->absentMemberIds());
                 }
-                if (Schema::hasColumn('discipleship_meeting_reports', 'meditation_sharers')) {
+                if (Schema::hasColumn('jurnal_temu_dg', 'meditation_sharers')) {
                     $reportData['meditation_sharers'] = array_map(static fn (int $memberId) => [
                         'person_id' => $memberId,
                         'person_name_snapshot' => $request->memberName($memberId),
                     ], $request->meditationSharerIds());
                 }
-                if (Schema::hasColumn('discipleship_meeting_reports', 'photos')) {
+                if (Schema::hasColumn('jurnal_temu_dg', 'photos')) {
                     $reportData['photos'] = array_values(array_filter(array_map(static function (array $photo): array {
                         $relativePath = sanitize_relative_upload_path((string) ($photo['path'] ?? ''));
 

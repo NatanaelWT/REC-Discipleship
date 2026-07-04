@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WebsitePageView extends Model
 {
+    protected $table = 'kunjungan_halaman';
+
     protected $primaryKey = 'request_id';
 
     protected $keyType = 'string';

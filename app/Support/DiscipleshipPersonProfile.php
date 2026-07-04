@@ -20,7 +20,7 @@ class DiscipleshipPersonProfile
             default => $field,
         };
 
-        if (Schema::hasTable('people') && Schema::hasColumn('people', $column)) {
+        if (Schema::hasTable('orang') && Schema::hasColumn('orang', $column)) {
             return "COALESCE(NULLIF({$peopleAlias}.{$column}, ''), '')";
         }
 
@@ -34,11 +34,11 @@ class DiscipleshipPersonProfile
     public static function namesByPersonIds(array $personIds): array
     {
         $personIds = array_values(array_filter(array_unique($personIds), static fn (int $id): bool => $id > 0));
-        if ($personIds === [] || ! Schema::hasTable('people')) {
+        if ($personIds === [] || ! Schema::hasTable('orang')) {
             return [];
         }
 
-        $query = DB::table('people as p')
+        $query = DB::table('orang as p')
             ->whereIn('p.id', $personIds);
 
         return $query

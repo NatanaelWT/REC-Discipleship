@@ -9,6 +9,8 @@ class DiscipleshipMeetingReport extends Model
 {
     use ResolvesBranchSlug;
 
+    protected $table = 'jurnal_temu_dg';
+
     protected $fillable = [
         'branch_id',
         'leader_person_id',

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class WorshipServiceSchedule extends Model
 {
+    protected $table = 'jadwal_pelayanan_ibadah';
+
     protected $guarded = [];
 
     protected $casts = [

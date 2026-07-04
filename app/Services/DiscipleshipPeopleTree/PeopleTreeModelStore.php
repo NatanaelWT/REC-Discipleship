@@ -106,7 +106,7 @@ class PeopleTreeModelStore
         $labels = $this->branchLabels();
 
         try {
-            $query = Person::query();
+            $query = Person::query()->from('orang as people');
             DiscipleshipPersonProfile::join($query);
 
             return $query
@@ -369,7 +369,7 @@ class PeopleTreeModelStore
             return [];
         }
 
-        $query = Person::query();
+        $query = Person::query()->from('orang as people');
         DiscipleshipPersonProfile::join($query);
 
         return $query
@@ -498,12 +498,12 @@ class PeopleTreeModelStore
     /** @return array<int, array<string, mixed>> */
     private function manualJourneyRows(array $branchIds): array
     {
-        if (! Schema::hasTable('discipleship_manual_journey_records')) {
+        if (! Schema::hasTable('dg_manual')) {
             return [];
         }
 
-        return DB::table('discipleship_manual_journey_records as manual')
-            ->join('people as person', function ($join): void {
+        return DB::table('dg_manual as manual')
+            ->join('orang as person', function ($join): void {
                 $join->on('person.id', '=', 'manual.person_id')
                     ->on('person.branch_id', '=', 'manual.branch_id');
             })

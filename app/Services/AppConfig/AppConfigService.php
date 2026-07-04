@@ -124,7 +124,7 @@ class AppConfigService
             $stored = Cache::store(self::cacheStore())->remember(
                 self::CACHE_KEY,
                 now()->addMinutes(5),
-                static fn (): array => DB::table('app_configs')
+                static fn (): array => DB::table('konfigurasi')
                     ->whereIn('key', self::ALLOWED_KEYS)
                     ->pluck('value', 'key')
                     ->all(),
@@ -156,7 +156,7 @@ class AppConfigService
     private static function configTableAvailable(): bool
     {
         try {
-            return Schema::hasTable('app_configs');
+            return Schema::hasTable('konfigurasi');
         } catch (Throwable) {
             return false;
         }

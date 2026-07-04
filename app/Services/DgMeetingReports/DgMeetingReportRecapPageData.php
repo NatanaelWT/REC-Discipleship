@@ -89,7 +89,7 @@ class DgMeetingReportRecapPageData
         $people = [];
         $branchIds = branch_ids_from_slugs($branchCodes);
         try {
-            $query = Person::query();
+            $query = Person::query()->from('orang as people');
             DiscipleshipPersonProfile::join($query);
 
             $records = $query
@@ -349,6 +349,7 @@ class DgMeetingReportRecapPageData
     {
         try {
             $reports = DiscipleshipMeetingReport::query()
+                ->from('jurnal_temu_dg as discipleship_meeting_reports')
                 ->select([
                     'id', 'branch_id', 'leader_person_id', 'leader_name_snapshot', 'discipleship_group_id',
                     'group_name_snapshot', 'meeting_date', 'material_topic', 'group_progress_snapshot',
@@ -359,7 +360,7 @@ class DgMeetingReportRecapPageData
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
                 ->whereExists(static function ($subquery): void {
                     $subquery->selectRaw('1')
-                        ->from('discipleship_groups as report_group')
+                        ->from('kelompok_dg as report_group')
                         ->whereColumn('report_group.id', 'discipleship_meeting_reports.discipleship_group_id')
                         ->whereColumn('report_group.branch_id', 'discipleship_meeting_reports.branch_id')
                         ->where('report_group.status', 'active');
