@@ -33,14 +33,9 @@ class WorshipGlobalScopeTest extends TestCase
         DB::table('worship_service_schedules')->insert([
             'month' => '2026-06',
             'update_note' => null,
-            'row_type' => 'training',
-            'role_name' => 'Jadwal Latihan',
-            'role_sort_order' => 0,
             'week_index' => 0,
             'service_date' => '2026-06-07',
             'training_date' => null,
-            'assignee_name' => null,
-            'assignee_sort_order' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -61,13 +56,10 @@ class WorshipGlobalScopeTest extends TestCase
             'month' => '2026-06',
             'update_note' => 'Diperbarui developer',
         ]);
-        $this->assertGreaterThan(
-            1,
-            DB::table('worship_service_schedules')->where('month', '2026-06')->count(),
-        );
+        $this->assertSame(4, DB::table('worship_service_schedules')->where('month', '2026-06')->count());
     }
 
-    public function test_worship_schedule_save_replace_and_delete_use_flat_rows(): void
+    public function test_worship_schedule_save_replace_and_delete_use_weekly_rows(): void
     {
         $this->createWorshipServiceScheduleTables();
         $builder = app(WorshipServiceScheduleBuilder::class);
@@ -85,34 +77,23 @@ class WorshipGlobalScopeTest extends TestCase
         $this->assertDatabaseHas('worship_service_schedules', [
             'month' => '2026-06',
             'update_note' => 'Catatan awal',
-            'row_type' => 'assignment',
-            'role_name' => 'LW',
             'week_index' => 0,
             'service_date' => '2026-06-07',
-            'assignee_name' => 'Cia',
-        ]);
-        $this->assertDatabaseHas('worship_service_schedules', [
-            'row_type' => 'assignment',
-            'role_name' => 'Singer',
-            'week_index' => 0,
-            'assignee_name' => 'Ryan',
-            'assignee_sort_order' => 0,
-        ]);
-        $this->assertDatabaseHas('worship_service_schedules', [
-            'row_type' => 'assignment',
-            'role_name' => 'Singer',
-            'week_index' => 0,
-            'assignee_name' => 'Zerren',
-            'assignee_sort_order' => 1,
-        ]);
-        $this->assertDatabaseHas('worship_service_schedules', [
-            'row_type' => 'training',
-            'role_name' => 'Jadwal Latihan',
-            'week_index' => 0,
-            'service_date' => '2026-06-07',
+            'lw_1_name' => 'Cia',
+            'singer_1_name' => 'Ryan',
+            'singer_2_name' => 'Zerren',
             'training_date' => '2026-06-05',
-            'assignee_name' => null,
         ]);
+        $this->assertDatabaseHas('worship_service_schedules', [
+            'month' => '2026-06',
+            'week_index' => 1,
+            'service_date' => '2026-06-14',
+            'lw_1_name' => null,
+            'singer_1_name' => null,
+            'singer_2_name' => null,
+            'training_date' => null,
+        ]);
+        $this->assertSame(4, DB::table('worship_service_schedules')->where('month', '2026-06')->count());
         $this->assertFalse(Schema::hasTable('worship_service_schedule_roles'));
         $this->assertFalse(Schema::hasTable('worship_service_schedule_weeks'));
         $this->assertFalse(Schema::hasTable('worship_service_assignments'));
@@ -129,11 +110,11 @@ class WorshipGlobalScopeTest extends TestCase
         $this->assertDatabaseHas('worship_service_schedules', [
             'month' => '2026-06',
             'update_note' => 'Catatan final',
-            'role_name' => 'LW',
-            'assignee_name' => 'Budi',
+            'week_index' => 0,
+            'lw_1_name' => 'Budi',
         ]);
-        $this->assertDatabaseMissing('worship_service_schedules', ['assignee_name' => 'Cia']);
-        $this->assertDatabaseMissing('worship_service_schedules', ['assignee_name' => 'Ryan']);
+        $this->assertDatabaseMissing('worship_service_schedules', ['lw_1_name' => 'Cia']);
+        $this->assertDatabaseMissing('worship_service_schedules', ['singer_1_name' => 'Ryan']);
 
         $this->assertTrue($builder->deleteMonth('2026-06'));
         $this->assertDatabaseCount('worship_service_schedules', 0);
@@ -154,7 +135,7 @@ class WorshipGlobalScopeTest extends TestCase
             ->assertDontSee('Judul Jadwal');
     }
 
-    public function test_worship_schedule_image_export_uses_flat_rows(): void
+    public function test_worship_schedule_image_export_uses_weekly_rows(): void
     {
         if (! function_exists('imagecreatetruecolor')) {
             $this->markTestSkipped('GD extension is required for worship schedule PNG export.');
@@ -181,6 +162,7 @@ class WorshipGlobalScopeTest extends TestCase
 
     private function createWorshipServiceScheduleTables(): void
     {
+        Schema::dropIfExists('worship_service_schedules_weekly');
         Schema::dropIfExists('worship_service_schedules_flat');
         Schema::dropIfExists('worship_service_assignments');
         Schema::dropIfExists('worship_service_schedule_weeks');
@@ -192,14 +174,32 @@ class WorshipGlobalScopeTest extends TestCase
             $table->id();
             $table->string('month', 7)->index();
             $table->longText('update_note')->nullable();
-            $table->string('row_type', 20)->default('assignment')->index();
-            $table->string('role_name');
-            $table->unsignedSmallInteger('role_sort_order')->default(0);
             $table->unsignedTinyInteger('week_index')->default(0);
             $table->date('service_date');
             $table->date('training_date')->nullable();
-            $table->string('assignee_name')->nullable();
-            $table->unsignedSmallInteger('assignee_sort_order')->default(0);
+            foreach ([
+                'stage_manager',
+                'lw',
+                'singer',
+                'keyboard',
+                'bass',
+                'gitar',
+                'drum',
+                'soundman',
+                'video_mixer_streaming_camera',
+                'lighting',
+                'operator',
+            ] as $columnPrefix) {
+                for ($slot = 1; $slot <= 4; $slot++) {
+                    $table->string($columnPrefix.'_'.$slot.'_name', 120)->nullable();
+                }
+            }
+            for ($customRole = 1; $customRole <= 4; $customRole++) {
+                $table->string('custom_role_'.$customRole.'_label', 120)->nullable();
+                for ($slot = 1; $slot <= 4; $slot++) {
+                    $table->string('custom_role_'.$customRole.'_assignee_'.$slot.'_name', 120)->nullable();
+                }
+            }
             $table->timestamps();
         });
     }

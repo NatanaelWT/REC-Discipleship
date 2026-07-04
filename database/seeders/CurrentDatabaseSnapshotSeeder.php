@@ -4603,7 +4603,7 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
     {
         if ($schedules === []
             || ! Schema::hasTable('worship_service_schedules')
-            || ! Schema::hasColumn('worship_service_schedules', 'row_type')) {
+            || ! Schema::hasColumn('worship_service_schedules', 'lw_1_name')) {
             return;
         }
 
@@ -4621,14 +4621,14 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
                 ->delete();
         }
 
-        $flatRows = [];
+        $weeklyRows = [];
         foreach ($schedules as $schedule) {
-            foreach ($this->flatWorshipServiceScheduleRows($schedule) as $row) {
-                $flatRows[] = $row;
+            foreach ($this->weeklyWorshipServiceScheduleRows($schedule) as $row) {
+                $weeklyRows[] = $row;
             }
         }
 
-        foreach (array_chunk($flatRows, 100) as $chunk) {
+        foreach (array_chunk($weeklyRows, 100) as $chunk) {
             DB::table('worship_service_schedules')->insert($chunk);
         }
     }
@@ -4637,7 +4637,7 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
      * @param  array<string, mixed>  $schedule
      * @return array<int, array<string, mixed>>
      */
-    private function flatWorshipServiceScheduleRows(array $schedule): array
+    private function weeklyWorshipServiceScheduleRows(array $schedule): array
     {
         $month = trim((string) ($schedule['month'] ?? ''));
         if ($month === '') {
@@ -4654,8 +4654,19 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
             $rows = [];
         }
 
-        $flatRows = [];
-        $roleSortOrder = 0;
+        $weeklyRows = [];
+        foreach ($weekDates as $weekIndex => $serviceDate) {
+            $weeklyRows[$weekIndex] = $this->blankWorshipServiceWeekRow(
+                $month,
+                $updateNote,
+                $weekIndex,
+                $serviceDate,
+                $createdAt,
+                $updatedAt,
+            );
+        }
+
+        $customRoleIndex = 1;
         foreach ($rows as $row) {
             if (! is_array($row)) {
                 continue;
@@ -4668,102 +4679,93 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
 
             $assignments = is_array($row['assignments'] ?? null) ? $row['assignments'] : [];
             if (strtolower($roleName) === 'jadwal latihan') {
-                foreach ($weekDates as $weekIndex => $serviceDate) {
+                foreach ($weekDates as $weekIndex => $_serviceDate) {
                     $trainingDate = trim((string) ($assignments[$weekIndex] ?? ''));
-                    $flatRows[] = $this->flatWorshipServiceScheduleRow(
-                        $month,
-                        $updateNote,
-                        'training',
-                        'Jadwal Latihan',
-                        $roleSortOrder,
-                        $weekIndex,
-                        $serviceDate,
-                        $this->validDate($trainingDate) ? $trainingDate : null,
-                        null,
-                        0,
-                        $createdAt,
-                        $updatedAt,
-                    );
+                    $weeklyRows[$weekIndex]['training_date'] = $this->validDate($trainingDate) ? $trainingDate : null;
                 }
-                $roleSortOrder++;
 
                 continue;
             }
 
-            foreach ($weekDates as $weekIndex => $serviceDate) {
-                $assigneeNames = $this->worshipAssignmentLines((string) ($assignments[$weekIndex] ?? ''));
-                if ($assigneeNames === []) {
-                    $flatRows[] = $this->flatWorshipServiceScheduleRow(
-                        $month,
-                        $updateNote,
-                        'assignment',
-                        $roleName,
-                        $roleSortOrder,
-                        $weekIndex,
-                        $serviceDate,
-                        null,
-                        null,
-                        0,
-                        $createdAt,
-                        $updatedAt,
-                    );
-
+            $roleColumns = $this->worshipRoleColumns();
+            $columnPrefix = $roleColumns[strtolower($roleName)] ?? null;
+            if ($columnPrefix === null) {
+                if ($customRoleIndex > 4) {
                     continue;
                 }
 
-                foreach ($assigneeNames as $sortOrder => $assigneeName) {
-                    $flatRows[] = $this->flatWorshipServiceScheduleRow(
-                        $month,
-                        $updateNote,
-                        'assignment',
-                        $roleName,
-                        $roleSortOrder,
-                        $weekIndex,
-                        $serviceDate,
-                        null,
-                        $assigneeName,
-                        $sortOrder,
-                        $createdAt,
-                        $updatedAt,
-                    );
+                $columnPrefix = 'custom_role_'.$customRoleIndex.'_assignee';
+                foreach ($weekDates as $weekIndex => $_serviceDate) {
+                    $weeklyRows[$weekIndex]['custom_role_'.$customRoleIndex.'_label'] = $roleName;
+                }
+                $customRoleIndex++;
+            }
+
+            foreach ($weekDates as $weekIndex => $_serviceDate) {
+                $assigneeNames = $this->worshipAssignmentLines((string) ($assignments[$weekIndex] ?? ''));
+                for ($slot = 1; $slot <= 4; $slot++) {
+                    $weeklyRows[$weekIndex][$columnPrefix.'_'.$slot.'_name'] = $assigneeNames[$slot - 1] ?? null;
                 }
             }
-            $roleSortOrder++;
         }
 
-        return $flatRows;
+        return array_values($weeklyRows);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function flatWorshipServiceScheduleRow(
+    private function blankWorshipServiceWeekRow(
         string $month,
         string $updateNote,
-        string $rowType,
-        string $roleName,
-        int $roleSortOrder,
         int $weekIndex,
         string $serviceDate,
-        ?string $trainingDate,
-        ?string $assigneeName,
-        int $assigneeSortOrder,
         mixed $createdAt,
         mixed $updatedAt,
     ): array {
-        return [
+        $row = [
             'month' => $month,
             'update_note' => $updateNote,
-            'row_type' => $rowType,
-            'role_name' => $roleName,
-            'role_sort_order' => $roleSortOrder,
             'week_index' => $weekIndex,
             'service_date' => $serviceDate,
-            'training_date' => $trainingDate,
-            'assignee_name' => $assigneeName,
-            'assignee_sort_order' => $assigneeSortOrder,
+            'training_date' => null,
             'created_at' => $createdAt,
             'updated_at' => $updatedAt,
+        ];
+
+        foreach ($this->worshipRoleColumns() as $columnPrefix) {
+            for ($slot = 1; $slot <= 4; $slot++) {
+                $row[$columnPrefix.'_'.$slot.'_name'] = null;
+            }
+        }
+
+        for ($customRole = 1; $customRole <= 4; $customRole++) {
+            $row['custom_role_'.$customRole.'_label'] = null;
+            for ($slot = 1; $slot <= 4; $slot++) {
+                $row['custom_role_'.$customRole.'_assignee_'.$slot.'_name'] = null;
+            }
+        }
+
+        return $row;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function worshipRoleColumns(): array
+    {
+        return [
+            'stage manager' => 'stage_manager',
+            'lw' => 'lw',
+            'singer' => 'singer',
+            'keyboard' => 'keyboard',
+            'bass' => 'bass',
+            'gitar' => 'gitar',
+            'drum' => 'drum',
+            'soundman' => 'soundman',
+            'video mixer, streaming, & camera' => 'video_mixer_streaming_camera',
+            'lighting' => 'lighting',
+            'operator' => 'operator',
         ];
     }
 
