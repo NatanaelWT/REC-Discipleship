@@ -9,7 +9,7 @@ use Tests\TestCase;
 
 class WorshipScheduleRelationalMigrationTest extends TestCase
 {
-    public function test_json_worship_schedules_are_backfilled_to_relational_tables(): void
+    public function test_json_worship_schedules_are_backfilled_to_flat_service_schedule_rows(): void
     {
         $this->createLegacyWorshipScheduleTable();
 
@@ -26,63 +26,79 @@ class WorshipScheduleRelationalMigrationTest extends TestCase
             'updated_at' => '2026-06-07 18:57:37',
         ]);
 
-        $migration = require database_path('migrations/2026_07_02_000001_normalize_worship_schedules_to_service_tables.php');
-        $migration->up();
+        $relationalMigration = require database_path('migrations/2026_07_02_000001_normalize_worship_schedules_to_service_tables.php');
+        $relationalMigration->up();
+
+        $flatMigration = require database_path('migrations/2026_07_04_000001_flatten_worship_service_schedules.php');
+        $flatMigration->up();
 
         $this->assertFalse(Schema::hasTable('worship_schedules'));
         foreach ([
-            'worship_service_schedules',
             'worship_service_schedule_roles',
             'worship_service_schedule_weeks',
             'worship_service_assignments',
         ] as $table) {
-            $this->assertTrue(Schema::hasTable($table), $table.' should exist.');
+            $this->assertFalse(Schema::hasTable($table), $table.' should not exist.');
         }
 
+        $this->assertTrue(Schema::hasTable('worship_service_schedules'));
+        $this->assertTrue(Schema::hasColumn('worship_service_schedules', 'row_type'));
+        $this->assertTrue(Schema::hasColumn('worship_service_schedules', 'assignee_sort_order'));
+        $this->assertFalse(Schema::hasColumn('worship_service_schedules', 'rows'));
+
+        $this->assertDatabaseCount('worship_service_schedules', 13);
         $this->assertDatabaseHas('worship_service_schedules', [
-            'id' => 12,
             'month' => '2026-06',
             'update_note' => 'Migrasi ibadah',
+            'row_type' => 'assignment',
+            'role_name' => 'LW',
+            'role_sort_order' => 0,
+            'week_index' => 0,
+            'service_date' => '2026-06-07',
+            'assignee_name' => 'Cia',
+            'assignee_sort_order' => 0,
             'created_at' => '2026-06-02 09:10:27',
             'updated_at' => '2026-06-07 18:57:37',
         ]);
-        $this->assertDatabaseCount('worship_service_schedule_roles', 2);
-        $this->assertDatabaseHas('worship_service_schedule_roles', [
-            'worship_service_schedule_id' => 12,
+        $this->assertDatabaseHas('worship_service_schedules', [
             'role_name' => 'LW',
-            'sort_order' => 0,
+            'week_index' => 1,
+            'assignee_name' => null,
         ]);
-        $this->assertDatabaseHas('worship_service_schedule_roles', [
-            'worship_service_schedule_id' => 12,
+        $this->assertDatabaseHas('worship_service_schedules', [
             'role_name' => 'Singer',
-            'sort_order' => 1,
+            'week_index' => 0,
+            'assignee_name' => 'Ryan',
+            'assignee_sort_order' => 0,
         ]);
-        $this->assertDatabaseMissing('worship_service_schedule_roles', [
+        $this->assertDatabaseHas('worship_service_schedules', [
+            'role_name' => 'Singer',
+            'week_index' => 0,
+            'assignee_name' => 'Zerren',
+            'assignee_sort_order' => 1,
+        ]);
+        $this->assertDatabaseMissing('worship_service_schedules', [
+            'assignee_name' => "Ryan\nZerren",
+        ]);
+        $this->assertDatabaseHas('worship_service_schedules', [
+            'row_type' => 'training',
             'role_name' => 'Jadwal Latihan',
-        ]);
-
-        $this->assertDatabaseCount('worship_service_schedule_weeks', 4);
-        $this->assertDatabaseHas('worship_service_schedule_weeks', [
-            'worship_service_schedule_id' => 12,
             'week_index' => 0,
             'service_date' => '2026-06-07',
             'training_date' => '2026-06-05',
+            'assignee_name' => null,
         ]);
-        $this->assertDatabaseHas('worship_service_schedule_weeks', [
-            'worship_service_schedule_id' => 12,
+        $this->assertDatabaseHas('worship_service_schedules', [
+            'row_type' => 'training',
             'week_index' => 3,
             'service_date' => '2026-06-28',
             'training_date' => '2026-06-26',
         ]);
-
-        $this->assertDatabaseCount('worship_service_assignments', 3);
-        $this->assertDatabaseHas('worship_service_assignments', ['assignee_name' => 'Cia']);
-        $this->assertDatabaseHas('worship_service_assignments', ['assignee_name' => 'Ryan']);
-        $this->assertDatabaseHas('worship_service_assignments', ['assignee_name' => 'Zerren']);
     }
 
     private function createLegacyWorshipScheduleTable(): void
     {
+        Schema::dropIfExists('worship_service_schedules_flat');
         Schema::dropIfExists('worship_service_assignments');
         Schema::dropIfExists('worship_service_schedule_weeks');
         Schema::dropIfExists('worship_service_schedule_roles');

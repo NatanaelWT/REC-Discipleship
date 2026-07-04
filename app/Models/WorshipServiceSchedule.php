@@ -3,33 +3,32 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorshipServiceSchedule extends Model
 {
     protected $fillable = [
         'month',
         'update_note',
+        'row_type',
+        'role_name',
+        'role_sort_order',
+        'week_index',
+        'service_date',
+        'training_date',
+        'assignee_name',
+        'assignee_sort_order',
+    ];
+
+    protected $casts = [
+        'role_sort_order' => 'integer',
+        'week_index' => 'integer',
+        'service_date' => 'date:Y-m-d',
+        'training_date' => 'date:Y-m-d',
+        'assignee_sort_order' => 'integer',
     ];
 
     public function getRouteKeyName(): string
     {
         return 'month';
-    }
-
-    /**
-     * @return HasMany<WorshipServiceScheduleRole>
-     */
-    public function roles(): HasMany
-    {
-        return $this->hasMany(WorshipServiceScheduleRole::class)->orderBy('sort_order');
-    }
-
-    /**
-     * @return HasMany<WorshipServiceScheduleWeek>
-     */
-    public function weeks(): HasMany
-    {
-        return $this->hasMany(WorshipServiceScheduleWeek::class)->orderBy('week_index');
     }
 }

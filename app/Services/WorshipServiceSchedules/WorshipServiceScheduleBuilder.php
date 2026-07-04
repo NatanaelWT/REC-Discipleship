@@ -3,8 +3,6 @@
 namespace App\Services\WorshipServiceSchedules;
 
 use App\Models\WorshipServiceSchedule;
-use App\Models\WorshipServiceScheduleRole;
-use App\Models\WorshipServiceScheduleWeek;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
@@ -12,6 +10,10 @@ use Illuminate\Support\Facades\DB;
 
 class WorshipServiceScheduleBuilder
 {
+    private const ROW_TYPE_ASSIGNMENT = 'assignment';
+    private const ROW_TYPE_TRAINING = 'training';
+    private const TRAINING_ROLE = 'Jadwal Latihan';
+
     public function __construct(private readonly WorshipServiceScheduleNormalizer $normalizer) {}
 
     /**
@@ -21,12 +23,26 @@ class WorshipServiceScheduleBuilder
     {
         RuntimeBootstrap::load();
 
-        return WorshipServiceSchedule::query()
-            ->with(['roles.assignments', 'weeks'])
-            ->orderByDesc('month')
-            ->get()
-            ->map(fn (WorshipServiceSchedule $schedule): array => $this->recordFromModel($schedule))
-            ->all();
+        $rowsByMonth = [];
+        foreach (
+            WorshipServiceSchedule::query()
+                ->orderByDesc('month')
+                ->orderBy('role_sort_order')
+                ->orderBy('week_index')
+                ->orderBy('assignee_sort_order')
+                ->orderBy('id')
+                ->get() as $row
+        ) {
+            $month = normalize_month_value((string) $row->month);
+            $rowsByMonth[$month][] = $row;
+        }
+
+        $records = [];
+        foreach ($rowsByMonth as $rows) {
+            $records[] = $this->recordFromRows($rows);
+        }
+
+        return $records;
     }
 
     /**
@@ -36,12 +52,12 @@ class WorshipServiceScheduleBuilder
     {
         RuntimeBootstrap::load();
 
-        $schedule = WorshipServiceSchedule::query()
-            ->with(['roles.assignments', 'weeks'])
-            ->where('month', normalize_month_value($month))
-            ->first();
+        $rows = $this->rowsForMonth($month);
+        if ($rows->isEmpty()) {
+            return null;
+        }
 
-        return $schedule instanceof WorshipServiceSchedule ? $this->recordFromModel($schedule) : null;
+        return $this->recordFromRows($rows->all());
     }
 
     /**
@@ -65,26 +81,31 @@ class WorshipServiceScheduleBuilder
         $month = normalize_month_value((string) ($record['month'] ?? date('Y-m')));
 
         return DB::transaction(function () use ($record, $month, $preserveTimestamps): WorshipServiceSchedule {
-            $schedule = WorshipServiceSchedule::query()->firstOrNew(['month' => $month]);
-            $schedule->fill([
-                'update_note' => trim((string) ($record['update_note'] ?? '')),
-            ]);
+            $existing = WorshipServiceSchedule::query()
+                ->where('month', $month)
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->first();
 
-            if ($preserveTimestamps) {
-                $createdAt = $this->parseTimestamp((string) ($record['created_at'] ?? ''));
-                $updatedAt = $this->parseTimestamp((string) ($record['updated_at'] ?? ''));
-                if ($createdAt instanceof Carbon) {
-                    $schedule->created_at = $createdAt;
-                }
-                if ($updatedAt instanceof Carbon) {
-                    $schedule->updated_at = $updatedAt;
-                }
+            $timestamps = $this->timestampsForSave($record, $existing, $preserveTimestamps);
+
+            WorshipServiceSchedule::query()
+                ->where('month', $month)
+                ->delete();
+
+            $flatRows = $this->flatRowsForRecord($record, $month, $timestamps['created_at'], $timestamps['updated_at']);
+            foreach (array_chunk($flatRows, 100) as $chunk) {
+                DB::table('worship_service_schedules')->insert($chunk);
             }
 
-            $schedule->save();
-            $this->replaceChildren($schedule, is_array($record['rows'] ?? null) ? $record['rows'] : []);
-
-            return $schedule->fresh(['roles.assignments', 'weeks']) ?? $schedule;
+            return WorshipServiceSchedule::query()
+                ->where('month', $month)
+                ->orderBy('row_type')
+                ->orderBy('role_sort_order')
+                ->orderBy('week_index')
+                ->orderBy('assignee_sort_order')
+                ->orderBy('id')
+                ->firstOrFail();
         });
     }
 
@@ -92,17 +113,17 @@ class WorshipServiceScheduleBuilder
     {
         RuntimeBootstrap::load();
 
-        $schedule = WorshipServiceSchedule::query()
-            ->where('month', normalize_month_value($month))
-            ->first();
-        if (! $schedule instanceof WorshipServiceSchedule) {
+        $month = normalize_month_value($month);
+        $exists = WorshipServiceSchedule::query()
+            ->where('month', $month)
+            ->exists();
+        if (! $exists) {
             return false;
         }
 
-        DB::transaction(function () use ($schedule): void {
-            $this->deleteChildren($schedule);
-            $schedule->delete();
-        });
+        WorshipServiceSchedule::query()
+            ->where('month', $month)
+            ->delete();
 
         return true;
     }
@@ -114,85 +135,132 @@ class WorshipServiceScheduleBuilder
     {
         RuntimeBootstrap::load();
 
-        $schedule->loadMissing(['roles.assignments', 'weeks']);
-        $month = normalize_month_value((string) $schedule->month);
+        $rows = $this->rowsForMonth((string) $schedule->month);
+
+        return $this->recordFromRows($rows->all());
+    }
+
+    private function baseQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return WorshipServiceSchedule::query()
+            ->orderBy('role_sort_order')
+            ->orderBy('week_index')
+            ->orderBy('assignee_sort_order')
+            ->orderBy('id');
+    }
+
+    /**
+     * @return EloquentCollection<int, WorshipServiceSchedule>
+     */
+    private function rowsForMonth(string $month): EloquentCollection
+    {
+        return $this->baseQuery()
+            ->where('month', normalize_month_value($month))
+            ->get();
+    }
+
+    /**
+     * @param  array<int, WorshipServiceSchedule>  $rows
+     * @return array<string, mixed>
+     */
+    private function recordFromRows(array $rows): array
+    {
+        $first = $rows[0] ?? null;
+        $month = $first instanceof WorshipServiceSchedule
+            ? normalize_month_value((string) $first->month)
+            : normalize_month_value(date('Y-m'));
         $weekDates = worship_penatalayan_week_dates($month);
-        $weeks = $this->weeksByIndex($schedule->weeks);
-        $weeksById = $this->weeksById($schedule->weeks);
-        $rows = [];
 
-        foreach ($schedule->roles as $role) {
-            $assignments = array_fill(0, count($weekDates), '');
-            $assignmentLines = [];
-            foreach ($role->assignments as $assignment) {
-                $week = $weeksById[$assignment->worship_service_schedule_week_id] ?? null;
-                if (! $week instanceof WorshipServiceScheduleWeek) {
-                    continue;
-                }
-
-                $weekIndex = (int) $week->week_index;
-                if ($weekIndex < 0 || $weekIndex >= count($weekDates)) {
-                    continue;
-                }
-
-                $assignmentLines[$weekIndex][] = (string) $assignment->assignee_name;
-            }
-
-            foreach ($assignmentLines as $weekIndex => $lines) {
-                $assignments[$weekIndex] = implode("\n", array_values($lines));
-            }
-
-            $rows[] = [
-                'role' => (string) $role->role_name,
-                'assignments' => $assignments,
-            ];
-        }
-
+        $roleNamesBySort = [];
+        $assignmentLines = [];
         $trainingAssignments = array_fill(0, count($weekDates), '');
-        foreach ($weeks as $week) {
-            $weekIndex = (int) $week->week_index;
+        $createdAt = null;
+        $updatedAt = null;
+        $updateNote = '';
+
+        foreach ($rows as $row) {
+            if (! $row instanceof WorshipServiceSchedule) {
+                continue;
+            }
+
+            $createdAt ??= $row->created_at;
+            $updatedAt = $this->latestTimestamp($updatedAt, $row->updated_at);
+            if ($updateNote === '') {
+                $updateNote = trim((string) ($row->update_note ?? ''));
+            }
+
+            $weekIndex = (int) $row->week_index;
             if ($weekIndex < 0 || $weekIndex >= count($weekDates)) {
                 continue;
             }
 
-            $trainingAssignments[$weekIndex] = $week->training_date instanceof Carbon
-                ? $week->training_date->format('Y-m-d')
-                : '';
+            if ((string) $row->row_type === self::ROW_TYPE_TRAINING) {
+                $trainingAssignments[$weekIndex] = $this->dateString($row->training_date);
+
+                continue;
+            }
+
+            $roleName = trim((string) $row->role_name);
+            if ($roleName === '') {
+                continue;
+            }
+
+            $roleSortOrder = (int) $row->role_sort_order;
+            $roleNamesBySort[$roleSortOrder] ??= $roleName;
+
+            $assigneeName = trim((string) ($row->assignee_name ?? ''));
+            if ($assigneeName === '') {
+                continue;
+            }
+
+            $assignmentLines[$roleSortOrder][$weekIndex][(int) $row->assignee_sort_order] = $assigneeName;
         }
-        $rows[] = [
-            'role' => 'Jadwal Latihan',
+
+        ksort($roleNamesBySort);
+
+        $scheduleRows = [];
+        foreach ($roleNamesBySort as $roleSortOrder => $roleName) {
+            $assignments = array_fill(0, count($weekDates), '');
+            foreach ($assignmentLines[$roleSortOrder] ?? [] as $weekIndex => $lines) {
+                ksort($lines);
+                $assignments[$weekIndex] = implode("\n", array_values($lines));
+            }
+
+            $scheduleRows[] = [
+                'role' => $roleName,
+                'assignments' => $assignments,
+            ];
+        }
+
+        $scheduleRows[] = [
+            'role' => self::TRAINING_ROLE,
             'assignments' => $trainingAssignments,
         ];
 
         return [
             'month' => $month,
-            'update_note' => trim((string) ($schedule->update_note ?? '')),
-            'rows' => normalize_worship_penatalayan_rows($rows, count($weekDates)),
-            'created_at' => $this->timestampString($schedule->created_at),
-            'updated_at' => $this->timestampString($schedule->updated_at),
+            'update_note' => $updateNote,
+            'rows' => normalize_worship_penatalayan_rows($scheduleRows, count($weekDates)),
+            'created_at' => $this->timestampString($createdAt),
+            'updated_at' => $this->timestampString($updatedAt),
         ];
     }
 
     /**
-     * @param  array<int, mixed>  $rows
+     * @param  array<string, mixed>  $record
+     * @return array<int, array<string, mixed>>
      */
-    private function replaceChildren(WorshipServiceSchedule $schedule, array $rows): void
+    private function flatRowsForRecord(array $record, string $month, mixed $createdAt, mixed $updatedAt): array
     {
-        $this->deleteChildren($schedule);
-
-        $month = normalize_month_value((string) $schedule->month);
         $weekDates = worship_penatalayan_week_dates($month);
-        $weeksByIndex = [];
-        foreach ($weekDates as $weekIndex => $weekDate) {
-            $weeksByIndex[$weekIndex] = $schedule->weeks()->create([
-                'week_index' => $weekIndex,
-                'service_date' => $weekDate,
-                'training_date' => null,
-            ]);
-        }
-
-        $normalizedRows = normalize_worship_penatalayan_rows($rows, count($weekDates));
+        $normalizedRows = normalize_worship_penatalayan_rows(
+            is_array($record['rows'] ?? null) ? $record['rows'] : [],
+            count($weekDates),
+        );
+        $updateNote = trim((string) ($record['update_note'] ?? ''));
+        $flatRows = [];
         $roleSortOrder = 0;
+
         foreach ($normalizedRows as $row) {
             $roleName = trim((string) ($row['role'] ?? ''));
             if ($roleName === '') {
@@ -200,91 +268,127 @@ class WorshipServiceScheduleBuilder
             }
 
             $assignments = is_array($row['assignments'] ?? null) ? $row['assignments'] : [];
-            if (strtolower($roleName) === 'jadwal latihan') {
-                foreach ($assignments as $weekIndex => $trainingDate) {
-                    if (! isset($weeksByIndex[$weekIndex])) {
-                        continue;
-                    }
-
-                    $normalizedTrainingDate = worship_penatalayan_training_date((string) $trainingDate, $month);
-                    $weeksByIndex[$weekIndex]->forceFill([
-                        'training_date' => $normalizedTrainingDate !== '' ? $normalizedTrainingDate : null,
-                    ])->save();
+            if (strtolower($roleName) === strtolower(self::TRAINING_ROLE)) {
+                foreach ($weekDates as $weekIndex => $serviceDate) {
+                    $trainingDate = worship_penatalayan_training_date((string) ($assignments[$weekIndex] ?? ''), $month);
+                    $flatRows[] = $this->flatRow(
+                        $month,
+                        $updateNote,
+                        self::ROW_TYPE_TRAINING,
+                        self::TRAINING_ROLE,
+                        $roleSortOrder,
+                        $weekIndex,
+                        $serviceDate,
+                        $trainingDate !== '' ? $trainingDate : null,
+                        null,
+                        0,
+                        $createdAt,
+                        $updatedAt,
+                    );
                 }
+                $roleSortOrder++;
 
                 continue;
             }
 
-            /** @var WorshipServiceScheduleRole $role */
-            $role = $schedule->roles()->create([
-                'role_name' => $roleName,
-                'sort_order' => $roleSortOrder,
-            ]);
-            $roleSortOrder++;
+            foreach ($weekDates as $weekIndex => $serviceDate) {
+                $assigneeNames = $this->normalizer->splitAssignmentLines((string) ($assignments[$weekIndex] ?? ''));
+                if ($assigneeNames === []) {
+                    $flatRows[] = $this->flatRow(
+                        $month,
+                        $updateNote,
+                        self::ROW_TYPE_ASSIGNMENT,
+                        $roleName,
+                        $roleSortOrder,
+                        $weekIndex,
+                        $serviceDate,
+                        null,
+                        null,
+                        0,
+                        $createdAt,
+                        $updatedAt,
+                    );
 
-            foreach ($assignments as $weekIndex => $cellValue) {
-                if (! isset($weeksByIndex[$weekIndex])) {
                     continue;
                 }
 
-                foreach ($this->normalizer->splitAssignmentLines((string) $cellValue) as $lineIndex => $assigneeName) {
-                    $role->assignments()->create([
-                        'worship_service_schedule_week_id' => $weeksByIndex[$weekIndex]->id,
-                        'assignee_name' => $assigneeName,
-                        'sort_order' => $lineIndex,
-                    ]);
+                foreach ($assigneeNames as $assigneeSortOrder => $assigneeName) {
+                    $flatRows[] = $this->flatRow(
+                        $month,
+                        $updateNote,
+                        self::ROW_TYPE_ASSIGNMENT,
+                        $roleName,
+                        $roleSortOrder,
+                        $weekIndex,
+                        $serviceDate,
+                        null,
+                        $assigneeName,
+                        $assigneeSortOrder,
+                        $createdAt,
+                        $updatedAt,
+                    );
                 }
             }
-        }
-    }
-
-    private function deleteChildren(WorshipServiceSchedule $schedule): void
-    {
-        $roleIds = $schedule->roles()->pluck('id')->all();
-        $weekIds = $schedule->weeks()->pluck('id')->all();
-
-        if ($roleIds !== []) {
-            DB::table('worship_service_assignments')
-                ->whereIn('worship_service_schedule_role_id', $roleIds)
-                ->delete();
-        }
-        if ($weekIds !== []) {
-            DB::table('worship_service_assignments')
-                ->whereIn('worship_service_schedule_week_id', $weekIds)
-                ->delete();
+            $roleSortOrder++;
         }
 
-        $schedule->roles()->delete();
-        $schedule->weeks()->delete();
+        return $flatRows;
     }
 
     /**
-     * @param  EloquentCollection<int, WorshipServiceScheduleWeek>  $weeks
-     * @return array<int, WorshipServiceScheduleWeek>
+     * @return array<string, mixed>
      */
-    private function weeksByIndex(EloquentCollection $weeks): array
-    {
-        $byIndex = [];
-        foreach ($weeks as $week) {
-            $byIndex[(int) $week->week_index] = $week;
-        }
-        ksort($byIndex);
-
-        return $byIndex;
+    private function flatRow(
+        string $month,
+        string $updateNote,
+        string $rowType,
+        string $roleName,
+        int $roleSortOrder,
+        int $weekIndex,
+        string $serviceDate,
+        ?string $trainingDate,
+        ?string $assigneeName,
+        int $assigneeSortOrder,
+        mixed $createdAt,
+        mixed $updatedAt,
+    ): array {
+        return [
+            'month' => $month,
+            'update_note' => $updateNote,
+            'row_type' => $rowType,
+            'role_name' => $roleName,
+            'role_sort_order' => $roleSortOrder,
+            'week_index' => $weekIndex,
+            'service_date' => $serviceDate,
+            'training_date' => $trainingDate,
+            'assignee_name' => $assigneeName,
+            'assignee_sort_order' => $assigneeSortOrder,
+            'created_at' => $createdAt,
+            'updated_at' => $updatedAt,
+        ];
     }
 
     /**
-     * @param  EloquentCollection<int, WorshipServiceScheduleWeek>  $weeks
-     * @return array<int, WorshipServiceScheduleWeek>
+     * @param  array<string, mixed>  $record
+     * @return array{created_at:mixed, updated_at:mixed}
      */
-    private function weeksById(EloquentCollection $weeks): array
+    private function timestampsForSave(array $record, ?WorshipServiceSchedule $existing, bool $preserveTimestamps): array
     {
-        $byId = [];
-        foreach ($weeks as $week) {
-            $byId[(int) $week->id] = $week;
+        $now = now();
+        $createdAt = $existing?->created_at ?? $now;
+        $updatedAt = $now;
+
+        if ($preserveTimestamps) {
+            $preservedCreatedAt = $this->parseTimestamp((string) ($record['created_at'] ?? ''));
+            $preservedUpdatedAt = $this->parseTimestamp((string) ($record['updated_at'] ?? ''));
+            $createdAt = $preservedCreatedAt ?? $createdAt;
+            $updatedAt = $preservedUpdatedAt ?? $updatedAt;
         }
 
-        return $byId;
+        return [
+            'created_at' => $createdAt,
+            'updated_at' => $updatedAt,
+        ];
     }
 
     private function parseTimestamp(string $value): ?Carbon
@@ -301,12 +405,33 @@ class WorshipServiceScheduleBuilder
         }
     }
 
+    private function latestTimestamp(mixed $current, mixed $candidate): mixed
+    {
+        if ($current === null) {
+            return $candidate;
+        }
+
+        $currentTimestamp = strtotime((string) $current) ?: 0;
+        $candidateTimestamp = strtotime((string) $candidate) ?: 0;
+
+        return $candidateTimestamp > $currentTimestamp ? $candidate : $current;
+    }
+
+    private function dateString(mixed $value): string
+    {
+        if ($value instanceof Carbon) {
+            return $value->format('Y-m-d');
+        }
+
+        return normalize_ymd_date((string) ($value ?? ''));
+    }
+
     private function timestampString(mixed $value): string
     {
         if ($value instanceof Carbon) {
             return $value->toDateTimeString();
         }
 
-        return trim((string) $value);
+        return trim((string) ($value ?? ''));
     }
 }

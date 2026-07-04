@@ -4601,86 +4601,60 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
      */
     private function seedWorshipServiceSchedules(array $schedules): void
     {
-        if ($schedules === [] || ! Schema::hasTable('worship_service_schedules')) {
+        if ($schedules === []
+            || ! Schema::hasTable('worship_service_schedules')
+            || ! Schema::hasColumn('worship_service_schedules', 'row_type')) {
             return;
         }
 
-        $this->seedTable(
-            'worship_service_schedules',
-            array_map(static function (array $schedule): array {
-                unset($schedule['rows']);
-
-                return $schedule;
-            }, $schedules),
-        );
-
+        $months = [];
         foreach ($schedules as $schedule) {
-            $this->replaceWorshipServiceScheduleChildren($schedule);
+            $month = trim((string) ($schedule['month'] ?? ''));
+            if ($month !== '') {
+                $months[] = $month;
+            }
+        }
+
+        if ($months !== []) {
+            DB::table('worship_service_schedules')
+                ->whereIn('month', array_values(array_unique($months)))
+                ->delete();
+        }
+
+        $flatRows = [];
+        foreach ($schedules as $schedule) {
+            foreach ($this->flatWorshipServiceScheduleRows($schedule) as $row) {
+                $flatRows[] = $row;
+            }
+        }
+
+        foreach (array_chunk($flatRows, 100) as $chunk) {
+            DB::table('worship_service_schedules')->insert($chunk);
         }
     }
 
     /**
      * @param  array<string, mixed>  $schedule
+     * @return array<int, array<string, mixed>>
      */
-    private function replaceWorshipServiceScheduleChildren(array $schedule): void
+    private function flatWorshipServiceScheduleRows(array $schedule): array
     {
-        if (! Schema::hasTable('worship_service_schedule_roles')
-            || ! Schema::hasTable('worship_service_schedule_weeks')
-            || ! Schema::hasTable('worship_service_assignments')) {
-            return;
+        $month = trim((string) ($schedule['month'] ?? ''));
+        if ($month === '') {
+            return [];
         }
 
-        $scheduleId = (int) ($schedule['id'] ?? 0);
-        $month = (string) ($schedule['month'] ?? '');
-        if ($scheduleId < 1 || $month === '') {
-            return;
-        }
-
-        $roleIds = DB::table('worship_service_schedule_roles')
-            ->where('worship_service_schedule_id', $scheduleId)
-            ->pluck('id')
-            ->all();
-        $weekIds = DB::table('worship_service_schedule_weeks')
-            ->where('worship_service_schedule_id', $scheduleId)
-            ->pluck('id')
-            ->all();
-
-        if ($roleIds !== []) {
-            DB::table('worship_service_assignments')
-                ->whereIn('worship_service_schedule_role_id', $roleIds)
-                ->delete();
-        }
-        if ($weekIds !== []) {
-            DB::table('worship_service_assignments')
-                ->whereIn('worship_service_schedule_week_id', $weekIds)
-                ->delete();
-        }
-        DB::table('worship_service_schedule_roles')
-            ->where('worship_service_schedule_id', $scheduleId)
-            ->delete();
-        DB::table('worship_service_schedule_weeks')
-            ->where('worship_service_schedule_id', $scheduleId)
-            ->delete();
-
+        $updateNote = trim((string) ($schedule['update_note'] ?? ''));
         $createdAt = $schedule['created_at'] ?? now();
         $updatedAt = $schedule['updated_at'] ?? now();
-        $weekIdsByIndex = [];
-        foreach ($this->worshipWeekDates($month) as $weekIndex => $serviceDate) {
-            $weekIdsByIndex[$weekIndex] = DB::table('worship_service_schedule_weeks')->insertGetId([
-                'worship_service_schedule_id' => $scheduleId,
-                'week_index' => $weekIndex,
-                'service_date' => $serviceDate,
-                'training_date' => null,
-                'created_at' => $createdAt,
-                'updated_at' => $updatedAt,
-            ]);
-        }
+        $weekDates = $this->worshipWeekDates($month);
 
         $rows = json_decode((string) ($schedule['rows'] ?? '[]'), true);
         if (! is_array($rows)) {
             $rows = [];
         }
 
+        $flatRows = [];
         $roleSortOrder = 0;
         foreach ($rows as $row) {
             if (! is_array($row)) {
@@ -4694,48 +4668,103 @@ Utk kali ini hanya menjawab pertanyaan no 1. Syukur sepakat Selasa depan tgl mer
 
             $assignments = is_array($row['assignments'] ?? null) ? $row['assignments'] : [];
             if (strtolower($roleName) === 'jadwal latihan') {
-                foreach ($assignments as $weekIndex => $trainingDate) {
-                    $weekIndex = (int) $weekIndex;
-                    if (isset($weekIdsByIndex[$weekIndex]) && $this->validDate((string) $trainingDate)) {
-                        DB::table('worship_service_schedule_weeks')
-                            ->where('id', $weekIdsByIndex[$weekIndex])
-                            ->update([
-                                'training_date' => trim((string) $trainingDate),
-                                'updated_at' => $updatedAt,
-                            ]);
-                    }
+                foreach ($weekDates as $weekIndex => $serviceDate) {
+                    $trainingDate = trim((string) ($assignments[$weekIndex] ?? ''));
+                    $flatRows[] = $this->flatWorshipServiceScheduleRow(
+                        $month,
+                        $updateNote,
+                        'training',
+                        'Jadwal Latihan',
+                        $roleSortOrder,
+                        $weekIndex,
+                        $serviceDate,
+                        $this->validDate($trainingDate) ? $trainingDate : null,
+                        null,
+                        0,
+                        $createdAt,
+                        $updatedAt,
+                    );
                 }
+                $roleSortOrder++;
 
                 continue;
             }
 
-            $roleId = DB::table('worship_service_schedule_roles')->insertGetId([
-                'worship_service_schedule_id' => $scheduleId,
-                'role_name' => $roleName,
-                'sort_order' => $roleSortOrder,
-                'created_at' => $createdAt,
-                'updated_at' => $updatedAt,
-            ]);
-            $roleSortOrder++;
+            foreach ($weekDates as $weekIndex => $serviceDate) {
+                $assigneeNames = $this->worshipAssignmentLines((string) ($assignments[$weekIndex] ?? ''));
+                if ($assigneeNames === []) {
+                    $flatRows[] = $this->flatWorshipServiceScheduleRow(
+                        $month,
+                        $updateNote,
+                        'assignment',
+                        $roleName,
+                        $roleSortOrder,
+                        $weekIndex,
+                        $serviceDate,
+                        null,
+                        null,
+                        0,
+                        $createdAt,
+                        $updatedAt,
+                    );
 
-            foreach ($assignments as $weekIndex => $cellValue) {
-                $weekIndex = (int) $weekIndex;
-                if (! isset($weekIdsByIndex[$weekIndex])) {
                     continue;
                 }
 
-                foreach ($this->worshipAssignmentLines((string) $cellValue) as $sortOrder => $assigneeName) {
-                    DB::table('worship_service_assignments')->insert([
-                        'worship_service_schedule_role_id' => $roleId,
-                        'worship_service_schedule_week_id' => $weekIdsByIndex[$weekIndex],
-                        'assignee_name' => $assigneeName,
-                        'sort_order' => $sortOrder,
-                        'created_at' => $createdAt,
-                        'updated_at' => $updatedAt,
-                    ]);
+                foreach ($assigneeNames as $sortOrder => $assigneeName) {
+                    $flatRows[] = $this->flatWorshipServiceScheduleRow(
+                        $month,
+                        $updateNote,
+                        'assignment',
+                        $roleName,
+                        $roleSortOrder,
+                        $weekIndex,
+                        $serviceDate,
+                        null,
+                        $assigneeName,
+                        $sortOrder,
+                        $createdAt,
+                        $updatedAt,
+                    );
                 }
             }
+            $roleSortOrder++;
         }
+
+        return $flatRows;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function flatWorshipServiceScheduleRow(
+        string $month,
+        string $updateNote,
+        string $rowType,
+        string $roleName,
+        int $roleSortOrder,
+        int $weekIndex,
+        string $serviceDate,
+        ?string $trainingDate,
+        ?string $assigneeName,
+        int $assigneeSortOrder,
+        mixed $createdAt,
+        mixed $updatedAt,
+    ): array {
+        return [
+            'month' => $month,
+            'update_note' => $updateNote,
+            'row_type' => $rowType,
+            'role_name' => $roleName,
+            'role_sort_order' => $roleSortOrder,
+            'week_index' => $weekIndex,
+            'service_date' => $serviceDate,
+            'training_date' => $trainingDate,
+            'assignee_name' => $assigneeName,
+            'assignee_sort_order' => $assigneeSortOrder,
+            'created_at' => $createdAt,
+            'updated_at' => $updatedAt,
+        ];
     }
 
     /**

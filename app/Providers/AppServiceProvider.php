@@ -13,10 +13,7 @@ use App\Models\Person;
 use App\Models\DiscipleshipRelationship;
 use App\Models\PublicMaterialFile;
 use App\Models\User;
-use App\Models\WorshipServiceAssignment;
 use App\Models\WorshipServiceSchedule;
-use App\Models\WorshipServiceScheduleRole;
-use App\Models\WorshipServiceScheduleWeek;
 use App\Observers\AuditableModelObserver;
 use App\Services\Activity\ActivityContext;
 use App\Services\AppConfig\AppConfigService;
@@ -64,10 +61,7 @@ class AppServiceProvider extends ServiceProvider
             DiscipleshipRelationship::class,
             PublicMaterialFile::class,
             User::class,
-            WorshipServiceAssignment::class,
             WorshipServiceSchedule::class,
-            WorshipServiceScheduleRole::class,
-            WorshipServiceScheduleWeek::class,
         ] as $model) {
             $model::observe(AuditableModelObserver::class);
         }
