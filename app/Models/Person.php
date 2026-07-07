@@ -13,7 +13,7 @@ class Person extends Model
     use ResolvesBranchSlug;
 
     public const VIEW_COLUMNS = [
-        'id', 'branch_id', 'full_name', 'gender', 'birth_date', 'birth_day_month',
+        'id', 'branch_id', 'full_name', 'gender', 'birth_date',
         'birth_place', 'address', 'email', 'whatsapp', 'batch_month', 'notes', 'completed_at',
         'journey_bridge_status', 'status', 'session_numbers', 'photos', 'created_at', 'updated_at',
     ];
@@ -25,7 +25,6 @@ class Person extends Model
         'full_name',
         'gender',
         'birth_date',
-        'birth_day_month',
         'birth_place',
         'address',
         'email',
@@ -88,7 +87,6 @@ class Person extends Model
             'full_name' => (string) ($this->full_name ?? ''),
             'gender' => (string) ($this->gender ?? ''),
             'birth_date' => $this->birth_date !== null ? $this->birth_date->format('Y-m-d') : '',
-            'birth_day_month' => (string) ($this->birth_day_month ?? ''),
             'birth_place' => (string) ($this->birth_place ?? ''),
             'address' => (string) ($this->address ?? ''),
             'email' => (string) ($this->email ?? ''),

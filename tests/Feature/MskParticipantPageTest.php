@@ -469,7 +469,6 @@ class MskParticipantPageTest extends TestCase
             'full_name' => 'Peserta Lama Diedit',
             'gender' => 'Perempuan',
             'birth_date' => '1998-04-25',
-            'birth_day_month' => '25-04',
             'birth_place' => 'Malang',
             'address' => 'Jl. Baru',
             'email' => 'peserta.edit@example.test',
@@ -555,7 +554,6 @@ class MskParticipantPageTest extends TestCase
             $table->string('full_name')->nullable();
             $table->string('gender')->nullable();
             $table->date('birth_date')->nullable();
-            $table->string('birth_day_month')->nullable();
             $table->string('birth_place')->nullable();
             $table->text('address')->nullable();
             $table->string('email')->nullable();

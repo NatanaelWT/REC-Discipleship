@@ -145,7 +145,6 @@ class MskParticipantTableData
             'full_name' => $this->nullableString($row['full_name'] ?? null),
             'gender' => $this->nullableString(normalize_member_gender_value((string) ($row['gender'] ?? ''))),
             'birth_date' => $birthDate !== '' ? $birthDate : null,
-            'birth_day_month' => $this->nullableString(normalize_member_birth_day_month_value((string) ($row['birth_day_month'] ?? ''))),
             'birth_place' => $this->nullableString($row['birth_place'] ?? null),
             'address' => $this->nullableString($row['address'] ?? null),
             'email' => $this->nullableString(strtolower(trim((string) ($row['email'] ?? '')))),

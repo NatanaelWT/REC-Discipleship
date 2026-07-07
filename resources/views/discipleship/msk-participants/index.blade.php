@@ -332,12 +332,9 @@ if ($page === 'msk_classes') {
         }
         $viewBirthPlace = trim((string) ($participant['birth_place'] ?? ''));
         $viewBirthDate = normalize_ymd_date((string) ($participant['birth_date'] ?? ''));
-        $viewBirthDayMonth = normalize_member_birth_day_month_value((string) ($participant['birth_day_month'] ?? ''));
         $viewBirthDateLabel = '-';
         if ($viewBirthDate !== '') {
             $viewBirthDateLabel = format_indo_date($viewBirthDate);
-        } elseif ($viewBirthDayMonth !== '') {
-            $viewBirthDateLabel = format_member_birth_day_month($viewBirthDayMonth).' (tanpa tahun)';
         }
         $viewBirthPlaceLabel = $viewBirthPlace !== '' ? $viewBirthPlace : '-';
 

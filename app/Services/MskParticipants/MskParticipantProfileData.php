@@ -33,10 +33,7 @@ class MskParticipantProfileData
         $gender = normalize_member_gender_value((string) ($participant['gender'] ?? '')) ?: '-';
         $birthPlace = trim((string) ($participant['birth_place'] ?? '')) ?: '-';
         $birthDate = normalize_ymd_date((string) ($participant['birth_date'] ?? ''));
-        $birthDayMonth = normalize_member_birth_day_month_value((string) ($participant['birth_day_month'] ?? ''));
-        $birthDateLabel = $birthDate !== ''
-            ? format_indo_date($birthDate)
-            : ($birthDayMonth !== '' ? format_member_birth_day_month($birthDayMonth).' (tanpa tahun)' : '-');
+        $birthDateLabel = $birthDate !== '' ? format_indo_date($birthDate) : '-';
         $email = strtolower(trim((string) ($participant['email'] ?? '')));
         if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
             $email = '';

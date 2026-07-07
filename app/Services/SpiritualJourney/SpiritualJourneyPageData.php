@@ -46,7 +46,7 @@ class SpiritualJourneyPageData
         $query = Person::query()
             ->from('orang as people')
             ->select([
-                'id', 'branch_id', 'full_name', 'gender', 'birth_date', 'birth_day_month',
+                'id', 'branch_id', 'full_name', 'gender', 'birth_date',
                 'birth_place', 'address', 'email', 'whatsapp', 'batch_month', 'notes', 'completed_at',
                 'journey_bridge_status', 'status', 'session_numbers', 'photos', 'created_at', 'updated_at',
             ])

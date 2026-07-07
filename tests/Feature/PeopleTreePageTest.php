@@ -772,7 +772,6 @@ class PeopleTreePageTest extends TestCase
             $table->string('full_name')->nullable();
             $table->string('gender')->nullable();
             $table->date('birth_date')->nullable();
-            $table->string('birth_day_month')->nullable();
             $table->string('birth_place')->nullable();
             $table->text('address')->nullable();
             $table->string('email')->nullable();

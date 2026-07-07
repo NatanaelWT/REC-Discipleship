@@ -410,7 +410,6 @@ class MskParticipantImportService
             'full_name' => (string) $rowData['full_name'],
             'gender' => (string) $rowData['gender'],
             'birth_date' => $birthDate,
-            'birth_day_month' => $birthDate !== '' ? date('d-m', strtotime($birthDate)) : normalize_member_birth_day_month_value((string) ($existing['birth_day_month'] ?? '')),
             'birth_place' => (string) $rowData['birth_place'],
             'address' => (string) $rowData['address'],
             'email' => (string) $rowData['email'],
