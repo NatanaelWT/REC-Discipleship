@@ -4,10 +4,8 @@ namespace App\Services\Analytics;
 
 use App\Models\ActivityRequest;
 use App\Models\WebsitePageView;
-use App\Models\WebsiteSession;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class WebsiteAnalyticsWriter
 {
@@ -34,11 +32,8 @@ class WebsiteAnalyticsWriter
                 return $existing;
             }
 
-            $session = $this->session($activity, $identity, $occurredAt);
-
             ActivityRequest::query()->whereKey((string) $activity->getKey())->update(array_merge($identity, $client, $language, [
                 'is_page_view' => true,
-                'session_id' => (string) $session->getKey(),
                 'user_id' => $activity->user_id,
                 'username' => $activity->username,
                 'actor_type' => $activity->actor_type,
@@ -75,43 +70,6 @@ class WebsiteAnalyticsWriter
             || $routeName === 'auth.login'
             || str_starts_with($routeName, 'public.')
             || str_starts_with($routeName, 'materials.');
-    }
-
-    /** @param array{visitor_hash:string,identity_source:string} $identity */
-    private function session(ActivityRequest $activity, array $identity, CarbonImmutable $occurredAt): WebsiteSession
-    {
-        $threshold = $occurredAt->subMinutes(max(1, (int) config('analytics.session_inactivity_minutes', 30)));
-        $session = WebsiteSession::query()
-            ->where('visitor_hash', $identity['visitor_hash'])
-            ->where('last_seen_at', '>=', $threshold)
-            ->orderByDesc('last_seen_at')
-            ->lockForUpdate()
-            ->first();
-
-        if ($session instanceof WebsiteSession) {
-            $session->forceFill([
-                'last_seen_at' => $occurredAt,
-                'exit_path' => (string) $activity->path,
-                'page_views' => (int) $session->page_views + 1,
-                'user_id' => $activity->user_id ?: $session->user_id,
-                'username' => $activity->username ?: $session->username,
-            ])->save();
-
-            return $session;
-        }
-
-        return WebsiteSession::query()->create([
-            'id' => (string) Str::ulid(),
-            'visitor_hash' => $identity['visitor_hash'],
-            'user_id' => $activity->user_id,
-            'username' => $activity->username,
-            'identity_source' => $identity['identity_source'],
-            'started_at' => $occurredAt,
-            'last_seen_at' => $occurredAt,
-            'landing_path' => (string) $activity->path,
-            'exit_path' => (string) $activity->path,
-            'page_views' => 1,
-        ]);
     }
 
     private function segment(string $path): string

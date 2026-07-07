@@ -12,11 +12,15 @@ use Throwable;
 
 class WebsiteStatisticsService
 {
+    public function __construct(
+        private readonly WebsiteAnalyticsSessionMetrics $sessionMetrics,
+    ) {}
+
     /** @return array<string, mixed> */
     public function dashboard(Request $request): array
     {
         $filters = $this->filters($request);
-        $cacheKey = 'analytics.dashboard.v4.'.sha1(json_encode($filters) ?: '[]');
+        $cacheKey = 'analytics.dashboard.v5.'.sha1(json_encode($filters) ?: '[]');
 
         if (app()->environment('testing')) {
             return $this->build($filters);
@@ -108,7 +112,7 @@ class WebsiteStatisticsService
     private function summary(Builder $query, array $filters): array
     {
         $pageViews = (clone $query)->count();
-        $sessions = (clone $query)->distinct()->count('session_id');
+        $sessions = $this->sessionMetrics->count(clone $query);
         $visitors = (clone $query)->distinct()->count('visitor_hash');
         $activeThreshold = CarbonImmutable::now('UTC')->subMinutes(5);
         $active = (clone $query)->where('occurred_at', '>=', $activeThreshold)->distinct()->count('visitor_hash');
@@ -140,7 +144,7 @@ class WebsiteStatisticsService
         $previousValues = [
             'page_views' => (clone $query)->count(),
             'visitors' => (clone $query)->distinct()->count('visitor_hash'),
-            'sessions' => (clone $query)->distinct()->count('session_id'),
+            'sessions' => $this->sessionMetrics->count(clone $query),
         ];
 
         return collect($previousValues)->mapWithKeys(static function (int $value, string $key) use ($current): array {
@@ -173,9 +177,10 @@ class WebsiteStatisticsService
     private function visitors(Builder $query): array
     {
         $timezone = $this->timezone();
+        $sessionsByVisitor = $this->sessionMetrics->countsByVisitor(clone $query);
 
         return $query
-            ->selectRaw('visitor_hash, MAX(user_id) AS user_id, MAX(username) AS username, MAX(language_name) AS language_name, MAX(device_type) AS device_type, COUNT(*) AS page_views, COUNT(DISTINCT session_id) AS sessions, MAX(occurred_at) AS last_seen_at')
+            ->selectRaw('visitor_hash, MAX(user_id) AS user_id, MAX(username) AS username, MAX(language_name) AS language_name, MAX(device_type) AS device_type, COUNT(*) AS page_views, MAX(occurred_at) AS last_seen_at')
             ->groupBy('visitor_hash')
             ->orderByDesc('page_views')
             ->limit(50)
@@ -186,7 +191,7 @@ class WebsiteStatisticsService
                 'language' => trim((string) $row->language_name) ?: 'Tidak diketahui',
                 'device' => trim((string) $row->device_type) ?: 'Tidak diketahui',
                 'page_views' => (int) $row->page_views,
-                'sessions' => (int) $row->sessions,
+                'sessions' => (int) ($sessionsByVisitor[(string) $row->visitor_hash] ?? 0),
                 'last_seen_at' => CarbonImmutable::parse((string) $row->last_seen_at, 'UTC')->setTimezone($timezone),
             ])->all();
     }

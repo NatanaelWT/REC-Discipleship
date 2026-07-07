@@ -511,7 +511,6 @@ class DeveloperAccessTest extends TestCase
         DB::table('aktivitas')->insert([
             $this->dashboardPageViewRow([
                 'id' => (string) Str::ulid(),
-                'session_id' => (string) Str::ulid(),
                 'visitor_hash' => str_repeat('a', 64),
                 'user_id' => null,
                 'segment' => 'publik',
@@ -524,7 +523,6 @@ class DeveloperAccessTest extends TestCase
             ]),
             $this->dashboardPageViewRow([
                 'id' => (string) Str::ulid(),
-                'session_id' => (string) Str::ulid(),
                 'visitor_hash' => str_repeat('b', 64),
                 'user_id' => null,
                 'segment' => 'publik',
@@ -537,7 +535,6 @@ class DeveloperAccessTest extends TestCase
             ]),
             $this->dashboardPageViewRow([
                 'id' => (string) Str::ulid(),
-                'session_id' => (string) Str::ulid(),
                 'visitor_hash' => str_repeat('c', 64),
                 'user_id' => null,
                 'segment' => 'publik',

@@ -7,6 +7,7 @@ use App\Models\ActivityRequest;
 use App\Models\Branch;
 use App\Models\User;
 use App\Models\WebsitePageView;
+use App\Services\Analytics\WebsiteAnalyticsSessionMetrics;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use DateTimeZone;
@@ -17,6 +18,10 @@ use Throwable;
 
 class DeveloperDashboardOverviewService
 {
+    public function __construct(
+        private readonly WebsiteAnalyticsSessionMetrics $sessionMetrics,
+    ) {}
+
     /** @return array<string, mixed> */
     public function overview(): array
     {
@@ -108,7 +113,7 @@ class DeveloperDashboardOverviewService
                 $summary = [
                     'page_views' => (clone $human)->count(),
                     'visitors' => (clone $human)->distinct()->count('visitor_hash'),
-                    'sessions' => (clone $human)->distinct()->count('session_id'),
+                    'sessions' => $this->sessionMetrics->count(clone $human),
                 ];
                 $topPages = (clone $human)
                     ->selectRaw("COALESCE(route_name, '') AS item_key, COALESCE(path, '') AS item_path, COUNT(*) AS aggregate_count")

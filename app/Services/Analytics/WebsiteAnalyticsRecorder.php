@@ -44,7 +44,7 @@ class WebsiteAnalyticsRecorder
     private function tablesAvailable(): bool
     {
         try {
-            return Schema::hasTable('aktivitas') && Schema::hasTable('sesi');
+            return Schema::hasTable('aktivitas');
         } catch (Throwable) {
             return false;
         }

@@ -48,9 +48,4 @@ class WebsitePageView extends Model
     {
         return $this->belongsTo(ActivityRequest::class, 'id', 'id');
     }
-
-    public function session(): BelongsTo
-    {
-        return $this->belongsTo(WebsiteSession::class, 'session_id');
-    }
 }

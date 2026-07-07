@@ -51,8 +51,9 @@ class WebsiteAnalyticsTest extends TestCase
         $first->assertOk()->assertCookie(config('analytics.cookie.name'));
         $this->assertSame(2, DB::table('aktivitas')->where('is_page_view', true)->count());
         $this->assertSame(1, DB::table('aktivitas')->where('is_page_view', true)->distinct()->count('visitor_hash'));
-        $this->assertSame(1, DB::table('sesi')->count());
-        $this->assertSame(2, (int) DB::table('sesi')->value('page_views'));
+        $dashboard = app(WebsiteStatisticsService::class)->dashboard(Request::create('/developer/statistics', 'GET', ['range' => 'all']));
+        $this->assertSame(1, $dashboard['summary']['sessions']);
+        $this->assertSame(2.0, $dashboard['summary']['pages_per_session']);
         $this->assertDatabaseHas('aktivitas', [
             'is_page_view' => true,
             'segment' => 'publik',
@@ -111,7 +112,27 @@ class WebsiteAnalyticsTest extends TestCase
         CarbonImmutable::setTestNow('2026-06-21 10:31:00', 'UTC');
         $this->get('/_analytics-test/page')->assertOk();
 
-        $this->assertSame(2, DB::table('sesi')->count());
+        $dashboard = app(WebsiteStatisticsService::class)->dashboard(Request::create('/developer/statistics', 'GET', [
+            'range' => 'today',
+        ]));
+
+        $this->assertSame(2, $dashboard['summary']['sessions']);
+        $this->assertSame(1.0, $dashboard['summary']['pages_per_session']);
+    }
+
+    public function test_exact_thirty_minute_gap_stays_in_same_session(): void
+    {
+        CarbonImmutable::setTestNow('2026-06-21 10:00:00', 'UTC');
+        $this->get('/_analytics-test/page')->assertOk();
+        CarbonImmutable::setTestNow('2026-06-21 10:30:00', 'UTC');
+        $this->get('/_analytics-test/page')->assertOk();
+
+        $dashboard = app(WebsiteStatisticsService::class)->dashboard(Request::create('/developer/statistics', 'GET', [
+            'range' => 'today',
+        ]));
+
+        $this->assertSame(1, $dashboard['summary']['sessions']);
+        $this->assertSame(2.0, $dashboard['summary']['pages_per_session']);
     }
 
     public function test_bot_and_prefetch_are_stored_but_technical_requests_are_not_page_views(): void
@@ -221,8 +242,8 @@ class WebsiteAnalyticsTest extends TestCase
     {
         $occurredAt = CarbonImmutable::now('UTC')->format('Y-m-d H:i:s.u');
         foreach ([
-            ['request_id' => '05'.str_repeat('0', 24), 'session_id' => '06'.str_repeat('0', 24), 'user_id' => null, 'segment' => 'publik'],
-            ['request_id' => '05'.str_repeat('1', 24), 'session_id' => '06'.str_repeat('1', 24), 'user_id' => 1, 'segment' => 'developer'],
+            ['request_id' => '05'.str_repeat('0', 24), 'user_id' => null, 'segment' => 'publik'],
+            ['request_id' => '05'.str_repeat('1', 24), 'user_id' => 1, 'segment' => 'developer'],
         ] as $row) {
             DB::table('aktivitas')->insert($this->pageViewRow(array_merge($row, [
                 'id' => $row['request_id'],
@@ -303,7 +324,6 @@ class WebsiteAnalyticsTest extends TestCase
         foreach (range(1, 12) as $index) {
             DB::table('aktivitas')->insert($this->pageViewRow([
                 'id' => sprintf('03%024d', $index),
-                'session_id' => sprintf('04%024d', $index),
                 'visitor_hash' => hash('sha256', 'compact-visitor-'.$index),
                 'identity_source' => 'anonymous_cookie',
                 'actor_type' => 'anonymous',
@@ -335,7 +355,6 @@ class WebsiteAnalyticsTest extends TestCase
                 $index = ($batch * 1000) + $offset;
                 $rows[] = $this->pageViewRow([
                     'id' => sprintf('01%024d', $index),
-                    'session_id' => sprintf('02%024d', intdiv($index, 10)),
                     'visitor_hash' => hash('sha256', 'visitor-'.($index % 5000)),
                     'identity_source' => 'anonymous_cookie',
                     'user_id' => null,
@@ -402,19 +421,9 @@ class WebsiteAnalyticsTest extends TestCase
         });
         $mergeMigration = require database_path('migrations/2026_07_07_000001_merge_activity_audit_tables.php');
         $mergeMigration->up();
+        $dropSessionsMigration = require database_path('migrations/2026_07_07_000003_drop_website_sessions_table.php');
+        $dropSessionsMigration->up();
 
-        Schema::create('sesi', static function (Blueprint $table): void {
-            $table->ulid('id')->primary();
-            $table->char('visitor_hash', 64);
-            $table->unsignedBigInteger('user_id')->nullable();
-            $table->string('username')->nullable();
-            $table->string('identity_source');
-            $table->dateTime('started_at', 6);
-            $table->dateTime('last_seen_at', 6);
-            $table->text('landing_path');
-            $table->text('exit_path');
-            $table->unsignedInteger('page_views');
-        });
         DB::table('cabang')->insert(['id' => 1, 'label' => 'Kutisari', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
     }
 
@@ -439,7 +448,6 @@ class WebsiteAnalyticsTest extends TestCase
             'started_at' => $occurredAt,
             'completed_at' => $occurredAt,
             'is_page_view' => true,
-            'session_id' => (string) Str::ulid(),
             'visitor_hash' => hash('sha256', $id),
             'identity_source' => 'legacy_session',
             'segment' => 'publik',
