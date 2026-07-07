@@ -236,6 +236,90 @@ class PeopleTreePageTest extends TestCase
         $this->assertContains((string) $personId, $groups[(string) $latestGroupId]['member_ids']);
     }
 
+    public function test_group_history_roster_shows_one_row_per_person(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+
+        $leaderId = (int) DB::table('orang')->where('full_name', 'Leader Test')->value('id');
+        $memberId = (int) DB::table('orang')->where('full_name', 'Anggota Test')->value('id');
+        $groupId = (int) DB::table('kelompok_dg')->where('name', 'Kelompok Test')->value('id');
+        $historicalOnlyId = DB::table('orang')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Anggota Histori Saja',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $leaderId,
+                'role' => 'leader',
+                'stage' => null,
+                'status' => 'closed',
+                'started_on' => '2025-11-01',
+                'ended_on' => '2025-12-01',
+                'end_reason' => 'person_archived',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $memberId,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'closed',
+                'started_on' => '2025-11-01',
+                'ended_on' => '2025-12-01',
+                'end_reason' => 'person_archived',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $historicalOnlyId,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'closed',
+                'started_on' => '2025-11-01',
+                'ended_on' => '2025-12-01',
+                'end_reason' => 'person_archived',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $historicalOnlyId,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'closed',
+                'started_on' => '2026-01-01',
+                'ended_on' => '2026-02-01',
+                'end_reason' => 'left_group',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->actingAsRecUser();
+
+        $response = $this->get('/pemuridan/pohon')->assertOk();
+        $historyHtml = $this->groupHistoryTemplateHtml($response->getContent(), (string) $groupId);
+
+        $this->assertSame(1, substr_count($historyHtml, 'Leader Test'));
+        $this->assertSame(1, substr_count($historyHtml, 'Anggota Test'));
+        $this->assertSame(1, substr_count($historyHtml, 'Anggota Histori Saja'));
+        $this->assertStringContainsString('1 pemimpin - 2 anggota', $historyHtml);
+        $this->assertStringContainsString('Keluar dari kelompok', $historyHtml);
+        $this->assertStringNotContainsString('Person Archived', $historyHtml);
+    }
+
     public function test_latest_historical_group_prefers_highest_stage_when_dates_match(): void
     {
         $this->createTables();
@@ -748,6 +832,15 @@ class PeopleTreePageTest extends TestCase
         preg_match($pattern, $content, $matches);
 
         return (string) ($matches[1] ?? '');
+    }
+
+    private function groupHistoryTemplateHtml(string $content, string $groupId): string
+    {
+        $pattern = '/<template[^>]*data-tree-v2-history-template="'.preg_quote($groupId, '/').'"[^>]*>(.*?)<\/template>/s';
+        $this->assertMatchesRegularExpression($pattern, $content);
+        preg_match($pattern, $content, $matches);
+
+        return html_entity_decode((string) ($matches[1] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     private function seedCrossBranchLeaderGroup(): void

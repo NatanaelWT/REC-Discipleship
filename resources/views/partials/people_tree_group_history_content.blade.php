@@ -84,6 +84,47 @@ $rosterMetaLabel = static function (array $parts): string {
 
     return implode(' - ', $filtered);
 };
+$rosterSortToken = static function (array $row): string {
+    $endDate = normalize_ymd_date((string) ($row['end_date'] ?? ''));
+    $startDate = normalize_ymd_date((string) ($row['start_date'] ?? ''));
+    $updatedAt = trim((string) ($row['updated_at'] ?? ''));
+    $createdAt = trim((string) ($row['created_at'] ?? ''));
+    $rowId = trim((string) ($row['id'] ?? ''));
+    $rowId = ctype_digit($rowId) ? str_pad($rowId, 12, '0', STR_PAD_LEFT) : $rowId;
+
+    return implode('|', [$endDate, $startDate, $updatedAt, $createdAt, $rowId]);
+};
+$dedupeRosterRows = static function (array $rows, string $personKey) use ($rosterSortToken): array {
+    $selectedByPersonId = [];
+    foreach ($rows as $row) {
+        if (! is_array($row)) {
+            continue;
+        }
+        $personId = trim((string) ($row[$personKey] ?? ''));
+        if ($personId === '') {
+            continue;
+        }
+        if (! isset($selectedByPersonId[$personId])) {
+            $selectedByPersonId[$personId] = $row;
+            continue;
+        }
+
+        $candidateActive = dgv2_is_current_period($row);
+        $selectedActive = dgv2_is_current_period($selectedByPersonId[$personId]);
+        if ($candidateActive && ! $selectedActive) {
+            $selectedByPersonId[$personId] = $row;
+            continue;
+        }
+        if ($candidateActive === $selectedActive && strcmp($rosterSortToken($row), $rosterSortToken($selectedByPersonId[$personId])) >= 0) {
+            $selectedByPersonId[$personId] = $row;
+        }
+    }
+
+    return array_values($selectedByPersonId);
+};
+
+$displayLeadershipRows = $dedupeRosterRows($leadershipRows, 'leader_person_id');
+$displayMembershipRows = $dedupeRosterRows($membershipRows, 'person_id');
 
 echo "<div class=\"journey-history-view tree-group-history-view\">";
 echo "<div class=\"journey-history-summary\">";
@@ -103,12 +144,12 @@ if ($groupNotes !== '') {
 }
 
 echo "<section class=\"tree-group-history-roster\">";
-echo "<div class=\"tree-group-history-roster-head\"><div class=\"journey-history-section-title\">Pemimpin &amp; Anggota</div><span>" . h((string) count($leadershipRows)) . " pemimpin - " . h((string) count($membershipRows)) . " anggota</span></div>";
-if (count($leadershipRows) === 0 && count($membershipRows) === 0) {
+echo "<div class=\"tree-group-history-roster-head\"><div class=\"journey-history-section-title\">Pemimpin &amp; Anggota</div><span>" . h((string) count($displayLeadershipRows)) . " pemimpin - " . h((string) count($displayMembershipRows)) . " anggota</span></div>";
+if (count($displayLeadershipRows) === 0 && count($displayMembershipRows) === 0) {
     echo "<div class=\"journey-history-empty\">Belum ada histori pemimpin atau anggota.</div>";
 } else {
     echo "<div class=\"tree-group-history-roster-list\">";
-    foreach ($leadershipRows as $leadershipRow) {
+    foreach ($displayLeadershipRows as $leadershipRow) {
         $leaderPersonId = trim((string) ($leadershipRow['leader_person_id'] ?? ''));
         $role = $textLabel((string) ($leadershipRow['role'] ?? 'leader'));
         $isActive = dgv2_is_current_period($leadershipRow);
@@ -122,7 +163,7 @@ if (count($leadershipRows) === 0 && count($membershipRows) === 0) {
         }
         echo "</article>";
     }
-    foreach ($membershipRows as $membershipRow) {
+    foreach ($displayMembershipRows as $membershipRow) {
         $memberPersonId = trim((string) ($membershipRow['person_id'] ?? ''));
         $stage = normalize_dg_progress_value((string) ($membershipRow['stage'] ?? ''));
         $role = $textLabel((string) ($membershipRow['role'] ?? 'anggota'));
