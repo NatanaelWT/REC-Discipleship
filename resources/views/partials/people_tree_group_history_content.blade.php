@@ -145,7 +145,7 @@ echo "<div class=\"journey-history-section-title\">Riwayat Jurnal Temu DG</div>"
 if (count($reportRows) === 0) {
     echo "<div class=\"journey-history-empty\">Belum ada jurnal DG yang tersimpan untuk kelompok ini.</div>";
 } else {
-    echo "<div class=\"table-wrap dg-recap-group-report-table-wrap tree-group-journal-table-wrap\"><table class=\"table dg-recap-table dg-recap-group-report-table tree-group-journal-table\"><thead><tr><th>Tanggal</th><th>Materi</th><th>Anggota Tidak Hadir</th><th>Kualitas Pemimpin</th><th>Sharing</th><th>Pembagi Meditasi</th><th>Catatan</th><th>Foto</th><th>Sumber</th></tr></thead><tbody>";
+    echo "<div class=\"table-wrap dg-recap-group-report-table-wrap tree-group-journal-table-wrap\"><table class=\"table dg-recap-table dg-recap-group-report-table tree-group-journal-table\"><thead><tr><th>Tanggal</th><th>Materi</th><th>Anggota Tidak Hadir</th><th>Kualitas Pemimpin</th><th>Sharing</th><th>Pembagi Meditasi</th><th>Catatan</th><th>Foto</th></tr></thead><tbody>";
     foreach ($reportRows as $reportRow) {
         $meetingDate = normalize_ymd_date((string) ($reportRow['meeting_date'] ?? ''));
         $meetingDateLabel = $meetingDate !== '' ? format_indo_date($meetingDate) : '-';
@@ -226,7 +226,6 @@ if (count($reportRows) === 0) {
             }
         }
         echo "</td>";
-        echo "<td class=\"dg-recap-text\">" . h($textLabel((string) ($reportRow['source'] ?? 'public_form'))) . "</td>";
         echo "</tr>";
     }
     echo "</tbody></table></div>";

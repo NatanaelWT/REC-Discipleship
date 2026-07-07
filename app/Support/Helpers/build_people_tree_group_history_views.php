@@ -212,7 +212,7 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
         require resource_path('views/partials/people_tree_group_history_content.blade.php');
 
         $views[$groupId] = [
-            'title' => 'Riwayat Kelompok ' . $groupName,
+            'title' => 'Riwayat Kelompok',
             'content' => (string) ob_get_clean(),
         ];
     }
