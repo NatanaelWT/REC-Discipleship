@@ -60,6 +60,8 @@ if ($page === 'people_tree') {
         echo "<div class=\"alert danger\">DG ini sudah tidak aktif atau sudah selesai.</div>\n";
     } elseif ($error === 'group_not_completed') {
         echo "<div class=\"alert danger\">Hanya DG yang berstatus selesai yang bisa diaktifkan kembali.</div>\n";
+    } elseif ($error === 'group_has_child') {
+        echo "<div class=\"alert danger\">DG ini sudah memiliki DG lanjutan sehingga tidak bisa diaktifkan kembali.</div>\n";
     }
     if (isset($_GET['left_group'])) {
         echo "<div class=\"alert success\">Orang berhasil dikeluarkan dari DG tersebut dan tetap tersedia untuk bergabung ke DG lain.</div>\n";

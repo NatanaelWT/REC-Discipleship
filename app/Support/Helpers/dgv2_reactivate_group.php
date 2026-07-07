@@ -23,6 +23,31 @@ function dgv2_reactivate_group(array &$model, string $groupId): array {
         return ['ok' => false, 'error' => 'invalid_group'];
     }
 
+    foreach (($model['discipleship_groups'] ?? []) as $group) {
+        if (! is_array($group)) {
+            continue;
+        }
+        $candidateGroupId = trim((string) ($group['id'] ?? ''));
+        if ($candidateGroupId === '' || $candidateGroupId === $groupId) {
+            continue;
+        }
+        $parentGroupId = trim((string) ($group['parent_group_id'] ?? ''));
+        $sourceGroupId = trim((string) ($group['source_group_id'] ?? ''));
+        if ($parentGroupId === $groupId || $sourceGroupId === $groupId) {
+            return ['ok' => false, 'error' => 'group_has_child'];
+        }
+    }
+    foreach (($model['group_multiplications'] ?? []) as $multiplication) {
+        if (! is_array($multiplication)) {
+            continue;
+        }
+        $sourceGroupId = trim((string) ($multiplication['source_group_id'] ?? ''));
+        $newGroupId = trim((string) ($multiplication['new_group_id'] ?? ''));
+        if ($sourceGroupId === $groupId && $newGroupId !== '' && $newGroupId !== $groupId) {
+            return ['ok' => false, 'error' => 'group_has_child'];
+        }
+    }
+
     $now = now_iso();
     $model['discipleship_groups'][$groupIndex]['status'] = 'active';
     $model['discipleship_groups'][$groupIndex]['updated_at'] = $now;

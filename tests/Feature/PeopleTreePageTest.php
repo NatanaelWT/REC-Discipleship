@@ -323,6 +323,81 @@ class PeopleTreePageTest extends TestCase
         $this->assertStringNotContainsString('Person Archived', $historyHtml);
     }
 
+    public function test_upgraded_completed_group_cannot_be_reactivated(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+
+        $leaderId = (int) DB::table('orang')->where('full_name', 'Leader Test')->value('id');
+        $memberId = (int) DB::table('orang')->where('full_name', 'Anggota Test')->value('id');
+        $parentGroupId = (int) DB::table('kelompok_dg')->where('name', 'Kelompok Test')->value('id');
+        DB::table('kelompok_dg')->where('id', $parentGroupId)->update([
+            'status' => 'completed',
+            'updated_at' => now(),
+        ]);
+        DB::table('keanggotaan_kelompok_dg')->where('discipleship_group_id', $parentGroupId)->update([
+            'status' => 'closed',
+            'ended_on' => '2026-07-01',
+            'end_reason' => 'continued_to_child_group',
+            'updated_at' => now(),
+        ]);
+        $childGroupId = DB::table('kelompok_dg')->insertGetId([
+            'branch_id' => 1,
+            'name' => 'Kelompok Test DG 2',
+            'status' => 'active',
+            'start_stage' => 'DG 2',
+            'current_stage' => 'DG 2',
+            'parent_group_id' => $parentGroupId,
+            'source_group_id' => $parentGroupId,
+            'initiated_by_person_id' => $leaderId,
+            'multiplied_at' => '2026-07-01',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $childGroupId,
+                'person_id' => $leaderId,
+                'role' => 'leader',
+                'stage' => null,
+                'status' => 'active',
+                'started_on' => '2026-07-01',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $childGroupId,
+                'person_id' => $memberId,
+                'role' => 'member',
+                'stage' => 'DG 2',
+                'status' => 'active',
+                'started_on' => '2026-07-01',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->actingAsRecUser();
+
+        $content = $this->get('/pemuridan/pohon')->assertOk()->getContent();
+        $this->assertMatchesRegularExpression(
+            '/<article\b(?=[^>]*data-tree-v2-node-action="group")(?=[^>]*data-group-id="'.preg_quote((string) $parentGroupId, '/').'")(?=[^>]*data-has-child-group="1")[^>]*>/',
+            $content,
+        );
+
+        $this->post('/pemuridan/pohon/kelompok/aktifkan', [
+            'id' => (string) $parentGroupId,
+            'return_page' => 'people_tree',
+        ])->assertRedirect('/pemuridan/pohon?error=group_has_child');
+
+        $this->assertDatabaseHas('kelompok_dg', [
+            'id' => $parentGroupId,
+            'status' => 'completed',
+        ]);
+    }
+
     public function test_latest_historical_group_prefers_highest_stage_when_dates_match(): void
     {
         $this->createTables();

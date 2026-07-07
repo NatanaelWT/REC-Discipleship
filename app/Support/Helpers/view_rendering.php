@@ -393,6 +393,7 @@ function render_people_tree_v3_group_branch(
     if (! is_array($groupChildBranches)) {
         $groupChildBranches = [];
     }
+    $hasChildGroup = ! empty($groupBranch['has_child_group']) || count($groupChildBranches) > 0;
     $isUngrouped = ! empty($groupBranch['is_ungrouped']);
     $isVirtualGroup = ! empty($groupBranch['is_virtual']);
     $groupStatus = strtolower(trim((string) ($groupBranch['status'] ?? 'active')));
@@ -441,6 +442,7 @@ function render_people_tree_v3_group_branch(
         $groupNodeAttrs .= ' data-status="'.h($groupStatus).'"';
         $groupNodeAttrs .= ' data-notes="'.h($groupNotes).'"';
         $groupNodeAttrs .= ' data-parent-group-id="'.h($groupParentId).'"';
+        $groupNodeAttrs .= ' data-has-child-group="'.($hasChildGroup ? '1' : '0').'"';
         $groupNodeAttrs .= ' data-members="'.h($groupMembersCsv).'"';
         $groupNodeAttrs .= ' data-is-virtual="'.($isVirtualGroup ? '1' : '0').'"';
         $groupNodeAttrs .= ' data-is-ungrouped="'.($isUngrouped ? '1' : '0').'"';
@@ -595,6 +597,7 @@ function render_people_tree_v3(
             'is_virtual' => $isVirtualGroup,
             'is_ungrouped' => false,
             'parent_group_id' => trim((string) ($groupRow['parent_group_id'] ?? '')),
+            'has_child_group' => ! empty($groupRow['has_child_group']),
             'status' => strtolower(trim((string) ($groupRow['status'] ?? 'active'))),
             'created_at' => trim((string) ($groupRow['created_at'] ?? '')),
             'child_groups' => [],

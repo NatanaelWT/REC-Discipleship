@@ -2866,6 +2866,7 @@
           progress: (dataset.progress || '').trim(),
           status: (dataset.status || '').trim().toLowerCase(),
           parentGroupId: (dataset.parentGroupId || '').trim(),
+          hasChildGroup: dataset.hasChildGroup === '1',
           members: dataset.members || '',
           isVirtual: dataset.isVirtual === '1',
           isUngrouped: dataset.isUngrouped === '1',
@@ -2969,6 +2970,7 @@
           && !nodeData.isUngrouped
           && !nodeData.isVirtual
           && nodeData.groupId !== ''
+          && !nodeData.hasChildGroup
           && String(nodeData.status || '').trim().toLowerCase() === 'completed';
         const canUpgradeGroup = !isPerson
           && !nodeData.isUngrouped

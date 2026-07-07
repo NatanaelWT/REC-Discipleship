@@ -15,6 +15,28 @@ function build_people_tree_group_rows(array $model, array $peopleById): array
         $groupsById[$groupId] = $groupRow;
     }
 
+    $sourceGroupIdsWithChildren = [];
+    foreach ($groupsById as $candidateGroupId => $candidateGroupRow) {
+        foreach (['parent_group_id', 'source_group_id'] as $sourceKey) {
+            $sourceGroupId = trim((string) ($candidateGroupRow[$sourceKey] ?? ''));
+            if ($sourceGroupId === '' || $sourceGroupId === (string) $candidateGroupId) {
+                continue;
+            }
+            $sourceGroupIdsWithChildren[$sourceGroupId] = true;
+        }
+    }
+    foreach (($model['group_multiplications'] ?? []) as $multiplicationRow) {
+        if (! is_array($multiplicationRow)) {
+            continue;
+        }
+        $sourceGroupId = trim((string) ($multiplicationRow['source_group_id'] ?? ''));
+        $newGroupId = trim((string) ($multiplicationRow['new_group_id'] ?? ''));
+        if ($sourceGroupId === '' || $newGroupId === '' || $sourceGroupId === $newGroupId) {
+            continue;
+        }
+        $sourceGroupIdsWithChildren[$sourceGroupId] = true;
+    }
+
     $leaderRecordsByGroup = [];
     $assistantRecordsByGroup = [];
     foreach (($model['group_leaderships'] ?? []) as $leadership) {
@@ -168,6 +190,8 @@ function build_people_tree_group_rows(array $model, array $peopleById): array
             'member_ids' => $memberIds,
             'progress' => normalize_dg_progress_value((string) ($groupRow['current_stage'] ?? $groupRow['start_stage'] ?? '')) ?: 'DG 1',
             'parent_group_id' => trim((string) ($groupRow['parent_group_id'] ?? '')),
+            'source_group_id' => trim((string) ($groupRow['source_group_id'] ?? '')),
+            'has_child_group' => ! empty($sourceGroupIdsWithChildren[$groupId]),
             'notes' => trim((string) ($groupRow['notes'] ?? '')),
             'status' => $status,
             'created_at' => trim((string) ($groupRow['created_at'] ?? '')),
