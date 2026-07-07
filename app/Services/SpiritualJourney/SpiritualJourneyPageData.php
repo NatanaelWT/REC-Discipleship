@@ -5,7 +5,6 @@ namespace App\Services\SpiritualJourney;
 use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\Person;
-use App\Models\DiscipleshipRelationship;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DiscipleshipTargets\DiscipleshipTargetReader;
 use App\Services\MskParticipants\MskParticipantHistoryData;
@@ -72,11 +71,16 @@ class SpiritualJourneyPageData
             $participants = $participants->slice(0, $perPage)->values();
         }
         $personIds = $participants->pluck('id')->filter()->map(static fn ($id): int => (int) $id)->unique()->all();
-        $people = $this->people($personIds);
         $groupPeople = $this->groupPeople($personIds);
         $groupIds = $groupPeople->pluck('discipleship_group_id')->filter()->map(static fn ($id): int => (int) $id)->unique()->all();
+        $modelGroupPeople = $this->mergeUniqueGroupPeople($groupPeople, $this->groupLinksForGroups($groupIds));
+        $people = $this->people(collect($personIds)
+            ->merge($modelGroupPeople->pluck('person_id')->map(static fn ($id): int => (int) $id))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all());
         $groups = $this->groups($groupIds);
-        $relationships = $this->relationships($personIds);
         $branches = $this->scope->optionsById();
 
         $participantRows = $participants->map(static function (Person $participant) use ($branches): array {
@@ -110,9 +114,8 @@ class SpiritualJourneyPageData
             'discipleshipV2Model' => [
                 'discipleship_persons' => array_values($people),
                 'discipleship_groups' => array_values($groups),
-                'group_memberships' => array_values(array_filter($groupPeople->map(fn ($row): array => $this->groupPersonRow($row))->all(), static fn (array $row): bool => $row['role'] === 'member')),
-                'group_leaderships' => array_values(array_filter($groupPeople->map(fn ($row): array => $this->groupPersonRow($row))->all(), static fn (array $row): bool => $row['role'] !== 'member')),
-                'discipleship_relations' => $relationships,
+                'group_memberships' => array_values(array_filter($modelGroupPeople->map(fn ($row): array => $this->groupPersonRow($row))->all(), static fn (array $row): bool => $row['role'] === 'member')),
+                'group_leaderships' => array_values(array_filter($modelGroupPeople->map(fn ($row): array => $this->groupPersonRow($row))->all(), static fn (array $row): bool => $row['role'] !== 'member')),
             ],
         ];
     }
@@ -346,6 +349,28 @@ class SpiritualJourneyPageData
         return $rows->merge($this->manualGroupPeople($personIds));
     }
 
+    private function groupLinksForGroups(array $groupIds)
+    {
+        if ($groupIds === []) {
+            return collect();
+        }
+
+        return DiscipleshipGroupPerson::query()
+            ->whereIn('branch_id', $this->scope->branchIds())
+            ->whereIn('discipleship_group_id', $groupIds)
+            ->get([
+                'id', 'branch_id', 'discipleship_group_id', 'person_id', 'role', 'stage', 'status', 'started_on', 'ended_on', 'end_reason', 'created_at', 'updated_at',
+            ]);
+    }
+
+    private function mergeUniqueGroupPeople($primary, $additional)
+    {
+        return $primary
+            ->merge($additional)
+            ->unique(static fn (DiscipleshipGroupPerson $row): string => (string) ($row->source ?? '').'|'.(string) $row->id)
+            ->values();
+    }
+
     private function groups(array $groupIds): array
     {
         if ($groupIds === []) {
@@ -369,28 +394,6 @@ class SpiritualJourneyPageData
         }
 
         return $rows;
-    }
-
-    private function relationships(array $personIds): array
-    {
-        if ($personIds === []) {
-            return [];
-        }
-
-        return DiscipleshipRelationship::query()
-            ->where(function ($query) use ($personIds): void {
-                $query->whereIn('mentor_person_id', $personIds)->orWhereIn('disciple_person_id', $personIds);
-            })
-            ->get(['id', 'branch_id', 'mentor_person_id', 'disciple_person_id', 'context_group_id', 'relation_type', 'stage_at_start', 'status', 'start_date', 'end_date', 'reason_end', 'notes', 'created_at', 'updated_at'])
-            ->map(static fn (DiscipleshipRelationship $row): array => [
-                'id' => (string) $row->id, 'mentor_person_id' => (string) $row->mentor_person_id,
-                'disciple_person_id' => (string) $row->disciple_person_id,
-                'context_group_id' => $row->context_group_id !== null ? (string) $row->context_group_id : '',
-                'relation_type' => (string) $row->relation_type, 'stage_at_start' => (string) $row->stage_at_start,
-                'status' => (string) $row->status, 'start_date' => (string) $row->start_date,
-                'end_date' => (string) $row->end_date, 'reason_end' => (string) $row->reason_end,
-                'notes' => (string) $row->notes, 'created_at' => (string) $row->created_at, 'updated_at' => (string) $row->updated_at,
-            ])->all();
     }
 
     private function groupPersonRow(DiscipleshipGroupPerson $row): array

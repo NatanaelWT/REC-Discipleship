@@ -2,12 +2,11 @@
 
 function dgv2_save_person_external(array &$model, array $payload): array
 {
-    $leaderId = trim((string) ($payload['leader_id'] ?? ''));
     $groupId = trim((string) ($payload['group_id'] ?? ''));
     $fullName = trim((string) ($payload['full_name'] ?? ''));
     $notes = trim((string) ($payload['notes'] ?? ''));
 
-    if ($leaderId !== 'virtual_injil' || $groupId !== '') {
+    if ($groupId !== '') {
         return ['ok' => false, 'error' => 'missing_member'];
     }
     if ($fullName === '') {
@@ -42,8 +41,5 @@ function dgv2_save_person_external(array &$model, array $payload): array
         'created_at' => $now,
         'updated_at' => $now,
     ];
-    dgv2_close_active_relation_for_disciple($model, $personId);
-    dgv2_open_relation($model, $leaderId, $personId, '', '');
-
     return ['ok' => true, 'person_id' => $personId];
 }

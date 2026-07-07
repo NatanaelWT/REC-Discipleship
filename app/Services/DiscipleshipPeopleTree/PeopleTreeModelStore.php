@@ -6,7 +6,6 @@ use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipMeetingReport;
 use App\Models\Person;
-use App\Models\DiscipleshipRelationship;
 use App\Support\DiscipleshipPersonProfile;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
@@ -54,7 +53,6 @@ class PeopleTreeModelStore
 
         $groups = $this->groupRows($branchIds);
         $groupPeople = $this->groupPeopleRows($branchIds);
-        $relationships = $this->relationshipRows($branchIds);
         $manualJourneyRows = $this->manualJourneyRows($branchIds);
         $memberships = [];
         $leaderships = [];
@@ -71,10 +69,8 @@ class PeopleTreeModelStore
             'discipleship_persons' => $this->peopleRows($this->referencedPersonIds(
                 $groups,
                 array_merge($groupPeople, $manualJourneyRows),
-                $relationships,
             )),
             'discipleship_groups' => $groups,
-            'discipleship_relations' => $relationships,
             'group_memberships' => $memberships,
             'group_leaderships' => $leaderships,
             'group_multiplications' => $this->multiplicationRows($groups),
@@ -339,19 +335,16 @@ class PeopleTreeModelStore
         }
 
         DB::transaction(function () use ($branchId, $model): void {
-            DiscipleshipRelationship::query()->where('branch_id', $branchId)->delete();
             DiscipleshipGroupPerson::query()->where('branch_id', $branchId)->delete();
 
             $personMap = $this->syncPeople($branchId, $model['discipleship_persons'] ?? []);
             $this->mapExistingPeople($personMap, $this->referencedPersonIds(
                 $model['discipleship_groups'] ?? [],
                 array_merge($model['group_memberships'] ?? [], $model['group_leaderships'] ?? []),
-                $model['discipleship_relations'] ?? [],
                 $model['group_multiplications'] ?? [],
             ));
             $groupMap = $this->syncGroups($branchId, $model['discipleship_groups'] ?? [], $personMap);
 
-            $this->insertRelationships($branchId, $model['discipleship_relations'] ?? [], $personMap, $groupMap);
             $this->insertGroupPeople($branchId, $model['group_memberships'] ?? [], $personMap, $groupMap, 'member');
             $this->insertGroupPeople($branchId, $model['group_leaderships'] ?? [], $personMap, $groupMap, 'leader');
             $this->applyMultiplications($branchId, $model['group_multiplications'] ?? [], $personMap, $groupMap);
@@ -426,37 +419,6 @@ class PeopleTreeModelStore
                 'notes' => trim((string) $group->notes),
                 'created_at' => optional($group->created_at)->toIso8601String(),
                 'updated_at' => optional($group->updated_at)->toIso8601String(),
-            ])
-            ->values()
-            ->all();
-    }
-
-    /** @return array<int, array<string, mixed>> */
-    private function relationshipRows(array $branchIds): array
-    {
-        return DiscipleshipRelationship::query()
-            ->select([
-                'id', 'branch_id', 'mentor_person_id', 'disciple_person_id', 'context_group_id', 'relation_type',
-                'stage_at_start', 'status', 'start_date', 'end_date', 'reason_end', 'notes', 'created_at', 'updated_at',
-            ])
-            ->whereIn('branch_id', $branchIds)
-            ->orderBy('id')
-            ->get()
-            ->map(static fn (DiscipleshipRelationship $relation): array => [
-                'id' => (string) $relation->getKey(),
-                'branch_code' => $relation->branch_code,
-                'mentor_person_id' => $relation->mentor_person_id !== null ? (string) $relation->mentor_person_id : '',
-                'disciple_person_id' => $relation->disciple_person_id !== null ? (string) $relation->disciple_person_id : '',
-                'context_group_id' => $relation->context_group_id !== null ? (string) $relation->context_group_id : '',
-                'relation_type' => trim((string) ($relation->relation_type ?? 'discipleship')),
-                'stage_at_start' => normalize_dg_progress_value((string) $relation->stage_at_start),
-                'status' => trim((string) ($relation->status ?? 'active')) ?: 'active',
-                'start_date' => optional($relation->start_date)->format('Y-m-d'),
-                'end_date' => optional($relation->end_date)->format('Y-m-d'),
-                'reason_end' => trim((string) $relation->reason_end),
-                'notes' => trim((string) $relation->notes),
-                'created_at' => optional($relation->created_at)->toIso8601String(),
-                'updated_at' => optional($relation->updated_at)->toIso8601String(),
             ])
             ->values()
             ->all();
@@ -737,38 +699,6 @@ class PeopleTreeModelStore
      * @param  array<string, int>  $personMap
      * @param  array<string, int>  $groupMap
      */
-    private function insertRelationships(int $branchId, array $rows, array $personMap, array $groupMap): void
-    {
-        foreach ($rows as $row) {
-            if (! is_array($row)) {
-                continue;
-            }
-            $discipleId = $this->mappedId($personMap, $row['disciple_person_id'] ?? null);
-            if ($discipleId === null) {
-                continue;
-            }
-
-            DiscipleshipRelationship::query()->create([
-                'branch_id' => $branchId,
-                'mentor_person_id' => $this->mappedId($personMap, $row['mentor_person_id'] ?? null),
-                'disciple_person_id' => $discipleId,
-                'context_group_id' => $this->mappedId($groupMap, $row['context_group_id'] ?? null),
-                'relation_type' => $this->nullableString($row['relation_type'] ?? null) ?? 'discipleship',
-                'stage_at_start' => $this->normalizedProgress($row['stage_at_start'] ?? null),
-                'status' => $this->nullableString($row['status'] ?? null) ?? 'active',
-                'start_date' => $this->dateValue($row['start_date'] ?? null),
-                'end_date' => $this->dateValue($row['end_date'] ?? null),
-                'reason_end' => $this->nullableString($row['reason_end'] ?? null),
-                'notes' => $this->nullableString($row['notes'] ?? null),
-            ]);
-        }
-    }
-
-    /**
-     * @param  array<int, mixed>  $rows
-     * @param  array<string, int>  $personMap
-     * @param  array<string, int>  $groupMap
-     */
     private function insertGroupPeople(int $branchId, array $rows, array $personMap, array $groupMap, string $defaultRole): void
     {
         foreach ($rows as $row) {
@@ -837,11 +767,10 @@ class PeopleTreeModelStore
     /**
      * @param array<int, mixed> $groups
      * @param array<int, mixed> $groupPeople
-     * @param array<int, mixed> $relationships
      * @param array<int, mixed> $multiplications
      * @return array<int, int>
      */
-    private function referencedPersonIds(array $groups, array $groupPeople, array $relationships, array $multiplications = []): array
+    private function referencedPersonIds(array $groups, array $groupPeople, array $multiplications = []): array
     {
         $ids = [];
         $add = static function (mixed $value) use (&$ids): void {
@@ -859,12 +788,6 @@ class PeopleTreeModelStore
         foreach ($groupPeople as $row) {
             if (is_array($row)) {
                 $add($row['person_id'] ?? $row['leader_person_id'] ?? null);
-            }
-        }
-        foreach ($relationships as $row) {
-            if (is_array($row)) {
-                $add($row['mentor_person_id'] ?? null);
-                $add($row['disciple_person_id'] ?? null);
             }
         }
         foreach ($multiplications as $row) {

@@ -14,9 +14,9 @@
         $roleLabel = 'Anggota';
     }
     $roleToneClass = trim((string) ($row['role_tone_class'] ?? 'is-member'));
-    $roleSubtitle = trim((string) ($row['role_subtitle'] ?? 'Belum memiliki binaan langsung'));
+    $roleSubtitle = trim((string) ($row['role_subtitle'] ?? 'Belum ada kelompok aktif'));
     if ($roleSubtitle === '') {
-        $roleSubtitle = 'Belum memiliki binaan langsung';
+        $roleSubtitle = 'Belum ada kelompok aktif';
     }
     $progressSteps = is_array($row['progress_steps'] ?? null) ? $row['progress_steps'] : [];
     $progressSummary = trim((string) ($row['progress_summary'] ?? 'Belum memulai DG'));

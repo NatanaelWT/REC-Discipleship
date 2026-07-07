@@ -220,20 +220,12 @@ class DiscipleshipDashboardSummaryQuery
     private function leaderRows(array $branchIds): Collection
     {
         return $this->query(static fn () => DB::table('orang as p')
-            ->leftJoin('keanggotaan_kelompok_dg as gp', function ($join): void {
+            ->join('keanggotaan_kelompok_dg as gp', function ($join): void {
                 $join->on('gp.person_id', '=', 'p.id')
                     ->on('gp.branch_id', '=', 'p.branch_id')
                     ->where('gp.role', '<>', 'member');
             })
-            ->leftJoin('relasi_dg as relationship', function ($join): void {
-                $join->on('relationship.mentor_person_id', '=', 'p.id')
-                    ->on('relationship.branch_id', '=', 'p.branch_id');
-            })
             ->whereIn('p.branch_id', $branchIds)
-            ->where(function ($query): void {
-                $query->whereNotNull('gp.id')
-                    ->orWhereNotNull('relationship.id');
-            })
             ->selectRaw('p.branch_id, COUNT(DISTINCT p.id) AS leader_count')
             ->groupBy('p.branch_id')->get());
     }

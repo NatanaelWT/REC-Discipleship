@@ -6,21 +6,6 @@ function dgv2_people_projection(array $model, array $members, array $mskClasses)
     foreach (dgv2_identity_sources($members, $mskClasses) as $row) {
         $identityById[(string) ($row['id'] ?? '')] = $row;
     }
-    $childrenMap = [];
-    $parentsByDisciple = [];
-    foreach ($model['discipleship_relations'] as $relation) {
-        if (! is_array($relation) || ! dgv2_is_current_period($relation)) {
-            continue;
-        }
-        $mentorId = trim((string) ($relation['mentor_person_id'] ?? ''));
-        $discipleId = trim((string) ($relation['disciple_person_id'] ?? ''));
-        if ($mentorId !== '') {
-            $childrenMap[$mentorId] = true;
-        }
-        if ($mentorId !== '' && $discipleId !== '') {
-            $parentsByDisciple[$discipleId][$mentorId] = true;
-        }
-    }
     $leadersMap = [];
     foreach ($model['group_leaderships'] as $leadership) {
         if (! is_array($leadership) || ! dgv2_is_current_period($leadership)) {
@@ -50,7 +35,6 @@ function dgv2_people_projection(array $model, array $members, array $mskClasses)
             continue;
         }
         $identity = dgv2_find_identity($identityById, $memberId);
-        $parentIds = array_keys($parentsByDisciple[$personId] ?? []);
         $name = trim((string) ($person['full_name'] ?? '')) ?: trim((string) ($identity['full_name'] ?? ''));
         $phone = trim((string) ($person['phone'] ?? '')) ?: trim((string) ($identity['whatsapp'] ?? ''));
         $gender = trim((string) ($person['gender'] ?? '')) ?: trim((string) ($identity['gender'] ?? ''));
@@ -60,8 +44,8 @@ function dgv2_people_projection(array $model, array $members, array $mskClasses)
             'name' => $name,
             'phone' => $phone,
             'gender' => $gender,
-            'role' => (isset($leadersMap[$personId]) || isset($childrenMap[$personId])) ? 'Pemimpin' : 'Anggota',
-            'parent_ids' => $parentIds,
+            'role' => isset($leadersMap[$personId]) ? 'Pemimpin' : 'Anggota',
+            'parent_ids' => [],
             'notes' => trim((string) ($person['notes'] ?? '')),
             'kampus' => trim((string) ($person['kampus'] ?? '')),
             'jurusan' => trim((string) ($person['jurusan'] ?? '')),

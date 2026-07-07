@@ -23,14 +23,6 @@ function dgv2_leave_group(array &$model, string $personId, string $groupId): arr
         return ['ok' => false, 'error' => 'invalid_person'];
     }
 
-    foreach ($model['discipleship_relations'] as $relation) {
-        if (!is_array($relation) || !dgv2_is_current_period($relation)) {
-            continue;
-        }
-        if (trim((string) ($relation['mentor_person_id'] ?? '')) === $personId) {
-            return ['ok' => false, 'error' => 'in_use'];
-        }
-    }
     foreach ($model['group_leaderships'] as $leadership) {
         if (!is_array($leadership) || !dgv2_is_current_period($leadership)) {
             continue;
@@ -65,6 +57,5 @@ function dgv2_leave_group(array &$model, string $personId, string $groupId): arr
         return ['ok' => false, 'error' => 'not_in_group'];
     }
 
-    dgv2_close_active_relation_for_disciple($model, $personId, 'left_group');
     return ['ok' => true];
 }

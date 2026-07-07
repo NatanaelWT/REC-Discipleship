@@ -156,12 +156,5 @@ function dgv2_reactivate_group(array &$model, string $groupId): array {
     }
     dgv2_sync_group_memberships($model, $groupId, $restoreMemberIds, $groupStage !== '' ? $groupStage : 'DG 1');
 
-    foreach ($restoreMemberIds as $personId) {
-        dgv2_close_active_relation_for_disciple($model, $personId, 'reactivated_group');
-        if ($leaderId !== '') {
-            dgv2_open_relation($model, $leaderId, $personId, $groupId, $groupStage);
-        }
-    }
-
     return ['ok' => true];
 }

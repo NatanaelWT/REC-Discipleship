@@ -142,10 +142,6 @@ function dgv2_save_group(array &$model, array $payload, array $leaderPeopleById,
             }
             unset($leadership);
 
-            foreach ($memberIds as $personId) {
-                dgv2_close_active_relation_for_disciple($model, $personId, 'continued_to_child_group');
-                dgv2_open_relation($model, $leaderId, $personId, $groupId, $stage);
-            }
         }
 
         $hasMultiplication = false;

@@ -96,6 +96,9 @@ class MskParticipantProfileData
             'photos' => $photos,
             'linked' => ! empty($history['linked']),
             'current_mentors' => is_array($history['current_mentors'] ?? null) ? $history['current_mentors'] : [],
+            'current_group_leaders' => is_array($history['current_group_leaders'] ?? null)
+                ? $history['current_group_leaders']
+                : (is_array($history['current_mentors'] ?? null) ? $history['current_mentors'] : []),
             'current_groups' => is_array($history['current_groups'] ?? null) ? $history['current_groups'] : [],
             'current_stage' => normalize_dg_progress_value((string) ($history['current_stage'] ?? '')),
             'member_items' => is_array($history['member_items'] ?? null) ? $history['member_items'] : [],

@@ -48,9 +48,6 @@ class RuntimeBootstrap
         if (! defined('DISCIPLESHIP_GROUPS_DATA_NAME')) {
             define('DISCIPLESHIP_GROUPS_DATA_NAME', 'discipleship_groups');
         }
-        if (! defined('DISCIPLESHIP_RELATIONSHIPS_DATA_NAME')) {
-            define('DISCIPLESHIP_RELATIONSHIPS_DATA_NAME', 'discipleship_relationships');
-        }
         if (! defined('REC_RUNTIME_PATH')) {
             define('REC_RUNTIME_PATH', storage_path('app/private'));
         }

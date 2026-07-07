@@ -75,9 +75,9 @@ class MskParticipantPageTest extends TestCase
         $this->createDiscipleshipHistoryTables();
 
         DB::table('orang')->insert([
-            ['id' => 10, 'branch_id' => 1, 'full_name' => 'Pembina Modal', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 10, 'branch_id' => 1, 'full_name' => 'Leader Modal', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 11, 'branch_id' => 1, 'full_name' => 'Peserta Modal', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 12, 'branch_id' => 1, 'full_name' => 'Binaan Modal', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 12, 'branch_id' => 1, 'full_name' => 'Anggota Modal', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
         ]);
         DB::table('kelompok_dg')->insert([
             ['id' => 20, 'branch_id' => 1, 'status' => 'active', 'stage' => 'DG 2', 'created_at' => now(), 'updated_at' => now()],
@@ -88,18 +88,6 @@ class MskParticipantPageTest extends TestCase
             ['branch_id' => 1, 'discipleship_group_id' => 20, 'person_id' => 11, 'role' => 'member', 'stage' => 'DG 2', 'status' => 'active', 'started_on' => '2026-01-01', 'created_at' => now(), 'updated_at' => now()],
             ['branch_id' => 1, 'discipleship_group_id' => 21, 'person_id' => 11, 'role' => 'leader', 'stage' => null, 'status' => 'active', 'started_on' => '2026-02-01', 'created_at' => now(), 'updated_at' => now()],
             ['branch_id' => 1, 'discipleship_group_id' => 21, 'person_id' => 12, 'role' => 'member', 'stage' => 'DG 1', 'status' => 'active', 'started_on' => '2026-02-01', 'created_at' => now(), 'updated_at' => now()],
-        ]);
-        DB::table('relasi_dg')->insert([
-            'branch_id' => 1,
-            'mentor_person_id' => 10,
-            'disciple_person_id' => 11,
-            'context_group_id' => 20,
-            'relation_type' => 'discipleship',
-            'stage_at_start' => 'DG 2',
-            'status' => 'active',
-            'start_date' => '2026-01-01',
-            'created_at' => now(),
-            'updated_at' => now(),
         ]);
         DB::table('orang')->where('id', 11)->update([
             'gender' => 'Perempuan',
@@ -121,13 +109,13 @@ class MskParticipantPageTest extends TestCase
             ->assertSee('Foto dan keterangan')
             ->assertSee('MSK dan pemuridan aktif')
             ->assertSee('Riwayat pemuridan')
-            ->assertSee('Mentor Aktif')
-            ->assertSee('Pembina Modal')
-            ->assertSee('DG 2 (Pembina Modal)')
+            ->assertSee('Leader Kelompok Aktif')
+            ->assertSee('Leader Modal')
+            ->assertSee('DG 2 (Leader Modal)')
             ->assertSee('Riwayat Sebagai Anggota')
             ->assertSee('Riwayat Memimpin')
             ->assertSee('DG 1 (Peserta Modal)')
-            ->assertSee('Binaan Modal')
+            ->assertSee('Anggota Modal')
             ->assertSee('data-msk-view-edit-link', false);
 
         $content = $response->getContent();
@@ -592,21 +580,6 @@ class MskParticipantPageTest extends TestCase
             $table->date('started_on')->nullable();
             $table->date('ended_on')->nullable();
             $table->string('end_reason')->nullable();
-            $table->timestamps();
-        });
-        Schema::create('relasi_dg', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('branch_id');
-            $table->unsignedBigInteger('mentor_person_id')->nullable();
-            $table->unsignedBigInteger('disciple_person_id');
-            $table->unsignedBigInteger('context_group_id')->nullable();
-            $table->string('relation_type')->nullable();
-            $table->string('stage_at_start')->nullable();
-            $table->string('status')->default('active');
-            $table->date('start_date')->nullable();
-            $table->date('end_date')->nullable();
-            $table->string('reason_end')->nullable();
-            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }

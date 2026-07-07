@@ -4,14 +4,6 @@ function dgv2_archive_person(array &$model, string $personId): array {
     if ($personId === '') {
         return ['ok' => false, 'error' => 'invalid_person'];
     }
-    foreach ($model['discipleship_relations'] as $relation) {
-        if (!is_array($relation) || !dgv2_is_current_period($relation)) {
-            continue;
-        }
-        if (trim((string) ($relation['mentor_person_id'] ?? '')) === $personId) {
-            return ['ok' => false, 'error' => 'in_use'];
-        }
-    }
     foreach ($model['discipleship_persons'] as &$person) {
         if (!is_array($person) || trim((string) ($person['id'] ?? '')) !== $personId) {
             continue;
@@ -20,7 +12,6 @@ function dgv2_archive_person(array &$model, string $personId): array {
         $person['updated_at'] = now_iso();
     }
     unset($person);
-    dgv2_close_active_relation_for_disciple($model, $personId, 'person_archived');
     foreach ($model['group_memberships'] as &$membership) {
         if (!is_array($membership) || !dgv2_is_current_period($membership)) {
             continue;

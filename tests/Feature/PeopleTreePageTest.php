@@ -597,11 +597,7 @@ class PeopleTreePageTest extends TestCase
             'role' => 'member',
             'status' => 'active',
         ]);
-        $this->assertDatabaseHas('relasi_dg', [
-            'mentor_person_id' => $leaderId,
-            'disciple_person_id' => $archivedPersonId,
-            'status' => 'active',
-        ]);
+        $this->assertFalse(Schema::hasTable('relasi_dg'));
     }
 
     public function test_people_tree_store_maps_temporary_ids_to_numeric_foreign_keys(): void
@@ -618,15 +614,6 @@ class PeopleTreePageTest extends TestCase
                     'id' => 'new_group_main',
                     'status' => 'active',
                     'stage' => 'DG 1',
-                ],
-            ],
-            'discipleship_relations' => [
-                [
-                    'id' => 'new_relation_main',
-                    'mentor_person_id' => 'new_person_leader',
-                    'disciple_person_id' => 'new_person_member',
-                    'context_group_id' => 'new_group_main',
-                    'status' => 'active',
                 ],
             ],
             'group_memberships' => [
@@ -663,11 +650,7 @@ class PeopleTreePageTest extends TestCase
         $this->assertDatabaseHas('orang', [
             'full_name' => 'Anggota Baru',
         ]);
-        $this->assertDatabaseHas('relasi_dg', [
-            'mentor_person_id' => $leaderId,
-            'disciple_person_id' => $memberId,
-            'context_group_id' => $groupId,
-        ]);
+        $this->assertFalse(Schema::hasTable('relasi_dg'));
         $this->assertDatabaseHas('keanggotaan_kelompok_dg', [
             'discipleship_group_id' => $groupId,
             'person_id' => $leaderId,
@@ -787,22 +770,6 @@ class PeopleTreePageTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('relasi_dg', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('branch_id');
-            $table->unsignedBigInteger('mentor_person_id')->nullable();
-            $table->unsignedBigInteger('disciple_person_id')->nullable();
-            $table->unsignedBigInteger('context_group_id')->nullable();
-            $table->string('relation_type')->nullable();
-            $table->string('stage_at_start')->nullable();
-            $table->string('status')->default('active');
-            $table->date('start_date')->nullable();
-            $table->date('end_date')->nullable();
-            $table->string('reason_end')->nullable();
-            $table->text('notes')->nullable();
-            $table->timestamps();
-        });
-
         Schema::create('keanggotaan_kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
@@ -845,19 +812,6 @@ class PeopleTreePageTest extends TestCase
             'branch_id' => 1,
             'status' => 'active',
             'stage' => 'DG 1',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        DB::table('relasi_dg')->insert([
-            'branch_id' => 1,
-            'mentor_person_id' => $leaderId,
-            'disciple_person_id' => $memberId,
-            'context_group_id' => $groupId,
-            'relation_type' => 'discipleship',
-            'stage_at_start' => 'DG 1',
-            'status' => 'active',
-            'start_date' => '2026-01-01',
             'created_at' => now(),
             'updated_at' => now(),
         ]);

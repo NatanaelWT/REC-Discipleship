@@ -123,9 +123,9 @@ class DiscipleshipDashboardTest extends TestCase
 
         $memberId = (int) DB::table('orang')->where('full_name', 'Anggota Dashboard')->value('id');
         $groupId = (int) DB::table('kelompok_dg')->orderBy('id')->value('id');
-        $mentorId = DB::table('orang')->insertGetId([
+        $additionalLeaderId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
-            'full_name' => 'Mentor Tanpa Kelompok',
+            'full_name' => 'Leader Tambahan Dashboard',
             'status' => 'active',
             'created_at' => now(),
             'updated_at' => now(),
@@ -190,6 +190,16 @@ class DiscipleshipDashboardTest extends TestCase
         DB::table('keanggotaan_kelompok_dg')->insert([
             'branch_id' => 1,
             'discipleship_group_id' => $groupId,
+            'person_id' => $additionalLeaderId,
+            'role' => 'leader',
+            'status' => 'active',
+            'started_on' => '2026-01-01',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            'branch_id' => 1,
+            'discipleship_group_id' => $groupId,
             'person_id' => $formerMemberId,
             'role' => 'member',
             'stage' => 'DG 1',
@@ -210,17 +220,6 @@ class DiscipleshipDashboardTest extends TestCase
             'started_on' => '2025-01-01',
             'ended_on' => '2025-12-31',
             'end_reason' => 'person_archived',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        DB::table('relasi_dg')->insert([
-            'branch_id' => 1,
-            'mentor_person_id' => $mentorId,
-            'disciple_person_id' => $memberId,
-            'context_group_id' => $groupId,
-            'relation_type' => 'discipleship',
-            'status' => 'active',
-            'start_date' => '2026-01-01',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -406,22 +405,6 @@ class DiscipleshipDashboardTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('relasi_dg', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('branch_id');
-            $table->unsignedBigInteger('mentor_person_id')->nullable();
-            $table->unsignedBigInteger('disciple_person_id')->nullable();
-            $table->unsignedBigInteger('context_group_id')->nullable();
-            $table->string('relation_type')->nullable();
-            $table->string('stage_at_start')->nullable();
-            $table->string('status')->default('active');
-            $table->date('start_date')->nullable();
-            $table->date('end_date')->nullable();
-            $table->string('reason_end')->nullable();
-            $table->text('notes')->nullable();
-            $table->timestamps();
-        });
-
         Schema::create('keanggotaan_kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
@@ -534,19 +517,6 @@ class DiscipleshipDashboardTest extends TestCase
             'stage' => 'DG 1',
             'status' => 'active',
             'started_on' => '2026-01-01',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        DB::table('relasi_dg')->insert([
-            'branch_id' => 1,
-            'mentor_person_id' => $leaderId,
-            'disciple_person_id' => $memberId,
-            'context_group_id' => $groupId,
-            'relation_type' => 'discipleship',
-            'stage_at_start' => 'DG 1',
-            'status' => 'active',
-            'start_date' => '2026-01-01',
             'created_at' => now(),
             'updated_at' => now(),
         ]);

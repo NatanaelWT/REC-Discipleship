@@ -78,22 +78,6 @@ if ($page === 'spiritual_journey') {
         }
     }
 
-    $relationsByDiscipleId = [];
-    $relationsByMentorId = [];
-    foreach (($discipleshipV2Model['discipleship_relations'] ?? []) as $relationRecord) {
-        if (! is_array($relationRecord)) {
-            continue;
-        }
-        $discipleId = trim((string) ($relationRecord['disciple_person_id'] ?? ''));
-        $mentorId = trim((string) ($relationRecord['mentor_person_id'] ?? ''));
-        if ($discipleId !== '') {
-            $relationsByDiscipleId[$discipleId][] = $relationRecord;
-        }
-        if ($mentorId !== '') {
-            $relationsByMentorId[$mentorId][] = $relationRecord;
-        }
-    }
-
     $historyTextLabel = static function (string $value, string $fallback = '-'): string {
         $value = trim($value);
         if ($value === '') {
@@ -232,7 +216,7 @@ if ($page === 'spiritual_journey') {
         }
         $summaryBadges[] = '<span class="'.h($bridgeBadgeClass).'">'.h((string) ($bridgeLabels[$journeyBridgeStatus] ?? 'Belum RG/KGAP')).'</span>';
 
-        $currentMentorNames = [];
+        $currentGroupLeaderNames = [];
         $currentGroupNames = [];
         $membershipTimelineItems = [];
         $leadershipTimelineItems = [];
@@ -252,15 +236,6 @@ if ($page === 'spiritual_journey') {
         };
 
         if ($resolvedPersonId !== '') {
-            foreach (($relationsByDiscipleId[$resolvedPersonId] ?? []) as $relation) {
-                $mentorId = trim((string) ($relation['mentor_person_id'] ?? ''));
-                $mentorName = person_label($peopleById, $mentorId, trim((string) ($discipleshipPersonsById[$mentorId]['full_name'] ?? '')));
-                $isActive = dgv2_is_current_period($relation);
-                if ($isActive && $mentorName !== '-') {
-                    $currentMentorNames[] = $mentorName;
-                }
-            }
-
             foreach (($membershipsByPersonId[$resolvedPersonId] ?? []) as $membership) {
                 $isManual = trim((string) ($membership['source'] ?? '')) === 'manual';
                 $groupId = trim((string) ($membership['group_id'] ?? ''));
@@ -274,9 +249,6 @@ if ($page === 'spiritual_journey') {
                 $stage = normalize_dg_progress_value((string) ($membership['stage'] ?? ''));
                 $role = trim((string) ($membership['role'] ?? 'anggota'));
                 $isActive = dgv2_is_current_period($membership);
-                if (! $isManual && $isActive && ! in_array($groupName, $currentGroupNames, true)) {
-                    $currentGroupNames[] = $groupName;
-                }
                 $meta = [];
                 if ($stage !== '') {
                     $meta[] = $journeyStageBadgeHtml($stage);
@@ -301,7 +273,18 @@ if ($page === 'spiritual_journey') {
                     }
                 }
                 if ($groupLeaderName !== '' && $groupLeaderName !== '-') {
-                    $meta[] = '<span class="journey-history-chip">Pembina: '.h($groupLeaderName).'</span>';
+                    if ($isActive) {
+                        $currentGroupLeaderNames[] = $groupLeaderName;
+                    }
+                    $groupName = discipleship_group_display_label([
+                        'progress' => $stage,
+                        'leader_name' => $groupLeaderName,
+                    ]);
+                    $meta[] = '<span class="journey-history-chip">Leader kelompok: '.h($groupLeaderName).'</span>';
+                }
+
+                if (! $isManual && $isActive && ! in_array($groupName, $currentGroupNames, true)) {
+                    $currentGroupNames[] = $groupName;
                 }
 
                 if ($isActive) {
@@ -381,7 +364,7 @@ if ($page === 'spiritual_journey') {
             }
         }
 
-        $currentMentorNames = array_values(array_unique(array_filter($currentMentorNames, static fn ($value) => trim((string) $value) !== '')));
+        $currentGroupLeaderNames = array_values(array_unique(array_filter($currentGroupLeaderNames, static fn ($value) => trim((string) $value) !== '')));
         $currentGroupNames = array_values(array_unique(array_filter($currentGroupNames, static fn ($value) => trim((string) $value) !== '')));
 
         usort($membershipTimelineItems, static function (array $a, array $b): int {
@@ -459,15 +442,15 @@ if ($page === 'spiritual_journey') {
 
         echo '<div class="journey-history-facts">';
         echo '<div class="journey-history-fact"><span class="journey-history-fact-label">Sesi MSK</span><strong>'.h($sessionCount > 0 ? implode(', ', array_map('strval', $sessionNumbers)) : 'Belum ada sesi').'</strong></div>';
-        echo '<div class="journey-history-fact"><span class="journey-history-fact-label">Mentor Aktif</span><strong>'.h(count($currentMentorNames) > 0 ? implode(', ', $currentMentorNames) : '-').'</strong></div>';
+        echo '<div class="journey-history-fact"><span class="journey-history-fact-label">Leader Kelompok Aktif</span><strong>'.h(count($currentGroupLeaderNames) > 0 ? implode(', ', $currentGroupLeaderNames) : '-').'</strong></div>';
         echo '<div class="journey-history-fact"><span class="journey-history-fact-label">Kelompok Aktif</span><strong>'.h(count($currentGroupNames) > 0 ? implode(', ', $currentGroupNames) : '-').'</strong></div>';
         echo '</div>';
 
         echo '<div class="journey-history-section-title">Riwayat Pemuridan</div>';
         if ($resolvedPersonId === '') {
-            echo '<div class="journey-history-empty">Peserta ini belum terhubung ke data pemuridan, jadi yang tampil baru progres MSK. Hubungkan peserta ke data DG untuk melihat perpindahan kelompok, mentor, dan peran pelayanan.</div>';
+            echo '<div class="journey-history-empty">Peserta ini belum terhubung ke data pemuridan, jadi yang tampil baru progres MSK. Hubungkan peserta ke data DG untuk melihat perpindahan kelompok dan peran pelayanan.</div>';
         } elseif (count($membershipTimelineItems) === 0 && count($leadershipTimelineItems) === 0) {
-            echo '<div class="journey-history-empty">Belum ada histori kelompok atau relasi pemuridan yang tercatat untuk orang ini.</div>';
+            echo '<div class="journey-history-empty">Belum ada histori kelompok yang tercatat untuk orang ini.</div>';
         } else {
             echo '<div class="journey-history-split-section">';
             echo '<div class="journey-history-split-header">Riwayat Sebagai Anggota</div>';

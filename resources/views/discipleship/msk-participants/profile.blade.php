@@ -26,8 +26,8 @@
                 echo '<span class="journey-track-badge is-'.h(strtolower(str_replace(' ', '', $itemStage))).'">'.h($itemStage).'</span>';
             }
             echo '<span class="journey-history-chip">'.h((string) ($item['role'] ?? '-')).'</span>';
-            if (trim((string) ($item['mentor'] ?? '')) !== '') {
-                echo '<span class="journey-history-chip">Pembina: '.h((string) $item['mentor']).'</span>';
+            if (trim((string) ($item['leader'] ?? '')) !== '') {
+                echo '<span class="journey-history-chip">Leader kelompok: '.h((string) $item['leader']).'</span>';
             }
             if (! empty($item['active'])) {
                 echo '<span class="journey-history-chip is-active">Aktif</span>';
@@ -98,7 +98,7 @@
       <div class="msk-view-section-head"><span class="msk-view-section-kicker">Perjalanan</span><h4>MSK dan pemuridan aktif</h4></div>
       <div class="msk-view-summary-grid">
         <div class="msk-view-summary-item"><span>Sesi MSK</span><strong>{{ $profile['session_progress'] }}</strong></div>
-        <div class="msk-view-summary-item"><span>Mentor Aktif</span><strong>{{ $profile['current_mentors'] !== [] ? implode(', ', $profile['current_mentors']) : '-' }}</strong></div>
+        <div class="msk-view-summary-item"><span>Leader Kelompok Aktif</span><strong>{{ ($profile['current_group_leaders'] ?? []) !== [] ? implode(', ', $profile['current_group_leaders']) : '-' }}</strong></div>
         <div class="msk-view-summary-item"><span>Kelompok Aktif</span><strong>{{ $profile['current_groups'] !== [] ? implode(', ', $profile['current_groups']) : '-' }}</strong></div>
         <div class="msk-view-summary-item"><span>Tahap DG</span><strong>{{ $stageLabel }}</strong></div>
       </div>
@@ -113,7 +113,7 @@
   <section class="msk-view-section is-wide msk-view-history-section">
     <div class="msk-view-section-head"><span class="msk-view-section-kicker">Pemuridan</span><h4>Riwayat pemuridan</h4></div>
     @if(! $profile['linked'])
-      <div class="journey-history-empty">Peserta ini belum terhubung ke data pemuridan. Setelah peserta dihubungkan ke Anggota DG, riwayat kelompok, mentor, dan kepemimpinan akan muncul di sini.</div>
+      <div class="journey-history-empty">Peserta ini belum terhubung ke data pemuridan. Setelah peserta dihubungkan ke Anggota DG, riwayat kelompok dan kepemimpinan akan muncul di sini.</div>
     @elseif((! $isExternalContext && $profile['member_items'] === []) && $profile['leader_items'] === [])
       <div class="journey-history-empty">Peserta sudah terhubung ke data pemuridan, tetapi belum memiliki riwayat kelompok atau kepemimpinan.</div>
     @else

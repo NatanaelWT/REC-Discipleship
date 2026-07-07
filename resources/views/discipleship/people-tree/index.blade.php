@@ -17,11 +17,11 @@ if ($page === 'people_tree') {
     $peopleTreeExportDotUrl = (string) ($peopleTreeUrls['export_dot'] ?? '/pemuridan/pohon/export-dot');
     $error = $_GET['error'] ?? '';
     if ($error === 'in_use') {
-        echo "<div class=\"alert danger\">Orang masih memiliki binaan.</div>\n";
+        echo "<div class=\"alert danger\">Orang masih memimpin kelompok aktif.</div>\n";
     } elseif ($error === 'missing_parent') {
-        echo "<div class=\"alert danger\">Pilih leader/pembina terlebih dahulu.</div>\n";
+        echo "<div class=\"alert danger\">Pilih leader kelompok terlebih dahulu.</div>\n";
     } elseif ($error === 'invalid_parent') {
-        echo "<div class=\"alert danger\">Leader/pembina tidak valid.</div>\n";
+        echo "<div class=\"alert danger\">Leader kelompok tidak valid.</div>\n";
     } elseif ($error === 'missing_member') {
         echo "<div class=\"alert danger\">Pilih " . h($personSourceLabelLower) . " terlebih dahulu.</div>\n";
     } elseif ($error === 'invalid_member') {

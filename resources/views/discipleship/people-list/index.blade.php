@@ -17,7 +17,7 @@
         'header' => [
             'kicker' => 'Anggota DG',
             'title' => 'Daftar Anggota DG',
-            'description' => 'Pantau relasi pembinaan dan progres seluruh peserta yang pernah mengikuti DG, baik yang masih aktif maupun sudah selesai.',
+            'description' => 'Pantau kelompok aktif dan progres seluruh peserta yang pernah mengikuti DG, baik yang masih aktif maupun sudah selesai.',
             'stats' => [
                 ['label' => 'Semua Peserta', 'value' => (string) $totalPeopleRows, 'value_attributes' => ['data-people-stat' => 'total']],
                 ['label' => 'Terakhir DG 1', 'value' => (string) $peopleInDg1Count, 'value_attributes' => ['data-people-stat' => 'dg1']],

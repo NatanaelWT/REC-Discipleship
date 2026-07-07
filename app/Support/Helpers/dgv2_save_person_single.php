@@ -8,27 +8,8 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
     }
     $id = trim((string) ($payload['id'] ?? ''));
     $memberId = trim((string) ($payload['member_id'] ?? ''));
-    $leaderId = trim((string) ($payload['leader_id'] ?? ''));
     $groupId = trim((string) ($payload['group_id'] ?? ''));
     $notes = trim((string) ($payload['notes'] ?? ''));
-
-    if ($leaderId === '' && $groupId !== '') {
-        foreach ($model['group_leaderships'] as $leadership) {
-            if (! is_array($leadership) || ! dgv2_is_current_period($leadership)) {
-                continue;
-            }
-            if (trim((string) ($leadership['group_id'] ?? '')) !== $groupId) {
-                continue;
-            }
-            $role = strtolower(trim((string) ($leadership['role'] ?? 'leader')));
-            if ($role === 'leader') {
-                $leaderId = trim((string) ($leadership['leader_person_id'] ?? ''));
-                if ($leaderId !== '') {
-                    break;
-                }
-            }
-        }
-    }
 
     $personIndex = null;
     $person = null;
@@ -105,7 +86,6 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
         $model['discipleship_persons'][$personIndex] = $row;
     }
 
-    dgv2_close_active_relation_for_disciple($model, $personId);
     foreach ($model['group_memberships'] as &$membership) {
         if (! is_array($membership) || ! dgv2_is_current_period($membership)) {
             continue;
@@ -123,19 +103,6 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
         $membership['updated_at'] = $now;
     }
     unset($membership);
-    if ($leaderId !== '') {
-        $groupStage = '';
-        if ($groupId !== '') {
-            foreach ($model['discipleship_groups'] as $group) {
-                if (! is_array($group) || trim((string) ($group['id'] ?? '')) !== $groupId) {
-                    continue;
-                }
-                $groupStage = discipleship_group_stage_value($group);
-                break;
-            }
-        }
-        dgv2_open_relation($model, $leaderId, $personId, $groupId, $groupStage);
-    }
     if ($groupId !== '') {
         $groupStage = 'DG 1';
         foreach ($model['discipleship_groups'] as $group) {

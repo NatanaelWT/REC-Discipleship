@@ -5,7 +5,6 @@ namespace App\Services\MskParticipants;
 use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\Person;
-use App\Models\DiscipleshipRelationship;
 use App\Support\DiscipleshipPersonProfile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -40,7 +39,6 @@ class MskParticipantHistoryData
             || ! Schema::hasTable('orang')
             || ! Schema::hasTable('kelompok_dg')
             || ! Schema::hasTable('keanggotaan_kelompok_dg')
-            || ! Schema::hasTable('relasi_dg')
         ) {
             return $histories;
         }
@@ -78,17 +76,8 @@ class MskParticipantHistoryData
                     'id', 'discipleship_group_id', 'person_id', 'role', 'stage', 'status',
                     'started_on', 'ended_on', 'end_reason', 'created_at', 'updated_at',
                 ]);
-        $relations = DiscipleshipRelationship::query()
-            ->whereIn('branch_id', $branchIds)
-            ->whereIn('disciple_person_id', $validPersonIds)
-            ->get([
-                'id', 'mentor_person_id', 'disciple_person_id', 'status', 'start_date',
-                'end_date', 'reason_end', 'created_at', 'updated_at',
-            ]);
-
         $relatedPersonIds = collect($validPersonIds)
             ->merge($allGroupLinks->pluck('person_id'))
-            ->merge($relations->pluck('mentor_person_id'))
             ->filter()
             ->map(static fn ($id): int => (int) $id)
             ->unique()
@@ -103,11 +92,9 @@ class MskParticipantHistoryData
                 continue;
             }
             $personLinks = $targetLinks->where('person_id', $personId);
-            $personRelations = $relations->where('disciple_person_id', $personId);
             $histories[$participantId] = $this->history(
                 $personId,
                 $personLinks,
-                $personRelations,
                 $groups,
                 $allGroupLinks,
                 $names,
@@ -125,6 +112,7 @@ class MskParticipantHistoryData
             'linked' => false,
             'person_id' => $personId > 0 ? (string) $personId : '',
             'current_mentors' => [],
+            'current_group_leaders' => [],
             'current_groups' => [],
             'current_stage' => '',
             'member_items' => [],
@@ -150,7 +138,6 @@ class MskParticipantHistoryData
 
     /**
      * @param  Collection<int, DiscipleshipGroupPerson>  $personLinks
-     * @param  Collection<int, DiscipleshipRelationship>  $relations
      * @param  Collection<int, DiscipleshipGroup>  $groups
      * @param  Collection<int, DiscipleshipGroupPerson>  $allGroupLinks
      * @param  array<int, string>  $names
@@ -159,15 +146,12 @@ class MskParticipantHistoryData
     private function history(
         int $personId,
         Collection $personLinks,
-        Collection $relations,
         Collection $groups,
         Collection $allGroupLinks,
         array $names,
         int $externalContextBranchId,
     ): array {
-        $activeRelations = $relations->filter(fn (DiscipleshipRelationship $row): bool => $this->isActive($row->status, $row->end_date));
-        $currentMentors = $activeRelations->map(fn (DiscipleshipRelationship $row): string => $names[(int) $row->mentor_person_id] ?? '-')
-            ->filter(static fn (string $name): bool => $name !== '-')->unique()->values()->all();
+        $currentGroupLeaders = [];
         $currentGroups = [];
         $currentStage = '';
         $memberItems = [];
@@ -197,6 +181,12 @@ class MskParticipantHistoryData
             if ($role === 'member') {
                 if ($active) {
                     $currentGroups[] = $groupName;
+                    if ($labelLeader) {
+                        $leaderName = trim((string) ($names[(int) $labelLeader->person_id] ?? ''));
+                        if ($leaderName !== '') {
+                            $currentGroupLeaders[] = $leaderName;
+                        }
+                    }
                     if ($this->stageRank($stage) > $this->stageRank($currentStage)) {
                         $currentStage = $stage;
                     }
@@ -207,7 +197,7 @@ class MskParticipantHistoryData
                     'title' => $isManual ? ('Selesai '.($stage !== '' ? $stage : 'DG').' manual') : $groupName,
                     'stage' => $stage,
                     'role' => $isManual ? 'Manual' : 'Anggota',
-                    'mentor' => $labelLeader ? ($names[(int) $labelLeader->person_id] ?? '') : '',
+                    'leader' => $labelLeader ? ($names[(int) $labelLeader->person_id] ?? '') : '',
                     'active' => $active,
                     'date' => $this->dateLabel($link->started_on, $link->ended_on),
                     'note' => $this->reasonLabel((string) $link->end_reason),
@@ -256,7 +246,8 @@ class MskParticipantHistoryData
         return [
             'linked' => true,
             'person_id' => (string) $personId,
-            'current_mentors' => array_values(array_unique($currentMentors)),
+            'current_mentors' => array_values(array_unique($currentGroupLeaders)),
+            'current_group_leaders' => array_values(array_unique($currentGroupLeaders)),
             'current_groups' => array_values(array_unique($currentGroups)),
             'current_stage' => $currentStage,
             'member_items' => $memberItems,

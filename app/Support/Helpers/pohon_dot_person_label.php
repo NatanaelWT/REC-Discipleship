@@ -3,8 +3,6 @@
 function pohon_dot_person_label(
     string $personId,
     array $peopleById,
-    array $childrenByMentor,
-    array $incomingMentorsByDisciple,
     array $leadershipsByPerson,
     array $membershipsByPerson,
     array $groupsById
@@ -12,12 +10,6 @@ function pohon_dot_person_label(
     $lines = [pohon_dot_person_name($peopleById, $personId)];
 
     $roles = [];
-    if (!empty($incomingMentorsByDisciple[$personId])) {
-        $roles[] = 'Murid';
-    }
-    if (!empty($childrenByMentor[$personId])) {
-        $roles[] = 'Mentor';
-    }
     if (!empty($leadershipsByPerson[$personId])) {
         $roles[] = 'Leader DG';
     }

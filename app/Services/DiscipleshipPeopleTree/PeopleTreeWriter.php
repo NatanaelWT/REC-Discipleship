@@ -261,7 +261,6 @@ class PeopleTreeWriter
         $collections = [
             'discipleship_persons' => 'orang',
             'discipleship_groups' => 'kelompok_dg',
-            'discipleship_relations' => 'relasi_dg',
             'group_memberships' => 'keanggotaan_kelompok_dg',
             'group_leaderships' => 'keanggotaan_kelompok_dg',
             'group_multiplications' => 'discipleship_group_multiplications',

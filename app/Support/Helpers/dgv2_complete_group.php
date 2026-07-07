@@ -28,17 +28,12 @@ function dgv2_complete_group(array &$model, string $groupId): array {
     }
 
     $now = now_iso();
-    $groupMemberIds = [];
     foreach ($model['group_memberships'] as &$membership) {
         if (!is_array($membership) || !dgv2_is_current_period($membership)) {
             continue;
         }
         if (trim((string) ($membership['group_id'] ?? '')) !== $groupId) {
             continue;
-        }
-        $personId = trim((string) ($membership['person_id'] ?? ''));
-        if ($personId !== '') {
-            $groupMemberIds[$personId] = true;
         }
         $membership['end_date'] = today_date();
         $membership['status'] = 'closed';
@@ -60,10 +55,6 @@ function dgv2_complete_group(array &$model, string $groupId): array {
         $leadership['updated_at'] = $now;
     }
     unset($leadership);
-
-    foreach (array_keys($groupMemberIds) as $personId) {
-        dgv2_close_active_relation_for_disciple($model, $personId, 'group_completed');
-    }
 
     return ['ok' => true];
 }

@@ -417,7 +417,9 @@ if ($page === 'msk_classes') {
                 'member_items' => [],
                 'leader_items' => [],
             ];
-        $viewCurrentMentors = is_array($viewHistory['current_mentors'] ?? null) ? $viewHistory['current_mentors'] : [];
+        $viewCurrentGroupLeaders = is_array($viewHistory['current_group_leaders'] ?? null)
+            ? $viewHistory['current_group_leaders']
+            : (is_array($viewHistory['current_mentors'] ?? null) ? $viewHistory['current_mentors'] : []);
         $viewCurrentGroups = is_array($viewHistory['current_groups'] ?? null) ? $viewHistory['current_groups'] : [];
         $viewCurrentStage = normalize_dg_progress_value((string) ($viewHistory['current_stage'] ?? ''));
         $viewMemberItems = is_array($viewHistory['member_items'] ?? null) ? $viewHistory['member_items'] : [];
@@ -450,9 +452,9 @@ if ($page === 'msk_classes') {
                 echo '<div class="journey-history-item-meta">';
                 echo $stageBadge;
                 echo '<span class="journey-history-chip">'.h((string) ($item['role'] ?? '-')).'</span>';
-                $mentor = trim((string) ($item['mentor'] ?? ''));
-                if ($mentor !== '') {
-                    echo '<span class="journey-history-chip">Pembina: '.h($mentor).'</span>';
+                $leader = trim((string) ($item['leader'] ?? ''));
+                if ($leader !== '') {
+                    echo '<span class="journey-history-chip">Leader kelompok: '.h($leader).'</span>';
                 }
                 if (! empty($item['active'])) {
                     echo '<span class="journey-history-chip is-active">Aktif</span>';
@@ -510,7 +512,7 @@ if ($page === 'msk_classes') {
         echo '    <div class="msk-view-section-head"><span class="msk-view-section-kicker">Perjalanan</span><h4>MSK dan pemuridan aktif</h4></div>';
         echo '    <div class="msk-view-summary-grid">';
         echo '      <div class="msk-view-summary-item"><span>Sesi MSK</span><strong>'.h($viewProgressLabel).'</strong></div>';
-        echo '      <div class="msk-view-summary-item"><span>Mentor Aktif</span><strong>'.h($viewCurrentMentors !== [] ? implode(', ', $viewCurrentMentors) : '-').'</strong></div>';
+        echo '      <div class="msk-view-summary-item"><span>Leader Kelompok Aktif</span><strong>'.h($viewCurrentGroupLeaders !== [] ? implode(', ', $viewCurrentGroupLeaders) : '-').'</strong></div>';
         echo '      <div class="msk-view-summary-item"><span>Kelompok Aktif</span><strong>'.h($viewCurrentGroups !== [] ? implode(', ', $viewCurrentGroups) : '-').'</strong></div>';
         echo '      <div class="msk-view-summary-item"><span>Tahap DG</span><strong>'.h($viewCurrentStage !== '' ? $viewCurrentStage : 'Belum DG').'</strong></div>';
         echo '    </div>';
@@ -523,7 +525,7 @@ if ($page === 'msk_classes') {
         echo '  <section class="msk-view-section is-wide msk-view-history-section">';
         echo '      <div class="msk-view-section-head"><span class="msk-view-section-kicker">Pemuridan</span><h4>Riwayat pemuridan</h4></div>';
         if (! $viewLinked) {
-            echo '      <div class="journey-history-empty">Peserta ini belum terhubung ke data pemuridan. Setelah peserta dihubungkan ke Anggota DG, riwayat kelompok, mentor, dan kepemimpinan akan muncul di sini.</div>';
+            echo '      <div class="journey-history-empty">Peserta ini belum terhubung ke data pemuridan. Setelah peserta dihubungkan ke Anggota DG, riwayat kelompok dan kepemimpinan akan muncul di sini.</div>';
         } elseif ($viewMemberItems === [] && $viewLeaderItems === []) {
             echo '      <div class="journey-history-empty">Peserta sudah terhubung ke data pemuridan, tetapi belum memiliki riwayat kelompok atau kepemimpinan.</div>';
         } else {

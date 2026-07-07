@@ -678,7 +678,7 @@ function render_people_tree_v3(
     if (count($directChildIds) > 0) {
         $personMetaParts[] = (string) count($directChildIds).' anggota';
     } elseif (! $isRoot) {
-        $personMetaParts[] = 'Belum ada binaan';
+        $personMetaParts[] = 'Belum memimpin kelompok';
     }
     $personMetaLabel = implode(' • ', $personMetaParts);
 

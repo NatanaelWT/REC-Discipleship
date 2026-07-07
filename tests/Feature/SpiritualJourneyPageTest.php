@@ -270,21 +270,6 @@ class SpiritualJourneyPageTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('relasi_dg', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('branch_id');
-            $table->unsignedBigInteger('mentor_person_id')->nullable();
-            $table->unsignedBigInteger('disciple_person_id')->nullable();
-            $table->unsignedBigInteger('context_group_id')->nullable();
-            $table->string('relation_type')->nullable();
-            $table->string('stage_at_start')->nullable();
-            $table->string('status', 40)->default('active');
-            $table->date('start_date')->nullable();
-            $table->date('end_date')->nullable();
-            $table->string('reason_end')->nullable();
-            $table->text('notes')->nullable();
-            $table->timestamps();
-        });
     }
 
     private function createDiscipleshipTables(): void
@@ -299,22 +284,6 @@ class SpiritualJourneyPageTest extends TestCase
             $table->string('status', 40)->default('active');
             $table->string('stage')->nullable();
             $table->unsignedBigInteger('parent_group_id')->nullable();
-            $table->text('notes')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('relasi_dg', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('branch_id');
-            $table->unsignedBigInteger('mentor_person_id')->nullable();
-            $table->unsignedBigInteger('disciple_person_id')->nullable();
-            $table->unsignedBigInteger('context_group_id')->nullable();
-            $table->string('relation_type')->nullable();
-            $table->string('stage_at_start')->nullable();
-            $table->string('status', 40)->default('active');
-            $table->date('start_date')->nullable();
-            $table->date('end_date')->nullable();
-            $table->string('reason_end')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
         });

@@ -10,7 +10,6 @@ use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipMeetingReport;
 use App\Models\Person;
-use App\Models\DiscipleshipRelationship;
 use App\Models\PublicMaterialFile;
 use App\Models\User;
 use App\Models\WorshipServiceSchedule;
@@ -58,7 +57,6 @@ class AppServiceProvider extends ServiceProvider
             DiscipleshipGroupPerson::class,
             DiscipleshipMeetingReport::class,
             Person::class,
-            DiscipleshipRelationship::class,
             PublicMaterialFile::class,
             User::class,
             WorshipServiceSchedule::class,
