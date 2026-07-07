@@ -227,13 +227,23 @@ class MskParticipantHistoryData
             ];
         }
 
-        $sort = static function (array $left, array $right): int {
+        $sort = function (array $left, array $right): int {
             $active = ((int) ($right['active'] ?? 0)) <=> ((int) ($left['active'] ?? 0));
             if ($active !== 0) {
                 return $active;
             }
 
-            return strcmp((string) ($right['sort_date'] ?? ''), (string) ($left['sort_date'] ?? ''));
+            $date = strcmp((string) ($right['sort_date'] ?? ''), (string) ($left['sort_date'] ?? ''));
+            if ($date !== 0) {
+                return $date;
+            }
+
+            $stage = $this->stageRank((string) ($right['stage'] ?? '')) <=> $this->stageRank((string) ($left['stage'] ?? ''));
+            if ($stage !== 0) {
+                return $stage;
+            }
+
+            return strcmp((string) ($right['title'] ?? ''), (string) ($left['title'] ?? ''));
         };
         usort($memberItems, $sort);
         usort($leaderItems, $sort);

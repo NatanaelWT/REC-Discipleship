@@ -236,6 +236,146 @@ class PeopleTreePageTest extends TestCase
         $this->assertContains((string) $personId, $groups[(string) $latestGroupId]['member_ids']);
     }
 
+    public function test_latest_historical_group_prefers_highest_stage_when_dates_match(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+
+        $leaderId = (int) DB::table('orang')->where('full_name', 'Leader Test')->value('id');
+        $personId = DB::table('orang')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Anggota Tanggal Sama',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $sameTimestamp = '2026-07-07 12:12:03';
+        $dg1GroupId = DB::table('kelompok_dg')->insertGetId([
+            'branch_id' => 1,
+            'name' => 'Kelompok Tanggal Sama DG 1',
+            'status' => 'completed',
+            'start_stage' => 'DG 1',
+            'current_stage' => 'DG 1',
+            'created_at' => $sameTimestamp,
+            'updated_at' => $sameTimestamp,
+        ]);
+        $dg2GroupId = DB::table('kelompok_dg')->insertGetId([
+            'branch_id' => 1,
+            'name' => 'Kelompok Tanggal Sama DG 2',
+            'status' => 'completed',
+            'start_stage' => 'DG 2',
+            'current_stage' => 'DG 2',
+            'parent_group_id' => $dg1GroupId,
+            'source_group_id' => $dg1GroupId,
+            'initiated_by_person_id' => $leaderId,
+            'multiplied_at' => '2026-04-09',
+            'created_at' => $sameTimestamp,
+            'updated_at' => $sameTimestamp,
+        ]);
+        $dg3GroupId = DB::table('kelompok_dg')->insertGetId([
+            'branch_id' => 1,
+            'name' => 'Kelompok Tanggal Sama DG 3',
+            'status' => 'completed',
+            'start_stage' => 'DG 3',
+            'current_stage' => 'DG 3',
+            'parent_group_id' => $dg2GroupId,
+            'source_group_id' => $dg2GroupId,
+            'initiated_by_person_id' => $leaderId,
+            'multiplied_at' => '2026-04-09',
+            'created_at' => $sameTimestamp,
+            'updated_at' => $sameTimestamp,
+        ]);
+
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $dg2GroupId,
+                'person_id' => $personId,
+                'role' => 'member',
+                'stage' => 'DG 2',
+                'status' => 'closed',
+                'started_on' => '2026-04-09',
+                'ended_on' => '2026-04-09',
+                'end_reason' => 'continued_to_child_group',
+                'created_at' => $sameTimestamp,
+                'updated_at' => $sameTimestamp,
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $dg3GroupId,
+                'person_id' => $personId,
+                'role' => 'member',
+                'stage' => 'DG 3',
+                'status' => 'closed',
+                'started_on' => '2026-04-09',
+                'ended_on' => '2026-04-09',
+                'end_reason' => 'group_completed',
+                'created_at' => $sameTimestamp,
+                'updated_at' => $sameTimestamp,
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $dg1GroupId,
+                'person_id' => $personId,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'closed',
+                'started_on' => '2026-04-09',
+                'ended_on' => '2026-04-09',
+                'end_reason' => 'continued_to_child_group',
+                'created_at' => $sameTimestamp,
+                'updated_at' => $sameTimestamp,
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $dg1GroupId,
+                'person_id' => $leaderId,
+                'role' => 'leader',
+                'stage' => null,
+                'status' => 'closed',
+                'started_on' => '2026-04-09',
+                'ended_on' => '2026-04-09',
+                'end_reason' => null,
+                'created_at' => $sameTimestamp,
+                'updated_at' => $sameTimestamp,
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $dg2GroupId,
+                'person_id' => $leaderId,
+                'role' => 'leader',
+                'stage' => null,
+                'status' => 'closed',
+                'started_on' => '2026-04-09',
+                'ended_on' => '2026-04-09',
+                'end_reason' => null,
+                'created_at' => $sameTimestamp,
+                'updated_at' => $sameTimestamp,
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $dg3GroupId,
+                'person_id' => $leaderId,
+                'role' => 'leader',
+                'stage' => null,
+                'status' => 'closed',
+                'started_on' => '2026-04-09',
+                'ended_on' => '2026-04-09',
+                'end_reason' => null,
+                'created_at' => $sameTimestamp,
+                'updated_at' => $sameTimestamp,
+            ],
+        ]);
+
+        $store = app(PeopleTreeModelStore::class);
+        $model = $store->modelForBranch('kutisari');
+        $people = $store->peopleForModel($model, [], [], false);
+        $groups = collect(build_people_tree_group_rows($model, index_by_id($people)))->keyBy('id');
+
+        $this->assertNotContains((string) $personId, $groups[(string) $dg2GroupId]['member_ids']);
+        $this->assertContains((string) $personId, $groups[(string) $dg3GroupId]['member_ids']);
+    }
+
     public function test_people_tree_write_invalidates_cached_read_model(): void
     {
         $this->createTables();

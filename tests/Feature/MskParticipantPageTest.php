@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\MskParticipants\MskParticipantExportService;
+use App\Services\MskParticipants\MskParticipantHistoryData;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -134,6 +135,35 @@ class MskParticipantPageTest extends TestCase
         $this->assertLessThan(strpos($content, 'Foto dan keterangan'), strpos($content, 'Kontak dan akses'));
         $this->assertLessThan(strpos($content, 'MSK dan pemuridan aktif'), strpos($content, 'Foto dan keterangan'));
         $this->assertLessThan(strpos($content, 'Riwayat pemuridan'), strpos($content, 'MSK dan pemuridan aktif'));
+    }
+
+    public function test_msk_history_prefers_higher_stage_when_history_dates_match(): void
+    {
+        $this->createMskTables();
+        $this->createDiscipleshipHistoryTables();
+
+        DB::table('orang')->insert([
+            ['id' => 10, 'branch_id' => 1, 'full_name' => 'Pak Yakub', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 11, 'branch_id' => 1, 'full_name' => 'Peserta Tanggal Sama', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        $sameTimestamp = '2026-07-07 12:12:03';
+        DB::table('kelompok_dg')->insert([
+            ['id' => 20, 'branch_id' => 1, 'name' => 'Kelompok DG 2', 'status' => 'completed', 'start_stage' => 'DG 2', 'current_stage' => 'DG 2', 'created_at' => $sameTimestamp, 'updated_at' => $sameTimestamp],
+            ['id' => 21, 'branch_id' => 1, 'name' => 'Kelompok DG 3', 'status' => 'completed', 'start_stage' => 'DG 3', 'current_stage' => 'DG 3', 'created_at' => $sameTimestamp, 'updated_at' => $sameTimestamp],
+        ]);
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            ['branch_id' => 1, 'discipleship_group_id' => 20, 'person_id' => 10, 'role' => 'leader', 'stage' => null, 'status' => 'closed', 'started_on' => '2026-04-09', 'ended_on' => '2026-04-09', 'end_reason' => null, 'created_at' => $sameTimestamp, 'updated_at' => $sameTimestamp],
+            ['branch_id' => 1, 'discipleship_group_id' => 20, 'person_id' => 11, 'role' => 'member', 'stage' => 'DG 2', 'status' => 'closed', 'started_on' => '2026-04-09', 'ended_on' => '2026-04-09', 'end_reason' => 'continued_to_child_group', 'created_at' => $sameTimestamp, 'updated_at' => $sameTimestamp],
+            ['branch_id' => 1, 'discipleship_group_id' => 21, 'person_id' => 10, 'role' => 'leader', 'stage' => null, 'status' => 'closed', 'started_on' => '2026-04-09', 'ended_on' => '2026-04-09', 'end_reason' => null, 'created_at' => $sameTimestamp, 'updated_at' => $sameTimestamp],
+            ['branch_id' => 1, 'discipleship_group_id' => 21, 'person_id' => 11, 'role' => 'member', 'stage' => 'DG 3', 'status' => 'closed', 'started_on' => '2026-04-09', 'ended_on' => '2026-04-09', 'end_reason' => 'group_completed', 'created_at' => $sameTimestamp, 'updated_at' => $sameTimestamp],
+        ]);
+
+        $histories = app(MskParticipantHistoryData::class)->forParticipants([
+            ['id' => '11', 'member_id' => '11', 'full_name' => 'Peserta Tanggal Sama'],
+        ], [1]);
+
+        $this->assertSame('DG 3', $histories['11']['member_items'][0]['stage'] ?? null);
+        $this->assertSame('DG 2', $histories['11']['member_items'][1]['stage'] ?? null);
     }
 
     public function test_central_can_export_but_cannot_import_msk_data(): void

@@ -70,8 +70,32 @@ function build_people_tree_group_rows(array $model, array $peopleById): array
         $membershipsByPersonId[$personId][] = $membership;
     }
 
+    $stageRank = static function (array $membership) use ($groupsById): int {
+        $groupId = trim((string) ($membership['group_id'] ?? ''));
+        $group = $groupsById[$groupId] ?? [];
+        $stage = normalize_dg_progress_value((string) ($membership['stage'] ?? $group['current_stage'] ?? $group['start_stage'] ?? ''));
+
+        return match ($stage) {
+            'DG 3' => 3,
+            'DG 2' => 2,
+            'DG 1' => 1,
+            default => 0,
+        };
+    };
+    $groupProgressionDate = static function (array $membership) use ($groupsById): string {
+        $groupId = trim((string) ($membership['group_id'] ?? ''));
+        $group = $groupsById[$groupId] ?? [];
+
+        return trim((string) (
+            $group['multiplied_at']
+            ?? $group['created_at']
+            ?? $group['updated_at']
+            ?? ''
+        ));
+    };
+
     foreach ($membershipsByPersonId as $personId => $mems) {
-        usort($mems, static function (array $a, array $b): int {
+        usort($mems, static function (array $a, array $b) use ($stageRank, $groupProgressionDate): int {
             $aActive = dgv2_is_current_period($a) ? 1 : 0;
             $bActive = dgv2_is_current_period($b) ? 1 : 0;
             if ($aActive !== $bActive) {
@@ -83,7 +107,28 @@ function build_people_tree_group_rows(array $model, array $peopleById): array
                 return strcmp($dateB, $dateA);
             }
 
-            return strcmp(trim((string) ($b['updated_at'] ?? '')), trim((string) ($a['updated_at'] ?? '')));
+            $stageCompare = $stageRank($b) <=> $stageRank($a);
+            if ($stageCompare !== 0) {
+                return $stageCompare;
+            }
+
+            $groupDateA = $groupProgressionDate($a);
+            $groupDateB = $groupProgressionDate($b);
+            if ($groupDateA !== $groupDateB) {
+                return strcmp($groupDateB, $groupDateA);
+            }
+
+            $updatedCompare = strcmp(trim((string) ($b['updated_at'] ?? '')), trim((string) ($a['updated_at'] ?? '')));
+            if ($updatedCompare !== 0) {
+                return $updatedCompare;
+            }
+
+            $groupIdCompare = strcmp(trim((string) ($b['group_id'] ?? '')), trim((string) ($a['group_id'] ?? '')));
+            if ($groupIdCompare !== 0) {
+                return $groupIdCompare;
+            }
+
+            return strcmp(trim((string) ($b['id'] ?? '')), trim((string) ($a['id'] ?? '')));
         });
         if (isset($mems[0]['group_id'])) {
             $chosenGroupIdForMember[$personId] = trim((string) $mems[0]['group_id']);
