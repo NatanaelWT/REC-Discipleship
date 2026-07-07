@@ -36,8 +36,8 @@ class WebsiteAnalyticsWriter
 
             $session = $this->session($activity, $identity, $occurredAt);
 
-            return WebsitePageView::query()->create(array_merge($identity, $client, $language, [
-                'request_id' => (string) $activity->getKey(),
+            ActivityRequest::query()->whereKey((string) $activity->getKey())->update(array_merge($identity, $client, $language, [
+                'is_page_view' => true,
                 'session_id' => (string) $session->getKey(),
                 'user_id' => $activity->user_id,
                 'username' => $activity->username,
@@ -51,6 +51,8 @@ class WebsiteAnalyticsWriter
                 'response_ms' => $activity->duration_ms,
                 'occurred_at' => $occurredAt,
             ]));
+
+            return WebsitePageView::query()->findOrFail((string) $activity->getKey());
         }, 3);
     }
 

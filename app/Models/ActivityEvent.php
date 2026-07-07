@@ -4,11 +4,10 @@ namespace App\Models;
 
 use App\Casts\UtcDateTimeCast;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ActivityEvent extends Model
 {
-    protected $table = 'peristiwa_aktivitas';
+    protected $table = 'aktivitas';
 
     public $timestamps = false;
 
@@ -23,10 +22,5 @@ class ActivityEvent extends Model
             'metadata' => 'array',
             'occurred_at' => UtcDateTimeCast::class,
         ];
-    }
-
-    public function activityRequest(): BelongsTo
-    {
-        return $this->belongsTo(ActivityRequest::class, 'request_id');
     }
 }

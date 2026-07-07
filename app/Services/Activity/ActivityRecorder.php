@@ -3,6 +3,7 @@
 namespace App\Services\Activity;
 
 use App\Models\ActivityEvent;
+use App\Models\ActivityRequest;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 
@@ -38,7 +39,12 @@ class ActivityRecorder
         $cleanAfter = is_array($after) ? $this->sanitizer->sanitize($after) : null;
 
         try {
-            return ActivityEvent::query()->create([
+            $activity = ActivityRequest::query()->find($requestId);
+            if (! $activity instanceof ActivityRequest) {
+                throw new \RuntimeException('Activity request tidak ditemukan untuk event audit.');
+            }
+
+            return $activity->appendEventEntry([
                 'request_id' => $requestId,
                 'category' => trim($category) ?: 'data',
                 'action' => trim($action) ?: 'changed',

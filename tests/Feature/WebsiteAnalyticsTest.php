@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class WebsiteAnalyticsTest extends TestCase
@@ -48,11 +49,12 @@ class WebsiteAnalyticsTest extends TestCase
             ->get('/_analytics-test/page');
 
         $first->assertOk()->assertCookie(config('analytics.cookie.name'));
-        $this->assertSame(2, DB::table('kunjungan_halaman')->count());
-        $this->assertSame(1, DB::table('kunjungan_halaman')->distinct()->count('visitor_hash'));
+        $this->assertSame(2, DB::table('aktivitas')->where('is_page_view', true)->count());
+        $this->assertSame(1, DB::table('aktivitas')->where('is_page_view', true)->distinct()->count('visitor_hash'));
         $this->assertSame(1, DB::table('sesi')->count());
         $this->assertSame(2, (int) DB::table('sesi')->value('page_views'));
-        $this->assertDatabaseHas('kunjungan_halaman', [
+        $this->assertDatabaseHas('aktivitas', [
+            'is_page_view' => true,
             'segment' => 'publik',
             'is_bot' => false,
             'language_code' => 'id-ID',
@@ -124,9 +126,9 @@ class WebsiteAnalyticsTest extends TestCase
         $this->get('/_analytics-test/redirect')->assertRedirect('/_analytics-test/page');
         $this->post('/_analytics-test/post')->assertOk();
 
-        $this->assertSame(2, DB::table('kunjungan_halaman')->count());
-        $this->assertSame(1, DB::table('kunjungan_halaman')->where('is_bot', true)->count());
-        $this->assertSame(1, DB::table('kunjungan_halaman')->where('is_prefetch', true)->count());
+        $this->assertSame(2, DB::table('aktivitas')->where('is_page_view', true)->count());
+        $this->assertSame(1, DB::table('aktivitas')->where('is_page_view', true)->where('is_bot', true)->count());
+        $this->assertSame(1, DB::table('aktivitas')->where('is_page_view', true)->where('is_prefetch', true)->count());
     }
 
     public function test_authenticated_and_internal_page_views_are_not_recorded(): void
@@ -136,8 +138,8 @@ class WebsiteAnalyticsTest extends TestCase
         $this->flushSession();
         $this->get('/_analytics-test/internal')->assertOk();
 
-        $this->assertSame(0, DB::table('kunjungan_halaman')->count());
-        $this->assertSame(2, DB::table('permintaan_aktivitas')->count());
+        $this->assertSame(0, DB::table('aktivitas')->where('is_page_view', true)->count());
+        $this->assertSame(2, DB::table('aktivitas')->count());
     }
 
     public function test_developer_statistics_page_and_filters_are_available_only_to_developer(): void
@@ -211,8 +213,8 @@ class WebsiteAnalyticsTest extends TestCase
 
         $this->assertSame(0, Artisan::call('analytics:backfill'));
         $this->assertSame(0, Artisan::call('analytics:backfill'));
-        $this->assertSame(1, DB::table('kunjungan_halaman')->where('identity_source', 'legacy_session')->count());
-        $this->assertNull(DB::table('kunjungan_halaman')->value('language_code'));
+        $this->assertSame(1, DB::table('aktivitas')->where('is_page_view', true)->where('identity_source', 'legacy_session')->count());
+        $this->assertNull(DB::table('aktivitas')->where('is_page_view', true)->value('language_code'));
     }
 
     public function test_dashboard_defensively_ignores_historical_internal_page_views_and_old_filters(): void
@@ -222,7 +224,8 @@ class WebsiteAnalyticsTest extends TestCase
             ['request_id' => '05'.str_repeat('0', 24), 'session_id' => '06'.str_repeat('0', 24), 'user_id' => null, 'segment' => 'publik'],
             ['request_id' => '05'.str_repeat('1', 24), 'session_id' => '06'.str_repeat('1', 24), 'user_id' => 1, 'segment' => 'developer'],
         ] as $row) {
-            DB::table('kunjungan_halaman')->insert(array_merge($row, [
+            DB::table('aktivitas')->insert($this->pageViewRow(array_merge($row, [
+                'id' => $row['request_id'],
                 'visitor_hash' => hash('sha256', $row['request_id']),
                 'identity_source' => 'legacy_session',
                 'username' => $row['user_id'] === null ? null : 'developer',
@@ -234,7 +237,7 @@ class WebsiteAnalyticsTest extends TestCase
                 'is_prefetch' => false,
                 'http_status' => 200,
                 'occurred_at' => $occurredAt,
-            ]));
+            ])));
         }
 
         $dashboard = app(WebsiteStatisticsService::class)->dashboard(Request::create('/developer/statistics', 'GET', [
@@ -298,8 +301,8 @@ class WebsiteAnalyticsTest extends TestCase
     {
         $occurredAt = CarbonImmutable::now('UTC')->format('Y-m-d H:i:s.u');
         foreach (range(1, 12) as $index) {
-            DB::table('kunjungan_halaman')->insert([
-                'request_id' => sprintf('03%024d', $index),
+            DB::table('aktivitas')->insert($this->pageViewRow([
+                'id' => sprintf('03%024d', $index),
                 'session_id' => sprintf('04%024d', $index),
                 'visitor_hash' => hash('sha256', 'compact-visitor-'.$index),
                 'identity_source' => 'anonymous_cookie',
@@ -314,7 +317,7 @@ class WebsiteAnalyticsTest extends TestCase
                 'is_prefetch' => false,
                 'http_status' => 200,
                 'occurred_at' => $occurredAt,
-            ]);
+            ]));
         }
 
         $response = $this->actingAs($this->developer())->get('/developer/statistics?range=today')->assertOk();
@@ -330,8 +333,8 @@ class WebsiteAnalyticsTest extends TestCase
             $rows = [];
             for ($offset = 0; $offset < 1000; $offset++) {
                 $index = ($batch * 1000) + $offset;
-                $rows[] = [
-                    'request_id' => sprintf('01%024d', $index),
+                $rows[] = $this->pageViewRow([
+                    'id' => sprintf('01%024d', $index),
                     'session_id' => sprintf('02%024d', intdiv($index, 10)),
                     'visitor_hash' => hash('sha256', 'visitor-'.($index % 5000)),
                     'identity_source' => 'anonymous_cookie',
@@ -352,9 +355,9 @@ class WebsiteAnalyticsTest extends TestCase
                     'http_status' => 200,
                     'response_ms' => 25.5,
                     'occurred_at' => $baseTime->subDays($index % 30)->format('Y-m-d H:i:s.u'),
-                ];
+                ]);
             }
-            DB::table('kunjungan_halaman')->insert($rows);
+            DB::table('aktivitas')->insert($rows);
         }
 
         $queryCount = 0;
@@ -397,56 +400,9 @@ class WebsiteAnalyticsTest extends TestCase
             $table->timestamp('last_login_at')->nullable();
             $table->timestamps();
         });
-        Schema::create('permintaan_aktivitas', static function (Blueprint $table): void {
-            $table->ulid('id')->primary();
-            $table->string('actor_type')->default('anonymous');
-            $table->unsignedBigInteger('user_id')->nullable();
-            $table->string('username')->nullable();
-            $table->string('role')->nullable();
-            $table->unsignedBigInteger('branch_id')->nullable();
-            $table->string('branch_label')->nullable();
-            $table->unsignedBigInteger('impersonator_user_id')->nullable();
-            $table->string('impersonator_username')->nullable();
-            $table->string('impersonator_role')->nullable();
-            $table->char('visitor_hash', 64)->nullable();
-            $table->string('ip_address', 45)->nullable();
-            $table->string('method', 12);
-            $table->string('route_name')->nullable();
-            $table->text('path');
-            $table->string('category')->default('request');
-            $table->string('action')->default('request');
-            $table->string('subject_type')->nullable();
-            $table->string('subject_id')->nullable();
-            $table->json('query_data')->nullable();
-            $table->json('input_data')->nullable();
-            $table->unsignedSmallInteger('http_status')->nullable();
-            $table->string('outcome')->default('pending');
-            $table->text('redirect_to')->nullable();
-            $table->string('response_content_type')->nullable();
-            $table->unsignedBigInteger('response_size')->nullable();
-            $table->decimal('duration_ms', 14, 3)->nullable();
-            $table->text('user_agent')->nullable();
-            $table->text('referer')->nullable();
-            $table->string('error_type')->nullable();
-            $table->text('error_message')->nullable();
-            $table->dateTime('started_at', 6);
-            $table->dateTime('completed_at', 6)->nullable();
-        });
-        Schema::create('peristiwa_aktivitas', static function (Blueprint $table): void {
-            $table->id();
-            $table->ulid('request_id');
-            $table->string('category');
-            $table->string('action');
-            $table->string('subject_type')->nullable();
-            $table->string('subject_id')->nullable();
-            $table->string('subject_label')->nullable();
-            $table->text('description')->nullable();
-            $table->json('before_values')->nullable();
-            $table->json('after_values')->nullable();
-            $table->json('changed_values')->nullable();
-            $table->json('metadata')->nullable();
-            $table->dateTime('occurred_at', 6);
-        });
+        $mergeMigration = require database_path('migrations/2026_07_07_000001_merge_activity_audit_tables.php');
+        $mergeMigration->up();
+
         Schema::create('sesi', static function (Blueprint $table): void {
             $table->ulid('id')->primary();
             $table->char('visitor_hash', 64);
@@ -459,30 +415,40 @@ class WebsiteAnalyticsTest extends TestCase
             $table->text('exit_path');
             $table->unsignedInteger('page_views');
         });
-        Schema::create('kunjungan_halaman', static function (Blueprint $table): void {
-            $table->ulid('request_id')->primary();
-            $table->ulid('session_id');
-            $table->char('visitor_hash', 64);
-            $table->string('identity_source');
-            $table->unsignedBigInteger('user_id')->nullable();
-            $table->string('username')->nullable();
-            $table->string('actor_type');
-            $table->string('segment');
-            $table->string('route_name')->nullable();
-            $table->text('path');
-            $table->string('referer_host')->nullable();
-            $table->string('language_code', 20)->nullable();
-            $table->string('language_name', 100)->nullable();
-            $table->string('device_type');
-            $table->string('browser_name')->nullable();
-            $table->string('os_name')->nullable();
-            $table->boolean('is_bot');
-            $table->boolean('is_prefetch');
-            $table->unsignedSmallInteger('http_status');
-            $table->decimal('response_ms', 14, 3)->nullable();
-            $table->dateTime('occurred_at', 6);
-        });
         DB::table('cabang')->insert(['id' => 1, 'label' => 'Kutisari', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+    }
+
+    /** @param array<string, mixed> $overrides */
+    private function pageViewRow(array $overrides): array
+    {
+        $id = (string) ($overrides['id'] ?? $overrides['request_id'] ?? Str::ulid());
+        unset($overrides['request_id']);
+        $occurredAt = (string) ($overrides['occurred_at'] ?? CarbonImmutable::now('UTC')->format('Y-m-d H:i:s.u'));
+        $path = (string) ($overrides['path'] ?? '/');
+
+        return array_merge([
+            'id' => $id,
+            'actor_type' => 'anonymous',
+            'method' => 'GET',
+            'route_name' => null,
+            'path' => $path,
+            'category' => 'request',
+            'action' => 'request.page_view',
+            'http_status' => 200,
+            'outcome' => 'succeeded',
+            'started_at' => $occurredAt,
+            'completed_at' => $occurredAt,
+            'is_page_view' => true,
+            'session_id' => (string) Str::ulid(),
+            'visitor_hash' => hash('sha256', $id),
+            'identity_source' => 'legacy_session',
+            'segment' => 'publik',
+            'device_type' => 'unknown',
+            'is_bot' => false,
+            'is_prefetch' => false,
+            'response_ms' => null,
+            'occurred_at' => $occurredAt,
+        ], $overrides, ['id' => $id]);
     }
 
     private function developer(): User

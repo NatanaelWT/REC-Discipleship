@@ -471,6 +471,7 @@ class DgMeetingReportRecapTest extends TestCase
 
     private function createActivityTables(): void
     {
+        Schema::dropIfExists('aktivitas');
         Schema::dropIfExists('peristiwa_aktivitas');
         Schema::dropIfExists('permintaan_aktivitas');
         Schema::dropIfExists('activity_events');
@@ -479,6 +480,8 @@ class DgMeetingReportRecapTest extends TestCase
         $activityMigration->up();
         $renameMigration = require database_path('migrations/2026_07_04_000003_rename_domain_tables_to_indonesian.php');
         $renameMigration->up();
+        $mergeMigration = require database_path('migrations/2026_07_07_000001_merge_activity_audit_tables.php');
+        $mergeMigration->up();
     }
 
     /** @return array{leader_id:int,member_id:int,group_id:int,report_id:int} */

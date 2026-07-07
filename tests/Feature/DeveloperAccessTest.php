@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivityRequest;
 use App\Models\User;
 use App\Services\Developer\DeveloperDiagnosticsService;
 use App\Support\RuntimeBootstrap;
@@ -375,6 +376,7 @@ class DeveloperAccessTest extends TestCase
 
     private function createCoreTables(): void
     {
+        Schema::dropIfExists('aktivitas');
         Schema::dropIfExists('kunjungan_halaman');
         Schema::dropIfExists('peristiwa_aktivitas');
         Schema::dropIfExists('permintaan_aktivitas');
@@ -432,74 +434,13 @@ class DeveloperAccessTest extends TestCase
 
     private function createDashboardTelemetryTables(): void
     {
+        Schema::dropIfExists('aktivitas');
         Schema::dropIfExists('kunjungan_halaman');
         Schema::dropIfExists('peristiwa_aktivitas');
         Schema::dropIfExists('permintaan_aktivitas');
 
-        Schema::create('permintaan_aktivitas', function (Blueprint $table): void {
-            $table->ulid('id')->primary();
-            $table->string('actor_type', 20)->default('anonymous');
-            $table->unsignedBigInteger('user_id')->nullable();
-            $table->string('username', 120)->nullable();
-            $table->string('role', 80)->nullable();
-            $table->unsignedBigInteger('branch_id')->nullable();
-            $table->string('branch_label', 160)->nullable();
-            $table->unsignedBigInteger('impersonator_user_id')->nullable();
-            $table->string('impersonator_username', 120)->nullable();
-            $table->string('impersonator_role', 80)->nullable();
-            $table->char('visitor_hash', 64)->nullable();
-            $table->string('ip_address', 45)->nullable();
-            $table->string('method', 12);
-            $table->string('route_name', 180)->nullable();
-            $table->text('path');
-            $table->string('category', 60)->default('request');
-            $table->string('action', 180)->default('request');
-            $table->string('subject_type', 160)->nullable();
-            $table->string('subject_id', 191)->nullable();
-            $table->json('query_data')->nullable();
-            $table->json('input_data')->nullable();
-            $table->unsignedSmallInteger('http_status')->nullable();
-            $table->string('outcome', 30)->default('success');
-            $table->text('redirect_to')->nullable();
-            $table->string('response_content_type', 180)->nullable();
-            $table->unsignedBigInteger('response_size')->nullable();
-            $table->decimal('duration_ms', 14, 3)->nullable();
-            $table->text('user_agent')->nullable();
-            $table->text('referer')->nullable();
-            $table->string('error_type', 191)->nullable();
-            $table->text('error_message')->nullable();
-            $table->dateTime('started_at', 6)->index();
-            $table->dateTime('completed_at', 6)->nullable();
-        });
-
-        Schema::create('peristiwa_aktivitas', function (Blueprint $table): void {
-            $table->id();
-            $table->ulid('request_id');
-            $table->string('category', 60);
-            $table->string('action', 180);
-            $table->string('subject_label', 255)->nullable();
-            $table->text('description')->nullable();
-            $table->json('before_values')->nullable();
-            $table->json('after_values')->nullable();
-            $table->json('changed_values')->nullable();
-            $table->json('metadata')->nullable();
-            $table->dateTime('occurred_at', 6);
-            $table->index(['request_id', 'id']);
-        });
-
-        Schema::create('kunjungan_halaman', function (Blueprint $table): void {
-            $table->ulid('request_id')->primary();
-            $table->ulid('session_id')->index();
-            $table->char('visitor_hash', 64)->index();
-            $table->unsignedBigInteger('user_id')->nullable();
-            $table->string('segment', 30)->index();
-            $table->string('route_name', 180)->nullable();
-            $table->text('path');
-            $table->boolean('is_bot')->default(false);
-            $table->boolean('is_prefetch')->default(false);
-            $table->decimal('response_ms', 14, 3)->nullable();
-            $table->dateTime('occurred_at', 6)->index();
-        });
+        $mergeMigration = require database_path('migrations/2026_07_07_000001_merge_activity_audit_tables.php');
+        $mergeMigration->up();
     }
 
     private function seedDashboardTelemetry(int $branchUserId): void
@@ -509,7 +450,7 @@ class DeveloperAccessTest extends TestCase
         $errorId = (string) Str::ulid();
         $now = now('UTC');
 
-        DB::table('permintaan_aktivitas')->insert([
+        DB::table('aktivitas')->insert([
             [
                 'id' => $recentId,
                 'actor_type' => 'user',
@@ -563,15 +504,13 @@ class DeveloperAccessTest extends TestCase
             ],
         ]);
 
-        DB::table('peristiwa_aktivitas')->insert([
-            ['request_id' => $recentId, 'category' => 'data', 'action' => 'people.updated', 'subject_label' => 'Peserta Test', 'description' => 'Updated person', 'occurred_at' => $now->copy()->subMinutes(20)->format('Y-m-d H:i:s.u')],
-            ['request_id' => $recentId, 'category' => 'data', 'action' => 'audit.logged', 'subject_label' => 'Peserta Test', 'description' => 'Audit logged', 'occurred_at' => $now->copy()->subMinutes(20)->format('Y-m-d H:i:s.u')],
-            ['request_id' => $errorId, 'category' => 'request', 'action' => 'request.failed', 'subject_label' => 'Error Test', 'description' => 'Failure logged', 'occurred_at' => $now->copy()->subMinutes(5)->format('Y-m-d H:i:s.u')],
-        ]);
+        ActivityRequest::query()->findOrFail($recentId)->appendEventEntry(['category' => 'data', 'action' => 'people.updated', 'subject_label' => 'Peserta Test', 'description' => 'Updated person', 'occurred_at' => $now->copy()->subMinutes(20)->format('Y-m-d H:i:s.u')]);
+        ActivityRequest::query()->findOrFail($recentId)->appendEventEntry(['category' => 'data', 'action' => 'audit.logged', 'subject_label' => 'Peserta Test', 'description' => 'Audit logged', 'occurred_at' => $now->copy()->subMinutes(20)->format('Y-m-d H:i:s.u')]);
+        ActivityRequest::query()->findOrFail($errorId)->appendEventEntry(['category' => 'request', 'action' => 'request.failed', 'subject_label' => 'Error Test', 'description' => 'Failure logged', 'occurred_at' => $now->copy()->subMinutes(5)->format('Y-m-d H:i:s.u')]);
 
-        DB::table('kunjungan_halaman')->insert([
-            [
-                'request_id' => (string) Str::ulid(),
+        DB::table('aktivitas')->insert([
+            $this->dashboardPageViewRow([
+                'id' => (string) Str::ulid(),
                 'session_id' => (string) Str::ulid(),
                 'visitor_hash' => str_repeat('a', 64),
                 'user_id' => null,
@@ -582,9 +521,9 @@ class DeveloperAccessTest extends TestCase
                 'is_prefetch' => false,
                 'response_ms' => 52.4,
                 'occurred_at' => $now->copy()->subDay()->format('Y-m-d H:i:s.u'),
-            ],
-            [
-                'request_id' => (string) Str::ulid(),
+            ]),
+            $this->dashboardPageViewRow([
+                'id' => (string) Str::ulid(),
                 'session_id' => (string) Str::ulid(),
                 'visitor_hash' => str_repeat('b', 64),
                 'user_id' => null,
@@ -595,9 +534,9 @@ class DeveloperAccessTest extends TestCase
                 'is_prefetch' => false,
                 'response_ms' => 20.0,
                 'occurred_at' => $now->copy()->subDay()->format('Y-m-d H:i:s.u'),
-            ],
-            [
-                'request_id' => (string) Str::ulid(),
+            ]),
+            $this->dashboardPageViewRow([
+                'id' => (string) Str::ulid(),
                 'session_id' => (string) Str::ulid(),
                 'visitor_hash' => str_repeat('c', 64),
                 'user_id' => null,
@@ -608,8 +547,35 @@ class DeveloperAccessTest extends TestCase
                 'is_prefetch' => true,
                 'response_ms' => 19.0,
                 'occurred_at' => $now->copy()->subDay()->format('Y-m-d H:i:s.u'),
-            ],
+            ]),
         ]);
+    }
+
+    /** @param array<string, mixed> $overrides */
+    private function dashboardPageViewRow(array $overrides): array
+    {
+        $id = (string) ($overrides['id'] ?? Str::ulid());
+        $occurredAt = (string) ($overrides['occurred_at'] ?? now('UTC')->format('Y-m-d H:i:s.u'));
+        $path = (string) ($overrides['path'] ?? '/');
+
+        return array_merge([
+            'id' => $id,
+            'actor_type' => 'anonymous',
+            'method' => 'GET',
+            'path' => $path,
+            'category' => 'request',
+            'action' => 'request.page_view',
+            'http_status' => 200,
+            'outcome' => 'succeeded',
+            'started_at' => $occurredAt,
+            'completed_at' => $occurredAt,
+            'is_page_view' => true,
+            'identity_source' => 'legacy_session',
+            'device_type' => 'unknown',
+            'is_bot' => false,
+            'is_prefetch' => false,
+            'occurred_at' => $occurredAt,
+        ], $overrides, ['id' => $id]);
     }
 
     private function seedDeveloper(): int

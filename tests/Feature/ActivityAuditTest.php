@@ -29,6 +29,8 @@ class ActivityAuditTest extends TestCase
         $migration->up();
         $renameMigration = require database_path('migrations/2026_07_04_000003_rename_domain_tables_to_indonesian.php');
         $renameMigration->up();
+        $mergeMigration = require database_path('migrations/2026_07_07_000001_merge_activity_audit_tables.php');
+        $mergeMigration->up();
         $this->registerAuditTestRoutes();
     }
 
@@ -42,14 +44,14 @@ class ActivityAuditTest extends TestCase
         $secondId = $second->headers->get('X-Activity-Request-Id');
         $this->assertNotNull($firstId);
         $this->assertNotSame($firstId, $secondId);
-        $this->assertDatabaseHas('permintaan_aktivitas', [
+        $this->assertDatabaseHas('aktivitas', [
             'id' => $firstId,
             'route_name' => 'audit-test.view',
             'category' => 'navigation',
             'outcome' => 'succeeded',
             'http_status' => 200,
         ]);
-        $this->assertDatabaseHas('permintaan_aktivitas', [
+        $this->assertDatabaseHas('aktivitas', [
             'path' => '/alamat-tidak-ada',
             'outcome' => 'failed',
             'http_status' => 404,
@@ -391,8 +393,7 @@ class ActivityAuditTest extends TestCase
             'started_at' => now('UTC'),
             'completed_at' => now('UTC'),
         ]);
-        ActivityEvent::query()->create([
-            'request_id' => $activity->id,
+        $activity->appendEventEntry([
             'category' => 'request',
             'action' => 'request.exception',
             'changed_values' => ['outcome' => ['before' => 'pending', 'after' => 'failed']],

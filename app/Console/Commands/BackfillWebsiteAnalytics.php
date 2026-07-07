@@ -20,7 +20,10 @@ class BackfillWebsiteAnalytics extends Command
             ->where('method', 'GET')
             ->whereBetween('http_status', [200, 299])
             ->where('response_content_type', 'like', 'text/html%')
-            ->whereDoesntHave('websitePageView');
+            ->where(static function ($query): void {
+                $query->where('is_page_view', false)
+                    ->orWhereNull('is_page_view');
+            });
         if (trim((string) $this->option('from')) !== '') {
             $query->where('started_at', '>=', (string) $this->option('from'));
         }

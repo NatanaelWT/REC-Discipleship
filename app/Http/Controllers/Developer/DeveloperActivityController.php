@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Developer;
 
 use App\Enums\UserAccessRole;
 use App\Http\Controllers\Controller;
-use App\Models\ActivityEvent;
 use App\Models\ActivityRequest;
 use App\Models\Branch;
 use App\Support\RuntimeBootstrap;
@@ -26,7 +25,7 @@ class DeveloperActivityController extends Controller
             return $guard;
         }
 
-        $query = ActivityRequest::query()->withCount('events');
+        $query = ActivityRequest::query();
         $this->applyFilters($query, $request);
         $activitiesPage = $this->activityPage($query, $request);
 
@@ -40,9 +39,7 @@ class DeveloperActivityController extends Controller
                 static fn (UserAccessRole $role): array => [$role->value => $role->label()],
             )->all(),
             'branchOptions' => Branch::query()->orderBy('label')->get(['id', 'label']),
-            'categoryOptions' => ActivityRequest::query()->whereNotNull('category')->distinct()->pluck('category')
-                ->merge(ActivityEvent::query()->whereNotNull('category')->distinct()->pluck('category'))
-                ->unique()->sort()->values(),
+            'categoryOptions' => $this->categoryOptions(),
         ]);
     }
 
@@ -219,8 +216,6 @@ class DeveloperActivityController extends Controller
             return $guard;
         }
 
-        $activityRequest->load('events');
-
         return view('developer.activities.show', [
             'settings' => ['church_name' => app_church_name()],
             'currentPage' => 'developer_activities',
@@ -276,7 +271,7 @@ class DeveloperActivityController extends Controller
         if ($category !== '') {
             $query->where(static function (Builder $nested) use ($category): void {
                 $nested->where('category', $category)
-                    ->orWhereHas('events', static fn (Builder $events) => $events->where('category', $category));
+                    ->orWhereJsonContains('event_categories', $category);
             });
         }
 
@@ -284,7 +279,7 @@ class DeveloperActivityController extends Controller
         if ($action !== '') {
             $query->where(static function (Builder $nested) use ($action): void {
                 $nested->where('action', $action)
-                    ->orWhereHas('events', static fn (Builder $events) => $events->where('action', $action));
+                    ->orWhereJsonContains('event_actions', $action);
             });
         }
 
@@ -299,12 +294,12 @@ class DeveloperActivityController extends Controller
                     if ($subjectId !== '') {
                         $requestSubject->where('subject_id', $subjectId);
                     }
-                })->orWhereHas('events', static function (Builder $events) use ($subjectType, $subjectId): void {
+                })->orWhere(static function (Builder $eventSubjects) use ($subjectType, $subjectId): void {
                     if ($subjectType !== '') {
-                        $events->where('subject_type', $subjectType);
+                        $eventSubjects->whereJsonContains('event_subject_types', $subjectType);
                     }
                     if ($subjectId !== '') {
-                        $events->where('subject_id', $subjectId);
+                        $eventSubjects->whereJsonContains('event_subject_ids', $subjectId);
                     }
                 });
             });
@@ -329,13 +324,27 @@ class DeveloperActivityController extends Controller
                     ->orWhere('path', 'like', $needle)
                     ->orWhere('subject_id', 'like', $needle)
                     ->orWhere('ip_address', 'like', $needle)
-                    ->orWhereHas('events', static function (Builder $events) use ($needle): void {
-                        $events->where('subject_label', 'like', $needle)
-                            ->orWhere('description', 'like', $needle)
-                            ->orWhere('action', 'like', $needle);
-                    });
+                    ->orWhere('event_text', 'like', $needle);
             });
         }
+    }
+
+    private function categoryOptions()
+    {
+        return ActivityRequest::query()
+            ->whereNotNull('category')
+            ->distinct()
+            ->pluck('category')
+            ->merge(
+                ActivityRequest::query()
+                    ->whereNotNull('event_categories')
+                    ->get(['event_categories'])
+                    ->flatMap(static fn (ActivityRequest $activity) => is_array($activity->event_categories) ? $activity->event_categories : []),
+            )
+            ->filter(static fn ($category): bool => trim((string) $category) !== '')
+            ->unique()
+            ->sort()
+            ->values();
     }
 
     private function filterDate(string $value, bool $endOfDay): ?CarbonImmutable
