@@ -5,7 +5,7 @@ namespace App\Support;
 class HelperManifest
 {
     private const CORE = [
-        'app_church_name', 'app_config_value', 'app_timezone', 'asset_version', 'auth_access_scope_label',
+        'app_church_name', 'app_config_value', 'app_maintenance_mode_enabled', 'app_timezone', 'asset_version', 'auth_access_scope_label',
         'branch_can_access_page', 'branch_can_access_secure_upload_path', 'branch_can_use_action', 'branch_home_page',
         'branch_id_from_slug', 'branch_ids_from_slugs', 'branch_slug_from_id', 'can_manage_app_config',
         'can_manage_difficult_questions', 'can_manage_public_materials', 'can_manage_users', 'central_readonly_action_map',

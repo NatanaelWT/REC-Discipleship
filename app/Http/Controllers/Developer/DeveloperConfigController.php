@@ -51,6 +51,7 @@ class DeveloperConfigController extends Controller
             'church_name',
             'app_timezone',
             'developer_debug_banner',
+            'maintenance_mode',
         ]), current_username());
 
         if ($error !== null) {

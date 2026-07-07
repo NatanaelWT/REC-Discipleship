@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\HandleMaintenanceMode;
 use App\Http\Middleware\InvalidateDiscipleshipReadCache;
 use App\Http\Middleware\MeasureRequestPerformance;
 use App\Http\Middleware\RejectLegacyPageQuery;
@@ -23,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(InvalidateDiscipleshipReadCache::class);
         $middleware->replaceInGroup('web', ValidateCsrfToken::class, ValidateCsrfTokenAndRecordActivity::class);
         $middleware->alias([
+            'rec.maintenance' => HandleMaintenanceMode::class,
             'rec.auth' => RequireRecAuthentication::class,
             'rec.page' => RequireRecPageAccess::class,
         ]);

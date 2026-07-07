@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\UserAccessRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Services\Activity\ActivityRecorder;
@@ -68,6 +69,24 @@ class LoginController extends Controller
         );
 
         if ($user !== null) {
+            if (
+                app_maintenance_mode_enabled()
+                && UserAccessRole::fromStoredValue((string) $user->access_scope) !== UserAccessRole::Developer
+            ) {
+                $limiter->clear($ip);
+                $activity->record(
+                    'auth',
+                    'auth.login.maintenance_denied',
+                    'users',
+                    $user->getKey(),
+                    (string) $user->username,
+                    'Login ditolak karena aplikasi sedang maintenance.',
+                    metadata: ['username' => (string) $user->username],
+                );
+
+                return redirect()->route('auth.login', ['maintenance' => 1]);
+            }
+
             $limiter->clear($ip);
             $credentials->updateLastLogin($user, $now);
             $sessions->login($request, $user);

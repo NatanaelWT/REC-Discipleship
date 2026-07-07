@@ -5,6 +5,9 @@
 ])
 
 @section('content')
+    @php
+        $maintenanceMode = function_exists('app_maintenance_mode_enabled') && app_maintenance_mode_enabled();
+    @endphp
     <section class="public-material-preview-shell" aria-label="Preview materi DG" data-public-material-pdf-viewer data-pdf-url="{{ $rawUrl }}">
       <div class="public-material-native-pdf" data-native-pdf>
         <iframe class="file-page-embed public-material-preview-embed" src="{{ $rawUrl }}" loading="eager" referrerpolicy="same-origin" title="{{ $previewTitle }}"></iframe>
@@ -16,8 +19,10 @@
       </div>
       <div class="public-material-preview-actions">
         <a class="btn ghost public-material-back-btn" href="{{ $backUrl }}">Kembali</a>
-        <a class="btn public-material-journal-btn" href="{{ route('public.dg.branch') }}">Isi Jurnal Temu DG</a>
-        @if ($showFeedbackButton)
+        @if (! $maintenanceMode)
+          <a class="btn public-material-journal-btn" href="{{ route('public.dg.branch') }}">Isi Jurnal Temu DG</a>
+        @endif
+        @if (! $maintenanceMode && $showFeedbackButton)
           @php
               $feedbackParams = [];
               if (in_array((int) $feedbackSessionNumber, [3, 12], true)) {

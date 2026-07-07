@@ -11,18 +11,20 @@ use Throwable;
 
 class AppConfigService
 {
-    private const CACHE_KEY = 'rec.app-config.v2';
+    private const CACHE_KEY = 'rec.app-config.v3';
 
     public const DEFAULTS = [
         'church_name' => 'Reformed Exodus Community',
         'app_timezone' => 'Asia/Jakarta',
         'developer_debug_banner' => '0',
+        'maintenance_mode' => '0',
     ];
 
     public const ALLOWED_KEYS = [
         'church_name',
         'app_timezone',
         'developer_debug_banner',
+        'maintenance_mode',
     ];
 
     /**
@@ -84,6 +86,7 @@ class AppConfigService
             'church_name' => $churchName,
             'app_timezone' => $timezone,
             'developer_debug_banner' => $this->normalizeBooleanString($input['developer_debug_banner'] ?? '0'),
+            'maintenance_mode' => $this->normalizeBooleanString($input['maintenance_mode'] ?? '0'),
         ];
 
         foreach ($values as $key => $value) {
@@ -170,6 +173,7 @@ class AppConfigService
             'church_name' => $service->normalizeChurchName($value) ?: self::DEFAULTS['church_name'],
             'app_timezone' => $service->normalizeTimezone($value) ?: self::DEFAULTS['app_timezone'],
             'developer_debug_banner' => $service->normalizeBooleanString($value),
+            'maintenance_mode' => $service->normalizeBooleanString($value),
             default => '',
         };
     }

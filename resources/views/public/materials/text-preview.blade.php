@@ -5,6 +5,9 @@
 ])
 
 @section('content')
+    @php
+        $maintenanceMode = function_exists('app_maintenance_mode_enabled') && app_maintenance_mode_enabled();
+    @endphp
     <section class="public-material-text-shell" aria-label="Teks materi DG">
       <div class="public-material-text-main">
         <header class="public-material-text-header">
@@ -37,8 +40,10 @@
       </div>
 
       <div class="public-material-preview-actions public-material-text-actions">
-        <a class="btn public-material-journal-btn" href="{{ route('public.dg.branch') }}">Isi Jurnal Temu DG</a>
-        @if ($showFeedbackButton)
+        @if (! $maintenanceMode)
+          <a class="btn public-material-journal-btn" href="{{ route('public.dg.branch') }}">Isi Jurnal Temu DG</a>
+        @endif
+        @if (! $maintenanceMode && $showFeedbackButton)
           @php
               $feedbackParams = [];
               if (in_array((int) $feedbackSessionNumber, [3, 12], true)) {

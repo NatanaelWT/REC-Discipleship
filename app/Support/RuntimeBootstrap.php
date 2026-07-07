@@ -78,7 +78,7 @@ class RuntimeBootstrap
     }
 
     /**
-     * @return array{church_name:string,app_timezone:string,developer_debug_banner:string}
+     * @return array{church_name:string,app_timezone:string,developer_debug_banner:string,maintenance_mode:string}
      */
     private static function runtimeSettings(): array
     {

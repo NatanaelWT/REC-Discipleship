@@ -10,6 +10,7 @@
         if ($churchName === '') {
             $churchName = app_church_name();
         }
+        $maintenanceMode = function_exists('app_maintenance_mode_enabled') && app_maintenance_mode_enabled();
         $loginPillars = [
             [
                 'eyebrow' => 'Firman',
@@ -29,7 +30,9 @@
         ];
     @endphp
 
-    @if ($errorCode === 'locked')
+    @if ($maintenanceMode)
+        @php render_alert('danger', 'Aplikasi sedang maintenance. Login sementara hanya tersedia untuk developer.'); @endphp
+    @elseif ($errorCode === 'locked')
         @php render_alert('danger', 'Terlalu banyak percobaan login. Coba lagi dalam ' . format_lock_wait_label($waitSeconds) . '.'); @endphp
     @elseif ($errorCode !== '')
         @php render_alert('danger', 'Username atau password salah.'); @endphp

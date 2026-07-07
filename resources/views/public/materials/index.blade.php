@@ -14,6 +14,10 @@
         <span class="public-material-count">{{ (string) count($materialRows) }} file</span>
       </div>
 
+      @if (function_exists('app_maintenance_mode_enabled') && app_maintenance_mode_enabled())
+        <div class="public-material-message is-danger">Aplikasi sedang maintenance. Materi DG tetap bisa dibaca, tetapi pelaporan dan form publik sementara ditutup.</div>
+      @endif
+
       @if ($materialStatus === 'uploaded')
         <div class="public-material-message is-success">File berhasil diupload.</div>
       @elseif ($materialStatus === 'renamed')

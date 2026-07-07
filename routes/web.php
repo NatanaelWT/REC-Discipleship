@@ -35,7 +35,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::group([], function (): void {
+Route::middleware('rec.maintenance')->group(function (): void {
     Route::get('/', [PublicHomeController::class, 'index'])->name('home');
     Route::get('/index.php', static fn (): RedirectResponse => redirect()->route('home'))->name('index.redirect');
 

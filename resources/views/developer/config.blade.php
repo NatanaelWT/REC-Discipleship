@@ -14,6 +14,7 @@
       'stats' => [
         ['label' => 'Timezone Aktif', 'value' => $configValues['app_timezone'] ?? 'Asia/Jakarta'],
         ['label' => 'Nama Aplikasi', 'value' => $configValues['church_name'] ?? app_church_name()],
+        ['label' => 'Maintenance', 'value' => ($configValues['maintenance_mode'] ?? '0') === '1' ? 'Aktif' : 'Nonaktif'],
         ['label' => 'Debug Banner', 'value' => ($configValues['developer_debug_banner'] ?? '0') === '1' ? 'Aktif' : 'Nonaktif'],
         ['label' => 'Pilihan Timezone', 'value' => number_format(count($timezoneOptions), 0, ',', '.')],
       ],
@@ -23,6 +24,9 @@
       <div class="alert success">Config disimpan.</div>
     @elseif ($errorCode !== '')
       <div class="alert danger">{{ $errorMessages[$errorCode] ?? 'Config ditolak.' }}</div>
+    @endif
+    @if (($configValues['maintenance_mode'] ?? '0') === '1')
+      <div class="alert danger">Maintenance mode aktif. Login dan akses aplikasi untuk non-developer sedang dikunci.</div>
     @endif
 
     <section class="card developer-panel developer-section-card">
@@ -54,6 +58,14 @@
             <option value="1" @selected(($configValues['developer_debug_banner'] ?? '0') === '1')>Aktif</option>
           </select>
           <small>Menampilkan penanda debug khusus pada akun developer.</small>
+        </label>
+        <label class="developer-config-field">
+          <span>Maintenance Mode</span>
+          <select name="maintenance_mode">
+            <option value="0" @selected(($configValues['maintenance_mode'] ?? '0') !== '1')>Nonaktif</option>
+            <option value="1" @selected(($configValues['maintenance_mode'] ?? '0') === '1')>Aktif</option>
+          </select>
+          <small>Mengunci login dan aksi non-developer. Materi DG tetap bisa dibaca publik.</small>
         </label>
         <div class="developer-form-actions">
           <button class="btn developer-primary-action" type="submit">@include('developer._icon', ['name' => 'check'])<span>Simpan Config</span></button>
