@@ -328,12 +328,29 @@ if ($page === 'people_tree') {
     echo ".tree-group-history-view .journey-history-item-note{font-size:10px;line-height:1.4;}\n";
     echo ".tree-group-history-view .journey-history-empty{padding:12px 14px;border-radius:14px;font-size:12px;line-height:1.55;}\n";
     echo ".tree-group-history-note{margin-bottom:6px;}\n";
+    echo ".tree-group-history-people-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;align-items:start;}\n";
+    echo ".tree-group-history-compact-section{display:grid;gap:7px;min-width:0;}\n";
+    echo ".tree-group-history-compact-list{display:grid;gap:6px;}\n";
+    echo ".tree-group-history-person-pill{display:grid;gap:5px;padding:8px 10px;border-radius:12px;background:#fff;border:1px solid rgba(226,232,240,.95);box-shadow:none;}\n";
+    echo ".tree-group-history-person-main{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;min-width:0;}\n";
+    echo ".tree-group-history-person-main strong{font-size:11px;line-height:1.25;color:#0f172a;min-width:0;overflow-wrap:anywhere;}\n";
+    echo ".tree-group-history-person-main span{font-size:9px;line-height:1.25;color:#64748b;font-weight:700;text-align:right;white-space:nowrap;}\n";
+    echo ".tree-group-history-person-note{font-size:9px;line-height:1.35;color:#64748b;}\n";
+    echo ".tree-group-journal-list{display:grid;gap:10px;}\n";
+    echo ".tree-group-journal-item{gap:8px;}\n";
+    echo ".tree-group-journal-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}\n";
+    echo ".tree-group-journal-details div{display:grid;gap:3px;padding:8px 10px;border-radius:10px;background:rgba(248,250,252,.9);border:1px solid rgba(226,232,240,.85);min-width:0;}\n";
+    echo ".tree-group-journal-details span{font-size:9px;text-transform:uppercase;letter-spacing:.03em;color:#64748b;font-weight:800;}\n";
+    echo ".tree-group-journal-details strong{font-size:11px;line-height:1.35;color:#0f172a;font-weight:700;overflow-wrap:anywhere;}\n";
+    echo ".tree-group-journal-quality{display:flex;flex-wrap:wrap;gap:5px;}\n";
+    echo ".tree-group-journal-quality span,.tree-group-journal-photos a,.tree-group-journal-photos span{display:inline-flex;align-items:center;min-height:22px;padding:3px 8px;border-radius:999px;background:rgba(226,232,240,.55);color:#475569;font-size:10px;font-weight:800;text-decoration:none;}\n";
+    echo ".tree-group-journal-photos{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:10px;color:#64748b;font-weight:800;}\n";
     echo "#people-modal .modal-field{margin-bottom:18px;}\n";
     echo "#people-modal .modal-field:last-of-type{margin-bottom:0;}\n";
     echo "#people-modal .modal-field > span:first-child{display:inline-block;margin-bottom:8px;}\n";
     echo "#people-modal textarea[name=\"notes\"]{margin-top:4px;}\n";
     echo "#people-modal .modal-actions{margin-top:24px;padding-top:6px;}\n";
-    echo "@media (max-width: 640px){.dg-member-picker{gap:12px;padding-top:4px;}.dg-member-picker-list{gap:10px;}.dg-member-picker-row{padding:12px;gap:10px;}.dg-member-picker-remove{width:36px;min-width:36px;height:36px;}.dg-member-picker-append{width:100%;justify-content:center;margin-top:0;}.tree-v2-surface{height:calc(100dvh - 92px);min-height:360px;}.tree-v2-toolbar{top:4px;right:4px;left:4px;gap:8px;align-items:flex-end;flex-direction:column;}.tree-v2-search{width:min(100%,360px);flex-wrap:wrap;border-radius:18px;}.tree-v2-search input{width:100%;flex:1 0 100%;}.tree-v2-toolbar .zoom-controls{transform:scale(.94);transform-origin:top right;}.tree-group-history-view .journey-history-timeline{grid-template-columns:1fr;}.tree-group-history-view .journey-history-item-head{grid-template-columns:1fr;}.tree-group-history-view .journey-history-summary{padding:12px;align-items:flex-start;}.tree-group-history-view .journey-history-summary-badges{justify-content:flex-start;}}\n";
+    echo "@media (max-width: 640px){.dg-member-picker{gap:12px;padding-top:4px;}.dg-member-picker-list{gap:10px;}.dg-member-picker-row{padding:12px;gap:10px;}.dg-member-picker-remove{width:36px;min-width:36px;height:36px;}.dg-member-picker-append{width:100%;justify-content:center;margin-top:0;}.tree-v2-surface{height:calc(100dvh - 92px);min-height:360px;}.tree-v2-toolbar{top:4px;right:4px;left:4px;gap:8px;align-items:flex-end;flex-direction:column;}.tree-v2-search{width:min(100%,360px);flex-wrap:wrap;border-radius:18px;}.tree-v2-search input{width:100%;flex:1 0 100%;}.tree-v2-toolbar .zoom-controls{transform:scale(.94);transform-origin:top right;}.tree-group-history-view .journey-history-timeline{grid-template-columns:1fr;}.tree-group-history-view .journey-history-item-head{grid-template-columns:1fr;}.tree-group-history-view .journey-history-summary{padding:12px;align-items:flex-start;}.tree-group-history-view .journey-history-summary-badges{justify-content:flex-start;}.tree-group-history-people-grid,.tree-group-journal-details{grid-template-columns:1fr;}.tree-group-history-person-main{display:grid;gap:3px;}.tree-group-history-person-main span{text-align:left;white-space:normal;}}\n";
     echo "</style>\n";
 
     echo "<section class=\"tree-v2-surface\">\n";
@@ -398,7 +415,7 @@ if ($page === 'people_tree') {
 
     echo view('partials.modal', [
         'id' => 'tree-v2-history-modal',
-        'size' => 'standard',
+        'size' => 'wide',
         'modalAttrs' => ['data-tree-v2-history-modal' => true],
         'title' => 'Riwayat Kelompok',
         'titleAttrs' => ['data-tree-v2-history-title' => true],
