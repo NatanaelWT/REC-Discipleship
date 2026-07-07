@@ -41,6 +41,9 @@ class PeopleTreePageTest extends TestCase
         $response->assertSee('Anggota Test');
         $response->assertDontSee('?page=people_tree', false);
         $response->assertSee('tree-v2-person-profile-modal', false);
+        $response->assertSee('tree-v2-history-actions', false);
+        $response->assertSee('data-tree-v2-action-do="add_member"', false);
+        $response->assertSee('data-tree-v2-action-do="upgrade_group"', false);
         $response->assertSee('data-tree-v2-profile-action="add_group"', false);
         $response->assertSee('data-tree-v2-profile-action="edit_person"', false);
         $response->assertSee('data-tree-v2-profile-action="leave_group"', false);

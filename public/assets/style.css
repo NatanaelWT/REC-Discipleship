@@ -5208,6 +5208,28 @@ textarea {
   background: linear-gradient(135deg, #ef4444, #b91c1c);
 }
 
+.tree-v2-history-actions {
+  justify-content: flex-end;
+}
+
+.tree-v2-profile-action.is-complete {
+  background: linear-gradient(135deg, #db5a4a, #bb2f2f);
+}
+
+.tree-v2-profile-action.is-reactivate {
+  background: linear-gradient(135deg, #0f766e, #155e75);
+}
+
+.tree-v2-profile-action.is-upgrade {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #111827;
+}
+
+.tree-v2-profile-action.is-upgrade:hover:not(:disabled),
+.tree-v2-profile-action.is-upgrade:focus-visible:not(:disabled) {
+  color: #111827;
+}
+
 .page-discipleship-people-list .discipleship-list-card.table-card-plain {
   flex: 0 0 auto;
   min-height: auto;

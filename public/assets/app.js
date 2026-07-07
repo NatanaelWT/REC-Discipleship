@@ -2764,7 +2764,9 @@
     if (treeV2ActionModal || personProfileModal) {
       const titleEl = treeV2ActionModal ? treeV2ActionModal.querySelector('[data-tree-v2-action-title]') : null;
       const closeButtons = treeV2ActionModal ? treeV2ActionModal.querySelectorAll('[data-tree-v2-action-close]') : [];
-      const actionButtons = treeV2ActionModal ? treeV2ActionModal.querySelectorAll('[data-tree-v2-action-do]') : [];
+      const modalActionButtons = treeV2ActionModal ? Array.from(treeV2ActionModal.querySelectorAll('[data-tree-v2-action-do]')) : [];
+      const historyActionButtons = treeV2HistoryModal ? Array.from(treeV2HistoryModal.querySelectorAll('[data-tree-v2-action-do]')) : [];
+      const actionButtons = modalActionButtons.concat(historyActionButtons);
       const personProfileTitleEl = personProfileModal ? personProfileModal.querySelector('[data-tree-v2-person-profile-title]') : null;
       const personProfileBodyEl = personProfileModal ? personProfileModal.querySelector('[data-tree-v2-person-profile-body]') : null;
       const personProfileCloseButtons = personProfileModal ? personProfileModal.querySelectorAll('[data-tree-v2-person-profile-close]') : [];
@@ -2782,7 +2784,10 @@
       actionButtons.forEach(button => {
         const action = button.getAttribute('data-tree-v2-action-do') || '';
         if (action !== '') {
-          buttonsByAction[action] = button;
+          if (!Array.isArray(buttonsByAction[action])) {
+            buttonsByAction[action] = [];
+          }
+          buttonsByAction[action].push(button);
         }
       });
       document.querySelectorAll('template[data-tree-v2-person-profile-template]').forEach(templateEl => {
@@ -2796,18 +2801,20 @@
       let activeNodeData = null;
 
       const setActionVisible = (action, visible) => {
-        const button = buttonsByAction[action];
-        if (!button) return;
-        if (visible) {
-          button.classList.remove('is-hidden');
-          button.disabled = false;
-        } else {
-          button.classList.add('is-hidden');
-          button.disabled = true;
-        }
+        const buttons = buttonsByAction[action];
+        if (!Array.isArray(buttons)) return;
+        buttons.forEach(button => {
+          if (visible) {
+            button.classList.remove('is-hidden');
+            button.disabled = false;
+          } else {
+            button.classList.add('is-hidden');
+            button.disabled = true;
+          }
+        });
       };
 
-      const closeActionModal = () => {
+      const closeActionModal = (preserveContext = false) => {
         if (treeV2ActionModal) {
           treeV2ActionModal.classList.remove('is-open');
           treeV2ActionModal.setAttribute('aria-hidden', 'true');
@@ -2817,13 +2824,23 @@
           personProfileModal.setAttribute('aria-hidden', 'true');
         }
         document.body.classList.remove('modal-open');
-        activeNode = null;
-        activeNodeData = null;
+        if (!preserveContext) {
+          activeNode = null;
+          activeNodeData = null;
+        }
+      };
+
+      const closeHistoryModal = () => {
+        if (!treeV2HistoryModal) return;
+        treeV2HistoryModal.classList.remove('is-open');
+        treeV2HistoryModal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
       };
 
       const clickProxy = proxyButton => {
         if (!proxyButton) return;
         closeActionModal();
+        closeHistoryModal();
         window.requestAnimationFrame(() => {
           proxyButton.click();
         });
@@ -2975,6 +2992,12 @@
           titleEl.textContent = isPerson ? ('Aksi Orang: ' + nodeData.name) : ('Aksi Kelompok: ' + nodeData.name);
         }
 
+        if (!isPerson && canViewHistory && viewHistoryProxy) {
+          viewHistoryProxy.setAttribute('data-tree-v2-history-open', nodeData.groupId || '');
+          viewHistoryProxy.click();
+          return;
+        }
+
         treeV2ActionModal.classList.add('is-open');
         treeV2ActionModal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('modal-open');
@@ -3109,6 +3132,7 @@
           const idInput = completeGroupForm.querySelector('input[name="id"]');
           if (idInput) idInput.value = activeNodeData.groupId || '';
           closeActionModal();
+          closeHistoryModal();
           completeGroupForm.submit();
           return;
         }
@@ -3120,6 +3144,7 @@
           const idInput = reactivateGroupForm.querySelector('input[name="id"]');
           if (idInput) idInput.value = activeNodeData.groupId || '';
           closeActionModal();
+          closeHistoryModal();
           reactivateGroupForm.submit();
           return;
         }
@@ -3145,7 +3170,8 @@
 
         if (actionName === 'view_history' && viewHistoryProxy) {
           viewHistoryProxy.setAttribute('data-tree-v2-history-open', activeNodeData.groupId || '');
-          clickProxy(viewHistoryProxy);
+          closeActionModal(true);
+          viewHistoryProxy.click();
         }
 
       };
