@@ -154,6 +154,95 @@ class MskParticipantPageTest extends TestCase
         $this->assertSame('DG 2', $histories['11']['member_items'][1]['stage'] ?? null);
     }
 
+    public function test_msk_history_hides_closed_membership_when_same_group_is_active(): void
+    {
+        $this->createMskTables();
+        $this->createDiscipleshipHistoryTables();
+
+        DB::table('orang')->insert([
+            'id' => 10,
+            'branch_id' => 1,
+            'full_name' => 'Leader Duplikat',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('orang')->insert([
+            'id' => 11,
+            'branch_id' => 1,
+            'full_name' => 'Peserta Duplikat',
+            'batch_month' => '2026-06',
+            'status' => 'active',
+            'session_numbers' => json_encode(range(1, 12)),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('kelompok_dg')->insert([
+            'id' => 20,
+            'branch_id' => 1,
+            'status' => 'active',
+            'stage' => 'DG 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 20,
+                'person_id' => 10,
+                'role' => 'leader',
+                'stage' => null,
+                'status' => 'active',
+                'started_on' => '2026-02-13',
+                'ended_on' => null,
+                'end_reason' => null,
+                'created_at' => '2026-02-13 08:00:00',
+                'updated_at' => '2026-03-22 08:00:00',
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 20,
+                'person_id' => 11,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'closed',
+                'started_on' => '2026-02-13',
+                'ended_on' => '2026-03-21',
+                'end_reason' => 'person_archived',
+                'created_at' => '2026-02-13 08:00:00',
+                'updated_at' => '2026-03-21 08:00:00',
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 20,
+                'person_id' => 11,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'active',
+                'started_on' => '2026-03-22',
+                'ended_on' => null,
+                'end_reason' => null,
+                'created_at' => '2026-03-22 08:00:00',
+                'updated_at' => '2026-03-22 08:00:00',
+            ],
+        ]);
+
+        $histories = app(MskParticipantHistoryData::class)->forParticipants([
+            ['id' => '11', 'member_id' => '11', 'full_name' => 'Peserta Duplikat'],
+        ], [1]);
+
+        $this->assertCount(1, $histories['11']['member_items']);
+        $this->assertTrue((bool) ($histories['11']['member_items'][0]['active'] ?? false));
+        $this->assertSame('DG 1 (Leader Duplikat)', $histories['11']['member_items'][0]['title'] ?? '');
+        $this->assertSame('', $histories['11']['member_items'][0]['note'] ?? '');
+
+        $this->actingAsRecUser();
+        $content = $this->get('/pemuridan/msk?batch_month=2026-06')->assertOk()->getContent();
+        $this->assertStringContainsString('DG 1 (Leader Duplikat)', $content);
+        $this->assertStringNotContainsString('Data peserta diarsipkan', $content);
+    }
+
     public function test_central_can_export_but_cannot_import_msk_data(): void
     {
         $this->createMskTables();

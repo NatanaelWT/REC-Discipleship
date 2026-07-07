@@ -234,9 +234,62 @@ if ($page === 'spiritual_journey') {
 
             return 0;
         };
+        $timelineMembershipRows = static function (array $records): array {
+            $isGroupMembership = static function (array $record): bool {
+                $groupId = trim((string) ($record['group_id'] ?? ''));
+                $personId = trim((string) ($record['person_id'] ?? ''));
+
+                return trim((string) ($record['source'] ?? '')) !== 'manual'
+                    && strtolower(trim((string) ($record['role'] ?? ''))) === 'member'
+                    && $groupId !== ''
+                    && $groupId !== 'virtual_root_group'
+                    && $personId !== '';
+            };
+            $groupKey = static fn (array $record): string => trim((string) ($record['person_id'] ?? '')).'|'.trim((string) ($record['group_id'] ?? ''));
+            $compareRecency = static function (array $left, array $right): int {
+                foreach (['start_date', 'updated_at', 'id'] as $field) {
+                    if ($field === 'id') {
+                        $comparison = (int) ($left[$field] ?? 0) <=> (int) ($right[$field] ?? 0);
+                    } else {
+                        $comparison = strcmp(trim((string) ($left[$field] ?? '')), trim((string) ($right[$field] ?? '')));
+                    }
+                    if ($comparison !== 0) {
+                        return $comparison;
+                    }
+                }
+
+                return 0;
+            };
+
+            $activeByGroup = [];
+            foreach ($records as $record) {
+                if (! is_array($record) || ! $isGroupMembership($record) || ! dgv2_is_current_period($record)) {
+                    continue;
+                }
+                $key = $groupKey($record);
+                if (! isset($activeByGroup[$key]) || $compareRecency($record, $activeByGroup[$key]) > 0) {
+                    $activeByGroup[$key] = $record;
+                }
+            }
+            if ($activeByGroup === []) {
+                return $records;
+            }
+
+            return array_values(array_filter($records, static function ($record) use ($isGroupMembership, $groupKey, $activeByGroup): bool {
+                if (! is_array($record) || ! $isGroupMembership($record)) {
+                    return true;
+                }
+                $activeRecord = $activeByGroup[$groupKey($record)] ?? null;
+                if (! is_array($activeRecord)) {
+                    return true;
+                }
+
+                return trim((string) ($record['id'] ?? '')) === trim((string) ($activeRecord['id'] ?? ''));
+            }));
+        };
 
         if ($resolvedPersonId !== '') {
-            foreach (($membershipsByPersonId[$resolvedPersonId] ?? []) as $membership) {
+            foreach ($timelineMembershipRows($membershipsByPersonId[$resolvedPersonId] ?? []) as $membership) {
                 $isManual = trim((string) ($membership['source'] ?? '')) === 'manual';
                 $groupId = trim((string) ($membership['group_id'] ?? ''));
                 if ($groupId === 'virtual_root_group') {

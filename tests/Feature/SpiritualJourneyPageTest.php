@@ -209,6 +209,91 @@ class SpiritualJourneyPageTest extends TestCase
         $response->assertDontSee('Peserta Belum Terhubung');
     }
 
+    public function test_spiritual_journey_hides_closed_membership_when_same_group_is_active(): void
+    {
+        $this->createMskTables();
+        $this->createDiscipleshipTables();
+
+        DB::table('orang')->insert([
+            'id' => 10,
+            'branch_id' => 1,
+            'full_name' => 'Leader Journey Duplikat',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('orang')->insert([
+            'id' => 11,
+            'branch_id' => 1,
+            'full_name' => 'Peserta Journey Duplikat',
+            'batch_month' => '2026-06',
+            'journey_bridge_status' => 'belum',
+            'status' => 'active',
+            'session_numbers' => json_encode(range(1, 12)),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('kelompok_dg')->insert([
+            'id' => 20,
+            'branch_id' => 1,
+            'status' => 'active',
+            'stage' => 'DG 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 20,
+                'person_id' => 10,
+                'role' => 'leader',
+                'stage' => null,
+                'status' => 'active',
+                'started_on' => '2026-02-13',
+                'ended_on' => null,
+                'end_reason' => null,
+                'created_at' => '2026-02-13 08:00:00',
+                'updated_at' => '2026-03-22 08:00:00',
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 20,
+                'person_id' => 11,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'closed',
+                'started_on' => '2026-02-13',
+                'ended_on' => '2026-03-21',
+                'end_reason' => 'person_archived',
+                'created_at' => '2026-02-13 08:00:00',
+                'updated_at' => '2026-03-21 08:00:00',
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 20,
+                'person_id' => 11,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'active',
+                'started_on' => '2026-03-22',
+                'ended_on' => null,
+                'end_reason' => null,
+                'created_at' => '2026-03-22 08:00:00',
+                'updated_at' => '2026-03-22 08:00:00',
+            ],
+        ]);
+
+        $this->actingAsRecUser();
+        $content = $this->get('/pemuridan/spiritual-journey')->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($content, 'Leader kelompok: Leader Journey Duplikat'));
+        $this->assertStringContainsString('DG 1 (Leader Journey Duplikat)', $content);
+        $this->assertStringContainsString('Minggu, 22 Maret 2026 - Sekarang', $content);
+        $this->assertStringNotContainsString('Jumat, 13 Februari 2026 - Sabtu, 21 Maret 2026', $content);
+        $this->assertStringNotContainsString('Data peserta diarsipkan', $content);
+    }
+
     public function test_bridge_status_update_persists_to_laravel_table(): void
     {
         $this->createMskTables();

@@ -157,7 +157,7 @@ class MskParticipantHistoryData
         $memberItems = [];
         $leaderItems = [];
 
-        foreach ($personLinks as $link) {
+        foreach ($this->timelineLinks($personLinks) as $link) {
             $isManual = trim((string) ($link->source ?? '')) === 'manual';
             $groupId = (int) $link->discipleship_group_id;
             $group = $groups->get($groupId);
@@ -259,6 +259,79 @@ class MskParticipantHistoryData
     private function isActive(mixed $status, mixed $endDate): bool
     {
         return strtolower(trim((string) $status)) === 'active' && trim((string) $endDate) === '';
+    }
+
+    /**
+     * @param  Collection<int, DiscipleshipGroupPerson>  $personLinks
+     * @return Collection<int, DiscipleshipGroupPerson>
+     */
+    private function timelineLinks(Collection $personLinks): Collection
+    {
+        $activeMemberByGroup = [];
+        foreach ($personLinks as $link) {
+            if (! $this->isGroupMembershipLink($link) || ! $this->isActive($link->status, $link->ended_on)) {
+                continue;
+            }
+
+            $key = $this->membershipGroupKey($link);
+            if (! isset($activeMemberByGroup[$key]) || $this->compareMembershipRecency($link, $activeMemberByGroup[$key]) > 0) {
+                $activeMemberByGroup[$key] = $link;
+            }
+        }
+
+        if ($activeMemberByGroup === []) {
+            return $personLinks->values();
+        }
+
+        return $personLinks
+            ->filter(function (DiscipleshipGroupPerson $link) use ($activeMemberByGroup): bool {
+                if (! $this->isGroupMembershipLink($link)) {
+                    return true;
+                }
+
+                $activeLink = $activeMemberByGroup[$this->membershipGroupKey($link)] ?? null;
+
+                return $activeLink === null || $this->sameTimelineLink($link, $activeLink);
+            })
+            ->values();
+    }
+
+    private function isGroupMembershipLink(DiscipleshipGroupPerson $link): bool
+    {
+        return trim((string) ($link->source ?? '')) !== 'manual'
+            && strtolower(trim((string) $link->role)) === 'member'
+            && (int) $link->discipleship_group_id > 0
+            && (int) $link->person_id > 0;
+    }
+
+    private function membershipGroupKey(DiscipleshipGroupPerson $link): string
+    {
+        return (string) ((int) $link->person_id).'|'.(string) ((int) $link->discipleship_group_id);
+    }
+
+    private function compareMembershipRecency(DiscipleshipGroupPerson $left, DiscipleshipGroupPerson $right): int
+    {
+        foreach (['started_on', 'updated_at', 'id'] as $field) {
+            $comparison = $field === 'id'
+                ? ((int) $left->id <=> (int) $right->id)
+                : strcmp(trim((string) $left->{$field}), trim((string) $right->{$field}));
+            if ($comparison !== 0) {
+                return $comparison;
+            }
+        }
+
+        return 0;
+    }
+
+    private function sameTimelineLink(DiscipleshipGroupPerson $left, DiscipleshipGroupPerson $right): bool
+    {
+        $leftId = trim((string) $left->id);
+        $rightId = trim((string) $right->id);
+        if ($leftId !== '' && $rightId !== '') {
+            return $leftId === $rightId;
+        }
+
+        return $left === $right;
     }
 
     private function stageRank(string $stage): int
