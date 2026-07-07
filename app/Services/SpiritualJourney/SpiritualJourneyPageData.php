@@ -354,15 +354,15 @@ class SpiritualJourneyPageData
         $branches = $this->scope->optionsById();
         $rows = [];
         foreach (DiscipleshipGroup::query()->whereIn('id', $groupIds)->get([
-            'id', 'branch_id', 'name', 'status', 'start_stage', 'current_stage', 'parent_group_id', 'notes', 'created_at', 'updated_at',
+            'id', 'branch_id', 'status', 'stage', 'parent_group_id', 'notes', 'created_at', 'updated_at',
         ]) as $group) {
             $branch = $branches[(int) $group->branch_id] ?? ['slug' => '', 'label' => 'Tanpa cabang'];
+            $progress = discipleship_group_stage_value($group);
             $rows[(string) $group->id] = [
                 'id' => (string) $group->id, 'branch_code' => $branch['slug'], 'branch_label' => $branch['label'],
-                'name' => trim((string) $group->name) ?: 'Kelompok', 'status' => (string) $group->status,
-                'start_stage' => normalize_dg_progress_value((string) $group->start_stage),
-                'current_stage' => normalize_dg_progress_value((string) $group->current_stage),
-                'progress' => normalize_dg_progress_value((string) ($group->current_stage ?: $group->start_stage)),
+                'name' => discipleship_group_display_label(['progress' => $progress]), 'status' => (string) $group->status,
+                'stage' => $progress,
+                'progress' => $progress,
                 'parent_group_id' => $group->parent_group_id !== null ? (string) $group->parent_group_id : '',
                 'notes' => trim((string) $group->notes), 'created_at' => (string) $group->created_at, 'updated_at' => (string) $group->updated_at,
             ];

@@ -121,10 +121,8 @@ class SpiritualJourneyPageTest extends TestCase
         ]);
         $groupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
-            'name' => 'Kelompok DG Test',
             'status' => 'active',
-            'start_stage' => 'DG 1',
-            'current_stage' => 'DG 1',
+            'stage' => 'DG 1',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -298,10 +296,8 @@ class SpiritualJourneyPageTest extends TestCase
         Schema::create('kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
-            $table->string('name')->nullable();
             $table->string('status', 40)->default('active');
-            $table->string('start_stage', 40)->nullable();
-            $table->string('current_stage', 40)->nullable();
+            $table->string('stage')->nullable();
             $table->unsignedBigInteger('parent_group_id')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();

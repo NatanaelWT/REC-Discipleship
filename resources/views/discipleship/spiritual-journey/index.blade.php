@@ -325,7 +325,7 @@ if ($page === 'spiritual_journey') {
                 if ($groupName === '') {
                     $groupName = 'Kelompok';
                 }
-                $groupStage = normalize_dg_progress_value((string) ($allGroupsById[$groupId]['current_stage'] ?? $allGroupsById[$groupId]['start_stage'] ?? ''));
+                $groupStage = discipleship_group_stage_value($allGroupsById[$groupId] ?? []);
                 if ($groupStage === '') {
                     $groupStage = normalize_dg_progress_value((string) ($allGroupsById[$groupId]['progress'] ?? ''));
                 }

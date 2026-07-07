@@ -408,7 +408,7 @@ class PeopleTreeModelStore
     {
         return DiscipleshipGroup::query()
             ->select([
-                'id', 'branch_id', 'name', 'status', 'start_stage', 'current_stage', 'parent_group_id',
+                'id', 'branch_id', 'status', 'stage', 'parent_group_id',
                 'source_group_id', 'initiated_by_person_id', 'multiplied_at', 'notes', 'created_at', 'updated_at',
             ])
             ->whereIn('branch_id', $branchIds)
@@ -417,10 +417,8 @@ class PeopleTreeModelStore
             ->map(static fn (DiscipleshipGroup $group): array => [
                 'id' => (string) $group->getKey(),
                 'branch_code' => $group->branch_code,
-                'name' => trim((string) $group->name),
                 'status' => trim((string) ($group->status ?? 'active')) ?: 'active',
-                'start_stage' => normalize_dg_progress_value((string) $group->start_stage),
-                'current_stage' => normalize_dg_progress_value((string) $group->current_stage),
+                'stage' => discipleship_group_stage_value($group),
                 'parent_group_id' => $group->parent_group_id !== null ? (string) $group->parent_group_id : '',
                 'source_group_id' => $group->source_group_id !== null ? (string) $group->source_group_id : '',
                 'initiated_by_person_id' => $group->initiated_by_person_id !== null ? (string) $group->initiated_by_person_id : '',
@@ -704,10 +702,8 @@ class PeopleTreeModelStore
             $group ??= new DiscipleshipGroup;
             $group->fill([
                 'branch_id' => $branchId,
-                'name' => $this->nullableString($row['name'] ?? null) ?? 'Kelompok',
                 'status' => $this->nullableString($row['status'] ?? null) ?? 'active',
-                'start_stage' => $this->normalizedProgress($row['start_stage'] ?? null),
-                'current_stage' => $this->normalizedProgress($row['current_stage'] ?? $row['progress'] ?? null),
+                'stage' => $this->normalizedProgress($row['stage'] ?? $row['progress'] ?? $row['current_stage'] ?? $row['start_stage'] ?? null) ?? 'DG 1',
                 'notes' => $this->nullableString($row['notes'] ?? null),
             ]);
             $group->save();

@@ -38,7 +38,7 @@ function build_pohon_pemuridan_dot_content(string $branch, array $model): string
         $groupsById[$groupId] = [
             'id' => $groupId,
             'status' => strtolower(trim((string) ($row['status'] ?? 'active'))),
-            'stage' => trim((string) ($row['current_stage'] ?? $row['start_stage'] ?? '')),
+            'stage' => discipleship_group_stage_value($row),
         ];
     }
 

@@ -235,7 +235,7 @@ class StoreDgMeetingReportRequest extends FormRequest
 
     public function groupName(): string
     {
-        return $this->nullableText($this->groupRow['name'] ?? null) ?? 'Kelompok';
+        return discipleship_group_display_label($this->groupRow);
     }
 
     public function groupProgress(): string

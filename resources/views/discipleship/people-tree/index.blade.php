@@ -595,13 +595,13 @@ if ($page === 'people_tree') {
             if ($existingGroupId === '') {
                 continue;
             }
-            $existingGroupName = trim((string) ($groupRecord['name'] ?? 'Kelompok'));
-            if ($existingGroupName === '') {
-                $existingGroupName = 'Kelompok';
-            }
-            $existingGroupProgress = normalize_dg_progress_value((string) ($groupRecord['current_stage'] ?? $groupRecord['start_stage'] ?? $groupRecord['progress'] ?? ''));
+            $existingGroupProgress = discipleship_group_stage_value($groupRecord);
             if ($existingGroupProgress === '') {
                 $existingGroupProgress = 'DG 1';
+            }
+            $existingGroupName = trim((string) ($groupRecord['name'] ?? ''));
+            if ($existingGroupName === '') {
+                $existingGroupName = discipleship_group_display_label(['progress' => $existingGroupProgress]);
             }
             $existingGroupStatus = strtolower(trim((string) ($groupRecord['status'] ?? 'active')));
             $leaderName = '-';

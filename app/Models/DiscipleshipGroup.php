@@ -15,10 +15,8 @@ class DiscipleshipGroup extends Model
 
     protected $fillable = [
         'branch_id',
-        'name',
         'status',
-        'start_stage',
-        'current_stage',
+        'stage',
         'parent_group_id',
         'source_group_id',
         'initiated_by_person_id',

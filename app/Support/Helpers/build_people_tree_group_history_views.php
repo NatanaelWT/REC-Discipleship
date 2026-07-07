@@ -121,11 +121,7 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
     $views = [];
     foreach ($groupsById as $groupId => $groupRow) {
         $groupStatus = strtolower(trim((string) ($groupRow['status'] ?? 'active')));
-        $groupName = trim((string) ($groupRow['name'] ?? 'Kelompok'));
-        if ($groupName === '') {
-            $groupName = 'Kelompok';
-        }
-        $groupStage = normalize_dg_progress_value((string) ($groupRow['current_stage'] ?? $groupRow['start_stage'] ?? ''));
+        $groupStage = discipleship_group_stage_value($groupRow);
         if ($groupStage === '') {
             $groupStage = 'DG 1';
         }
@@ -163,6 +159,11 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
             }
         }
 
+        $groupName = discipleship_group_display_label([
+            'progress' => $groupStage,
+            'leader_name' => $leaderNames[0] ?? '',
+        ]);
+
         $memberNames = [];
         foreach ($membershipRows as $membershipRow) {
             $memberPersonId = trim((string) ($membershipRow['person_id'] ?? ''));
@@ -178,7 +179,9 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
         $sourceGroupName = '-';
         $sourceGroupId = trim((string) ($groupRow['parent_group_id'] ?? ''));
         if ($sourceGroupId !== '' && isset($groupsById[$sourceGroupId])) {
-            $sourceGroupName = trim((string) ($groupsById[$sourceGroupId]['name'] ?? 'Kelompok')) ?: 'Kelompok';
+            $sourceGroupName = discipleship_group_display_label([
+                'progress' => discipleship_group_stage_value($groupsById[$sourceGroupId]) ?: 'DG 1',
+            ]);
         }
 
         $continuedGroups = [];
@@ -188,13 +191,12 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
                 continue;
             }
             $newGroupRow = $groupsById[$newGroupId] ?? [];
-            $newGroupName = trim((string) ($newGroupRow['name'] ?? 'Kelompok')) ?: 'Kelompok';
-            $newGroupStage = normalize_dg_progress_value((string) ($newGroupRow['current_stage'] ?? $newGroupRow['start_stage'] ?? ''));
+            $newGroupStage = discipleship_group_stage_value($newGroupRow);
             if ($newGroupStage === '') {
                 $newGroupStage = 'DG 1';
             }
             $continuedGroups[] = [
-                'name' => $newGroupName,
+                'name' => discipleship_group_display_label(['progress' => $newGroupStage]),
                 'stage' => $newGroupStage,
                 'date' => $dateRangeLabel((string) ($multiplicationRow['start_date'] ?? ''), ''),
             ];

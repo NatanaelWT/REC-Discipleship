@@ -168,7 +168,7 @@ class DgMeetingReportRecapPageData
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
                 ->where('status', 'active')
                 ->orderBy('id')
-                ->get(['id', 'branch_id', 'name', 'status', 'start_stage', 'current_stage', 'created_at', 'updated_at']);
+                ->get(['id', 'branch_id', 'status', 'stage', 'created_at', 'updated_at']);
         } catch (Throwable) {
             return [];
         }
@@ -188,7 +188,11 @@ class DgMeetingReportRecapPageData
                 $memberNames[$memberId] = trim((string) ($people[$memberId]['name'] ?? ''));
             }
 
-            $name = trim((string) ($group->name ?? 'Kelompok')) ?: 'Kelompok';
+            $progress = discipleship_group_stage_value($group) ?: 'DG 1';
+            $name = discipleship_group_display_label([
+                'progress' => $progress,
+                'leader_name' => trim((string) ($people[$leaderId]['name'] ?? '')),
+            ]);
             if ($centralReadOnly) {
                 $name = append_branch_suffix($name, $branchLabels[$branchCode] ?? strtoupper($branchCode));
             }
@@ -201,7 +205,7 @@ class DgMeetingReportRecapPageData
                 'leader_id' => $leaderId,
                 'member_ids' => $memberIds,
                 'member_names' => $memberNames,
-                'progress' => normalize_dg_progress_value((string) ($group->current_stage ?? $group->start_stage ?? '')) ?: 'DG 1',
+                'progress' => $progress,
                 'status' => strtolower(trim((string) ($group->status ?? 'active'))) ?: 'active',
                 'created_at' => $this->timestampString($group->created_at ?? null),
                 'updated_at' => $this->timestampString($group->updated_at ?? null),

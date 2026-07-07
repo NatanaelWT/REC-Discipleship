@@ -99,10 +99,7 @@ class MemberFeedbackJournalController extends Controller
                 $groupId = $request->groupId();
                 $leaderId = (int) ($groupRow['leader_id'] ?? 0);
                 $respondentId = $request->respondentPersonId();
-                $groupName = trim((string) ($groupRow['name'] ?? ''));
-                if ($groupName === '') {
-                    $groupName = 'Kelompok';
-                }
+                $groupName = discipleship_group_display_label($groupRow);
 
                 $groupProgress = normalize_dg_progress_value((string) ($groupRow['progress'] ?? ''));
                 if ($groupProgress === '') {

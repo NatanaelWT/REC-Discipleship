@@ -67,7 +67,7 @@ class MskParticipantHistoryData
         $groups = DiscipleshipGroup::query()
             ->whereIn('branch_id', $branchIds)
             ->whereIn('id', $groupIds)
-            ->get(['id', 'name', 'start_stage', 'current_stage'])
+            ->get(['id', 'stage'])
             ->keyBy('id');
         $allGroupLinks = $groupIds === []
             ? collect()
@@ -177,11 +177,22 @@ class MskParticipantHistoryData
             $isManual = trim((string) ($link->source ?? '')) === 'manual';
             $groupId = (int) $link->discipleship_group_id;
             $group = $groups->get($groupId);
-            $groupName = $isManual ? 'Riwayat manual DG' : (trim((string) ($group?->name ?? '')) ?: 'Kelompok');
-            $stage = normalize_dg_progress_value((string) ($link->stage ?? $group?->current_stage ?? $group?->start_stage));
+            $stage = normalize_dg_progress_value((string) ($link->stage ?? $group?->stage));
             $active = $this->isActive($link->status, $link->ended_on);
             $role = strtolower(trim((string) $link->role));
             $groupLinks = $allGroupLinks->where('discipleship_group_id', $groupId);
+            $labelLeader = $isManual
+                ? null
+                : $groupLinks
+                    ->filter(static fn (DiscipleshipGroupPerson $row): bool => strtolower((string) $row->role) !== 'member')
+                    ->sortByDesc(fn (DiscipleshipGroupPerson $row): string => ($this->isActive($row->status, $row->ended_on) ? '1' : '0').(string) ($row->updated_at ?? ''))
+                    ->first();
+            $groupName = $isManual
+                ? 'Riwayat manual DG'
+                : discipleship_group_display_label([
+                    'progress' => $stage,
+                    'leader_name' => $labelLeader ? ($names[(int) $labelLeader->person_id] ?? '') : '',
+                ]);
 
             if ($role === 'member') {
                 if ($active) {
@@ -192,17 +203,11 @@ class MskParticipantHistoryData
                 } elseif ($isManual && $this->stageRank($stage) > $this->stageRank($currentStage)) {
                     $currentStage = $stage;
                 }
-                $leader = $isManual
-                    ? null
-                    : $groupLinks
-                        ->filter(static fn (DiscipleshipGroupPerson $row): bool => strtolower((string) $row->role) !== 'member')
-                        ->sortByDesc(fn (DiscipleshipGroupPerson $row): string => ($this->isActive($row->status, $row->ended_on) ? '1' : '0').(string) ($row->updated_at ?? ''))
-                        ->first();
                 $memberItems[] = [
                     'title' => $isManual ? ('Selesai '.($stage !== '' ? $stage : 'DG').' manual') : $groupName,
                     'stage' => $stage,
                     'role' => $isManual ? 'Manual' : 'Anggota',
-                    'mentor' => $leader ? ($names[(int) $leader->person_id] ?? '') : '',
+                    'mentor' => $labelLeader ? ($names[(int) $labelLeader->person_id] ?? '') : '',
                     'active' => $active,
                     'date' => $this->dateLabel($link->started_on, $link->ended_on),
                     'note' => $this->reasonLabel((string) $link->end_reason),

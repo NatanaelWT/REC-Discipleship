@@ -19,7 +19,7 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
         DB::table('orang')->insert($people);
         $groups = [];
         for ($index = 1; $index <= 300; $index++) {
-            $groups[] = ['branch_id' => 1, 'name' => sprintf('Kelompok %04d', $index), 'status' => 'active', 'current_stage' => 'DG 1'];
+            $groups[] = ['branch_id' => 1, 'status' => 'active', 'stage' => 'DG 1'];
         }
         DB::table('kelompok_dg')->insert($groups);
         $links = [];
@@ -37,10 +37,10 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
         $response = $this->get('/pemuridan/kelompok');
 
         $response->assertOk()
-            ->assertSee('Kelompok 0001')
-            ->assertSee('Kelompok 0050')
-            ->assertDontSee('Kelompok 0051')
-            ->assertDontSee('Kelompok 0300')
+            ->assertSee('Orang 0001')
+            ->assertSee('Orang 0050')
+            ->assertDontSee('Orang 0051')
+            ->assertDontSee('Orang 0300')
             ->assertDontSee('rec-pagination', false)
             ->assertDontSee('Halaman 1 dari')
             ->assertSee('data-discipleship-groups-list', false)
@@ -58,16 +58,16 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
             ->assertJsonPath('has_more', true)
             ->assertJsonPath('next_page', 3)
             ->assertJsonPath('stats.total', 300);
-        $this->assertStringContainsString('Kelompok 0051', (string) $pageTwo->json('html'));
-        $this->assertStringContainsString('Kelompok 0100', (string) $pageTwo->json('html'));
-        $this->assertStringNotContainsString('Kelompok 0101', (string) $pageTwo->json('html'));
+        $this->assertStringContainsString('Orang 0051', (string) $pageTwo->json('html'));
+        $this->assertStringContainsString('Orang 0100', (string) $pageTwo->json('html'));
+        $this->assertStringNotContainsString('Orang 0101', (string) $pageTwo->json('html'));
 
-        $search = $this->get('/pemuridan/kelompok/rows?q=Kelompok+0300');
+        $search = $this->get('/pemuridan/kelompok/rows?q=Orang+0300');
         $search->assertOk()
             ->assertJsonPath('has_more', false)
             ->assertJsonPath('stats.total', 1);
-        $this->assertStringContainsString('Kelompok 0300', (string) $search->json('html'));
-        $this->assertStringNotContainsString('Kelompok 0299', (string) $search->json('html'));
+        $this->assertStringContainsString('Orang 0300', (string) $search->json('html'));
+        $this->assertStringNotContainsString('Orang 0299', (string) $search->json('html'));
     }
 
     public function test_inactive_group_shows_its_last_leader_and_members(): void
@@ -81,9 +81,8 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
         DB::table('kelompok_dg')->insert([
             'id' => 1,
             'branch_id' => 1,
-            'name' => 'Kelompok Selesai',
             'status' => 'completed',
-            'current_stage' => 'DG 2',
+            'stage' => 'DG 2',
         ]);
         DB::table('keanggotaan_kelompok_dg')->insert([
             ['branch_id' => 1, 'discipleship_group_id' => 1, 'person_id' => 1, 'role' => 'leader', 'stage' => null, 'status' => 'closed', 'ended_on' => '2026-05-01'],
@@ -107,15 +106,13 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
         $this->createTables();
         DB::table('kelompok_dg')->insert([
             'branch_id' => 1,
-            'name' => 'Kelompok Yatim',
             'status' => 'completed',
-            'current_stage' => 'DG 1',
+            'stage' => 'DG 1',
         ]);
         $this->actingAsRecUser();
 
         $this->get('/pemuridan/kelompok')
             ->assertOk()
-            ->assertDontSee('Kelompok Yatim')
             ->assertSee('data-groups-stat="total">0', false)
             ->assertSee('Belum ada kelompok.');
     }
@@ -134,10 +131,8 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
         Schema::create('kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
-            $table->string('name');
             $table->string('status')->default('active');
-            $table->string('start_stage')->nullable();
-            $table->string('current_stage')->nullable();
+            $table->string('stage')->nullable();
             $table->timestamps();
         });
         Schema::create('keanggotaan_kelompok_dg', function (Blueprint $table): void {

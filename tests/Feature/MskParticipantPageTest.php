@@ -80,8 +80,8 @@ class MskParticipantPageTest extends TestCase
             ['id' => 12, 'branch_id' => 1, 'full_name' => 'Binaan Modal', 'status' => 'active', 'created_at' => now(), 'updated_at' => now()],
         ]);
         DB::table('kelompok_dg')->insert([
-            ['id' => 20, 'branch_id' => 1, 'name' => 'Kelompok Peserta Modal', 'status' => 'active', 'start_stage' => 'DG 2', 'current_stage' => 'DG 2', 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 21, 'branch_id' => 1, 'name' => 'Kelompok Dipimpin Modal', 'status' => 'active', 'start_stage' => 'DG 1', 'current_stage' => 'DG 1', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 20, 'branch_id' => 1, 'status' => 'active', 'stage' => 'DG 2', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 21, 'branch_id' => 1, 'status' => 'active', 'stage' => 'DG 1', 'created_at' => now(), 'updated_at' => now()],
         ]);
         DB::table('keanggotaan_kelompok_dg')->insert([
             ['branch_id' => 1, 'discipleship_group_id' => 20, 'person_id' => 10, 'role' => 'leader', 'stage' => null, 'status' => 'active', 'started_on' => '2026-01-01', 'created_at' => now(), 'updated_at' => now()],
@@ -123,10 +123,10 @@ class MskParticipantPageTest extends TestCase
             ->assertSee('Riwayat pemuridan')
             ->assertSee('Mentor Aktif')
             ->assertSee('Pembina Modal')
-            ->assertSee('Kelompok Peserta Modal')
+            ->assertSee('DG 2 (Pembina Modal)')
             ->assertSee('Riwayat Sebagai Anggota')
             ->assertSee('Riwayat Memimpin')
-            ->assertSee('Kelompok Dipimpin Modal')
+            ->assertSee('DG 1 (Peserta Modal)')
             ->assertSee('Binaan Modal')
             ->assertSee('data-msk-view-edit-link', false);
 
@@ -148,8 +148,8 @@ class MskParticipantPageTest extends TestCase
         ]);
         $sameTimestamp = '2026-07-07 12:12:03';
         DB::table('kelompok_dg')->insert([
-            ['id' => 20, 'branch_id' => 1, 'name' => 'Kelompok DG 2', 'status' => 'completed', 'start_stage' => 'DG 2', 'current_stage' => 'DG 2', 'created_at' => $sameTimestamp, 'updated_at' => $sameTimestamp],
-            ['id' => 21, 'branch_id' => 1, 'name' => 'Kelompok DG 3', 'status' => 'completed', 'start_stage' => 'DG 3', 'current_stage' => 'DG 3', 'created_at' => $sameTimestamp, 'updated_at' => $sameTimestamp],
+            ['id' => 20, 'branch_id' => 1, 'status' => 'completed', 'stage' => 'DG 2', 'created_at' => $sameTimestamp, 'updated_at' => $sameTimestamp],
+            ['id' => 21, 'branch_id' => 1, 'status' => 'completed', 'stage' => 'DG 3', 'created_at' => $sameTimestamp, 'updated_at' => $sameTimestamp],
         ]);
         DB::table('keanggotaan_kelompok_dg')->insert([
             ['branch_id' => 1, 'discipleship_group_id' => 20, 'person_id' => 10, 'role' => 'leader', 'stage' => null, 'status' => 'closed', 'started_on' => '2026-04-09', 'ended_on' => '2026-04-09', 'end_reason' => null, 'created_at' => $sameTimestamp, 'updated_at' => $sameTimestamp],
@@ -577,10 +577,8 @@ class MskParticipantPageTest extends TestCase
         Schema::create('kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
-            $table->string('name');
             $table->string('status')->default('active');
-            $table->string('start_stage')->nullable();
-            $table->string('current_stage')->nullable();
+            $table->string('stage')->nullable();
             $table->timestamps();
         });
         Schema::create('keanggotaan_kelompok_dg', function (Blueprint $table): void {

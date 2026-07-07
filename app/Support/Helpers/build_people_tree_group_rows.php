@@ -95,7 +95,7 @@ function build_people_tree_group_rows(array $model, array $peopleById): array
     $stageRank = static function (array $membership) use ($groupsById): int {
         $groupId = trim((string) ($membership['group_id'] ?? ''));
         $group = $groupsById[$groupId] ?? [];
-        $stage = normalize_dg_progress_value((string) ($membership['stage'] ?? $group['current_stage'] ?? $group['start_stage'] ?? ''));
+        $stage = normalize_dg_progress_value((string) ($membership['stage'] ?? discipleship_group_stage_value($group)));
 
         return match ($stage) {
             'DG 3' => 3,
@@ -180,15 +180,21 @@ function build_people_tree_group_rows(array $model, array $peopleById): array
             return strcasecmp((string) ($peopleById[$a]['name'] ?? ''), (string) ($peopleById[$b]['name'] ?? ''));
         });
 
+        $progress = discipleship_group_stage_value($groupRow) ?: 'DG 1';
+        $leaderName = trim((string) ($peopleById[$leaderPersonId]['name'] ?? ''));
+
         $rows[] = [
             'id' => $groupId,
             'leader_id' => $leaderPersonId,
-            'leader_name' => trim((string) ($peopleById[$leaderPersonId]['name'] ?? '')),
+            'leader_name' => $leaderName,
             'assistant_id' => $assistantPersonId,
             'assistant_name' => $assistantPersonId !== '' ? trim((string) ($peopleById[$assistantPersonId]['name'] ?? '')) : '',
-            'name' => trim((string) ($groupRow['name'] ?? 'Kelompok')) ?: 'Kelompok',
+            'name' => discipleship_group_display_label([
+                'progress' => $progress,
+                'leader_name' => $leaderName,
+            ]),
             'member_ids' => $memberIds,
-            'progress' => normalize_dg_progress_value((string) ($groupRow['current_stage'] ?? $groupRow['start_stage'] ?? '')) ?: 'DG 1',
+            'progress' => $progress,
             'parent_group_id' => trim((string) ($groupRow['parent_group_id'] ?? '')),
             'source_group_id' => trim((string) ($groupRow['source_group_id'] ?? '')),
             'has_child_group' => ! empty($sourceGroupIdsWithChildren[$groupId]),

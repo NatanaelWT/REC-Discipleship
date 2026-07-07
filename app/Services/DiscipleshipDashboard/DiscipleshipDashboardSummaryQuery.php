@@ -125,7 +125,7 @@ class DiscipleshipDashboardSummaryQuery
                     ->from('keanggotaan_kelompok_dg as group_history')
                     ->whereColumn('group_history.discipleship_group_id', 'g.id');
             })
-            ->get(['g.id', 'g.branch_id', 'g.parent_group_id', 'g.status', 'g.start_stage', 'g.current_stage']));
+            ->get(['g.id', 'g.branch_id', 'g.parent_group_id', 'g.status', 'g.stage']));
 
         $metrics = [];
         foreach ($branchIds as $branchId) {
@@ -158,7 +158,7 @@ class DiscipleshipDashboardSummaryQuery
                     continue;
                 }
                 $metrics[$branchId]->active_group_count++;
-                $stage = normalize_dg_progress_value((string) ($group->current_stage ?: $group->start_stage));
+                $stage = discipleship_group_stage_value($group);
                 if ($stage === 'DG 1') {
                     $metrics[$branchId]->dg1_group_count++;
                 } elseif ($stage === 'DG 2') {

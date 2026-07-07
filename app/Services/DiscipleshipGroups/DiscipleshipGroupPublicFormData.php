@@ -27,8 +27,7 @@ class DiscipleshipGroupPublicFormData
             ])
             ->where('branch_id', branch_id_from_slug($branchCode))
             ->where('status', 'active')
-            ->orderBy('current_stage')
-            ->orderBy('name')
+            ->orderBy('stage')
             ->orderBy('id')
             ->get()
             ->each(function (DiscipleshipGroup $group) use ($branchCode, &$groupsById, &$leadersById): void {
@@ -55,13 +54,19 @@ class DiscipleshipGroupPublicFormData
                 ];
 
                 $members = $this->memberRows($group);
-                $progress = normalize_dg_progress_value((string) ($group->current_stage ?? $group->start_stage ?? ''));
+                $progress = discipleship_group_stage_value($group) ?: 'DG 1';
+                $groupLabel = discipleship_group_display_label([
+                    'progress' => $progress,
+                    'leader_name' => $leaderName,
+                ]);
 
                 $groupsById[$groupId] = [
                     'id' => $groupId,
                     'leader_id' => $leaderId,
                     'leader_name' => $leaderName,
-                    'name' => trim((string) ($group->name ?? 'Kelompok')) ?: 'Kelompok',
+                    'name' => $groupLabel,
+                    'label' => $groupLabel,
+                    'stage' => $progress,
                     'progress' => $progress,
                     'members' => $members,
                 ];
@@ -77,7 +82,7 @@ class DiscipleshipGroupPublicFormData
                 return $leaderCompare;
             }
 
-            $groupCompare = strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+            $groupCompare = strcasecmp((string) ($a['progress'] ?? ''), (string) ($b['progress'] ?? ''));
             if ($groupCompare !== 0) {
                 return $groupCompare;
             }

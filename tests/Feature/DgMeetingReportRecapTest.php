@@ -52,10 +52,8 @@ class DgMeetingReportRecapTest extends TestCase
         $ids = $this->seedReport();
         $inactiveGroupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
-            'name' => 'Kelompok Nonaktif',
             'status' => 'completed',
-            'start_stage' => 'DG 1',
-            'current_stage' => 'DG 1',
+            'stage' => 'DG 1',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -188,7 +186,7 @@ class DgMeetingReportRecapTest extends TestCase
         $this->assertSame($ids['leader_id'], (int) $report->leader_person_id);
         $this->assertSame('Veronica Lahindah', $report->leader_name_snapshot);
         $this->assertSame($ids['group_id'], (int) $report->discipleship_group_id);
-        $this->assertSame('Kelompok', $report->group_name_snapshot);
+        $this->assertSame('DG 2 (Veronica Lahindah)', $report->group_name_snapshot);
         $this->assertSame('Sesi 9', $report->material_topic);
         $this->assertSame('2026-06-18', substr((string) $report->meeting_date, 0, 10));
         $this->assertSame([[
@@ -207,10 +205,8 @@ class DgMeetingReportRecapTest extends TestCase
         DB::table('kelompok_dg')->insert([
             'id' => 175,
             'branch_id' => 1,
-            'name' => 'Kelompok Kutisari Lintas',
             'status' => 'active',
-            'start_stage' => 'DG 1',
-            'current_stage' => 'DG 1',
+            'stage' => 'DG 1',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -416,10 +412,8 @@ class DgMeetingReportRecapTest extends TestCase
         Schema::create('kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
-            $table->string('name');
             $table->string('status')->default('active');
-            $table->string('start_stage')->nullable();
-            $table->string('current_stage')->nullable();
+            $table->string('stage')->nullable();
             $table->unsignedBigInteger('parent_group_id')->nullable();
             $table->unsignedBigInteger('source_group_id')->nullable();
             $table->unsignedBigInteger('initiated_by_person_id')->nullable();
@@ -505,10 +499,8 @@ class DgMeetingReportRecapTest extends TestCase
 
         $groupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
-            'name' => 'Kelompok Test',
             'status' => 'active',
-            'start_stage' => 'DG 1',
-            'current_stage' => 'DG 1',
+            'stage' => 'DG 1',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -583,10 +575,8 @@ class DgMeetingReportRecapTest extends TestCase
         ]);
         $groupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
-            'name' => 'Kelompok Lain',
             'status' => 'active',
-            'start_stage' => 'DG 1',
-            'current_stage' => 'DG 1',
+            'stage' => 'DG 1',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -615,10 +605,8 @@ class DgMeetingReportRecapTest extends TestCase
         DB::table('kelompok_dg')->insert([
             'id' => 322,
             'branch_id' => 2,
-            'name' => 'Kelompok',
             'status' => 'active',
-            'start_stage' => 'DG 2',
-            'current_stage' => 'DG 2',
+            'stage' => 'DG 2',
             'created_at' => now(),
             'updated_at' => now(),
         ]);

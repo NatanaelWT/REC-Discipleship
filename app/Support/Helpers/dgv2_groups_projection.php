@@ -52,20 +52,23 @@ function dgv2_groups_projection(array $model, array $peopleById): array
             continue;
         }
         $memberIds = array_keys($membersByGroup[$groupId] ?? []);
-        $progress = normalize_dg_progress_value((string) ($group['current_stage'] ?? $group['start_stage'] ?? ''));
+        $progress = discipleship_group_stage_value($group);
         if ($progress === '') {
             $progress = 'DG 1';
         }
+        $leaderName = trim((string) ($peopleById[$leaderId]['name'] ?? ''));
         $rows[] = [
             'id' => $groupId,
             'leader_id' => $leaderId,
             'assistant_id' => $assistantId,
-            'name' => trim((string) ($group['name'] ?? 'Kelompok')) ?: 'Kelompok',
+            'name' => discipleship_group_display_label([
+                'progress' => $progress,
+                'leader_name' => $leaderName,
+            ]),
             'member_ids' => $memberIds,
-            'leader_name' => trim((string) ($peopleById[$leaderId]['name'] ?? '')),
+            'leader_name' => $leaderName,
             'member_names' => build_group_member_names($memberIds, $peopleById),
             'progress' => $progress,
-            'start_progress' => normalize_dg_progress_value((string) ($group['start_stage'] ?? '')),
             'parent_group_id' => trim((string) ($group['parent_group_id'] ?? '')),
             'notes' => trim((string) ($group['notes'] ?? '')),
             'created_at' => trim((string) ($group['created_at'] ?? now_iso())) ?: now_iso(),

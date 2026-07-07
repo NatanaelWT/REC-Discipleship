@@ -47,7 +47,8 @@ class HelperManifest
         'dgv2_open_relation', 'dgv2_payload_member_ids', 'dgv2_people_projection', 'dgv2_person_active_group_ids',
         'dgv2_reactivate_group', 'dgv2_save_group', 'dgv2_save_person', 'dgv2_save_person_external',
         'dgv2_save_person_single', 'dgv2_sync_group_leaderships', 'dgv2_sync_group_memberships',
-        'dg_progress_min_share_times', 'discipleship_action_map', 'discipleship_page_map',
+        'dg_progress_min_share_times', 'discipleship_group_display_label', 'discipleship_group_stage_value',
+        'discipleship_action_map', 'discipleship_page_map',
         'discipleship_person_sources', 'discipleship_stage_color', 'discipleship_unified_identity_key',
         'export_xlsx_column_ref', 'export_xlsx_inline_text', 'extract_member_photos', 'extract_msk_participant_photos',
         'filter_active_members', 'format_parent_names', 'get_parent_ids',
@@ -70,6 +71,7 @@ class HelperManifest
         'normalize_public_member_feedback_session', 'is_known_public_branch_code', 'is_public_material_dg_session_menu',
         'is_public_material_feedback_session', 'is_public_material_previewable_path', 'normalize_msk_session_numbers',
         'public_material_paths', 'public_material_previewable_extensions', 'public_material_session_number',
+        'discipleship_group_display_label', 'discipleship_group_stage_value',
         'public_member_feedback_group_option_label', 'public_member_feedback_group_title',
         'public_member_feedback_questions', 'normalize_public_member_feedback_session',
     ];

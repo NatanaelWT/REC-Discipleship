@@ -481,7 +481,7 @@ class MemberFeedbackRecapPageData
                 ->whereIn('branch_id', $branchIds)
                 ->where('status', 'active')
                 ->orderBy('id')
-                ->get(['id', 'branch_id', 'name', 'status', 'start_stage', 'current_stage']);
+                ->get(['id', 'branch_id', 'status', 'stage']);
         } catch (Throwable) {
             return ['total' => 0, 'keys' => [], 'groups' => []];
         }
@@ -490,12 +490,12 @@ class MemberFeedbackRecapPageData
         foreach ($groups as $group) {
             $groupId = (int) $group->getKey();
             $branchCode = branch_slug_from_id($group->branch_id);
-            $progress = normalize_dg_progress_value((string) ($group->current_stage ?? $group->start_stage ?? '')) ?: 'DG 1';
+            $progress = discipleship_group_stage_value($group) ?: 'DG 1';
             $groupRows[$groupId] = [
                 'id' => $groupId,
                 'branch_label' => $branchLabels[$branchCode] ?? public_branch_label($branchCode),
                 'leader_name' => '-',
-                'name' => trim((string) ($group->name ?? 'Kelompok')) ?: 'Kelompok',
+                'name' => discipleship_group_display_label(['progress' => $progress]),
                 'progress' => $progress,
                 'active_member_count' => 0,
                 'member_keys' => [],
@@ -563,6 +563,10 @@ class MemberFeedbackRecapPageData
         }
 
         foreach ($groupRows as &$groupRow) {
+            $groupRow['name'] = discipleship_group_display_label([
+                'progress' => $groupRow['progress'] ?? '',
+                'leader_name' => (string) ($groupRow['leader_name'] ?? ''),
+            ]);
             unset($groupRow['member_keys']);
         }
         unset($groupRow);

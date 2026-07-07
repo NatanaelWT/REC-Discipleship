@@ -89,10 +89,11 @@ class DashboardSectionData
                 $query->whereNull('latest_report.last_report_date')
                     ->orWhere('latest_report.last_report_date', '<', now()->subDays(30)->toDateString());
             })
-            ->select(['g.id', 'g.branch_id', 'g.name', 'g.current_stage', 'latest_report.last_report_date'])
+            ->select(['g.id', 'g.branch_id', 'g.stage', 'latest_report.last_report_date'])
             ->orderByRaw('CASE WHEN latest_report.last_report_date IS NULL THEN 0 ELSE 1 END')
             ->orderBy('latest_report.last_report_date')
-            ->orderBy('g.name')
+            ->orderBy('g.stage')
+            ->orderBy('g.id')
             ->get();
 
         $groupIds = $groups->pluck('id')->map(static fn ($id): int => (int) $id)->all();
@@ -106,7 +107,7 @@ class DashboardSectionData
                 'id' => (int) $group->id,
                 'leader_name' => $people['leaders'][0] ?? '-',
                 'members_first_names' => implode(', ', array_slice($people['members'], 0, 8)) ?: '-',
-                'progress' => normalize_dg_progress_value((string) $group->current_stage) ?: 'DG 1',
+                'progress' => discipleship_group_stage_value($group) ?: 'DG 1',
                 'last_report_date' => trim((string) $group->last_report_date),
                 'branch_label' => $branches[(int) $group->branch_id]['label'] ?? 'Tanpa cabang',
             ];

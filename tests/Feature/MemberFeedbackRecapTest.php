@@ -81,9 +81,10 @@ class MemberFeedbackRecapTest extends TestCase
 
         $this->assertStringContainsString('Pengisi Feedback per Kelompok', $content);
         $this->assertStringContainsString('Kelompok Terisi', $content);
-        $this->assertStringContainsString('Kelompok Tanpa Feedback', $content);
-        $this->assertMatchesRegularExpression('/Kelompok Terisi.*?1 orang.*?1 orang.*?1 orang/s', $content);
-        $this->assertMatchesRegularExpression('/Kelompok Tanpa Feedback.*?1 orang.*?0 orang.*?0 orang/s', $content);
+        $this->assertStringContainsString('DG 1 (Pemimpin Test)', $content);
+        $this->assertStringContainsString('DG 1 (Pemimpin Tanpa Feedback)', $content);
+        $this->assertMatchesRegularExpression('/DG 1 \(Pemimpin Test\).*?1 orang.*?1 orang.*?1 orang/s', $content);
+        $this->assertMatchesRegularExpression('/DG 1 \(Pemimpin Tanpa Feedback\).*?1 orang.*?0 orang.*?0 orang/s', $content);
         $this->assertStringNotContainsString('2 orang', $content);
     }
 
@@ -208,10 +209,8 @@ class MemberFeedbackRecapTest extends TestCase
         Schema::create('kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
-            $table->string('name');
             $table->string('status')->default('active');
-            $table->string('start_stage')->nullable();
-            $table->string('current_stage')->nullable();
+            $table->string('stage')->nullable();
             $table->timestamps();
         });
 
@@ -276,10 +275,8 @@ class MemberFeedbackRecapTest extends TestCase
 
         $groupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => $branchId,
-            'name' => $groupName,
             'status' => 'active',
-            'start_stage' => 'DG 1',
-            'current_stage' => 'DG 1',
+            'stage' => 'DG 1',
             'created_at' => now(),
             'updated_at' => now(),
         ]);

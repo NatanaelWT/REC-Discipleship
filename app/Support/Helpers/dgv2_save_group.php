@@ -63,7 +63,7 @@ function dgv2_save_group(array &$model, array $payload, array $leaderPeopleById,
                 return ['ok' => false, 'error' => 'invalid_group'];
             }
         }
-        $parentStage = normalize_dg_progress_value((string) ($parentGroup['current_stage'] ?? $parentGroup['start_stage'] ?? ''));
+        $parentStage = discipleship_group_stage_value($parentGroup);
         if ($parentStage === 'DG 1') {
             $stage = 'DG 2';
         } elseif ($parentStage === 'DG 2') {
@@ -91,8 +91,7 @@ function dgv2_save_group(array &$model, array $payload, array $leaderPeopleById,
     $row = [
         'id' => $groupId,
         'status' => 'active',
-        'start_stage' => normalize_dg_progress_value((string) ($existing['start_stage'] ?? $stage)) ?: $stage,
-        'current_stage' => $stage,
+        'stage' => $stage,
         'parent_group_id' => $parentGroupId,
         'notes' => $notes,
         'created_at' => trim((string) ($existing['created_at'] ?? $now)) ?: $now,

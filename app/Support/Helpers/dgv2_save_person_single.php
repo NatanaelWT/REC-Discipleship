@@ -130,7 +130,7 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
                 if (! is_array($group) || trim((string) ($group['id'] ?? '')) !== $groupId) {
                     continue;
                 }
-                $groupStage = normalize_dg_progress_value((string) ($group['current_stage'] ?? $group['start_stage'] ?? ''));
+                $groupStage = discipleship_group_stage_value($group);
                 break;
             }
         }
@@ -142,7 +142,7 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
             if (! is_array($group) || trim((string) ($group['id'] ?? '')) !== $groupId) {
                 continue;
             }
-            $groupStage = normalize_dg_progress_value((string) ($group['current_stage'] ?? $group['start_stage'] ?? ''));
+            $groupStage = discipleship_group_stage_value($group);
             if ($groupStage === '') {
                 $groupStage = 'DG 1';
             }

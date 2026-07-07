@@ -122,7 +122,7 @@ class DiscipleshipDashboardTest extends TestCase
         $this->seedDashboardData();
 
         $memberId = (int) DB::table('orang')->where('full_name', 'Anggota Dashboard')->value('id');
-        $groupId = (int) DB::table('kelompok_dg')->where('name', 'Kelompok Dashboard')->value('id');
+        $groupId = (int) DB::table('kelompok_dg')->orderBy('id')->value('id');
         $mentorId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
             'full_name' => 'Mentor Tanpa Kelompok',
@@ -242,15 +242,13 @@ class DiscipleshipDashboardTest extends TestCase
     {
         $this->createDashboardTables();
         $this->seedDashboardData();
-        $firstGroupId = (int) DB::table('kelompok_dg')->where('name', 'Kelompok Dashboard')->value('id');
+        $firstGroupId = (int) DB::table('kelompok_dg')->orderBy('id')->value('id');
         DB::table('kelompok_dg')->where('id', $firstGroupId)->update(['status' => 'completed']);
 
         $secondGroupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
-            'name' => 'Kelompok Dashboard DG 2',
             'status' => 'completed',
-            'start_stage' => 'DG 2',
-            'current_stage' => 'DG 2',
+            'stage' => 'DG 2',
             'parent_group_id' => $firstGroupId,
             'source_group_id' => $firstGroupId,
             'created_at' => now(),
@@ -258,10 +256,8 @@ class DiscipleshipDashboardTest extends TestCase
         ]);
         $thirdGroupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
-            'name' => 'Kelompok Dashboard DG 3',
             'status' => 'active',
-            'start_stage' => 'DG 3',
-            'current_stage' => 'DG 3',
+            'stage' => 'DG 3',
             'parent_group_id' => $secondGroupId,
             'source_group_id' => $secondGroupId,
             'created_at' => now(),
@@ -269,10 +265,8 @@ class DiscipleshipDashboardTest extends TestCase
         ]);
         $independentGroupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
-            'name' => 'Kelompok Independen',
             'status' => 'active',
-            'start_stage' => 'DG 1',
-            'current_stage' => 'DG 1',
+            'stage' => 'DG 1',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -339,9 +333,8 @@ class DiscipleshipDashboardTest extends TestCase
         for ($index = 1; $index <= 25; $index++) {
             $groups[] = [
                 'branch_id' => 1,
-                'name' => sprintf('Kelompok Belum Lapor %03d', $index),
                 'status' => 'active',
-                'current_stage' => 'DG 1',
+                'stage' => 'DG 1',
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -403,10 +396,8 @@ class DiscipleshipDashboardTest extends TestCase
         Schema::create('kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
-            $table->string('name');
             $table->string('status')->default('active');
-            $table->string('start_stage')->nullable();
-            $table->string('current_stage')->nullable();
+            $table->string('stage')->nullable();
             $table->unsignedBigInteger('parent_group_id')->nullable();
             $table->unsignedBigInteger('source_group_id')->nullable();
             $table->unsignedBigInteger('initiated_by_person_id')->nullable();
@@ -518,10 +509,8 @@ class DiscipleshipDashboardTest extends TestCase
 
         $groupId = DB::table('kelompok_dg')->insertGetId([
             'branch_id' => 1,
-            'name' => 'Kelompok Dashboard',
             'status' => 'active',
-            'start_stage' => 'DG 1',
-            'current_stage' => 'DG 1',
+            'stage' => 'DG 1',
             'created_at' => now(),
             'updated_at' => now(),
         ]);

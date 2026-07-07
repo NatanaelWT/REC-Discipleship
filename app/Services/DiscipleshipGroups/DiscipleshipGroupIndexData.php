@@ -37,9 +37,9 @@ class DiscipleshipGroupIndexData
         $page = $this->page($request);
         $perPage = $this->perPage($request);
         $query = $this->filteredGroupQuery($search, $status)
-            ->select(['id', 'branch_id', 'name', 'status', 'start_stage', 'current_stage', 'created_at'])
+            ->select(['id', 'branch_id', 'status', 'stage', 'created_at'])
             ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
-            ->orderBy('name')
+            ->orderBy('stage')
             ->orderBy('id');
 
         $groups = $query
@@ -89,9 +89,7 @@ class DiscipleshipGroupIndexData
 
         if ($search !== '') {
             $query->where(function (Builder $builder) use ($search): void {
-                $builder->whereRaw('LOWER(name) LIKE ?', ['%'.$search.'%'])
-                    ->orWhereRaw('LOWER(start_stage) LIKE ?', ['%'.$search.'%'])
-                    ->orWhereRaw('LOWER(current_stage) LIKE ?', ['%'.$search.'%'])
+                $builder->whereRaw('LOWER(stage) LIKE ?', ['%'.$search.'%'])
                     ->orWhereExists(function ($subquery) use ($search): void {
                         $subquery->selectRaw('1')
                             ->from('keanggotaan_kelompok_dg as search_gp')
@@ -142,11 +140,15 @@ class DiscipleshipGroupIndexData
             $members = $displayLinks->where('role', 'member')
                 ->map(static fn (DiscipleshipGroupPerson $link): string => $people[(int) $link->person_id] ?? '')
                 ->filter()->unique()->values()->all();
-            $progress = normalize_dg_progress_value((string) ($group->current_stage ?: $group->start_stage)) ?: '-';
+            $progress = discipleship_group_stage_value($group) ?: '-';
             $branchLabel = $branchOptions[(int) $group->branch_id]['label'] ?? 'Tanpa cabang';
             if ($this->scope->includesAllBranches()) {
                 $leaderName = append_branch_suffix($leaderName, $branchLabel);
             }
+            $groupLabel = discipleship_group_display_label([
+                'progress' => $progress,
+                'leader_name' => $leaderName,
+            ], $progress !== '-' ? $progress : 'Kelompok DG');
 
             return [
                 'id' => (int) $group->id,
@@ -162,7 +164,7 @@ class DiscipleshipGroupIndexData
                     'DG 1' => 'is-dg1', 'DG 2' => 'is-dg2', 'DG 3' => 'is-dg3', default => 'is-neutral',
                 },
                 'progress_label' => $progress,
-                'progress_helper_text' => trim((string) $group->name).($this->scope->includesAllBranches() ? ' - '.$branchLabel : ''),
+                'progress_helper_text' => $groupLabel,
                 'member_summary' => $members !== [] ? implode(', ', array_slice($members, 0, 8)) : ($isActiveGroup ? 'Belum ada peserta' : 'Tanpa riwayat peserta'),
                 'member_helper_text' => count($members).($isActiveGroup ? ' peserta aktif' : ' peserta tercatat'),
                 'member_count' => count($members),
@@ -175,9 +177,9 @@ class DiscipleshipGroupIndexData
     {
         $row = $this->filteredGroupQuery($search, $status)
             ->selectRaw("COUNT(*) AS total,
-                SUM(CASE WHEN current_stage = 'DG 1' THEN 1 ELSE 0 END) AS dg1,
-                SUM(CASE WHEN current_stage = 'DG 2' THEN 1 ELSE 0 END) AS dg2,
-                SUM(CASE WHEN current_stage = 'DG 3' THEN 1 ELSE 0 END) AS dg3")
+                SUM(CASE WHEN stage = 'DG 1' THEN 1 ELSE 0 END) AS dg1,
+                SUM(CASE WHEN stage = 'DG 2' THEN 1 ELSE 0 END) AS dg2,
+                SUM(CASE WHEN stage = 'DG 3' THEN 1 ELSE 0 END) AS dg3")
             ->first();
 
         return [

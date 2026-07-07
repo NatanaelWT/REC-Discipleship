@@ -16,7 +16,7 @@ function dgv2_reactivate_group(array &$model, string $groupId): array {
         if ($groupStatus !== 'completed') {
             return ['ok' => false, 'error' => 'group_not_completed'];
         }
-        $groupStage = normalize_dg_progress_value((string) ($group['current_stage'] ?? $group['start_stage'] ?? ''));
+        $groupStage = discipleship_group_stage_value($group);
         break;
     }
     if ($groupIndex === null) {

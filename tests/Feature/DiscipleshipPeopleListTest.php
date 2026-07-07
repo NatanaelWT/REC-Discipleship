@@ -558,10 +558,8 @@ class DiscipleshipPeopleListTest extends TestCase
         Schema::create('kelompok_dg', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
-            $table->string('name')->nullable();
             $table->string('status', 40)->default('active');
-            $table->string('start_stage', 40)->nullable();
-            $table->string('current_stage', 40)->nullable();
+            $table->string('stage')->nullable();
             $table->unsignedBigInteger('parent_group_id')->nullable();
             $table->unsignedBigInteger('source_group_id')->nullable();
             $table->unsignedBigInteger('initiated_by_person_id')->nullable();
