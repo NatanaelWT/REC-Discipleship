@@ -209,7 +209,7 @@ if (count($reportRows) === 0) {
         } else {
             echo h((string) count($photos) . ' foto');
             echo "<div class=\"dg-recap-photo-links tree-group-journal-photo-links\">";
-            foreach (array_slice($photos, 0, 3) as $photo) {
+            foreach (array_values(array_slice($photos, 0, 3)) as $photoIndex => $photo) {
                 if (! is_array($photo)) {
                     continue;
                 }
@@ -217,7 +217,7 @@ if (count($reportRows) === 0) {
                 $name = trim((string) ($photo['name'] ?? '')) ?: 'Foto jurnal';
                 $url = function_exists('secure_upload_url') ? secure_upload_url($path, false, $name) : '';
                 if ($url !== '') {
-                    echo "<a class=\"note-link\" href=\"" . h($url) . "\" target=\"_blank\" rel=\"noopener\">" . h($name) . "</a>";
+                    echo "<a class=\"note-link\" href=\"" . h($url) . "\" target=\"_blank\" rel=\"noopener\" title=\"" . h($name) . "\">Lihat foto " . h((string) ($photoIndex + 1)) . "</a>";
                 }
             }
             echo "</div>";
