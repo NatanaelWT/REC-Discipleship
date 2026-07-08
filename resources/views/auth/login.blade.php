@@ -31,7 +31,7 @@
     @endphp
 
     @if ($maintenanceMode)
-        @php render_alert('danger', 'Aplikasi sedang maintenance. Login sementara hanya tersedia untuk developer.'); @endphp
+        @php render_alert('danger', 'Aplikasi sedang maintenance. Untuk sementara, login tidak dapat digunakan.'); @endphp
     @elseif ($errorCode === 'locked')
         @php render_alert('danger', 'Terlalu banyak percobaan login. Coba lagi dalam ' . format_lock_wait_label($waitSeconds) . '.'); @endphp
     @elseif ($errorCode !== '')

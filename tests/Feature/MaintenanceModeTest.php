@@ -121,11 +121,11 @@ class MaintenanceModeTest extends TestCase
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('akses publik dibatasi ke materi DG saja');
+            ->assertSee('Aplikasi sedang maintenance. Untuk sementara, akses dibatasi.');
 
         $this->get('/login')
             ->assertOk()
-            ->assertSee('Login sementara hanya tersedia untuk developer');
+            ->assertSee('Aplikasi sedang maintenance. Untuk sementara, login tidak dapat digunakan.');
 
         $this->get('/materi/materi_dg_1')
             ->assertOk()
@@ -163,7 +163,7 @@ class MaintenanceModeTest extends TestCase
 
         $this->getJson('/publik/pertanyaan-sulit/kirim')
             ->assertStatus(503)
-            ->assertJsonPath('message', 'Aplikasi sedang maintenance. Akses sementara hanya tersedia untuk developer.');
+            ->assertJsonPath('message', 'Aplikasi sedang maintenance. Untuk sementara, akses dibatasi.');
 
         $this->assertSame(0, DB::table('pertanyaan_sulit')->count());
     }

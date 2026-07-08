@@ -6,7 +6,7 @@
 
 @section('content')
     @if (function_exists('app_maintenance_mode_enabled') && app_maintenance_mode_enabled())
-      <div class="alert danger">Aplikasi sedang maintenance. Untuk sementara, akses publik dibatasi ke materi DG saja.</div>
+      <div class="alert danger">Aplikasi sedang maintenance. Untuk sementara, akses dibatasi.</div>
     @endif
 
     <section class="card public-menu-card">

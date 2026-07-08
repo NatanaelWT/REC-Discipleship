@@ -82,7 +82,7 @@ class HandleMaintenanceMode
     {
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
-                'message' => 'Aplikasi sedang maintenance. Akses sementara hanya tersedia untuk developer.',
+                'message' => 'Aplikasi sedang maintenance. Untuk sementara, akses dibatasi.',
             ], 503);
         }
 
