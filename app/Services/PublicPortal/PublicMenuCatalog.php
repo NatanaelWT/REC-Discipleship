@@ -9,16 +9,17 @@ class PublicMenuCatalog
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function cards(): array
+    public function cards(bool $maintenanceMode = false): array
     {
         return array_map(
-            fn (array $card): array => $this->normalizeCard($card),
+            fn (array $card): array => $this->normalizeCard($card, $maintenanceMode),
             [
                 [
                     'title' => 'Jurnal Temu DG',
                     'title_lines' => ['Jurnal', 'Temu DG'],
                     'href' => route('public.dg.branch', [], false),
                     'is_primary' => true,
+                    'disabled_during_maintenance' => true,
                 ],
                 [
                     'title' => 'Jurnal Umpan Balik Anggota',
@@ -26,6 +27,7 @@ class PublicMenuCatalog
                     'href' => route('public.member-feedback.branch', [], false),
                     'is_primary' => true,
                     'cta' => 'Isi Jurnal',
+                    'disabled_during_maintenance' => true,
                 ],
                 [
                     'title' => 'Materi DG-1',
@@ -58,12 +60,14 @@ class PublicMenuCatalog
                     'title_lines' => ['Unggah', 'Pertanyaan', 'Sulit'],
                     'href' => route('public.difficult-question.submit', [], false),
                     'tile_class' => 'is-half',
+                    'disabled_during_maintenance' => true,
                 ],
                 [
                     'title' => 'Jawaban Pertanyaan Sulit',
                     'title_lines' => ['Jawaban', 'Pertanyaan', 'Sulit'],
                     'href' => route('public.difficult-question.answer', [], false),
                     'tile_class' => 'is-half',
+                    'disabled_during_maintenance' => true,
                 ],
             ],
         );
@@ -89,14 +93,18 @@ class PublicMenuCatalog
      * @param array<string, mixed> $card
      * @return array<string, mixed>
      */
-    private function normalizeCard(array $card): array
+    private function normalizeCard(array $card, bool $maintenanceMode = false): array
     {
         $title = trim((string) ($card['title'] ?? 'Menu'));
         $isPrimary = ! empty($card['is_primary']);
+        $isDisabled = $maintenanceMode && ! empty($card['disabled_during_maintenance']);
         $tileClass = $isPrimary ? 'public-menu-tile is-primary' : 'public-menu-tile';
         $extraTileClass = trim((string) ($card['tile_class'] ?? ''));
         if ($extraTileClass !== '') {
             $tileClass .= ' ' . $extraTileClass;
+        }
+        if ($isDisabled) {
+            $tileClass .= ' is-disabled';
         }
 
         $titleLength = function_exists('mb_strlen') ? mb_strlen($title) : strlen($title);
@@ -117,6 +125,11 @@ class PublicMenuCatalog
             }
         }
 
+        $cta = trim((string) ($card['cta'] ?? ($isPrimary ? 'Pilih Cabang' : 'Buka Menu')));
+        if ($isDisabled) {
+            $cta = 'Tidak tersedia sementara';
+        }
+
         return [
             'title' => $title,
             'title_lines' => $titleLines,
@@ -124,7 +137,8 @@ class PublicMenuCatalog
             'href' => trim((string) ($card['href'] ?? '#')),
             'tile_class' => $tileClass,
             'title_class' => $titleClass,
-            'cta' => trim((string) ($card['cta'] ?? ($isPrimary ? 'Pilih Cabang' : 'Buka Menu'))),
+            'cta' => $cta,
+            'is_disabled' => $isDisabled,
         ];
     }
 }

@@ -20,7 +20,12 @@
         </div>
         <div class="public-menu-grid" role="navigation" aria-label="Menu publik">
           @foreach ($menuCards as $menuCard)
-            <a class="{{ $menuCard['tile_class'] }}" href="{{ $menuCard['href'] }}">
+            @php $menuCardDisabled = ! empty($menuCard['is_disabled']); @endphp
+            @if ($menuCardDisabled)
+              <span class="{{ $menuCard['tile_class'] }}" aria-disabled="true" title="Tidak tersedia sementara">
+            @else
+              <a class="{{ $menuCard['tile_class'] }}" href="{{ $menuCard['href'] }}">
+            @endif
               <span class="public-menu-tile-eyebrow">Menu Publik</span>
               <span class="{{ $menuCard['title_class'] }}">
                 @if ($menuCard['title_lines'] !== [])
@@ -34,8 +39,17 @@
               @if ($menuCard['sub'] !== '')
                 <span class="public-menu-tile-sub">{{ $menuCard['sub'] }}</span>
               @endif
-              <span class="public-menu-tile-cta">{{ $menuCard['cta'] }} <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true"><path d="M7 4l6 6-6 6"/></svg></span>
-            </a>
+              <span class="public-menu-tile-cta">
+                {{ $menuCard['cta'] }}
+                @unless ($menuCardDisabled)
+                  <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true"><path d="M7 4l6 6-6 6"/></svg>
+                @endunless
+              </span>
+            @if ($menuCardDisabled)
+              </span>
+            @else
+              </a>
+            @endif
           @endforeach
         </div>
       </div>

@@ -43,7 +43,7 @@ class HomeController extends Controller
         return [
             'settings' => ['church_name' => $churchName],
             'churchName' => $churchName,
-            'menuCards' => $catalog->cards(),
+            'menuCards' => $catalog->cards(app_maintenance_mode_enabled()),
         ];
     }
 }

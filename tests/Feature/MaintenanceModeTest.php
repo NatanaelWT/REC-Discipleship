@@ -121,7 +121,14 @@ class MaintenanceModeTest extends TestCase
 
         $this->get('/')
             ->assertOk()
-            ->assertSee('Aplikasi sedang maintenance. Untuk sementara, akses dibatasi.');
+            ->assertSee('Aplikasi sedang maintenance. Untuk sementara, akses dibatasi.')
+            ->assertSee('Tidak tersedia sementara')
+            ->assertSee('aria-disabled="true"', false)
+            ->assertSee('href="/materi/materi_dg_1"', false)
+            ->assertDontSee('href="/publik/jurnal-dg"', false)
+            ->assertDontSee('href="/publik/umpan-balik-anggota"', false)
+            ->assertDontSee('href="/publik/pertanyaan-sulit/kirim"', false)
+            ->assertDontSee('href="/publik/pertanyaan-sulit/jawaban"', false);
 
         $this->get('/login')
             ->assertOk()
