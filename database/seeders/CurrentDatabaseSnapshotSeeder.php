@@ -90,7 +90,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             0 => [
                 'id' => 9,
                 'username' => 'keziaae',
-                'password' => 'kezia',
+                'password' => '$2y$12$OzqKP.4vmxanJGXG7JLi6.81wvBkqlg6hLFB.nTb5cnKwFroSufAK',
                 'branch_id' => null,
                 'access_scope' => 'pelayan',
                 'last_login_at' => '2026-06-15 09:42:59',
@@ -101,7 +101,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             1 => [
                 'id' => 10,
                 'username' => 'reckutisari',
-                'password' => 'adminreckutisari',
+                'password' => '$2y$12$9vALRky.f5DVcxo1UB7pCefZM5qhsEWKud1fxG.dOAMQThxT9vRMW',
                 'branch_id' => 1,
                 'access_scope' => 'pemuridan_cabang',
                 'last_login_at' => '2026-06-17 10:54:52',
@@ -112,7 +112,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             2 => [
                 'id' => 11,
                 'username' => 'recgm',
-                'password' => 'adminrecgm',
+                'password' => '$2y$12$d1LvQkQ8Op9i1QTARSz6Den6H1Ta9Axfr8xxH4l1iLxEKXv04rijS',
                 'branch_id' => 2,
                 'access_scope' => 'pemuridan_cabang',
                 'last_login_at' => '2026-06-17 14:44:25',
@@ -123,7 +123,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             3 => [
                 'id' => 12,
                 'username' => 'recdarmo',
-                'password' => 'adminrecdarmo',
+                'password' => '$2y$12$/LZkDSpPEJXmUVKXRvVJ..FkCo18vm6wXzgvhFFgxyqwBb2VVX9H.',
                 'branch_id' => 3,
                 'access_scope' => 'pemuridan_cabang',
                 'last_login_at' => '2026-06-11 16:24:16',
@@ -134,7 +134,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             4 => [
                 'id' => 13,
                 'username' => 'recmerr',
-                'password' => 'adminrecmerr',
+                'password' => '$2y$12$7ERyJysH6.YcdXrxpKtDaO/3TkWYEdGQgkghifEcXRCnnOYoJrGvK',
                 'branch_id' => 4,
                 'access_scope' => 'pemuridan_cabang',
                 'last_login_at' => '2026-06-13 15:31:27',
@@ -145,7 +145,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             5 => [
                 'id' => 14,
                 'username' => 'recbatam',
-                'password' => 'adminrecbatam',
+                'password' => '$2y$12$iVu5vBHKTPBFcIrNbEEUVej8FieSnoeSPfVNe2.fJtIgHaUuclPNi',
                 'branch_id' => 5,
                 'access_scope' => 'pemuridan_cabang',
                 'last_login_at' => '2026-06-12 23:06:39',
@@ -156,7 +156,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             6 => [
                 'id' => 15,
                 'username' => 'recnginden',
-                'password' => 'adminrecnginden',
+                'password' => '$2y$12$gVB2BXxNnExX79lGK6I6QuR137IubsMi1xvxCdKYmszNebAplAmRW',
                 'branch_id' => 6,
                 'access_scope' => 'pemuridan_cabang',
                 'last_login_at' => '2026-06-15 08:45:43',
@@ -167,7 +167,7 @@ class CurrentDatabaseSnapshotSeeder extends Seeder
             7 => [
                 'id' => 16,
                 'username' => 'recpusat',
-                'password' => 'adminrecpusat',
+                'password' => '$2y$12$aRyh33idC8j.eU1LT4IFk.EnP/BdtJZNL0ihVWznE/u6e7PRs78cC',
                 'branch_id' => null,
                 'access_scope' => 'pemuridan_pusat',
                 'last_login_at' => '2026-06-17 12:31:07',

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -82,6 +83,20 @@ class AuthLoginTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_plaintext_stored_password_is_not_accepted(): void
+    {
+        $this->createAuthTables();
+        $this->seedUser(['password' => 'secret-test']);
+
+        $response = $this->post('/login', [
+            'username' => 'auth_user_test',
+            'password' => 'secret-test',
+        ]);
+
+        $response->assertRedirect('/login?error=1');
+        $this->assertGuest();
+    }
+
     public function test_invalid_login_is_rate_limited_after_five_failures(): void
     {
         $this->createAuthTables();
@@ -139,7 +154,7 @@ class AuthLoginTest extends TestCase
     {
         DB::table('users')->insert(array_merge([
             'username' => 'auth_user_test',
-            'password' => 'secret-test',
+            'password' => Hash::make('secret-test'),
             'branch_id' => 1,
             'access_scope' => 'pemuridan_cabang',
             'is_active' => true,

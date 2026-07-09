@@ -34,10 +34,6 @@ class AuthCredentialService
 
     public function passwordMatches(string $storedPassword, string $inputPassword): bool
     {
-        if (hash_equals($storedPassword, $inputPassword)) {
-            return true;
-        }
-
         if ($this->looksLikeLaravelHash($storedPassword) && Hash::check($inputPassword, $storedPassword)) {
             return true;
         }

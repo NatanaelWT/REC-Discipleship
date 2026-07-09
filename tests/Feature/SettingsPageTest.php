@@ -70,7 +70,7 @@ class SettingsPageTest extends TestCase
         DB::table('users')->updateOrInsert(
             ['username' => 'admin_settings_test'],
             [
-                'password' => 'old-secret',
+                'password' => Hash::make('old-secret'),
                 'branch_id' => 1,
                 'access_scope' => 'pemuridan_cabang',
                 'is_active' => true,
