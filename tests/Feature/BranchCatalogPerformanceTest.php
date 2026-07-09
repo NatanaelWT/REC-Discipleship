@@ -16,16 +16,19 @@ class BranchCatalogPerformanceTest extends TestCase
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
+            $table->boolean('is_developer_only')->default(false);
             $table->timestamps();
         });
 
         DB::table('cabang')->insert([
-            ['label' => 'Kutisari', 'is_active' => true],
-            ['label' => 'GM', 'is_active' => true],
+            ['label' => 'Kutisari', 'is_active' => true, 'is_developer_only' => false],
+            ['label' => 'GM', 'is_active' => true, 'is_developer_only' => false],
+            ['label' => 'Testing', 'is_active' => true, 'is_developer_only' => true],
         ]);
 
         $catalog = app(BranchCatalog::class);
         $catalog->clearCache();
+        $catalog->options(true, true);
         $queries = 0;
         DB::listen(static function () use (&$queries): void {
             $queries++;
@@ -35,8 +38,12 @@ class BranchCatalogPerformanceTest extends TestCase
             $this->assertSame('kutisari', $catalog->slugForId(1));
             $this->assertSame(2, $catalog->idForSlug('gm'));
             $this->assertSame('Kutisari', $catalog->labelForId(1));
+            $this->assertNull($catalog->idForSlug('testing'));
+            $this->assertSame(3, $catalog->idForSlug('testing', true));
         }
 
-        $this->assertLessThanOrEqual(1, $queries);
+        $this->assertSame(['GM', 'Kutisari'], array_column($catalog->options(), 'label'));
+        $this->assertSame(['GM', 'Kutisari', 'Testing'], array_column($catalog->options(true, true), 'label'));
+        $this->assertSame(0, $queries);
     }
 }

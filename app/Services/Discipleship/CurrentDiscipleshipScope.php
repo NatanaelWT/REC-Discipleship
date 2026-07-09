@@ -11,6 +11,9 @@ class CurrentDiscipleshipScope
     /** @var array<int, array{id:int,slug:string,label:string}> */
     private array $optionsById;
 
+    /** @var array<int, array{id:int,slug:string,label:string}> */
+    private array $publicOptionsById;
+
     /** @var array<int, int> */
     private array $branchIds;
 
@@ -25,8 +28,11 @@ class CurrentDiscipleshipScope
         private readonly CurrentUserContext $user,
         private readonly BranchCatalog $branches,
     ) {
-        $this->optionsById = $branches->activeOptionsById();
-        $this->readOnly = $user->isDiscipleshipPreviewReadonly();
+        $this->publicOptionsById = $branches->activeOptionsById();
+        $this->optionsById = $user->isDeveloper()
+            ? $branches->developerOptionsById()
+            : $this->publicOptionsById;
+        $this->readOnly = true;
         $this->resolve();
     }
 
@@ -88,11 +94,12 @@ class CurrentDiscipleshipScope
 
     private function resolve(): void
     {
-        if (! $this->readOnly) {
+        if ($this->user->isDiscipleshipBranch()) {
             $branchId = $this->user->branchId();
             $this->selectedBranchId = $branchId !== null && isset($this->optionsById[$branchId]) ? $branchId : null;
             $this->branchIds = $this->selectedBranchId !== null ? [$this->selectedBranchId] : [];
             $this->allBranches = false;
+            $this->readOnly = false;
 
             return;
         }
@@ -105,8 +112,9 @@ class CurrentDiscipleshipScope
 
         if ($selected === 'all') {
             $this->selectedBranchId = null;
-            $this->branchIds = array_map('intval', array_keys($this->optionsById));
+            $this->branchIds = array_map('intval', array_keys($this->publicOptionsById));
             $this->allBranches = true;
+            $this->readOnly = true;
 
             return;
         }
@@ -114,6 +122,7 @@ class CurrentDiscipleshipScope
         $this->selectedBranchId = $selected;
         $this->branchIds = [$selected];
         $this->allBranches = false;
+        $this->readOnly = ! ($this->user->isDeveloper() && $this->branches->isDeveloperOnlyId($selected));
     }
 
     private function selectionFromRequest(): int|string|null

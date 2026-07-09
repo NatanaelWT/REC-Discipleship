@@ -21,8 +21,8 @@ class DiscipleshipTargetReader
      */
     public function valuesForBranch(string $branchCode): array
     {
-        $branchCode = $this->branches->normalizeSlug($branchCode);
-        $branch = Branch::query()->find($this->branches->idForSlug($branchCode));
+        $branchCode = normalize_user_branch($branchCode);
+        $branch = Branch::query()->find(branch_id_from_slug($branchCode));
         if ($branch instanceof Branch) {
             return $this->normalizer->normalize($branch->only([
                 'camp_gap_participant_target',
@@ -52,8 +52,8 @@ class DiscipleshipTargetReader
     {
         $branchIdsByCode = [];
         foreach ($branchCodes as $branchCode) {
-            $branchCode = $this->branches->normalizeSlug((string) $branchCode);
-            $branchId = $this->branches->idForSlug($branchCode);
+            $branchCode = normalize_user_branch((string) $branchCode);
+            $branchId = branch_id_from_slug($branchCode);
             if ($branchCode !== '' && $branchId !== null) {
                 $branchIdsByCode[$branchCode] = $branchId;
             }
@@ -104,10 +104,10 @@ class DiscipleshipTargetReader
      */
     public function saveBranch(string $branchCode, array $values): Branch
     {
-        $branchCode = $this->branches->normalizeSlug($branchCode);
+        $branchCode = normalize_user_branch($branchCode);
         $values = $this->normalizer->normalize($values);
 
-        $branch = Branch::query()->findOrFail($this->branches->idForSlug($branchCode));
+        $branch = Branch::query()->findOrFail(branch_id_from_slug($branchCode));
         $branch->fill($values)->save();
         Cache::store($this->cacheStore())->put(self::CACHE_VERSION_KEY, (string) hrtime(true));
 

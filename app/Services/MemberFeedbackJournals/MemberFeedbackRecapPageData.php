@@ -32,7 +32,7 @@ class MemberFeedbackRecapPageData
         $centralReadOnly = is_effective_central_discipleship_readonly();
         $selectedBranch = $centralReadOnly
             ? normalize_central_recap_branch(central_recap_selected_branch())
-            : normalize_public_branch_code(current_user_branch());
+            : normalize_user_branch(current_user_branch());
 
         $branchCodes = $this->branchCodes($selectedBranch, $centralReadOnly);
         $data = $this->cache->remember(
@@ -85,8 +85,8 @@ class MemberFeedbackRecapPageData
         $latestSubmittedAt = '';
 
         foreach ($this->feedbacks($branchIds) as $index => $feedback) {
-            $branchCode = branch_slug_from_id($feedback->branch_id);
-            $branchLabel = $branchLabels[$branchCode] ?? public_branch_label($branchCode);
+            $branchCode = normalize_user_branch(branch_slug_from_id($feedback->branch_id));
+            $branchLabel = $branchLabels[$branchCode] ?? user_branch_label($branchCode);
             $groupId = (int) ($feedback->discipleship_group_id ?? 0);
             $respondentId = (int) ($feedback->respondent_person_id ?? 0);
             $feedbackSession = (int) ($feedback->feedback_session ?? 0);
@@ -326,8 +326,8 @@ class MemberFeedbackRecapPageData
     private function branchLabels(): array
     {
         $labels = [];
-        foreach (public_dg_branch_options() as $option) {
-            $branchCode = normalize_public_branch_code((string) ($option['code'] ?? ''));
+        foreach (central_recap_branch_options() as $option) {
+            $branchCode = normalize_user_branch((string) ($option['code'] ?? ''));
             if ($branchCode === '') {
                 continue;
             }
@@ -489,11 +489,11 @@ class MemberFeedbackRecapPageData
         $groupRows = [];
         foreach ($groups as $group) {
             $groupId = (int) $group->getKey();
-            $branchCode = branch_slug_from_id($group->branch_id);
+            $branchCode = normalize_user_branch(branch_slug_from_id($group->branch_id));
             $progress = discipleship_group_stage_value($group) ?: 'DG 1';
             $groupRows[$groupId] = [
                 'id' => $groupId,
-                'branch_label' => $branchLabels[$branchCode] ?? public_branch_label($branchCode),
+                'branch_label' => $branchLabels[$branchCode] ?? user_branch_label($branchCode),
                 'leader_name' => '-',
                 'name' => discipleship_group_display_label(['progress' => $progress]),
                 'progress' => $progress,

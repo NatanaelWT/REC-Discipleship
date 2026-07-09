@@ -151,7 +151,7 @@ if ($page === 'people_tree') {
     if (count($treeRootConfigs) === 0) {
         $treeRootConfigs[] = [
             'id' => $rootLeaderId,
-            'branch_code' => normalize_public_branch_code(current_user_branch()),
+            'branch_code' => normalize_user_branch(current_user_branch()),
             'branch_label' => $rootLeaderName,
         ];
         $peopleById[$rootLeaderId] = [
@@ -181,7 +181,7 @@ if ($page === 'people_tree') {
                 if (!is_array($sourceGroupRow) || trim((string) ($sourceGroupRow['id'] ?? '')) !== $groupId) {
                     continue;
                 }
-                $groupBranchCode = normalize_public_branch_code((string) ($sourceGroupRow['branch_code'] ?? ''));
+                $groupBranchCode = normalize_user_branch((string) ($sourceGroupRow['branch_code'] ?? ''));
                 break;
             }
         }
@@ -208,7 +208,7 @@ if ($page === 'people_tree') {
         if ($personRowId === '') {
             continue;
         }
-        $personBranchCode = normalize_public_branch_code((string) ($personRow['branch_code'] ?? current_user_branch()));
+        $personBranchCode = normalize_user_branch((string) ($personRow['branch_code'] ?? current_user_branch()));
         $rootParentId = $rootLeaderId;
         if ($centralReadOnly) {
             $contextRootId = trim((string) ($leaderContextRootByPersonId[$personRowId] ?? ''));
@@ -227,7 +227,7 @@ if ($page === 'people_tree') {
             && $primaryParent !== ''
             && (
                 !isset($peopleById[$primaryParent])
-                || normalize_public_branch_code((string) ($peopleById[$primaryParent]['branch_code'] ?? '')) !== $personBranchCode
+                || normalize_user_branch((string) ($peopleById[$primaryParent]['branch_code'] ?? '')) !== $personBranchCode
             )
             && !isset($leaderContextRootByPersonId[$personRowId])
         ) {
@@ -275,7 +275,7 @@ if ($page === 'people_tree') {
         $groupsByLeader[$leaderId][] = $groupRow;
     }
     $membersById = index_by_id($members);
-    $dotExportBranch = normalize_public_branch_code(current_user_branch());
+    $dotExportBranch = normalize_user_branch(current_user_branch());
     $dotExportDisabled = false;
     if ($centralReadOnly) {
         $dotExportBranch = isset($selectedCentralBranch)

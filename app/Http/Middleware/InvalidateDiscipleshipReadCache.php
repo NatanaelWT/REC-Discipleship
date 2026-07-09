@@ -57,7 +57,7 @@ class InvalidateDiscipleshipReadCache
             ?? $request->input('branch', $request->input('public_cabang', ''))
         ));
         if ($branchSlug !== '') {
-            $branchId = $this->branches->idForSlug($branchSlug);
+            $branchId = $this->branches->idForSlug($branchSlug, true);
             if ($branchId !== null) {
                 $ids[$branchId] = $branchId;
             }

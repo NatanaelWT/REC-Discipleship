@@ -6,6 +6,7 @@ use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\DiscipleshipMeetingReport;
 use App\Models\Person;
+use App\Services\Branches\BranchCatalog;
 use App\Support\DiscipleshipPersonProfile;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +25,7 @@ class PeopleTreeModelStore
             )));
         }
 
-        $branchCode = normalize_public_branch_code($selectedBranch);
+        $branchCode = normalize_user_branch($selectedBranch);
 
         return $branchCode !== '' ? [$branchCode] : [];
     }
@@ -33,8 +34,8 @@ class PeopleTreeModelStore
     public function branchLabels(): array
     {
         $labels = [];
-        foreach (public_dg_branch_options() as $option) {
-            $branchCode = normalize_public_branch_code((string) ($option['code'] ?? ''));
+        foreach (central_recap_branch_options() as $option) {
+            $branchCode = normalize_user_branch((string) ($option['code'] ?? ''));
             if ($branchCode !== '') {
                 $labels[$branchCode] = trim((string) ($option['label'] ?? '')) ?: strtoupper($branchCode);
             }
@@ -79,7 +80,7 @@ class PeopleTreeModelStore
 
     public function modelForBranch(string $branchCode): array
     {
-        $branchCode = normalize_public_branch_code($branchCode);
+        $branchCode = normalize_user_branch($branchCode);
         if ($branchCode === '') {
             return dgv2_empty_model();
         }
@@ -90,11 +91,14 @@ class PeopleTreeModelStore
     /** @return array<int, array<string, mixed>> */
     public function leaderCandidatesForBranch(string $branchCode): array
     {
-        $branchCode = normalize_public_branch_code($branchCode);
-        $branchIds = branch_ids_from_slugs(array_map(
-            static fn (array $option): string => normalize_public_branch_code((string) ($option['code'] ?? '')),
-            public_dg_branch_options(),
-        ));
+        $branchCode = normalize_user_branch($branchCode);
+        $branchId = branch_id_from_slug($branchCode);
+        $branchIds = $branchId !== null && app(BranchCatalog::class)->isDeveloperOnlyId($branchId)
+            ? [$branchId]
+            : branch_ids_from_slugs(array_map(
+                static fn (array $option): string => normalize_public_branch_code((string) ($option['code'] ?? '')),
+                public_dg_branch_options(),
+            ));
         if ($branchIds === []) {
             return [];
         }
@@ -122,7 +126,7 @@ class PeopleTreeModelStore
                     DB::raw(DiscipleshipPersonProfile::expression('gender').' as gender'),
                 ])
                 ->map(static function (Person $person) use ($branchCode, $labels): array {
-                    $personBranchCode = normalize_public_branch_code((string) $person->branch_code);
+                    $personBranchCode = normalize_user_branch((string) $person->branch_code);
                     $branchLabel = $labels[$personBranchCode] ?? strtoupper($personBranchCode);
                     $name = trim((string) $person->full_name);
                     if ($personBranchCode !== '' && $personBranchCode !== $branchCode) {
@@ -173,7 +177,7 @@ class PeopleTreeModelStore
                 ->get()
                 ->map(static function (Person $participant) use ($centralReadOnly, $labels): array {
                     $row = $participant->toViewArray();
-                    $branchCode = normalize_public_branch_code((string) $participant->branch_code);
+                    $branchCode = normalize_user_branch((string) $participant->branch_code);
                     $branchLabel = $labels[$branchCode] ?? strtoupper($branchCode);
                     $row['branch_code'] = $branchCode;
                     $row['branch_label'] = $branchLabel;
@@ -201,16 +205,16 @@ class PeopleTreeModelStore
                 continue;
             }
             $id = trim((string) ($row['id'] ?? ''));
-            $branchCode = normalize_public_branch_code((string) ($row['branch_code'] ?? ''));
+            $branchCode = normalize_user_branch((string) ($row['branch_code'] ?? ''));
             if ($id !== '') {
                 $branches[$id] = [$branchCode, $labels[$branchCode] ?? strtoupper($branchCode)];
             }
         }
 
-        $contextBranchCode = normalize_public_branch_code(current_user_branch());
+        $contextBranchCode = normalize_user_branch(current_user_branch());
         foreach ($people as &$row) {
             $id = trim((string) ($row['id'] ?? ''));
-            [$branchCode, $branchLabel] = $branches[$id] ?? [normalize_public_branch_code(current_user_branch()), ''];
+            [$branchCode, $branchLabel] = $branches[$id] ?? [normalize_user_branch(current_user_branch()), ''];
             $row['branch_code'] = $branchCode;
             $row['branch_label'] = $branchLabel;
             if ($branchLabel !== '' && ($centralReadOnly || ($contextBranchCode !== '' && $branchCode !== '' && $branchCode !== $contextBranchCode))) {
@@ -237,7 +241,7 @@ class PeopleTreeModelStore
                 continue;
             }
             $id = trim((string) ($row['id'] ?? ''));
-            $branchCode = normalize_public_branch_code((string) ($row['branch_code'] ?? ''));
+            $branchCode = normalize_user_branch((string) ($row['branch_code'] ?? ''));
             if ($id !== '') {
                 $groupLabels[$id] = $labels[$branchCode] ?? strtoupper($branchCode);
             }
@@ -283,7 +287,7 @@ class PeopleTreeModelStore
                 ->orderByDesc('id')
                 ->get()
                 ->map(function (DiscipleshipMeetingReport $report) use ($centralReadOnly, $labels): array {
-                    $branchCode = normalize_public_branch_code((string) $report->branch_code);
+                    $branchCode = normalize_user_branch((string) $report->branch_code);
                     $branchLabel = $labels[$branchCode] ?? strtoupper($branchCode);
                     $leaderName = trim((string) ($report->leader_name_snapshot ?? ''));
                     $groupName = trim((string) ($report->group_name_snapshot ?? 'Kelompok')) ?: 'Kelompok';
@@ -328,7 +332,7 @@ class PeopleTreeModelStore
 
     public function replaceBranchModel(string $branchCode, array $model): void
     {
-        $branchCode = normalize_public_branch_code($branchCode);
+        $branchCode = normalize_user_branch($branchCode);
         $branchId = branch_id_from_slug($branchCode);
         if ($branchCode === '' || $branchId === null) {
             return;
@@ -542,7 +546,7 @@ class PeopleTreeModelStore
             }
 
             $sourceId = trim((string) ($row['id'] ?? ''));
-            $sourceBranchCode = normalize_public_branch_code((string) ($row['branch_code'] ?? ''));
+            $sourceBranchCode = normalize_user_branch((string) ($row['branch_code'] ?? ''));
             $sourceBranchId = $sourceBranchCode !== '' ? branch_id_from_slug($sourceBranchCode) : $branchId;
             if (ctype_digit($sourceId) && $sourceBranchId !== null && $sourceBranchId !== $branchId) {
                 $person = Person::query()
@@ -759,7 +763,7 @@ class PeopleTreeModelStore
     private function normalizeBranchCodes(array $branchCodes): array
     {
         return array_values(array_unique(array_filter(array_map(
-            static fn (string $branchCode): string => normalize_public_branch_code($branchCode),
+            static fn (string $branchCode): string => normalize_user_branch($branchCode),
             $branchCodes,
         ))));
     }

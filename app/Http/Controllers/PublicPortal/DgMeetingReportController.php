@@ -30,6 +30,9 @@ class DgMeetingReportController extends Controller
             }
 
             $branch = current_user_branch();
+            if (! is_known_public_branch_code($branch)) {
+                return redirect()->route('public.dg.branch', ['error' => 'invalid_branch']);
+            }
         } elseif (! is_known_public_branch_code($branchRaw)) {
             return redirect()->route('public.dg.branch', ['error' => 'invalid_branch']);
         } else {

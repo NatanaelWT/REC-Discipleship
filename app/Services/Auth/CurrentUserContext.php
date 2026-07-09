@@ -65,7 +65,7 @@ class CurrentUserContext
     public function branchId(): ?int
     {
         if ($this->isDeveloper()) {
-            return null;
+            return $this->developerTestingBranchId();
         }
 
         if (! $this->isDiscipleshipBranch()) {
@@ -74,7 +74,11 @@ class CurrentUserContext
 
         $branchId = $this->user()?->branch_id;
 
-        return is_numeric($branchId) && (int) $branchId > 0 ? (int) $branchId : null;
+        if (! is_numeric($branchId) || (int) $branchId < 1 || $this->branches->isDeveloperOnlyId((int) $branchId)) {
+            return null;
+        }
+
+        return (int) $branchId;
     }
 
     public function accessScope(): string
@@ -113,7 +117,16 @@ class CurrentUserContext
 
     public function isDiscipleshipPreviewReadonly(): bool
     {
+        if ($this->isDeveloper()) {
+            return ! $this->isDeveloperTestingBranch();
+        }
+
         return $this->isDiscipleshipCentral() || $this->isDeveloper();
+    }
+
+    public function isDeveloperTestingBranch(): bool
+    {
+        return $this->isDeveloper() && $this->developerTestingBranchId() !== null;
     }
 
     public function canAccessStewardship(): bool
@@ -165,6 +178,10 @@ class CurrentUserContext
 
         if ($this->isDeveloper()) {
             if (is_worship_action($action)) {
+                return true;
+            }
+
+            if ($this->isDeveloperTestingBranch() && isset($this->developerTestingActionMap()[$action])) {
                 return true;
             }
 
@@ -237,5 +254,49 @@ class CurrentUserContext
         }
 
         return [];
+    }
+
+    private function developerTestingBranchId(): ?int
+    {
+        if (! $this->isDeveloper()) {
+            return null;
+        }
+
+        $candidate = null;
+        $request = request();
+        if ($request->query->has('branch_id')) {
+            $input = trim((string) $request->query('branch_id', ''));
+            if ($input === '' || strtolower($input) === 'all') {
+                return null;
+            }
+
+            $candidate = filter_var($input, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        } else {
+            $stored = session('central_rekap_branch_id', 'all');
+            $candidate = is_numeric($stored)
+                ? filter_var($stored, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])
+                : null;
+        }
+
+        if ($candidate === false || $candidate === null) {
+            return null;
+        }
+
+        return $this->branches->isActiveId($candidate, true) && $this->branches->isDeveloperOnlyId($candidate)
+            ? (int) $candidate
+            : null;
+    }
+
+    /**
+     * @return array<string, true>
+     */
+    private function developerTestingActionMap(): array
+    {
+        $actions = discipleship_action_map();
+        foreach (['save_discipleship_targets', 'export_pohon_pemuridan_dot'] as $action) {
+            $actions[$action] = true;
+        }
+
+        return $actions;
     }
 }

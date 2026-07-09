@@ -35,7 +35,7 @@ class MskParticipantPageData
         $centralReadOnly = is_effective_central_discipleship_readonly();
         $selectedBranch = $centralReadOnly
             ? normalize_central_recap_branch(central_recap_selected_branch())
-            : normalize_public_branch_code(current_user_branch());
+            : normalize_user_branch(current_user_branch());
 
         $branchCodes = $this->branchCodes($selectedBranch, $centralReadOnly);
         $branchIds = branch_ids_from_slugs($branchCodes);
@@ -209,7 +209,7 @@ class MskParticipantPageData
     private function participantViewRow(Person $participant): array
     {
         $row = $participant->toViewArray();
-        $row['branch_code'] = normalize_public_branch_code((string) $participant->branch_code);
+        $row['branch_code'] = normalize_user_branch((string) $participant->branch_code);
 
         return $row;
     }

@@ -13,7 +13,7 @@ class SpiritualJourneyBridgeStatusService
             return false;
         }
 
-        $branchCode = normalize_public_branch_code(current_user_branch());
+        $branchCode = normalize_user_branch(current_user_branch());
         $participant = Person::query()
             ->where('branch_id', branch_id_from_slug($branchCode))
             ->whereKey($participantId)

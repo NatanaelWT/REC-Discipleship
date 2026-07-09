@@ -63,7 +63,7 @@ class PeopleTreeWriter
             abort(403, 'Permintaan ditolak demi keamanan.');
         }
 
-        $targetBranch = normalize_public_branch_code(current_user_branch());
+        $targetBranch = normalize_user_branch(current_user_branch());
         $redirectParams = [];
 
         if (is_effective_central_discipleship_readonly()) {
@@ -78,8 +78,8 @@ class PeopleTreeWriter
                     'error' => 'dot_export_branch_required',
                 ]);
             }
-            $targetBranch = normalize_public_branch_code($selectedExportBranch);
-            $redirectParams['branch_id'] = $this->branches->idForSlug($targetBranch);
+            $targetBranch = normalize_user_branch($selectedExportBranch);
+            $redirectParams['branch_id'] = $this->branches->idForSlug($targetBranch, true);
         }
 
         $dotContent = build_pohon_pemuridan_dot_content($targetBranch, $this->modelStore->modelForBranch($targetBranch));
@@ -94,7 +94,7 @@ class PeopleTreeWriter
             'people_tree.exported',
             'discipleship_branch',
             $targetBranch,
-            public_branch_label($targetBranch),
+            user_branch_label($targetBranch),
             'Pohon pemuridan diekspor sebagai Graphviz DOT.',
             metadata: [
                 'name' => 'pohon_pemuridan_'.$targetBranch.'.dot',
@@ -139,7 +139,7 @@ class PeopleTreeWriter
             return redirect(AppPageRouteMap::pageUrl(branch_home_page(current_user_branch()), ['error' => 'access_denied']));
         }
 
-        $branchCode = normalize_public_branch_code(current_user_branch());
+        $branchCode = normalize_user_branch(current_user_branch());
         $model = $this->modelStore->modelForBranch($branchCode);
         $beforeModel = $model;
         $members = [];
@@ -151,7 +151,7 @@ class PeopleTreeWriter
         $projectionPeopleById = index_by_id($projectionPeople);
         $localProjectionPeopleById = array_filter(
             $projectionPeopleById,
-            static fn (array $row): bool => normalize_public_branch_code((string) ($row['branch_code'] ?? $branchCode)) === $branchCode,
+            static fn (array $row): bool => normalize_user_branch((string) ($row['branch_code'] ?? $branchCode)) === $branchCode,
         );
         $leaderCandidatesById = index_by_id($this->modelStore->leaderCandidatesForBranch($branchCode));
 
@@ -300,7 +300,7 @@ class PeopleTreeWriter
             'people_tree.'.$requestedAction,
             'discipleship_branch',
             $branchCode,
-            public_branch_label($branchCode),
+            user_branch_label($branchCode),
             'Perubahan pohon pemuridan disimpan.',
             metadata: ['branch' => $branchCode, 'counts' => $counts],
         );

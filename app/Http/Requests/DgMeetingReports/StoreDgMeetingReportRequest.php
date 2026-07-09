@@ -81,7 +81,13 @@ class StoreDgMeetingReportRequest extends FormRequest
             $branchRaw = trim((string) $this->input('public_cabang', ''));
             if ($branchRaw === '') {
                 if (is_logged_in()) {
-                    $this->publicBranch = current_user_branch();
+                    $candidateBranch = current_user_branch();
+                    if (! is_known_public_branch_code($candidateBranch)) {
+                        $validator->errors()->add('public_cabang', 'invalid_branch');
+
+                        return;
+                    }
+                    $this->publicBranch = $candidateBranch;
                 } else {
                     $validator->errors()->add('public_cabang_missing', 'missing_branch');
 

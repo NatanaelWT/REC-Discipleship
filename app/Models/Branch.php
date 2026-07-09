@@ -11,6 +11,7 @@ class Branch extends Model
     protected $fillable = [
         'label',
         'is_active',
+        'is_developer_only',
         'camp_gap_participant_target',
         'msk_completion_target',
         'dg1_completion_target',
@@ -20,6 +21,7 @@ class Branch extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_developer_only' => 'boolean',
         'camp_gap_participant_target' => 'integer',
         'msk_completion_target' => 'integer',
         'dg1_completion_target' => 'integer',

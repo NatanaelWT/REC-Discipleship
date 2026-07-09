@@ -50,7 +50,7 @@ class MskParticipantTableData
                 ->get()
                 ->map(static function (Person $participant): array {
                     $row = $participant->toViewArray();
-                    $row['branch_code'] = normalize_public_branch_code((string) $participant->branch_code);
+                    $row['branch_code'] = normalize_user_branch((string) $participant->branch_code);
 
                     return $row;
                 })
@@ -68,7 +68,7 @@ class MskParticipantTableData
     public function replaceBranchRows(string $branchCode, array $participants, bool $deleteMissing = false): array
     {
         $counts = ['inserted' => 0, 'updated' => 0, 'sessions' => 0, 'photos' => 0];
-        $branchCode = normalize_public_branch_code($branchCode);
+        $branchCode = normalize_user_branch($branchCode);
         $branchId = branch_id_from_slug($branchCode);
         if ($branchCode === '' || $branchId === null || ! $this->hasTables()) {
             return $counts;
@@ -120,7 +120,7 @@ class MskParticipantTableData
     {
         $normalized = [];
         foreach ($branchCodes as $branchCode) {
-            $branchCode = normalize_public_branch_code((string) $branchCode);
+            $branchCode = normalize_user_branch((string) $branchCode);
             if ($branchCode !== '') {
                 $normalized[] = $branchCode;
             }

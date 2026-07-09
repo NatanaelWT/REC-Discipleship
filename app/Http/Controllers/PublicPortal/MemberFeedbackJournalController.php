@@ -53,6 +53,9 @@ class MemberFeedbackJournalController extends Controller
         if ($publicBranchRaw === '') {
             if (is_logged_in()) {
                 $publicBranch = current_user_branch();
+                if (! is_known_public_branch_code($publicBranch)) {
+                    return redirect()->route('public.member-feedback.branch', ['error' => 'invalid_branch']);
+                }
             } else {
                 return redirect()->route('public.member-feedback.branch');
             }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\Branches\BranchCatalog;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -87,6 +88,39 @@ class DiscipleshipTargetPageTest extends TestCase
             ->assertDontSee('Simpan Target');
     }
 
+    public function test_developer_can_update_testing_branch_targets_without_polluting_all_branches(): void
+    {
+        $this->createBranchTable();
+        $this->seedTargets();
+        $testingBranchId = $this->seedTestingTargets();
+        $this->actingAsRecUser('developer', null, 'developer');
+
+        $this->get('/pemuridan/target?branch_id='.$testingBranchId)
+            ->assertOk()
+            ->assertSee('Mode Testing Developer')
+            ->assertSee('Cabang Testing')
+            ->assertSee('name="target_msk_completed"', false)
+            ->assertSee('Simpan Target');
+
+        $this->post('/pemuridan/target', [
+            'action' => 'save_discipleship_targets',
+            'target_dg_total_people' => 991,
+            'target_msk_completed' => 992,
+            'target_dg1_people' => 993,
+            'target_dg2_people' => 994,
+            'target_dg3_people' => 995,
+        ])->assertRedirect('/pemuridan/target?saved=1');
+
+        $this->assertSame(991, (int) DB::table('cabang')->where('id', $testingBranchId)->value('camp_gap_participant_target'));
+        $this->assertSame(111, (int) DB::table('cabang')->where('id', 1)->value('camp_gap_participant_target'));
+
+        $this->get('/pemuridan/target?branch_id=all')
+            ->assertOk()
+            ->assertSee('data-branch-code="gm"', false)
+            ->assertSee('data-branch-code="kutisari"', false)
+            ->assertDontSee('data-branch-code="testing"', false);
+    }
+
     public function test_central_and_developer_cannot_update_branch_targets(): void
     {
         $this->createBranchTable();
@@ -116,6 +150,7 @@ class DiscipleshipTargetPageTest extends TestCase
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
+            $table->boolean('is_developer_only')->default(false);
             $table->unsignedInteger('camp_gap_participant_target')->default(50);
             $table->unsignedInteger('msk_completion_target')->default(50);
             $table->unsignedInteger('dg1_completion_target')->default(50);
@@ -123,6 +158,7 @@ class DiscipleshipTargetPageTest extends TestCase
             $table->unsignedInteger('dg3_completion_target')->default(50);
             $table->timestamps();
         });
+        app(BranchCatalog::class)->clearCache();
     }
 
     private function seedTargets(): void
@@ -153,5 +189,25 @@ class DiscipleshipTargetPageTest extends TestCase
                 'updated_at' => now(),
             ],
         ]);
+        app(BranchCatalog::class)->clearCache();
+    }
+
+    private function seedTestingTargets(): int
+    {
+        $id = (int) DB::table('cabang')->insertGetId([
+            'label' => 'Testing',
+            'is_active' => true,
+            'is_developer_only' => true,
+            'camp_gap_participant_target' => 50,
+            'msk_completion_target' => 50,
+            'dg1_completion_target' => 50,
+            'dg2_completion_target' => 50,
+            'dg3_completion_target' => 50,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        app(BranchCatalog::class)->clearCache();
+
+        return $id;
     }
 }

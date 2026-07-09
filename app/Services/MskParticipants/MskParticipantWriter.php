@@ -22,7 +22,7 @@ class MskParticipantWriter
     public function save(MskParticipantWriteRequest $request): array
     {
         $payload = $request->payload();
-        $branchCode = normalize_public_branch_code(current_user_branch());
+        $branchCode = normalize_user_branch(current_user_branch());
         $participantId = (int) ($payload['id'] ?? 0);
         $existing = $participantId > 0 ? $this->participantForBranch($branchCode, $participantId) : null;
         $existingViewRow = $existing?->toViewArray() ?? [];
@@ -72,7 +72,7 @@ class MskParticipantWriter
      */
     public function updateSessions(Person $participant, array $sessionNumbers): array
     {
-        $branchCode = normalize_public_branch_code(current_user_branch());
+        $branchCode = normalize_user_branch(current_user_branch());
         $participant = $this->currentBranchParticipant($participant);
         if ($participant === null) {
             return ['auto_converted' => false, 'error' => 'invalid_msk_participant'];
@@ -95,7 +95,7 @@ class MskParticipantWriter
      */
     public function setStatus(Person $participant, string $status): array
     {
-        $branchCode = normalize_public_branch_code(current_user_branch());
+        $branchCode = normalize_user_branch(current_user_branch());
         $participant = $this->currentBranchParticipant($participant);
         if ($participant === null) {
             return ['error' => 'invalid_msk_participant'];
@@ -110,7 +110,7 @@ class MskParticipantWriter
 
     public function currentBranchParticipant(Person $participant): ?Person
     {
-        $branchCode = normalize_public_branch_code(current_user_branch());
+        $branchCode = normalize_user_branch(current_user_branch());
         if ((string) $participant->branch_code === $branchCode) {
             return $participant;
         }

@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Branches\BranchCatalog;
+
 function user_branch_label(string $branch): string {
     if (trim($branch) === '') {
         return 'Tanpa cabang';
@@ -10,5 +12,9 @@ function user_branch_label(string $branch): string {
         return 'Tanpa cabang';
     }
 
-    return public_branch_label($branch);
+    $branchId = branch_id_from_slug($branch);
+
+    return $branchId !== null
+        ? app(BranchCatalog::class)->labelForId($branchId)
+        : 'Tanpa cabang';
 }

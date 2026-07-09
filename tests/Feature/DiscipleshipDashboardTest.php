@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\Branches\BranchCatalog;
 use App\Services\DiscipleshipDashboard\DiscipleshipDashboardSummaryQuery;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -97,6 +98,46 @@ class DiscipleshipDashboardTest extends TestCase
             ->assertDontSee('data-msk-edit-open', false);
     }
 
+    public function test_developer_testing_branch_can_update_dashboard_msk_sessions(): void
+    {
+        $this->createDashboardTables();
+        $this->seedDashboardData();
+        $testingBranchId = $this->seedTestingBranch();
+        $testingParticipantId = DB::table('orang')->insertGetId([
+            'branch_id' => $testingBranchId,
+            'full_name' => 'Peserta Testing Dashboard',
+            'gender' => 'Perempuan',
+            'whatsapp' => '0844444444',
+            'batch_month' => '2026-07',
+            'journey_bridge_status' => 'belum',
+            'status' => 'active',
+            'session_numbers' => json_encode([1]),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->actingAsRecUser('developer', null, 'developer');
+
+        $this->get('/pemuridan/dashboard?branch_id='.$testingBranchId)
+            ->assertOk()
+            ->assertSee('Mode Testing Developer')
+            ->assertDontSee('Peserta MSK Dashboard');
+        $this->get('/pemuridan/dashboard/sections/incomplete-msk')
+            ->assertOk()
+            ->assertSee('Peserta Testing Dashboard')
+            ->assertDontSee('Peserta MSK Dashboard');
+
+        $this->post('/pemuridan/dashboard/msk-sessions', [
+            'action' => 'save_msk_sessions',
+            'id' => $testingParticipantId,
+            'return_page' => 'discipleship_dashboard',
+            'session_numbers' => ['1', '2', '3'],
+        ])->assertRedirect('/pemuridan/dashboard?msk_session_saved=1');
+
+        $sessions = json_decode((string) DB::table('orang')->where('id', $testingParticipantId)->value('session_numbers'), true);
+        $this->assertSame([1, 2, 3], $sessions);
+    }
+
     public function test_dashboard_initial_response_uses_aggregate_queries_and_bounded_html(): void
     {
         $this->createDashboardTables();
@@ -109,7 +150,7 @@ class DiscipleshipDashboardTest extends TestCase
         $queries = DB::getQueryLog();
 
         $response->assertOk();
-        $this->assertLessThanOrEqual(11, count($queries));
+        $this->assertLessThanOrEqual(13, count($queries));
         $this->assertLessThan(100 * 1024, strlen((string) $response->getContent()));
         foreach ($queries as $query) {
             $this->assertStringNotContainsString('select *', strtolower((string) $query['query']));
@@ -364,6 +405,7 @@ class DiscipleshipDashboardTest extends TestCase
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
+            $table->boolean('is_developer_only')->default(false);
             $table->unsignedInteger('camp_gap_participant_target')->default(50);
             $table->unsignedInteger('msk_completion_target')->default(50);
             $table->unsignedInteger('dg1_completion_target')->default(50);
@@ -391,6 +433,7 @@ class DiscipleshipDashboardTest extends TestCase
             $table->json('photos')->nullable();
             $table->timestamps();
         });
+        app(BranchCatalog::class)->clearCache();
 
         Schema::create('kelompok_dg', function (Blueprint $table): void {
             $table->id();
@@ -469,6 +512,7 @@ class DiscipleshipDashboardTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        app(BranchCatalog::class)->clearCache();
 
         $leaderId = DB::table('orang')->insertGetId([
             'branch_id' => 1,
@@ -534,6 +578,25 @@ class DiscipleshipDashboardTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    private function seedTestingBranch(): int
+    {
+        $id = (int) DB::table('cabang')->insertGetId([
+            'label' => 'Testing',
+            'is_active' => true,
+            'is_developer_only' => true,
+            'camp_gap_participant_target' => 50,
+            'msk_completion_target' => 50,
+            'dg1_completion_target' => 50,
+            'dg2_completion_target' => 50,
+            'dg3_completion_target' => 50,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        app(BranchCatalog::class)->clearCache();
+
+        return $id;
     }
 }
 

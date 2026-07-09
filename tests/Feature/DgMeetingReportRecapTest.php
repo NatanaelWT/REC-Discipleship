@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ActivityRequest;
+use App\Services\Branches\BranchCatalog;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -155,6 +156,26 @@ class DgMeetingReportRecapTest extends TestCase
             ->assertSee("groupRow.id = String(groupRow.id || '');", false)
             ->assertSee("groupRow.leader_id = String(groupRow.leader_id || '');", false)
             ->assertSee("memberRow.id = String(memberRow.id || '');", false);
+    }
+
+    public function test_public_dg_form_rejects_developer_testing_branch_url(): void
+    {
+        Schema::dropIfExists('cabang');
+        Schema::create('cabang', function (Blueprint $table): void {
+            $table->id();
+            $table->string('label')->unique();
+            $table->boolean('is_active')->default(true);
+            $table->boolean('is_developer_only')->default(false);
+            $table->timestamps();
+        });
+        DB::table('cabang')->insert([
+            ['label' => 'Kutisari', 'is_active' => true, 'is_developer_only' => false, 'created_at' => now(), 'updated_at' => now()],
+            ['label' => 'Testing', 'is_active' => true, 'is_developer_only' => true, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        app(BranchCatalog::class)->clearCache();
+
+        $this->get('/publik/jurnal-dg/testing/laporan')
+            ->assertRedirect(route('public.dg.branch', ['error' => 'invalid_branch']));
     }
 
     public function test_public_dg_report_accepts_matching_numeric_ids_sent_as_strings(): void

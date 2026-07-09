@@ -1,7 +1,7 @@
 <?php
 
 function build_pohon_pemuridan_dot_content(string $branch, array $model): string {
-    $branch = normalize_public_branch_code($branch);
+    $branch = normalize_user_branch($branch);
 
     $peopleRows = is_array($model['discipleship_persons'] ?? null) ? array_values($model['discipleship_persons']) : [];
     $groupRows = is_array($model['discipleship_groups'] ?? null) ? array_values($model['discipleship_groups']) : [];

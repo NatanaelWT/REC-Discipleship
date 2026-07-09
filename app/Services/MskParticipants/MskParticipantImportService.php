@@ -17,7 +17,7 @@ class MskParticipantImportService
      */
     public function import(ImportMskParticipantsRequest $request): array
     {
-        $branchCode = normalize_public_branch_code(current_user_branch());
+        $branchCode = normalize_user_branch(current_user_branch());
         $participants = $this->tableData->participantsForBranches([$branchCode]);
         $beforeParticipants = $participants;
 
@@ -113,7 +113,7 @@ class MskParticipantImportService
             $importErrors === [] ? 'msk.import.completed' : 'msk.import.failed',
             'msk_import',
             $branchCode,
-            public_branch_label($branchCode),
+            user_branch_label($branchCode),
             $importErrors === [] ? 'Import peserta MSK selesai.' : 'Import peserta MSK gagal divalidasi.',
             metadata: [
                 'branch' => $branchCode,

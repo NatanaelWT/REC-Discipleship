@@ -73,7 +73,7 @@ class DiscipleshipReadCache
                     $ids[$branchId] = $branchId;
                 }
             } elseif (is_string($value)) {
-                $branchId = $this->branches->idForSlug($value);
+                $branchId = $this->branches->idForSlug($value, true);
                 if ($branchId !== null) {
                     $ids[$branchId] = $branchId;
                 }

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ActivityRequest;
 use App\Models\User;
+use App\Services\Branches\BranchCatalog;
 use App\Services\Developer\DeveloperDiagnosticsService;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Database\Schema\Blueprint;
@@ -374,6 +375,52 @@ class DeveloperAccessTest extends TestCase
         $this->assertDatabaseMissing('users', ['username' => 'missing_branch']);
     }
 
+    public function test_non_developer_users_cannot_be_assigned_to_developer_testing_branch(): void
+    {
+        $this->createCoreTables();
+        $testingBranchId = $this->seedTestingBranch();
+        $this->seedDeveloper();
+        $branchUserId = $this->seedUser('branch_user', 'pemuridan_cabang');
+        $this->loginAs('developer');
+
+        $this->post('/developer/users', [
+            'username' => 'testing_user',
+            'password' => 'new-secret',
+            'branch_id' => $testingBranchId,
+            'access_scope' => 'pemuridan_cabang',
+            'is_active' => '1',
+        ])->assertRedirect('/developer/users?error=branch_invalid');
+        $this->assertDatabaseMissing('users', ['username' => 'testing_user']);
+
+        $this->post('/developer/users/'.$branchUserId, [
+            'branch_id' => $testingBranchId,
+            'access_scope' => 'pemuridan_cabang',
+            'is_active' => '1',
+        ])->assertRedirect('/developer/users?error=branch_invalid&user='.$branchUserId);
+        $this->assertSame(1, (int) DB::table('users')->where('id', $branchUserId)->value('branch_id'));
+    }
+
+    public function test_developer_testing_branch_is_editable_context(): void
+    {
+        $this->createCoreTables();
+        $testingBranchId = $this->seedTestingBranch();
+        $this->seedDeveloper();
+        $this->loginAs('developer');
+
+        $this->get('/pemuridan/target?branch_id='.$testingBranchId)
+            ->assertOk()
+            ->assertSee('Mode Testing Developer')
+            ->assertSee('Cabang Testing')
+            ->assertSee('name="target_msk_completed"', false)
+            ->assertSee('Simpan Target');
+
+        RuntimeBootstrap::load();
+        $this->assertSame('testing', current_user_branch());
+        $this->assertSame($testingBranchId, current_user_branch_id());
+        $this->assertFalse(is_effective_central_discipleship_readonly());
+        $this->assertTrue(branch_can_use_action(current_user_branch(), 'save_person'));
+    }
+
     private function createCoreTables(): void
     {
         Schema::dropIfExists('aktivitas');
@@ -411,6 +458,7 @@ class DeveloperAccessTest extends TestCase
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
+            $table->boolean('is_developer_only')->default(false);
             $table->timestamps();
         });
 
@@ -430,6 +478,22 @@ class DeveloperAccessTest extends TestCase
                 'updated_at' => '2026-06-19 08:00:00',
             ]);
         }
+
+        app(BranchCatalog::class)->clearCache();
+    }
+
+    private function seedTestingBranch(): int
+    {
+        $id = (int) DB::table('cabang')->insertGetId([
+            'label' => 'Testing',
+            'is_active' => true,
+            'is_developer_only' => true,
+            'created_at' => '2026-07-09 08:00:00',
+            'updated_at' => '2026-07-09 08:00:00',
+        ]);
+        app(BranchCatalog::class)->clearCache();
+
+        return $id;
     }
 
     private function createDashboardTelemetryTables(): void

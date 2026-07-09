@@ -25,7 +25,7 @@ class DgMeetingReportRecapPageData
         $centralReadOnly = is_effective_central_discipleship_readonly();
         $selectedBranch = $centralReadOnly
             ? normalize_central_recap_branch(central_recap_selected_branch())
-            : normalize_public_branch_code(current_user_branch());
+            : normalize_user_branch(current_user_branch());
 
         $branchCodes = $this->branchCodes($selectedBranch, $centralReadOnly);
         $data = $this->cache->remember('meeting-report-recap', [...$branchCodes, $centralReadOnly ? 'central' : 'branch'], function () use ($branchCodes, $centralReadOnly): array {
@@ -66,8 +66,8 @@ class DgMeetingReportRecapPageData
     private function branchLabels(): array
     {
         $labels = [];
-        foreach (public_dg_branch_options() as $option) {
-            $branchCode = normalize_public_branch_code((string) ($option['code'] ?? ''));
+        foreach (central_recap_branch_options() as $option) {
+            $branchCode = normalize_user_branch((string) ($option['code'] ?? ''));
             if ($branchCode === '') {
                 continue;
             }
@@ -114,9 +114,9 @@ class DgMeetingReportRecapPageData
         } catch (Throwable) {
             return [];
         }
-        $singleContextBranchCode = count($branchCodes) === 1 ? normalize_public_branch_code((string) $branchCodes[0]) : '';
+        $singleContextBranchCode = count($branchCodes) === 1 ? normalize_user_branch((string) $branchCodes[0]) : '';
         foreach ($records as $person) {
-            $branchCode = normalize_public_branch_code((string) $person->branch_code);
+            $branchCode = normalize_user_branch((string) $person->branch_code);
             $effectiveId = $this->effectiveId($branchCode, (string) $person->getKey());
             if ($effectiveId === '') {
                 continue;
@@ -175,7 +175,7 @@ class DgMeetingReportRecapPageData
         $rows = [];
 
         foreach ($groups as $group) {
-            $branchCode = normalize_public_branch_code((string) $group->branch_code);
+            $branchCode = normalize_user_branch((string) $group->branch_code);
             $groupId = $this->effectiveId($branchCode, (string) $group->getKey());
             if ($groupId === '') {
                 continue;
@@ -379,7 +379,7 @@ class DgMeetingReportRecapPageData
 
         $rows = [];
         foreach ($reports as $report) {
-            $branchCode = normalize_public_branch_code((string) $report->branch_code);
+            $branchCode = normalize_user_branch((string) $report->branch_code);
             $branchLabel = $branchLabels[$branchCode] ?? strtoupper($branchCode);
             $leaderId = $this->effectiveId($branchCode, (string) ($report->leader_person_id ?? ''));
             $groupId = $this->effectiveId($branchCode, (string) ($report->discipleship_group_id ?? ''));
