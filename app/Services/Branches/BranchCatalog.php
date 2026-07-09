@@ -4,15 +4,14 @@ namespace App\Services\Branches;
 
 use App\Models\Branch;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Throwable;
 
 class BranchCatalog
 {
-    private const CACHE_KEY = 'rec.branch-catalog.v3';
+    private const CACHE_KEY = 'rec.branch-catalog.v4';
 
-    /** @var array<int, array{id:int,slug:string,label:string,active:bool,developer_only:bool}>|null */
+    /** @var array<int, array{id:int,slug:string,label:string,active:bool}>|null */
     private ?array $allOptions = null;
 
     /** @var array<int, array{id:int,slug:string,label:string}> */
@@ -21,41 +20,41 @@ class BranchCatalog
     /** @var array<int, array{id:int,slug:string,label:string}> */
     private array $developerOptions = [];
 
-    /** @var array<int, array{id:int,slug:string,label:string,active:bool,developer_only:bool}> */
+    /** @var array<int, array{id:int,slug:string,label:string,active:bool}> */
     private array $optionsById = [];
 
-    /** @var array<string, array{id:int,slug:string,label:string,active:bool,developer_only:bool}> */
+    /** @var array<string, array{id:int,slug:string,label:string,active:bool}> */
     private array $activeOptionsBySlug = [];
 
-    /** @var array<string, array{id:int,slug:string,label:string,active:bool,developer_only:bool}> */
+    /** @var array<string, array{id:int,slug:string,label:string,active:bool}> */
     private array $developerOptionsBySlug = [];
 
     /**
      * @return array<int, array{id:int|null,slug:string,label:string}>
      */
-    public function options(bool $activeOnly = true, bool $includeDeveloperOnly = false): array
+    public function options(bool $activeOnly = true, bool $includeInactive = false): array
     {
         $this->load();
 
         if ($activeOnly) {
-            return $includeDeveloperOnly ? $this->developerOptions : $this->activeOptions;
+            return $includeInactive ? $this->developerOptions : $this->activeOptions;
         }
 
         return array_values(array_map(
             $this->publicOption(...),
             array_filter(
                 $this->allOptions ?? [],
-                static fn (array $option): bool => $includeDeveloperOnly || ! $option['developer_only'],
+                static fn (array $option): bool => $includeInactive || $option['active'],
             ),
         ));
     }
 
-    public function idForSlug(string $slug, bool $includeDeveloperOnly = false): ?int
+    public function idForSlug(string $slug, bool $includeInactive = false): ?int
     {
         $this->load();
         $slug = Str::slug(trim($slug));
 
-        $options = $includeDeveloperOnly ? $this->developerOptionsBySlug : $this->activeOptionsBySlug;
+        $options = $includeInactive ? $this->developerOptionsBySlug : $this->activeOptionsBySlug;
 
         return $options[$slug]['id'] ?? null;
     }
@@ -76,31 +75,33 @@ class BranchCatalog
         return $branchId !== false ? ($this->optionsById[$branchId]['label'] ?? 'Tanpa cabang') : 'Tanpa cabang';
     }
 
-    public function isActiveId(int|string|null $branchId, bool $includeDeveloperOnly = false): bool
+    public function isActiveId(int|string|null $branchId, bool $includeInactive = false): bool
     {
         $this->load();
         $branchId = filter_var($branchId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 
-        if ($branchId === false || ! ($this->optionsById[$branchId]['active'] ?? false)) {
+        if ($branchId === false || ! isset($this->optionsById[$branchId])) {
             return false;
         }
 
-        return $includeDeveloperOnly || ! ($this->optionsById[$branchId]['developer_only'] ?? false);
+        return $includeInactive || (bool) ($this->optionsById[$branchId]['active'] ?? false);
     }
 
-    public function isDeveloperOnlyId(int|string|null $branchId): bool
+    public function isInactiveId(int|string|null $branchId): bool
     {
         $this->load();
         $branchId = filter_var($branchId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 
-        return $branchId !== false && (bool) ($this->optionsById[$branchId]['developer_only'] ?? false);
+        return $branchId !== false
+            && isset($this->optionsById[$branchId])
+            && ! (bool) ($this->optionsById[$branchId]['active'] ?? false);
     }
 
-    public function normalizeSlug(string $slug, bool $includeDeveloperOnly = false): string
+    public function normalizeSlug(string $slug, bool $includeInactive = false): string
     {
         $this->load();
         $slug = Str::slug(trim($slug));
-        $options = $includeDeveloperOnly ? $this->developerOptionsBySlug : $this->activeOptionsBySlug;
+        $options = $includeInactive ? $this->developerOptionsBySlug : $this->activeOptionsBySlug;
 
         return isset($options[$slug]) ? $slug : '';
     }
@@ -138,33 +139,23 @@ class BranchCatalog
         $this->allOptions = array_values($options);
         foreach ($this->allOptions as $option) {
             $this->optionsById[$option['id']] = $option;
-            if (! $option['active']) {
-                continue;
-            }
-
             $publicOption = $this->publicOption($option);
             $this->developerOptions[] = $publicOption;
             $this->developerOptionsBySlug[$option['slug']] = $option;
-            if (! $option['developer_only']) {
+            if ($option['active']) {
                 $this->activeOptions[] = $publicOption;
                 $this->activeOptionsBySlug[$option['slug']] = $option;
             }
         }
     }
 
-    /** @return array<int, array{id:int,slug:string,label:string,active:bool,developer_only:bool}> */
+    /** @return array<int, array{id:int,slug:string,label:string,active:bool}> */
     private function databaseOptions(): array
     {
-        $columns = ['id', 'label', 'is_active'];
-        $hasDeveloperOnly = Schema::hasColumn('cabang', 'is_developer_only');
-        if ($hasDeveloperOnly) {
-            $columns[] = 'is_developer_only';
-        }
-
         return Branch::query()
             ->orderBy('label')
-            ->get($columns)
-            ->map(static function (Branch $branch) use ($hasDeveloperOnly): array {
+            ->get(['id', 'label', 'is_active'])
+            ->map(static function (Branch $branch): array {
                 $label = trim((string) $branch->label);
 
                 return [
@@ -172,7 +163,6 @@ class BranchCatalog
                     'slug' => Str::slug($label),
                     'label' => $label,
                     'active' => (bool) $branch->is_active,
-                    'developer_only' => $hasDeveloperOnly && (bool) ($branch->is_developer_only ?? false),
                 ];
             })
             ->filter(static fn (array $option): bool => $option['slug'] !== '' && $option['slug'] !== 'pusat')
@@ -181,7 +171,7 @@ class BranchCatalog
     }
 
     /**
-     * @param  array{id:int,slug:string,label:string,active:bool,developer_only:bool}  $option
+     * @param  array{id:int,slug:string,label:string,active:bool}  $option
      * @return array{id:int,slug:string,label:string}
      */
     private function publicOption(array $option): array
@@ -214,11 +204,11 @@ class BranchCatalog
         return app()->environment('testing') ? 'array' : 'file';
     }
 
-    /** @return array<int, array{id:int,slug:string,label:string,active:bool,developer_only:bool}> */
+    /** @return array<int, array{id:int,slug:string,label:string,active:bool}> */
     private static function fallbackOptionsWithState(): array
     {
         return array_map(
-            static fn (array $option): array => [...$option, 'active' => true, 'developer_only' => false],
+            static fn (array $option): array => [...$option, 'active' => true],
             self::fallbackOptions(),
         );
     }

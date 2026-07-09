@@ -16,14 +16,13 @@ class BranchCatalogPerformanceTest extends TestCase
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
-            $table->boolean('is_developer_only')->default(false);
             $table->timestamps();
         });
 
         DB::table('cabang')->insert([
-            ['label' => 'Kutisari', 'is_active' => true, 'is_developer_only' => false],
-            ['label' => 'GM', 'is_active' => true, 'is_developer_only' => false],
-            ['label' => 'Testing', 'is_active' => true, 'is_developer_only' => true],
+            ['label' => 'Kutisari', 'is_active' => true],
+            ['label' => 'GM', 'is_active' => true],
+            ['label' => 'Testing', 'is_active' => false],
         ]);
 
         $catalog = app(BranchCatalog::class);

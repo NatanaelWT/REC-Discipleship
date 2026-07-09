@@ -65,7 +65,7 @@ class CurrentUserContext
     public function branchId(): ?int
     {
         if ($this->isDeveloper()) {
-            return $this->developerTestingBranchId();
+            return $this->developerExperimentBranchId();
         }
 
         if (! $this->isDiscipleshipBranch()) {
@@ -74,7 +74,7 @@ class CurrentUserContext
 
         $branchId = $this->user()?->branch_id;
 
-        if (! is_numeric($branchId) || (int) $branchId < 1 || $this->branches->isDeveloperOnlyId((int) $branchId)) {
+        if (! is_numeric($branchId) || (int) $branchId < 1 || ! $this->branches->isActiveId((int) $branchId)) {
             return null;
         }
 
@@ -118,15 +118,20 @@ class CurrentUserContext
     public function isDiscipleshipPreviewReadonly(): bool
     {
         if ($this->isDeveloper()) {
-            return ! $this->isDeveloperTestingBranch();
+            return ! $this->isDeveloperExperimentBranch();
         }
 
         return $this->isDiscipleshipCentral() || $this->isDeveloper();
     }
 
+    public function isDeveloperExperimentBranch(): bool
+    {
+        return $this->isDeveloper() && $this->developerExperimentBranchId() !== null;
+    }
+
     public function isDeveloperTestingBranch(): bool
     {
-        return $this->isDeveloper() && $this->developerTestingBranchId() !== null;
+        return $this->isDeveloperExperimentBranch();
     }
 
     public function canAccessStewardship(): bool
@@ -181,7 +186,7 @@ class CurrentUserContext
                 return true;
             }
 
-            if ($this->isDeveloperTestingBranch() && isset($this->developerTestingActionMap()[$action])) {
+            if ($this->isDeveloperExperimentBranch() && isset($this->developerExperimentActionMap()[$action])) {
                 return true;
             }
 
@@ -256,7 +261,7 @@ class CurrentUserContext
         return [];
     }
 
-    private function developerTestingBranchId(): ?int
+    private function developerExperimentBranchId(): ?int
     {
         if (! $this->isDeveloper()) {
             return null;
@@ -282,7 +287,7 @@ class CurrentUserContext
             return null;
         }
 
-        return $this->branches->isActiveId($candidate, true) && $this->branches->isDeveloperOnlyId($candidate)
+        return $this->branches->isActiveId($candidate, true) && $this->branches->isInactiveId($candidate)
             ? (int) $candidate
             : null;
     }
@@ -290,7 +295,7 @@ class CurrentUserContext
     /**
      * @return array<string, true>
      */
-    private function developerTestingActionMap(): array
+    private function developerExperimentActionMap(): array
     {
         $actions = discipleship_action_map();
         foreach (['save_discipleship_targets', 'export_pohon_pemuridan_dot'] as $action) {

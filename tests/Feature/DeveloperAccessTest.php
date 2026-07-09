@@ -409,7 +409,7 @@ class DeveloperAccessTest extends TestCase
 
         $this->get('/pemuridan/target?branch_id='.$testingBranchId)
             ->assertOk()
-            ->assertSee('Mode Testing Developer')
+            ->assertSee('Mode Eksperimen Developer')
             ->assertSee('Cabang Testing')
             ->assertSee('name="target_msk_completed"', false)
             ->assertSee('Simpan Target');
@@ -458,7 +458,6 @@ class DeveloperAccessTest extends TestCase
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
-            $table->boolean('is_developer_only')->default(false);
             $table->timestamps();
         });
 
@@ -486,8 +485,7 @@ class DeveloperAccessTest extends TestCase
     {
         $id = (int) DB::table('cabang')->insertGetId([
             'label' => 'Testing',
-            'is_active' => true,
-            'is_developer_only' => true,
+            'is_active' => false,
             'created_at' => '2026-07-09 08:00:00',
             'updated_at' => '2026-07-09 08:00:00',
         ]);

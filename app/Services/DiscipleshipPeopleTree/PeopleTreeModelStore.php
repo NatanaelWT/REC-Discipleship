@@ -93,7 +93,7 @@ class PeopleTreeModelStore
     {
         $branchCode = normalize_user_branch($branchCode);
         $branchId = branch_id_from_slug($branchCode);
-        $branchIds = $branchId !== null && app(BranchCatalog::class)->isDeveloperOnlyId($branchId)
+        $branchIds = $branchId !== null && app(BranchCatalog::class)->isInactiveId($branchId)
             ? [$branchId]
             : branch_ids_from_slugs(array_map(
                 static fn (array $option): string => normalize_public_branch_code((string) ($option['code'] ?? '')),

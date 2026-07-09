@@ -206,8 +206,8 @@ function render_central_rekap_toolbar(string $currentPage): void
     echo "    <div class=\"central-rekap-toolbar-body\">\n";
     echo "      <div class=\"central-rekap-head\">\n";
     echo "        <div class=\"central-rekap-title-row\">\n";
-    $modeLabel = function_exists('is_developer_testing_branch') && is_developer_testing_branch()
-        ? 'Mode Testing Developer'
+    $modeLabel = function_exists('is_developer_experiment_branch') && is_developer_experiment_branch()
+        ? 'Mode Eksperimen Developer'
         : 'Mode Pusat';
     echo '          <span class="badge warning">'.h($modeLabel)."</span>\n";
     echo '          <span class="central-rekap-current">Rekap aktif: <strong>'.h($selectedBranchLabel)."</strong>. Klik nama cabang di bawah untuk ganti tampilan.</span>\n";
@@ -986,7 +986,7 @@ function page_header(string $title, array $settings, string $currentPage, bool $
     $currentBranch = current_user_branch();
     $currentScope = current_auth_access_scope();
     $isCentralReadonlySession = is_effective_central_discipleship_readonly();
-    $isDeveloperTestingBranch = function_exists('is_developer_testing_branch') && is_developer_testing_branch();
+    $isDeveloperExperimentBranch = function_exists('is_developer_experiment_branch') && is_developer_experiment_branch();
     $worshipOnlyAccess = current_user_can_access_worship();
     $worshipScopeWithoutFeature = is_worship_only_scope($currentScope) && ! $worshipOnlyAccess;
     $discipleshipOnlyAccess = is_discipleship_branch_scope($currentScope) || $isCentralReadonlySession;
@@ -995,8 +995,8 @@ function page_header(string $title, array $settings, string $currentPage, bool $
     if ($isCentralReadonlySession) {
         $bodyClasses[] = 'is-central-readonly';
     }
-    if ($isDeveloperTestingBranch) {
-        $bodyClasses[] = 'is-developer-testing-branch';
+    if ($isDeveloperExperimentBranch) {
+        $bodyClasses[] = 'is-developer-experiment-branch';
     }
     $currentPageClass = preg_replace('/[^a-z0-9_-]+/i', '-', strtolower(trim($currentPage)));
     if (is_string($currentPageClass) && $currentPageClass !== '') {

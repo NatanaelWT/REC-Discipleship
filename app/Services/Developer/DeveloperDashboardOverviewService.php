@@ -296,14 +296,10 @@ class DeveloperDashboardOverviewService
     private function safeActiveDiscipleshipBranchCount(): int
     {
         try {
-            $query = Branch::query()
+            return Branch::query()
                 ->where('is_active', true)
-                ->where('label', '!=', 'Pusat');
-            if (Schema::hasColumn('cabang', 'is_developer_only')) {
-                $query->where('is_developer_only', false);
-            }
-
-            return $query->count();
+                ->where('label', '!=', 'Pusat')
+                ->count();
         } catch (Throwable) {
             return 0;
         }

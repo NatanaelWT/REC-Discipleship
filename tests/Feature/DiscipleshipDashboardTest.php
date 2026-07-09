@@ -120,7 +120,7 @@ class DiscipleshipDashboardTest extends TestCase
 
         $this->get('/pemuridan/dashboard?branch_id='.$testingBranchId)
             ->assertOk()
-            ->assertSee('Mode Testing Developer')
+            ->assertSee('Mode Eksperimen Developer')
             ->assertDontSee('Peserta MSK Dashboard');
         $this->get('/pemuridan/dashboard/sections/incomplete-msk')
             ->assertOk()
@@ -405,7 +405,6 @@ class DiscipleshipDashboardTest extends TestCase
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
-            $table->boolean('is_developer_only')->default(false);
             $table->unsignedInteger('camp_gap_participant_target')->default(50);
             $table->unsignedInteger('msk_completion_target')->default(50);
             $table->unsignedInteger('dg1_completion_target')->default(50);
@@ -584,8 +583,7 @@ class DiscipleshipDashboardTest extends TestCase
     {
         $id = (int) DB::table('cabang')->insertGetId([
             'label' => 'Testing',
-            'is_active' => true,
-            'is_developer_only' => true,
+            'is_active' => false,
             'camp_gap_participant_target' => 50,
             'msk_completion_target' => 50,
             'dg1_completion_target' => 50,

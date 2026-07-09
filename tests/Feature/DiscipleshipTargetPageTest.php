@@ -97,7 +97,7 @@ class DiscipleshipTargetPageTest extends TestCase
 
         $this->get('/pemuridan/target?branch_id='.$testingBranchId)
             ->assertOk()
-            ->assertSee('Mode Testing Developer')
+            ->assertSee('Mode Eksperimen Developer')
             ->assertSee('Cabang Testing')
             ->assertSee('name="target_msk_completed"', false)
             ->assertSee('Simpan Target');
@@ -150,7 +150,6 @@ class DiscipleshipTargetPageTest extends TestCase
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
-            $table->boolean('is_developer_only')->default(false);
             $table->unsignedInteger('camp_gap_participant_target')->default(50);
             $table->unsignedInteger('msk_completion_target')->default(50);
             $table->unsignedInteger('dg1_completion_target')->default(50);
@@ -196,8 +195,7 @@ class DiscipleshipTargetPageTest extends TestCase
     {
         $id = (int) DB::table('cabang')->insertGetId([
             'label' => 'Testing',
-            'is_active' => true,
-            'is_developer_only' => true,
+            'is_active' => false,
             'camp_gap_participant_target' => 50,
             'msk_completion_target' => 50,
             'dg1_completion_target' => 50,
