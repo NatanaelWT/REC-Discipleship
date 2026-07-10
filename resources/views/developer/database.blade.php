@@ -61,6 +61,26 @@
         ? route('developer.database.table', ['table' => $selectedTable, 'tab' => $tab])
         : route('developer.database', ['tab' => $tab]);
     };
+    $browseUrl = function (array $params = []) use ($selectedTable, $browse): string {
+      $query = [
+        'table' => $selectedTable,
+        'tab' => 'browse',
+        'search' => (string) ($browse['search'] ?? ''),
+        'sort' => (string) ($browse['sort'] ?? ''),
+        'dir' => (string) ($browse['dir'] ?? 'asc'),
+      ];
+      if (! empty($browse['count_total'])) {
+        $query['count_total'] = '1';
+      }
+      $query = array_merge($query, $params);
+      foreach (['search', 'sort', 'dir', 'count_total'] as $key) {
+        if (($query[$key] ?? '') === '') {
+          unset($query[$key]);
+        }
+      }
+
+      return route('developer.database.table', $query);
+    };
   @endphp
 
   @include('developer._header', [
@@ -161,9 +181,21 @@
             </form>
           </details>
 
+          @php
+            $loadedRows = count($browse['rows'] ?? []);
+            $currentPage = (int) ($browse['page'] ?? 1);
+            $totalKnown = (bool) ($browse['total_known'] ?? false);
+            $hasMoreRows = (bool) ($browse['has_more'] ?? false);
+          @endphp
           <div class="developer-db-meta-row">
-            <span>{{ number_format((int) ($browse['total'] ?? 0), 0, ',', '.') }} row</span>
-            <span>Page {{ number_format((int) ($browse['page'] ?? 1), 0, ',', '.') }} / {{ number_format((int) ($browse['last_page'] ?? 1), 0, ',', '.') }}</span>
+            @if ($totalKnown)
+              <span>{{ number_format((int) ($browse['total'] ?? 0), 0, ',', '.') }} row</span>
+              <span>Page {{ number_format($currentPage, 0, ',', '.') }} / {{ number_format((int) ($browse['last_page'] ?? 1), 0, ',', '.') }}</span>
+            @else
+              <span>{{ number_format($loadedRows, 0, ',', '.') }} row dimuat@if ($hasMoreRows) dari banyak row@endif</span>
+              <span>Page {{ number_format($currentPage, 0, ',', '.') }}</span>
+              <a class="btn tiny ghost" href="{{ $browseUrl(['db_page' => 1, 'count_total' => '1']) }}">Hitung total</a>
+            @endif
             @if (! $canEditRows)<span class="badge warning">Primary key tidak ada: edit/delete nonaktif</span>@endif
           </div>
 
@@ -176,7 +208,7 @@
                       $name = (string) ($column['name'] ?? '');
                       $nextDir = (($browse['sort'] ?? '') === $name && ($browse['dir'] ?? 'asc') === 'asc') ? 'desc' : 'asc';
                     @endphp
-                    <th><a href="{{ route('developer.database.table', ['table' => $selectedTable, 'tab' => 'browse', 'search' => $browse['search'] ?? '', 'sort' => $name, 'dir' => $nextDir]) }}">{{ $name }}</a></th>
+                    <th><a href="{{ $browseUrl(['sort' => $name, 'dir' => $nextDir, 'db_page' => 1]) }}">{{ $name }}</a></th>
                   @endforeach
                   <th>Aksi</th>
                 </tr>
@@ -234,13 +266,13 @@
             </table>
           </div>
 
-          @if (($browse['last_page'] ?? 1) > 1)
+          @if ($currentPage > 1 || $hasMoreRows)
             <div class="developer-db-pagination">
-              @if (($browse['page'] ?? 1) > 1)
-                <a class="btn tiny ghost" href="{{ route('developer.database.table', ['table' => $selectedTable, 'tab' => 'browse', 'search' => $browse['search'] ?? '', 'sort' => $browse['sort'] ?? '', 'dir' => $browse['dir'] ?? 'asc', 'db_page' => ((int) ($browse['page'] ?? 1)) - 1]) }}">Sebelumnya</a>
+              @if ($currentPage > 1)
+                <a class="btn tiny ghost" href="{{ $browseUrl(['db_page' => $currentPage - 1]) }}">Sebelumnya</a>
               @endif
-              @if (($browse['page'] ?? 1) < ($browse['last_page'] ?? 1))
-                <a class="btn tiny ghost" href="{{ route('developer.database.table', ['table' => $selectedTable, 'tab' => 'browse', 'search' => $browse['search'] ?? '', 'sort' => $browse['sort'] ?? '', 'dir' => $browse['dir'] ?? 'asc', 'db_page' => ((int) ($browse['page'] ?? 1)) + 1]) }}">Berikutnya</a>
+              @if ($hasMoreRows)
+                <a class="btn tiny ghost" href="{{ $browseUrl(['db_page' => $currentPage + 1]) }}">Berikutnya</a>
               @endif
             </div>
           @endif

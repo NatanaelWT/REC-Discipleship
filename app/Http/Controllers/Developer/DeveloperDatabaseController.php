@@ -149,10 +149,20 @@ class DeveloperDatabaseController extends Controller
         ?string $activeTab = null,
     ): View {
         $table = $table !== null ? $database->normalizeTable($table) : null;
+        $resolvedTab = $activeTab ?? trim((string) $request->query('tab', 'browse'));
+        if (! in_array($resolvedTab, ['browse', 'structure', 'sql', 'export', 'import'], true)) {
+            $resolvedTab = 'browse';
+        }
+        if ($table === null && in_array($resolvedTab, ['browse', 'structure'], true)) {
+            $resolvedTab = 'sql';
+        }
+
         $tableInfo = null;
         $browse = null;
-        if ($table !== null) {
+        if ($table !== null && in_array($resolvedTab, ['browse', 'structure'], true)) {
             $tableInfo = $database->tableInfo($table);
+        }
+        if ($table !== null && $resolvedTab === 'browse') {
             $browse = $database->browse($table, $request->query());
         }
 
@@ -164,7 +174,7 @@ class DeveloperDatabaseController extends Controller
             'selectedTable' => $table,
             'tableInfo' => $tableInfo,
             'browse' => $browse,
-            'activeTab' => $activeTab ?? trim((string) $request->query('tab', 'browse')),
+            'activeTab' => $resolvedTab,
             'statusCode' => trim((string) $request->query('status', '')),
             'errorCode' => trim((string) $request->query('error', '')),
             'message' => session('developer_database_message'),

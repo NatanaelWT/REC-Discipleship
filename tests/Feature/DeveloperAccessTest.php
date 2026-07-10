@@ -333,7 +333,17 @@ class DeveloperAccessTest extends TestCase
             ->assertOk()
             ->assertSee('Data Row')
             ->assertSee('Alpha')
-            ->assertDontSee('Beta');
+            ->assertDontSee('Beta')
+            ->assertSee('Hitung total');
+
+        $browse = app(DeveloperDatabaseService::class)->browse('db_admin_sample');
+        $this->assertNull($browse['total']);
+        $this->assertFalse($browse['total_known']);
+        $this->assertSame(2, count($browse['rows']));
+
+        $countedBrowse = app(DeveloperDatabaseService::class)->browse('db_admin_sample', ['count_total' => '1']);
+        $this->assertSame(2, $countedBrowse['total']);
+        $this->assertTrue($countedBrowse['total_known']);
 
         $this->get('/developer/database/db_admin_sample?tab=structure')
             ->assertOk()

@@ -14,6 +14,21 @@ class DeveloperDatabaseService
     private const MAX_QUERY_ROWS = 200;
     private const MAX_IMPORT_BYTES = 26214400;
 
+    /** @var array<int, array<string, mixed>>|null */
+    private ?array $tableCache = null;
+
+    /** @var array<string, array<int, array<string, mixed>>> */
+    private array $columnCache = [];
+
+    /** @var array<string, array<int, array<string, mixed>>> */
+    private array $indexCache = [];
+
+    /** @var array<string, array<int, array<string, mixed>>> */
+    private array $foreignKeyCache = [];
+
+    /** @var array<string, array<int, string>> */
+    private array $primaryKeyCache = [];
+
     public function __construct(private readonly ActivityRecorder $activity) {}
 
     /**
@@ -35,6 +50,10 @@ class DeveloperDatabaseService
      */
     public function tables(): array
     {
+        if ($this->tableCache !== null) {
+            return $this->tableCache;
+        }
+
         try {
             $tables = array_map(function (array $table): array {
                 $name = trim((string) ($table['name'] ?? $table['table'] ?? $table['TABLE_NAME'] ?? ''));
@@ -53,7 +72,7 @@ class DeveloperDatabaseService
         $tables = array_values(array_filter($tables, static fn (array $table): bool => ($table['name'] ?? '') !== ''));
         usort($tables, static fn (array $left, array $right): int => strcmp((string) $left['name'], (string) $right['name']));
 
-        return $tables;
+        return $this->tableCache = $tables;
     }
 
     public function normalizeTable(string $table): ?string
@@ -106,6 +125,7 @@ class DeveloperDatabaseService
         $search = $this->shortString((string) ($input['search'] ?? ''), 120);
         $sort = in_array((string) ($input['sort'] ?? ''), $columnNames, true) ? (string) $input['sort'] : '';
         $dir = strtolower((string) ($input['dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
+        $countTotal = (string) ($input['count_total'] ?? '') === '1';
 
         $query = DB::table($table);
         if ($search !== '' && $columnNames !== []) {
@@ -116,7 +136,13 @@ class DeveloperDatabaseService
             });
         }
 
-        $total = (int) (clone $query)->count();
+        $total = null;
+        $lastPage = null;
+        if ($countTotal) {
+            $total = (int) (clone $query)->count();
+            $lastPage = max(1, (int) ceil($total / $perPage));
+        }
+
         if ($sort !== '') {
             $query->orderBy($sort, $dir);
         } elseif ($primaryKey !== []) {
@@ -127,10 +153,17 @@ class DeveloperDatabaseService
 
         $rows = $query
             ->offset(($page - 1) * $perPage)
-            ->limit($perPage)
+            ->limit($perPage + 1)
             ->get()
             ->map(fn (object $row): array => $this->rowPayload((array) $row, $primaryKey))
             ->all();
+        $hasMore = count($rows) > $perPage;
+        if ($hasMore) {
+            $rows = array_slice($rows, 0, $perPage);
+        }
+        if ($countTotal && $lastPage !== null) {
+            $hasMore = $page < $lastPage;
+        }
 
         return [
             'table' => $table,
@@ -139,9 +172,12 @@ class DeveloperDatabaseService
             'can_edit_rows' => $primaryKey !== [],
             'rows' => $rows,
             'total' => $total,
+            'total_known' => $countTotal,
             'page' => $page,
             'per_page' => $perPage,
-            'last_page' => max(1, (int) ceil($total / $perPage)),
+            'last_page' => $lastPage,
+            'has_more' => $hasMore,
+            'count_total' => $countTotal,
             'search' => $search,
             'sort' => $sort,
             'dir' => $dir,
@@ -582,13 +618,17 @@ class DeveloperDatabaseService
      */
     private function columns(string $table): array
     {
+        if (array_key_exists($table, $this->columnCache)) {
+            return $this->columnCache[$table];
+        }
+
         try {
             $columns = Schema::getColumns($table);
         } catch (Throwable) {
             $columns = array_map(static fn (string $name): array => ['name' => $name], Schema::getColumnListing($table));
         }
 
-        return array_values(array_map(static fn (array $column): array => [
+        return $this->columnCache[$table] = array_values(array_map(static fn (array $column): array => [
             'name' => trim((string) ($column['name'] ?? '')),
             'type' => trim((string) ($column['type'] ?? $column['type_name'] ?? '')),
             'type_name' => trim((string) ($column['type_name'] ?? '')),
@@ -604,10 +644,14 @@ class DeveloperDatabaseService
      */
     private function indexes(string $table): array
     {
+        if (array_key_exists($table, $this->indexCache)) {
+            return $this->indexCache[$table];
+        }
+
         try {
-            return array_values(Schema::getIndexes($table));
+            return $this->indexCache[$table] = array_values(Schema::getIndexes($table));
         } catch (Throwable) {
-            return [];
+            return $this->indexCache[$table] = [];
         }
     }
 
@@ -616,10 +660,14 @@ class DeveloperDatabaseService
      */
     private function foreignKeys(string $table): array
     {
+        if (array_key_exists($table, $this->foreignKeyCache)) {
+            return $this->foreignKeyCache[$table];
+        }
+
         try {
-            return array_values(Schema::getForeignKeys($table));
+            return $this->foreignKeyCache[$table] = array_values(Schema::getForeignKeys($table));
         } catch (Throwable) {
-            return [];
+            return $this->foreignKeyCache[$table] = [];
         }
     }
 
@@ -628,13 +676,17 @@ class DeveloperDatabaseService
      */
     private function primaryKey(string $table): array
     {
+        if (array_key_exists($table, $this->primaryKeyCache)) {
+            return $this->primaryKeyCache[$table];
+        }
+
         foreach ($this->indexes($table) as $index) {
             if ((bool) ($index['primary'] ?? false)) {
-                return array_values(array_map('strval', $index['columns'] ?? []));
+                return $this->primaryKeyCache[$table] = array_values(array_map('strval', $index['columns'] ?? []));
             }
         }
 
-        return [];
+        return $this->primaryKeyCache[$table] = [];
     }
 
     private function requireTable(string $table): string
