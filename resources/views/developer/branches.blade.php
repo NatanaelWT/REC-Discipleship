@@ -29,7 +29,7 @@
         <span class="developer-section-icon">@include('developer._icon', ['name' => 'config'])</span>
         <div><span class="developer-section-kicker">Cabang baru</span><h2>Tambah Cabang</h2><p>Cabang baru dibuat sebagai mode eksperimen sampai developer mengaktifkannya.</p></div>
       </div>
-      <form method="post" action="{{ route('developer.branches.store') }}" class="developer-form-grid developer-config-form">
+      <form method="post" action="{{ route('developer.branches.store') }}" class="developer-form-grid developer-config-form developer-branch-create-form">
         @csrf
         <label class="developer-config-field">
           <span>Nama Cabang</span>
@@ -83,7 +83,7 @@
             </summary>
             <div class="developer-user-detail">
               <div class="developer-user-detail-head"><strong>Pengaturan cabang</strong><span>Perubahan status langsung memengaruhi public form, user management, dan toolbar developer.</span></div>
-              <form method="post" action="{{ route('developer.branches.update', ['branch' => $branch['id']]) }}" class="developer-form-grid developer-config-form">
+              <form method="post" action="{{ route('developer.branches.update', ['branch' => $branch['id']]) }}" class="developer-form-grid developer-config-form developer-branch-edit-form">
                 @csrf
                 <label class="developer-config-field">
                   <span>Nama Cabang</span>
