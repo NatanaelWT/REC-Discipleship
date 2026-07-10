@@ -75,7 +75,6 @@ class DgMeetingReportRecapTest extends TestCase
             'leader_person_id' => $ids['leader_id'],
             'leader_name_snapshot' => 'Pemimpin Test',
             'discipleship_group_id' => $inactiveGroupId,
-            'group_name_snapshot' => 'Kelompok Nonaktif',
             'meeting_date' => '2025-12-01',
             'material_topic' => 'Materi Kelompok Nonaktif',
             'group_progress_snapshot' => 'DG 1',
@@ -206,7 +205,7 @@ class DgMeetingReportRecapTest extends TestCase
         $this->assertSame($ids['leader_id'], (int) $report->leader_person_id);
         $this->assertSame('Veronica Lahindah', $report->leader_name_snapshot);
         $this->assertSame($ids['group_id'], (int) $report->discipleship_group_id);
-        $this->assertSame('DG 2 (Veronica Lahindah)', $report->group_name_snapshot);
+        $this->assertFalse(property_exists($report, 'group_name_snapshot'));
         $this->assertSame('Sesi 9', $report->material_topic);
         $this->assertSame('2026-06-18', substr((string) $report->meeting_date, 0, 10));
         $this->assertSame([[
@@ -475,7 +474,6 @@ class DgMeetingReportRecapTest extends TestCase
             $table->unsignedBigInteger('leader_person_id')->nullable();
             $table->string('leader_name_snapshot')->nullable();
             $table->unsignedBigInteger('discipleship_group_id')->nullable();
-            $table->string('group_name_snapshot')->nullable();
             $table->date('meeting_date')->nullable();
             $table->string('material_topic')->nullable();
             $table->string('group_progress_snapshot')->nullable();
@@ -566,7 +564,6 @@ class DgMeetingReportRecapTest extends TestCase
             'leader_person_id' => $leaderId,
             'leader_name_snapshot' => 'Pemimpin Test',
             'discipleship_group_id' => $groupId,
-            'group_name_snapshot' => 'Kelompok Test',
             'meeting_date' => '2026-06-01',
             'material_topic' => 'Materi Test',
             'group_progress_snapshot' => 'DG 1',

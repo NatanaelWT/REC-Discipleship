@@ -109,7 +109,6 @@ class DgMeetingReportController extends Controller
                     'leader_person_id' => $request->leaderPersonId(),
                     'leader_name_snapshot' => $request->leaderName(),
                     'discipleship_group_id' => $request->discipleshipGroupId(),
-                    'group_name_snapshot' => $request->groupName(),
                     'meeting_date' => $request->meetingDate(),
                     'material_topic' => $request->materialLabel(),
                     'group_progress_snapshot' => $request->groupProgress(),

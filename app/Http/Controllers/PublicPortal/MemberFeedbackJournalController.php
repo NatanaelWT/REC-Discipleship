@@ -102,7 +102,6 @@ class MemberFeedbackJournalController extends Controller
                 $groupId = $request->groupId();
                 $leaderId = (int) ($groupRow['leader_id'] ?? 0);
                 $respondentId = $request->respondentPersonId();
-                $groupName = discipleship_group_display_label($groupRow);
 
                 $groupProgress = normalize_dg_progress_value((string) ($groupRow['progress'] ?? ''));
                 if ($groupProgress === '') {
@@ -120,7 +119,6 @@ class MemberFeedbackJournalController extends Controller
                     'respondent_person_id' => $respondentId,
                     'respondent_name_snapshot' => $request->respondentName(),
                     'leader_name_snapshot' => trim((string) ($groupRow['leader_name'] ?? '')) ?: null,
-                    'group_name_snapshot' => $groupName,
                     'group_label_snapshot' => public_member_feedback_group_option_label($groupRow),
                     'group_progress_snapshot' => $groupProgress,
                     'source' => 'public_form',

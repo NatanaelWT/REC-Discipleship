@@ -141,7 +141,7 @@ class ActivityRecorder
 
     private function modelLabel(Model $model): ?string
     {
-        foreach (['username', 'full_name', 'name', 'title', 'group_name_snapshot', 'month', 'key'] as $field) {
+        foreach (['username', 'full_name', 'name', 'title', 'month', 'key'] as $field) {
             $value = trim((string) ($model->getAttribute($field) ?? ''));
             if ($value !== '') {
                 return function_exists('mb_substr') ? mb_substr($value, 0, 255) : substr($value, 0, 255);

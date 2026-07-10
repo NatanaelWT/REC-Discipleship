@@ -16,7 +16,6 @@ class DiscipleshipMeetingReport extends Model
         'leader_person_id',
         'leader_name_snapshot',
         'discipleship_group_id',
-        'group_name_snapshot',
         'meeting_date',
         'material_topic',
         'group_progress_snapshot',

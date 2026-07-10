@@ -276,7 +276,7 @@ class PeopleTreeModelStore
             return DiscipleshipMeetingReport::query()
                 ->select([
                     'id', 'branch_id', 'leader_person_id', 'leader_name_snapshot', 'discipleship_group_id',
-                    'group_name_snapshot', 'meeting_date', 'material_topic', 'group_progress_snapshot',
+                    'meeting_date', 'material_topic', 'group_progress_snapshot',
                     'absence_reason', 'absences', 'meditation_sharers', 'photos', 'additional_notes',
                     'meditation_min_times', 'sharing_openness_score', 'prepared_material', 'prayed_for_members',
                     'shared_meditation', 'relationally_contacted', 'source', 'created_at', 'updated_at',
@@ -290,7 +290,11 @@ class PeopleTreeModelStore
                     $branchCode = normalize_user_branch((string) $report->branch_code);
                     $branchLabel = $labels[$branchCode] ?? strtoupper($branchCode);
                     $leaderName = trim((string) ($report->leader_name_snapshot ?? ''));
-                    $groupName = trim((string) ($report->group_name_snapshot ?? 'Kelompok')) ?: 'Kelompok';
+                    $groupProgress = normalize_dg_progress_value((string) $report->group_progress_snapshot) ?: 'DG 1';
+                    $groupName = discipleship_group_display_label([
+                        'progress' => $groupProgress,
+                        'leader_name' => $leaderName,
+                    ], 'Kelompok');
                     if ($centralReadOnly) {
                         $leaderName = $leaderName !== '' ? append_branch_suffix($leaderName, $branchLabel) : '';
                         $groupName = append_branch_suffix($groupName, $branchLabel);
@@ -306,7 +310,7 @@ class PeopleTreeModelStore
                         'group_name' => $groupName,
                         'meeting_date' => $this->dateString($report->meeting_date),
                         'material_topic' => trim((string) $report->material_topic),
-                        'group_progress' => normalize_dg_progress_value((string) $report->group_progress_snapshot) ?: 'DG 1',
+                        'group_progress' => $groupProgress,
                         'absence_reason' => trim((string) $report->absence_reason),
                         'absent_member_ids' => $this->reportPersonIds($report->absenceItems()),
                         'additional_notes' => trim((string) $report->additional_notes),

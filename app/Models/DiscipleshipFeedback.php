@@ -20,7 +20,6 @@ class DiscipleshipFeedback extends Model
         'respondent_person_id',
         'respondent_name_snapshot',
         'leader_name_snapshot',
-        'group_name_snapshot',
         'group_label_snapshot',
         'group_progress_snapshot',
         'ratings',

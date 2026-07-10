@@ -477,7 +477,6 @@ class DiscipleshipDashboardTest extends TestCase
             $table->unsignedBigInteger('leader_person_id')->nullable();
             $table->string('leader_name_snapshot')->nullable();
             $table->unsignedBigInteger('discipleship_group_id')->nullable();
-            $table->string('group_name_snapshot')->nullable();
             $table->date('meeting_date');
             $table->string('material_topic')->nullable();
             $table->string('group_progress_snapshot')->nullable();

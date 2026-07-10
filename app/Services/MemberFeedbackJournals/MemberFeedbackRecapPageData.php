@@ -91,7 +91,6 @@ class MemberFeedbackRecapPageData
             $respondentId = (int) ($feedback->respondent_person_id ?? 0);
             $feedbackSession = (int) ($feedback->feedback_session ?? 0);
             $leaderName = trim((string) ($feedback->leader_name_snapshot ?? '')) ?: '-';
-            $groupName = trim((string) ($feedback->group_name_snapshot ?? '')) ?: 'Kelompok';
             $respondentName = trim((string) ($feedback->respondent_name_snapshot ?? '')) ?: '-';
             $groupProgress = normalize_dg_progress_value((string) ($feedback->group_progress_snapshot ?? ''));
             if ($groupProgress === '' && isset($activeMemberships['groups'][$groupId])) {
@@ -99,6 +98,13 @@ class MemberFeedbackRecapPageData
             }
             if ($groupProgress === '') {
                 $groupProgress = 'DG 1';
+            }
+            $groupName = trim((string) ($activeMemberships['groups'][$groupId]['name'] ?? ''));
+            if ($groupName === '') {
+                $groupName = discipleship_group_display_label([
+                    'progress' => $groupProgress,
+                    'leader_name' => $leaderName,
+                ], 'Kelompok');
             }
 
             if ($centralReadOnly) {
@@ -588,7 +594,7 @@ class MemberFeedbackRecapPageData
                 ->select([
                     'id', 'branch_id', 'feedback_session', 'discipleship_group_id', 'leader_person_id',
                     'respondent_person_id', 'respondent_name_snapshot', 'leader_name_snapshot',
-                    'group_name_snapshot', 'group_label_snapshot', 'group_progress_snapshot',
+                    'group_label_snapshot', 'group_progress_snapshot',
                     'ratings', 'notes', 'source', 'created_at', 'updated_at',
                 ])
                 ->whereIn('branch_id', $branchIds)

@@ -237,7 +237,6 @@ class MemberFeedbackRecapTest extends TestCase
             $table->unsignedBigInteger('respondent_person_id')->nullable();
             $table->string('respondent_name_snapshot')->nullable();
             $table->string('leader_name_snapshot')->nullable();
-            $table->string('group_name_snapshot')->nullable();
             $table->string('group_label_snapshot')->nullable();
             $table->string('group_progress_snapshot', 80)->nullable();
             $table->longText('ratings')->nullable();
@@ -336,7 +335,6 @@ class MemberFeedbackRecapTest extends TestCase
             'respondent_person_id' => $ids['member_id'],
             'respondent_name_snapshot' => $respondentName,
             'leader_name_snapshot' => $ids['leader_name'],
-            'group_name_snapshot' => $ids['group_name'],
             'group_label_snapshot' => 'DG 1 ('.$ids['leader_name'].') - '.$respondentName,
             'group_progress_snapshot' => 'DG 1',
             'ratings' => json_encode($this->ratingRows($balanceScore)),
