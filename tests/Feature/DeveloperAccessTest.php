@@ -48,6 +48,31 @@ class DeveloperAccessTest extends TestCase
         $this->get('/developer/statistics')->assertRedirect('/pemuridan/dashboard?error=access_denied');
     }
 
+    public function test_database_is_a_standalone_sidebar_menu_for_developers(): void
+    {
+        $this->createCoreTables();
+        $this->seedDeveloper();
+        $this->loginAs('developer');
+
+        $response = $this->get('/developer/database')->assertOk();
+        $document = new \DOMDocument;
+        $previousErrorHandling = libxml_use_internal_errors(true);
+        $loaded = $document->loadHTML((string) $response->getContent());
+        libxml_clear_errors();
+        libxml_use_internal_errors($previousErrorHandling);
+
+        $this->assertTrue($loaded);
+
+        $xpath = new \DOMXPath($document);
+        $sidebar = '//nav[contains(concat(" ", normalize-space(@class), " "), " sidebar-nav ")]';
+        $developerGroup = $sidebar.'/details[summary[starts-with(normalize-space(.), "Developer")]]';
+
+        $this->assertSame(1.0, $xpath->evaluate('count('.$sidebar.'/a[normalize-space(.) = "Database"])'));
+        $this->assertSame(1.0, $xpath->evaluate('count('.$sidebar.'/a[normalize-space(.) = "Database" and contains(concat(" ", normalize-space(@class), " "), " active ")])'));
+        $this->assertSame(0.0, $xpath->evaluate('count('.$developerGroup.'//a[normalize-space(.) = "Database"])'));
+        $this->assertSame(0.0, $xpath->evaluate('count('.$developerGroup.'[@open])'));
+    }
+
     public function test_developer_bypasses_existing_access_gates(): void
     {
         $this->createCoreTables();
