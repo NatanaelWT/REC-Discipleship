@@ -16001,20 +16001,29 @@ details[open] > summary .activity-disclosure-icon::after {
 }
 
 /* Developer database admin */
+.page-developer-database .container {
+  max-width: 1680px;
+  padding: 28px 34px 56px;
+}
+
+.page-developer-database .developer-section-card {
+  padding: 24px;
+}
+
 .developer-db-shell {
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 22px;
   align-items: start;
 }
 
 .developer-db-sidebar {
   position: sticky;
-  top: 18px;
+  top: 24px;
   display: grid;
-  gap: 14px;
-  max-height: calc(100vh - 36px);
-  padding: 18px;
+  gap: 16px;
+  max-height: calc(100vh - 48px);
+  padding: 20px;
   overflow: hidden;
 }
 
@@ -16032,26 +16041,55 @@ details[open] > summary .activity-disclosure-icon::after {
 
 .developer-db-table-list {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   overflow: auto;
-  padding-right: 2px;
+  padding: 2px 4px 6px 0;
+}
+
+.developer-db-table-list::-webkit-scrollbar,
+.developer-db-table-wrap::-webkit-scrollbar,
+.developer-db-row-actions .developer-db-row-form::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.developer-db-table-list::-webkit-scrollbar-track,
+.developer-db-table-wrap::-webkit-scrollbar-track,
+.developer-db-row-actions .developer-db-row-form::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, .14);
+}
+
+.developer-db-table-list::-webkit-scrollbar-thumb,
+.developer-db-table-wrap::-webkit-scrollbar-thumb,
+.developer-db-row-actions .developer-db-row-form::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(100, 116, 139, .46);
 }
 
 .developer-db-table-link {
   display: grid;
-  gap: 3px;
-  padding: 10px 11px;
+  gap: 5px;
+  min-height: 64px;
+  align-content: center;
+  padding: 13px 14px;
   border: 1px solid rgba(226, 232, 240, .9);
-  border-radius: 11px;
+  border-radius: 13px;
   background: #fff;
   color: #0f172a;
   text-decoration: none;
+  transition: background .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
 .developer-db-table-link:hover,
 .developer-db-table-link.active {
   border-color: rgba(13, 148, 136, .34);
   background: #f0fdfa;
+  box-shadow: 0 10px 24px rgba(15, 118, 110, .08);
+}
+
+.developer-db-table-link:hover {
+  transform: translateY(-1px);
 }
 
 .developer-db-table-link strong {
@@ -16068,11 +16106,11 @@ details[open] > summary .activity-disclosure-icon::after {
 .developer-db-main {
   display: grid;
   min-width: 0;
-  gap: 16px;
+  gap: 20px;
 }
 
 .developer-db-toolbar {
-  gap: 14px;
+  gap: 18px;
 }
 
 .developer-db-tabs {
@@ -16083,9 +16121,9 @@ details[open] > summary .activity-disclosure-icon::after {
 
 .developer-db-tabs a {
   display: inline-flex;
-  min-height: 36px;
+  min-height: 38px;
   align-items: center;
-  padding: 8px 12px;
+  padding: 9px 14px;
   border: 1px solid rgba(148, 163, 184, .28);
   border-radius: 999px;
   background: #fff;
@@ -16108,12 +16146,21 @@ details[open] > summary .activity-disclosure-icon::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
 .developer-db-section-head h2 {
-  margin: 2px 0 0;
+  margin: 4px 0 0;
+  font-size: 25px;
+  line-height: 1.15;
+}
+
+.developer-db-meta-row {
+  padding: 2px 2px 0;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 750;
 }
 
 .developer-db-search {
@@ -16134,32 +16181,33 @@ details[open] > summary .activity-disclosure-icon::after {
 }
 
 .developer-db-search input {
-  min-width: 240px;
-  min-height: 38px;
-  padding: 8px 11px;
+  min-width: 280px;
+  min-height: 42px;
+  padding: 9px 12px;
 }
 
 .developer-db-editor,
 .developer-db-row-actions {
   border: 1px solid rgba(226, 232, 240, .9);
-  border-radius: 12px;
+  border-radius: 14px;
   background: #fff;
 }
 
 .developer-db-editor > summary,
 .developer-db-row-actions > summary {
   cursor: pointer;
-  padding: 11px 13px;
+  padding: 14px 16px;
   color: #0f766e;
   font-weight: 850;
+  list-style-position: inside;
 }
 
 .developer-db-row-form,
 .developer-db-utility-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 13px;
-  padding: 14px;
+  gap: 16px;
+  padding: 18px;
 }
 
 .developer-db-row-form label,
@@ -16193,8 +16241,8 @@ details[open] > summary .activity-disclosure-icon::after {
 .developer-db-utility-form input,
 .developer-db-utility-form select {
   width: 100%;
-  min-height: 40px;
-  padding: 8px 10px;
+  min-height: 42px;
+  padding: 9px 11px;
 }
 
 .developer-db-null,
@@ -16218,17 +16266,45 @@ details[open] > summary .activity-disclosure-icon::after {
 .developer-db-delete-form {
   display: flex;
   justify-content: flex-end;
-  padding: 0 14px 14px;
+  padding: 0 18px 18px;
 }
 
 .developer-db-table-wrap {
+  width: 100%;
   max-height: 680px;
+  overflow: auto;
+  border: 1px solid rgba(203, 213, 225, .86);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82);
+}
+
+.developer-db-data-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .developer-db-data-table th,
 .developer-db-data-table td {
+  min-height: 48px;
+  padding: 13px 16px;
+  border-bottom-color: rgba(203, 213, 225, .78);
   white-space: nowrap;
   vertical-align: top;
+}
+
+.developer-db-data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, #f8fafc, #eef4f8);
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
 .developer-db-data-table th a {
@@ -16239,7 +16315,16 @@ details[open] > summary .activity-disclosure-icon::after {
 .developer-db-data-table td {
   max-width: 260px;
   overflow: hidden;
+  color: #334155;
   text-overflow: ellipsis;
+}
+
+.developer-db-data-table tbody tr:nth-child(even) td {
+  background: rgba(248, 250, 252, .58);
+}
+
+.developer-db-data-table tbody tr:hover td {
+  background: #f0fdfa;
 }
 
 .developer-db-data-table td.is-null {
@@ -16248,17 +16333,26 @@ details[open] > summary .activity-disclosure-icon::after {
 }
 
 .developer-db-row-actions {
-  min-width: 280px;
+  width: 320px;
+  min-width: 320px;
+}
+
+.developer-db-row-actions .developer-db-row-form {
+  grid-template-columns: 1fr;
+  max-height: 420px;
+  overflow: auto;
+  padding: 16px;
 }
 
 .developer-db-sql-form {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .developer-db-sql-form textarea {
   width: 100%;
-  padding: 13px;
+  min-height: 220px;
+  padding: 15px;
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   line-height: 1.55;
@@ -16277,16 +16371,40 @@ details[open] > summary .activity-disclosure-icon::after {
 .developer-db-structure-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
+}
+
+.page-developer-database .developer-section-card > .table-wrap:not(.developer-db-table-wrap),
+.developer-db-structure-grid .table-wrap {
+  overflow: auto;
+  border: 1px solid rgba(203, 213, 225, .78);
+  border-radius: 15px;
+  background: #fff;
+}
+
+.page-developer-database .developer-section-card > .table-wrap:not(.developer-db-table-wrap) .table,
+.developer-db-structure-grid .table {
+  min-width: 100%;
+}
+
+.page-developer-database .developer-section-card > .table-wrap:not(.developer-db-table-wrap) th,
+.page-developer-database .developer-section-card > .table-wrap:not(.developer-db-table-wrap) td,
+.developer-db-structure-grid th,
+.developer-db-structure-grid td {
+  padding: 12px 14px;
 }
 
 .developer-db-structure-grid h3 {
   margin: 0;
-  padding: 14px 14px 0;
+  padding: 16px 16px 0;
   font-size: 14px;
 }
 
 @media (max-width: 980px) {
+  .page-developer-database .container {
+    padding-inline: 22px;
+  }
+
   .developer-db-shell {
     grid-template-columns: 1fr;
   }
@@ -16298,6 +16416,11 @@ details[open] > summary .activity-disclosure-icon::after {
 }
 
 @media (max-width: 720px) {
+  .page-developer-database .container,
+  .page-developer-database .developer-section-card {
+    padding-inline: 16px;
+  }
+
   .developer-db-row-form,
   .developer-db-utility-form,
   .developer-db-structure-grid {
