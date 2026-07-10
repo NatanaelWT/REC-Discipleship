@@ -364,6 +364,12 @@ class DeveloperAccessTest extends TestCase
         $fkBrowse = app(DeveloperDatabaseService::class)->browse('db_admin_fk_child');
         $this->assertSame('Parent Alpha', $fkBrowse['rows'][0]['foreign_labels']['owner_id']['label'] ?? null);
 
+        $branchFkBrowse = app(DeveloperDatabaseService::class)->browse('db_admin_branch_child');
+        $this->assertSame('Kutisari', $branchFkBrowse['rows'][0]['foreign_labels']['branch_id']['label'] ?? null);
+
+        $personFkBrowse = app(DeveloperDatabaseService::class)->browse('db_admin_person_child');
+        $this->assertSame('Aerin Anggono', $personFkBrowse['rows'][0]['foreign_labels']['person_id']['label'] ?? null);
+
         $this->get('/developer/database/db_admin_group_child')
             ->assertOk()
             ->assertSee('DG2')
@@ -877,7 +883,10 @@ class DeveloperAccessTest extends TestCase
     {
         Schema::dropIfExists('db_admin_imported');
         Schema::dropIfExists('db_admin_group_child');
+        Schema::dropIfExists('db_admin_person_child');
+        Schema::dropIfExists('db_admin_branch_child');
         Schema::dropIfExists('discipleship_groups');
+        Schema::dropIfExists('people');
         Schema::dropIfExists('db_admin_fk_child');
         Schema::dropIfExists('db_admin_fk_owner');
         Schema::dropIfExists('db_admin_no_pk');
@@ -904,6 +913,23 @@ class DeveloperAccessTest extends TestCase
             $table->string('note')->nullable();
             $table->foreign('owner_id')->references('id')->on('db_admin_fk_owner');
         });
+        Schema::create('db_admin_branch_child', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->string('note')->nullable();
+            $table->foreign('branch_id')->references('id')->on('cabang');
+        });
+        Schema::create('people', function (Blueprint $table): void {
+            $table->id();
+            $table->string('full_name');
+            $table->string('email')->nullable();
+        });
+        Schema::create('db_admin_person_child', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('person_id');
+            $table->string('note')->nullable();
+            $table->foreign('person_id')->references('id')->on('people');
+        });
         Schema::create('discipleship_groups', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('branch_id');
@@ -927,6 +953,12 @@ class DeveloperAccessTest extends TestCase
         $ownerId = (int) DB::table('db_admin_fk_owner')->insertGetId(['label' => 'Parent Alpha']);
         DB::table('db_admin_fk_child')->insert(['owner_id' => $ownerId, 'note' => 'Child row']);
         $branchId = (int) DB::table('cabang')->where('label', 'Kutisari')->value('id');
+        DB::table('db_admin_branch_child')->insert(['branch_id' => $branchId, 'note' => 'Branch child row']);
+        $personId = (int) DB::table('people')->insertGetId([
+            'full_name' => 'Aerin Anggono',
+            'email' => 'aerin.anggono@gmail.com',
+        ]);
+        DB::table('db_admin_person_child')->insert(['person_id' => $personId, 'note' => 'Person child row']);
         $groupId = (int) DB::table('discipleship_groups')->insertGetId([
             'branch_id' => $branchId,
             'stage' => 'DG 2',

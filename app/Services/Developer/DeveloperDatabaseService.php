@@ -808,7 +808,7 @@ class DeveloperDatabaseService
             }
         }
 
-        $displayColumns = $this->foreignDisplayColumns($columnNames, $foreignColumn);
+        $displayColumns = $this->foreignDisplayColumns($columnNames, $foreignColumn, $foreignTable);
         $selectColumns = array_values(array_unique(array_merge([$foreignColumn], $displayColumns)));
 
         try {
@@ -886,15 +886,10 @@ class DeveloperDatabaseService
                 continue;
             }
 
-            $labels[$this->referenceKey($row[$foreignColumn])] = implode(' · ', $parts);
+            $labels[$this->referenceKey($row[$foreignColumn])] = implode(' '."\u{00B7}".' ', $parts);
         }
 
         return $labels;
-    }
-
-    private function isDiscipleshipGroupTable(string $table): bool
-    {
-        return in_array($table, ['kelompok_dg', 'discipleship_groups'], true);
     }
 
     /**
@@ -956,12 +951,51 @@ class DeveloperDatabaseService
         return $this->shortString($stage, 24);
     }
 
+    private function isDiscipleshipGroupTable(string $table): bool
+    {
+        return in_array($table, ['kelompok_dg', 'discipleship_groups'], true);
+    }
+
+    private function isBranchTable(string $table): bool
+    {
+        return in_array($table, ['cabang', 'branches'], true);
+    }
+
+    private function isPersonTable(string $table): bool
+    {
+        return in_array($table, ['orang', 'people', 'discipleship_people'], true);
+    }
+
+    /**
+     * @param array<int, string> $columnNames
+     * @param array<int, string> $candidates
+     * @return array<int, string>
+     */
+    private function firstExistingColumns(array $columnNames, array $candidates): array
+    {
+        $lowerColumns = array_change_key_case(array_combine($columnNames, $columnNames) ?: [], CASE_LOWER);
+        foreach ($candidates as $candidate) {
+            if (isset($lowerColumns[$candidate])) {
+                return [$lowerColumns[$candidate]];
+            }
+        }
+
+        return [];
+    }
+
     /**
      * @param array<int, string> $columnNames
      * @return array<int, string>
      */
-    private function foreignDisplayColumns(array $columnNames, string $foreignColumn): array
+    private function foreignDisplayColumns(array $columnNames, string $foreignColumn, string $foreignTable): array
     {
+        if ($this->isBranchTable($foreignTable)) {
+            return $this->firstExistingColumns($columnNames, ['label', 'name']);
+        }
+        if ($this->isPersonTable($foreignTable)) {
+            return $this->firstExistingColumns($columnNames, ['full_name', 'nama_lengkap', 'name', 'nama']);
+        }
+
         $priority = [
             'full_name', 'nama_lengkap', 'name', 'nama', 'label', 'title', 'judul',
             'username', 'email', 'slug', 'code', 'kode', 'phone', 'whatsapp',
