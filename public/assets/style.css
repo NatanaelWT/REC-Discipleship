@@ -16343,6 +16343,29 @@ details[open] > summary .activity-disclosure-icon::after {
   font-style: italic;
 }
 
+.developer-db-fk-cell {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.developer-db-cell-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.developer-db-fk-label {
+  display: block;
+  max-width: 230px;
+  overflow: hidden;
+  color: #0f766e;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+}
+
 .developer-db-row-actions {
   width: 320px;
   min-width: 320px;

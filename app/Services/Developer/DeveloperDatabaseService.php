@@ -164,6 +164,7 @@ class DeveloperDatabaseService
         if ($countTotal && $lastPage !== null) {
             $hasMore = $page < $lastPage;
         }
+        $rows = $this->withForeignKeyLabels($table, $rows);
 
         return [
             'table' => $table,
@@ -722,6 +723,189 @@ class DeveloperDatabaseService
         }
 
         return ['values' => $row, 'key' => $key];
+    }
+
+    /**
+     * @param array<int, array{values:array<string, mixed>,key:?string}> $rows
+     * @return array<int, array{values:array<string, mixed>,key:?string,foreign_labels?:array<string, array{table:string,column:string,value:mixed,label:string}>}>
+     */
+    private function withForeignKeyLabels(string $table, array $rows): array
+    {
+        if ($rows === []) {
+            return $rows;
+        }
+
+        foreach ($this->foreignKeys($table) as $foreignKey) {
+            $localColumns = array_values(array_map('strval', $foreignKey['columns'] ?? []));
+            $foreignColumns = array_values(array_map('strval', $foreignKey['foreign_columns'] ?? []));
+            $foreignTable = trim((string) ($foreignKey['foreign_table'] ?? ''));
+            if (count($localColumns) !== 1 || count($foreignColumns) !== 1 || $foreignTable === '') {
+                continue;
+            }
+
+            $foreignTable = $this->normalizeTable($foreignTable);
+            if ($foreignTable === null) {
+                continue;
+            }
+
+            $localColumn = $localColumns[0];
+            $foreignColumn = $foreignColumns[0];
+            $values = [];
+            foreach ($rows as $row) {
+                $value = $row['values'][$localColumn] ?? null;
+                if ($value !== null && (is_scalar($value) || $value instanceof \Stringable)) {
+                    $values[$this->referenceKey($value)] = $value;
+                }
+            }
+            if ($values === []) {
+                continue;
+            }
+
+            $labels = $this->foreignReferenceLabels($foreignTable, $foreignColumn, array_values($values));
+            if ($labels === []) {
+                continue;
+            }
+
+            foreach ($rows as $index => $row) {
+                $value = $row['values'][$localColumn] ?? null;
+                if ($value === null) {
+                    continue;
+                }
+
+                $key = $this->referenceKey($value);
+                if (! isset($labels[$key])) {
+                    continue;
+                }
+
+                $rows[$index]['foreign_labels'][$localColumn] = [
+                    'table' => $foreignTable,
+                    'column' => $foreignColumn,
+                    'value' => $value,
+                    'label' => $labels[$key],
+                ];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param array<int, mixed> $values
+     * @return array<string, string>
+     */
+    private function foreignReferenceLabels(string $foreignTable, string $foreignColumn, array $values): array
+    {
+        $foreignColumns = $this->columns($foreignTable);
+        $columnNames = array_values(array_map(static fn (array $column): string => (string) $column['name'], $foreignColumns));
+        if (! in_array($foreignColumn, $columnNames, true)) {
+            return [];
+        }
+
+        $displayColumns = $this->foreignDisplayColumns($columnNames, $foreignColumn);
+        $selectColumns = array_values(array_unique(array_merge([$foreignColumn], $displayColumns)));
+
+        try {
+            $records = DB::table($foreignTable)
+                ->select($selectColumns)
+                ->whereIn($foreignColumn, $values)
+                ->limit(max(count($values), 1))
+                ->get();
+        } catch (Throwable) {
+            return [];
+        }
+
+        $labels = [];
+        foreach ($records as $record) {
+            $row = (array) $record;
+            if (! array_key_exists($foreignColumn, $row)) {
+                continue;
+            }
+
+            $labels[$this->referenceKey($row[$foreignColumn])] = $this->foreignReferenceLabel($row, $displayColumns, $foreignColumn);
+        }
+
+        return $labels;
+    }
+
+    /**
+     * @param array<int, string> $columnNames
+     * @return array<int, string>
+     */
+    private function foreignDisplayColumns(array $columnNames, string $foreignColumn): array
+    {
+        $priority = [
+            'full_name', 'nama_lengkap', 'name', 'nama', 'label', 'title', 'judul',
+            'username', 'email', 'slug', 'code', 'kode', 'phone', 'whatsapp',
+            'no_whatsapp', 'branch_label', 'subject_label', 'description',
+        ];
+
+        $columns = [];
+        $lowerColumns = array_change_key_case(array_combine($columnNames, $columnNames) ?: [], CASE_LOWER);
+        foreach ($priority as $candidate) {
+            if (isset($lowerColumns[$candidate]) && $lowerColumns[$candidate] !== $foreignColumn) {
+                $columns[] = $lowerColumns[$candidate];
+            }
+        }
+
+        foreach ($columnNames as $column) {
+            if ($column === $foreignColumn || in_array($column, $columns, true)) {
+                continue;
+            }
+            if (count($columns) >= 2) {
+                break;
+            }
+            $columns[] = $column;
+        }
+
+        return array_slice($columns, 0, 2);
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param array<int, string> $displayColumns
+     */
+    private function foreignReferenceLabel(array $row, array $displayColumns, string $foreignColumn): string
+    {
+        $parts = [];
+        foreach ($displayColumns as $column) {
+            $value = trim($this->valueString($row[$column] ?? ''));
+            if ($value !== '') {
+                $parts[] = $this->shortString($value, 72);
+            }
+            if (count($parts) >= 2) {
+                break;
+            }
+        }
+
+        if ($parts !== []) {
+            return implode(' · ', array_unique($parts));
+        }
+
+        return $foreignColumn.' '.$this->valueString($row[$foreignColumn] ?? '');
+    }
+
+    private function referenceKey(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        return (string) $value;
+    }
+
+    private function valueString(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+        if (is_array($value) || is_object($value)) {
+            return (string) json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+
+        return (string) $value;
     }
 
     /**

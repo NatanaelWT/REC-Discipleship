@@ -355,6 +355,14 @@ class DeveloperAccessTest extends TestCase
             ->assertOk()
             ->assertSee('Primary key tidak ada')
             ->assertSee('Readonly');
+
+        $this->get('/developer/database/db_admin_fk_child')
+            ->assertOk()
+            ->assertSee('Parent Alpha')
+            ->assertSee('owner_id');
+
+        $fkBrowse = app(DeveloperDatabaseService::class)->browse('db_admin_fk_child');
+        $this->assertSame('Parent Alpha', $fkBrowse['rows'][0]['foreign_labels']['owner_id']['label'] ?? null);
     }
 
     public function test_developer_database_admin_can_insert_update_and_delete_rows(): void
@@ -860,6 +868,8 @@ class DeveloperAccessTest extends TestCase
     private function createDatabaseAdminSampleTables(): void
     {
         Schema::dropIfExists('db_admin_imported');
+        Schema::dropIfExists('db_admin_fk_child');
+        Schema::dropIfExists('db_admin_fk_owner');
         Schema::dropIfExists('db_admin_no_pk');
         Schema::dropIfExists('db_admin_sample');
 
@@ -874,6 +884,16 @@ class DeveloperAccessTest extends TestCase
             $table->string('code');
             $table->string('value')->nullable();
         });
+        Schema::create('db_admin_fk_owner', function (Blueprint $table): void {
+            $table->id();
+            $table->string('label');
+        });
+        Schema::create('db_admin_fk_child', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('owner_id');
+            $table->string('note')->nullable();
+            $table->foreign('owner_id')->references('id')->on('db_admin_fk_owner');
+        });
 
         DB::table('db_admin_sample')->insert([
             ['name' => 'Alpha', 'score' => 10, 'notes' => 'First row', 'created_at' => now(), 'updated_at' => now()],
@@ -882,6 +902,8 @@ class DeveloperAccessTest extends TestCase
         DB::table('db_admin_no_pk')->insert([
             ['code' => 'readonly', 'value' => 'No primary key'],
         ]);
+        $ownerId = (int) DB::table('db_admin_fk_owner')->insertGetId(['label' => 'Parent Alpha']);
+        DB::table('db_admin_fk_child')->insert(['owner_id' => $ownerId, 'note' => 'Child row']);
     }
 
     private function rowKeyForSampleName(string $name): string

@@ -217,11 +217,26 @@
               </thead>
               <tbody>
                 @forelse (($browse['rows'] ?? []) as $row)
-                  @php $rowValues = is_array($row['values'] ?? null) ? $row['values'] : []; @endphp
+                  @php
+                    $rowValues = is_array($row['values'] ?? null) ? $row['values'] : [];
+                    $rowForeignLabels = is_array($row['foreign_labels'] ?? null) ? $row['foreign_labels'] : [];
+                  @endphp
                   <tr>
                     @foreach ($columns as $column)
-                      @php $name = (string) ($column['name'] ?? ''); @endphp
-                      <td class="{{ ($rowValues[$name] ?? null) === null ? 'is-null' : '' }}">{{ $valueText($rowValues[$name] ?? null) }}</td>
+                      @php
+                        $name = (string) ($column['name'] ?? '');
+                        $foreignLabel = is_array($rowForeignLabels[$name] ?? null) ? $rowForeignLabels[$name] : null;
+                      @endphp
+                      <td class="{{ ($rowValues[$name] ?? null) === null ? 'is-null' : '' }}">
+                        @if ($foreignLabel !== null)
+                          <span class="developer-db-fk-cell">
+                            <span class="developer-db-cell-value">{{ $valueText($rowValues[$name] ?? null) }}</span>
+                            <span class="developer-db-fk-label" title="{{ $foreignLabel['table'] ?? '' }}.{{ $foreignLabel['column'] ?? '' }}">{{ $foreignLabel['label'] ?? '' }}</span>
+                          </span>
+                        @else
+                          {{ $valueText($rowValues[$name] ?? null) }}
+                        @endif
+                      </td>
                     @endforeach
                     <td>
                       @if ($canEditRows && ! empty($row['key']))
