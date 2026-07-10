@@ -16017,14 +16017,6 @@ details[open] > summary .activity-disclosure-icon::after {
   align-items: start;
 }
 
-.developer-db-sidebar {
-  display: grid;
-  gap: 16px;
-  max-height: none;
-  padding: 20px;
-  overflow: hidden;
-}
-
 .developer-db-sidebar-head {
   display: flex;
   align-items: center;
@@ -16037,12 +16029,22 @@ details[open] > summary .activity-disclosure-icon::after {
   font-size: 13px;
 }
 
+.developer-db-table-panel {
+  display: grid;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(226, 232, 240, .82);
+}
+
 .developer-db-table-list {
-  display: flex;
-  gap: 10px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 162px;
+  grid-template-rows: repeat(2, minmax(54px, auto));
+  gap: 8px 10px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 2px 4px 8px 0;
+  padding: 2px 4px 10px 0;
   scroll-snap-type: x proximity;
 }
 
@@ -16069,13 +16071,12 @@ details[open] > summary .activity-disclosure-icon::after {
 
 .developer-db-table-link {
   display: grid;
-  flex: 0 0 190px;
   gap: 5px;
-  min-height: 64px;
+  min-height: 54px;
   align-content: center;
-  padding: 13px 14px;
+  padding: 10px 12px;
   border: 1px solid rgba(226, 232, 240, .9);
-  border-radius: 13px;
+  border-radius: 12px;
   background: #fff;
   color: #0f172a;
   text-decoration: none;
@@ -16112,7 +16113,15 @@ details[open] > summary .activity-disclosure-icon::after {
 }
 
 .developer-db-toolbar {
+  gap: 16px;
+}
+
+.developer-db-toolbar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 18px;
+  flex-wrap: wrap;
 }
 
 .developer-db-tabs {
@@ -16406,10 +16415,6 @@ details[open] > summary .activity-disclosure-icon::after {
   .page-developer-database .container {
     padding-inline: 22px;
   }
-
-  .developer-db-sidebar {
-    max-height: none;
-  }
 }
 
 @media (max-width: 720px) {
@@ -16437,7 +16442,12 @@ details[open] > summary .activity-disclosure-icon::after {
     max-width: 190px;
   }
 
-  .developer-db-table-link {
-    flex-basis: 165px;
+  .developer-db-toolbar-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .developer-db-table-list {
+    grid-auto-columns: 145px;
   }
 }

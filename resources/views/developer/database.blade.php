@@ -105,43 +105,45 @@
   @endif
 
   <section class="developer-db-shell">
-    <aside class="card developer-db-sidebar">
-      <div class="developer-db-sidebar-head">
-        <span class="developer-section-kicker">Tables</span>
-        <strong>{{ number_format($tables->count(), 0, ',', '.') }} tabel</strong>
-      </div>
-      <div class="developer-db-table-list">
-        @forelse ($tables as $tableRow)
-          @php $tableName = (string) ($tableRow['name'] ?? ''); @endphp
-          <a class="developer-db-table-link {{ $tableName === $selectedTable ? 'active' : '' }}" href="{{ route('developer.database.table', ['table' => $tableName]) }}">
-            <strong>{{ $tableName }}</strong>
-            <small>{{ $tableRow['engine'] ?? ($tableRow['type'] ?? 'table') }}</small>
-          </a>
-        @empty
-          <div class="developer-dashboard-empty">Tidak ada tabel ditemukan.</div>
-        @endforelse
-      </div>
-    </aside>
-
     <div class="developer-db-main">
       <section class="card developer-panel developer-section-card developer-db-toolbar">
-        <div class="developer-section-head">
-          <span class="developer-section-icon is-slate">@include('developer._icon', ['name' => 'config'])</span>
-          <div>
-            <span class="developer-section-kicker">Database</span>
-            <h2>{{ $selectedTable !== '' ? $selectedTable : 'Pilih Tabel' }}</h2>
-            <p>{{ $selectedTable !== '' ? 'Browse, edit, export, dan cek struktur tabel ini.' : 'Pilih tabel di kiri, atau gunakan SQL/export/import database.' }}</p>
+        <div class="developer-db-toolbar-top">
+          <div class="developer-section-head">
+            <span class="developer-section-icon is-slate">@include('developer._icon', ['name' => 'config'])</span>
+            <div>
+              <span class="developer-section-kicker">Database</span>
+              <h2>{{ $selectedTable !== '' ? $selectedTable : 'Pilih Tabel' }}</h2>
+              <p>{{ $selectedTable !== '' ? 'Browse, edit, export, dan cek struktur tabel ini.' : 'Pilih tabel di bawah, atau gunakan SQL/export/import database.' }}</p>
+            </div>
+          </div>
+          <nav class="developer-db-tabs" aria-label="Database admin tabs">
+            @if ($selectedTable !== '')
+              <a class="{{ $activeTab === 'browse' ? 'active' : '' }}" href="{{ $tabUrl('browse') }}">Browse</a>
+              <a class="{{ $activeTab === 'structure' ? 'active' : '' }}" href="{{ $tabUrl('structure') }}">Structure</a>
+            @endif
+            <a class="{{ $activeTab === 'sql' ? 'active' : '' }}" href="{{ $tabUrl('sql') }}">SQL</a>
+            <a class="{{ $activeTab === 'export' ? 'active' : '' }}" href="{{ $tabUrl('export') }}">Export</a>
+            <a class="{{ $activeTab === 'import' ? 'active' : '' }}" href="{{ $tabUrl('import') }}">Import</a>
+          </nav>
+        </div>
+
+        <div class="developer-db-table-panel">
+          <div class="developer-db-sidebar-head">
+            <span class="developer-section-kicker">Tables</span>
+            <strong>{{ number_format($tables->count(), 0, ',', '.') }} tabel</strong>
+          </div>
+          <div class="developer-db-table-list">
+            @forelse ($tables as $tableRow)
+              @php $tableName = (string) ($tableRow['name'] ?? ''); @endphp
+              <a class="developer-db-table-link {{ $tableName === $selectedTable ? 'active' : '' }}" href="{{ route('developer.database.table', ['table' => $tableName]) }}">
+                <strong>{{ $tableName }}</strong>
+                <small>{{ $tableRow['engine'] ?? ($tableRow['type'] ?? 'table') }}</small>
+              </a>
+            @empty
+              <div class="developer-dashboard-empty">Tidak ada tabel ditemukan.</div>
+            @endforelse
           </div>
         </div>
-        <nav class="developer-db-tabs" aria-label="Database admin tabs">
-          @if ($selectedTable !== '')
-            <a class="{{ $activeTab === 'browse' ? 'active' : '' }}" href="{{ $tabUrl('browse') }}">Browse</a>
-            <a class="{{ $activeTab === 'structure' ? 'active' : '' }}" href="{{ $tabUrl('structure') }}">Structure</a>
-          @endif
-          <a class="{{ $activeTab === 'sql' ? 'active' : '' }}" href="{{ $tabUrl('sql') }}">SQL</a>
-          <a class="{{ $activeTab === 'export' ? 'active' : '' }}" href="{{ $tabUrl('export') }}">Export</a>
-          <a class="{{ $activeTab === 'import' ? 'active' : '' }}" href="{{ $tabUrl('import') }}">Import</a>
-        </nav>
       </section>
 
       @if ($activeTab === 'browse' && $selectedTable !== '' && $browse !== null)
