@@ -73,6 +73,17 @@ class DeveloperAccessTest extends TestCase
         $this->assertSame(0.0, $xpath->evaluate('count('.$developerGroup.'[@open])'));
     }
 
+    public function test_sidebar_top_level_menus_use_consistent_spacing(): void
+    {
+        $css = file_get_contents(public_path('assets/style.css'));
+
+        $this->assertIsString($css);
+        $this->assertMatchesRegularExpression('/\.sidebar\s*\{[^}]*gap:\s*8px;/s', $css);
+        $this->assertMatchesRegularExpression('/\.sidebar-brand\s*\{[^}]*margin-bottom:\s*14px;/s', $css);
+        $this->assertMatchesRegularExpression('/\.sidebar-nav,\s*\.sidebar-subnav\s*\{[^}]*gap:\s*8px;/s', $css);
+        $this->assertMatchesRegularExpression('/\.nav-group:not\(\[open\]\)\s*\{[^}]*gap:\s*0;/s', $css);
+    }
+
     public function test_developer_bypasses_existing_access_gates(): void
     {
         $this->createCoreTables();
