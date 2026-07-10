@@ -15995,7 +15995,325 @@ details[open] > summary .activity-disclosure-icon::after {
     grid-template-columns: 1fr;
   }
 
-  .page-developer-branches .developer-form-actions .btn {
+.page-developer-branches .developer-form-actions .btn {
     width: 100%;
+  }
+}
+
+/* Developer database admin */
+.developer-db-shell {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.developer-db-sidebar {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 14px;
+  max-height: calc(100vh - 36px);
+  padding: 18px;
+  overflow: hidden;
+}
+
+.developer-db-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.developer-db-sidebar-head strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.developer-db-table-list {
+  display: grid;
+  gap: 8px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.developer-db-table-link {
+  display: grid;
+  gap: 3px;
+  padding: 10px 11px;
+  border: 1px solid rgba(226, 232, 240, .9);
+  border-radius: 11px;
+  background: #fff;
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.developer-db-table-link:hover,
+.developer-db-table-link.active {
+  border-color: rgba(13, 148, 136, .34);
+  background: #f0fdfa;
+}
+
+.developer-db-table-link strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.developer-db-table-link small {
+  color: #64748b;
+  font-size: 10px;
+}
+
+.developer-db-main {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+}
+
+.developer-db-toolbar {
+  gap: 14px;
+}
+
+.developer-db-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.developer-db-tabs a {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid rgba(148, 163, 184, .28);
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.developer-db-tabs a.active,
+.developer-db-tabs a:hover {
+  border-color: rgba(13, 148, 136, .38);
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.developer-db-section-head,
+.developer-db-meta-row,
+.developer-db-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.developer-db-section-head h2 {
+  margin: 2px 0 0;
+}
+
+.developer-db-search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.developer-db-search input,
+.developer-db-sql-form textarea,
+.developer-db-utility-form input,
+.developer-db-utility-form select,
+.developer-db-row-form input,
+.developer-db-row-form textarea {
+  border: 1px solid rgba(148, 163, 184, .36);
+  border-radius: 11px;
+  background: #fff;
+}
+
+.developer-db-search input {
+  min-width: 240px;
+  min-height: 38px;
+  padding: 8px 11px;
+}
+
+.developer-db-editor,
+.developer-db-row-actions {
+  border: 1px solid rgba(226, 232, 240, .9);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.developer-db-editor > summary,
+.developer-db-row-actions > summary {
+  cursor: pointer;
+  padding: 11px 13px;
+  color: #0f766e;
+  font-weight: 850;
+}
+
+.developer-db-row-form,
+.developer-db-utility-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+  padding: 14px;
+}
+
+.developer-db-row-form label,
+.developer-db-utility-form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.developer-db-row-form label span {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.developer-db-row-form label small {
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.developer-db-row-form input,
+.developer-db-row-form textarea,
+.developer-db-utility-form input,
+.developer-db-utility-form select {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
+.developer-db-null,
+.developer-db-confirm {
+  display: inline-flex !important;
+  grid-template-columns: none !important;
+  width: fit-content;
+  align-items: center;
+  gap: 7px !important;
+  color: #64748b !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.developer-db-null input,
+.developer-db-confirm input {
+  width: auto;
+  min-height: 0;
+}
+
+.developer-db-delete-form {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 14px 14px;
+}
+
+.developer-db-table-wrap {
+  max-height: 680px;
+}
+
+.developer-db-data-table th,
+.developer-db-data-table td {
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.developer-db-data-table th a {
+  color: #0f766e;
+  text-decoration: none;
+}
+
+.developer-db-data-table td {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.developer-db-data-table td.is-null {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.developer-db-row-actions {
+  min-width: 280px;
+}
+
+.developer-db-sql-form {
+  display: grid;
+  gap: 12px;
+}
+
+.developer-db-sql-form textarea {
+  width: 100%;
+  padding: 13px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.developer-db-utility-form {
+  align-items: end;
+  max-width: 680px;
+}
+
+.developer-db-utility-form .developer-db-confirm,
+.developer-db-utility-form .developer-form-actions {
+  grid-column: 1 / -1;
+}
+
+.developer-db-structure-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.developer-db-structure-grid h3 {
+  margin: 0;
+  padding: 14px 14px 0;
+  font-size: 14px;
+}
+
+@media (max-width: 980px) {
+  .developer-db-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .developer-db-sidebar {
+    position: static;
+    max-height: 260px;
+  }
+}
+
+@media (max-width: 720px) {
+  .developer-db-row-form,
+  .developer-db-utility-form,
+  .developer-db-structure-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .developer-db-search {
+    width: 100%;
+  }
+
+  .developer-db-search input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .developer-db-data-table td {
+    max-width: 190px;
   }
 }

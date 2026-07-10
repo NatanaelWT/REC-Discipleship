@@ -27,6 +27,7 @@ class AppPageRouteMap
         'developer_branches' => 'developer.branches',
         'developer_users' => 'developer.users',
         'developer_config' => 'developer.config',
+        'developer_database' => 'developer.database',
         'developer_statistics' => 'developer.statistics',
         'discipleship_dashboard' => 'discipleship.dashboard',
         'groups_list' => 'discipleship.groups',

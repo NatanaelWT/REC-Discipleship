@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Models\ActivityRequest;
 use App\Models\User;
 use App\Services\Branches\BranchCatalog;
+use App\Services\Developer\DeveloperDatabaseService;
 use App\Services\Developer\DeveloperDiagnosticsService;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -42,6 +44,7 @@ class DeveloperAccessTest extends TestCase
         $this->get('/developer/users')->assertRedirect('/pemuridan/dashboard?error=access_denied');
         $this->get('/developer/branches')->assertRedirect('/pemuridan/dashboard?error=access_denied');
         $this->get('/developer/config')->assertRedirect('/pemuridan/dashboard?error=access_denied');
+        $this->get('/developer/database')->assertRedirect('/pemuridan/dashboard?error=access_denied');
         $this->get('/developer/statistics')->assertRedirect('/pemuridan/dashboard?error=access_denied');
     }
 
@@ -311,6 +314,134 @@ class DeveloperAccessTest extends TestCase
         $this->post('/developer/branches/'.$emptyBranchId.'/delete')
             ->assertRedirect('/developer/branches?status=deleted');
         $this->assertDatabaseMissing('cabang', ['id' => $emptyBranchId]);
+    }
+
+    public function test_developer_can_browse_database_tables_and_structure(): void
+    {
+        $this->createCoreTables();
+        $this->createDatabaseAdminSampleTables();
+        $this->seedDeveloper();
+        $this->loginAs('developer');
+
+        $this->get('/developer/database')
+            ->assertOk()
+            ->assertSee('Database Admin')
+            ->assertSee('db_admin_sample')
+            ->assertSee('SQL');
+
+        $this->get('/developer/database/db_admin_sample?search=Alpha')
+            ->assertOk()
+            ->assertSee('Data Row')
+            ->assertSee('Alpha')
+            ->assertDontSee('Beta');
+
+        $this->get('/developer/database/db_admin_sample?tab=structure')
+            ->assertOk()
+            ->assertSee('Kolom')
+            ->assertSee('name')
+            ->assertSee('PK');
+
+        $this->get('/developer/database/db_admin_no_pk')
+            ->assertOk()
+            ->assertSee('Primary key tidak ada')
+            ->assertSee('Readonly');
+    }
+
+    public function test_developer_database_admin_can_insert_update_and_delete_rows(): void
+    {
+        $this->createCoreTables();
+        $this->createDatabaseAdminSampleTables();
+        $this->seedDeveloper();
+        $this->loginAs('developer');
+
+        $this->post('/developer/database/db_admin_sample/rows', [
+            'values' => [
+                'id' => '',
+                'name' => 'Gamma',
+                'score' => '30',
+                'notes' => 'Created from DB admin',
+            ],
+        ])->assertRedirect('/developer/database/db_admin_sample?status=row_created&tab=browse');
+        $this->assertDatabaseHas('db_admin_sample', ['name' => 'Gamma', 'score' => 30]);
+
+        $rowKey = $this->rowKeyForSampleName('Gamma');
+        $this->post('/developer/database/db_admin_sample/rows/'.$rowKey, [
+            'values' => [
+                'id' => (string) DB::table('db_admin_sample')->where('name', 'Gamma')->value('id'),
+                'name' => 'Gamma Updated',
+                'score' => '31',
+                'notes' => 'Updated from DB admin',
+            ],
+        ])->assertRedirect('/developer/database/db_admin_sample?status=row_updated&tab=browse');
+        $this->assertDatabaseHas('db_admin_sample', ['name' => 'Gamma Updated', 'score' => 31]);
+
+        $rowKey = $this->rowKeyForSampleName('Gamma Updated');
+        $this->post('/developer/database/db_admin_sample/rows/'.$rowKey.'/delete')
+            ->assertRedirect('/developer/database/db_admin_sample?error=confirm_required&tab=browse');
+        $this->assertDatabaseHas('db_admin_sample', ['name' => 'Gamma Updated']);
+
+        $this->post('/developer/database/db_admin_sample/rows/'.$rowKey.'/delete', [
+            'confirm_danger' => '1',
+        ])->assertRedirect('/developer/database/db_admin_sample?status=row_deleted&tab=browse');
+        $this->assertDatabaseMissing('db_admin_sample', ['name' => 'Gamma Updated']);
+    }
+
+    public function test_developer_database_sql_console_requires_confirmation_for_mutations(): void
+    {
+        $this->createCoreTables();
+        $this->createDatabaseAdminSampleTables();
+        $this->seedDeveloper();
+        $this->loginAs('developer');
+
+        $this->post('/developer/database/query', [
+            'table' => 'db_admin_sample',
+            'sql' => "UPDATE db_admin_sample SET score = 99 WHERE name = 'Alpha'",
+        ])->assertOk()
+            ->assertSee('Konfirmasi diperlukan');
+        $this->assertSame(10, (int) DB::table('db_admin_sample')->where('name', 'Alpha')->value('score'));
+
+        $this->post('/developer/database/query', [
+            'table' => 'db_admin_sample',
+            'sql' => "UPDATE db_admin_sample SET score = 99 WHERE name = 'Alpha'",
+            'confirm_danger' => '1',
+        ])->assertOk()
+            ->assertSee('Query mutasi berhasil');
+        $this->assertSame(99, (int) DB::table('db_admin_sample')->where('name', 'Alpha')->value('score'));
+
+        $this->post('/developer/database/query', [
+            'table' => 'db_admin_sample',
+            'sql' => 'SELECT name, score FROM db_admin_sample WHERE score = 99',
+        ])->assertOk()
+            ->assertSee('Alpha')
+            ->assertSee('99');
+    }
+
+    public function test_developer_database_admin_exports_and_imports_sql(): void
+    {
+        $this->createCoreTables();
+        $this->createDatabaseAdminSampleTables();
+        $this->seedDeveloper();
+        $this->loginAs('developer');
+
+        $export = app(DeveloperDatabaseService::class)->exportSql('db_admin_sample');
+        $this->assertSame('exported', $export['status'] ?? null);
+        $this->assertFileExists((string) $export['path']);
+        $sql = (string) file_get_contents((string) $export['path']);
+        @unlink((string) $export['path']);
+        $this->assertStringContainsString('db_admin_sample', $sql);
+        $this->assertStringContainsString('INSERT INTO', $sql);
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'rec_import_');
+        $this->assertIsString($tmpPath);
+        file_put_contents($tmpPath, "CREATE TABLE db_admin_imported (id integer primary key autoincrement, name varchar(255));\nINSERT INTO db_admin_imported (name) VALUES ('Imported Row');\n");
+
+        $this->post('/developer/database/import', [
+            'confirm_danger' => '1',
+            'sql_file' => new UploadedFile($tmpPath, 'db-admin-import.sql', 'application/sql', null, true),
+        ])->assertRedirect('/developer/database?status=imported');
+
+        $this->assertTrue(Schema::hasTable('db_admin_imported'));
+        $this->assertDatabaseHas('db_admin_imported', ['name' => 'Imported Row']);
     }
 
     public function test_developer_can_access_as_active_user_and_return_to_developer(): void
@@ -714,6 +845,44 @@ class DeveloperAccessTest extends TestCase
                 'occurred_at' => $now->copy()->subDay()->format('Y-m-d H:i:s.u'),
             ]),
         ]);
+    }
+
+    private function createDatabaseAdminSampleTables(): void
+    {
+        Schema::dropIfExists('db_admin_imported');
+        Schema::dropIfExists('db_admin_no_pk');
+        Schema::dropIfExists('db_admin_sample');
+
+        Schema::create('db_admin_sample', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name');
+            $table->integer('score')->nullable();
+            $table->text('notes')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('db_admin_no_pk', function (Blueprint $table): void {
+            $table->string('code');
+            $table->string('value')->nullable();
+        });
+
+        DB::table('db_admin_sample')->insert([
+            ['name' => 'Alpha', 'score' => 10, 'notes' => 'First row', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Beta', 'score' => 20, 'notes' => 'Second row', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        DB::table('db_admin_no_pk')->insert([
+            ['code' => 'readonly', 'value' => 'No primary key'],
+        ]);
+    }
+
+    private function rowKeyForSampleName(string $name): string
+    {
+        $browse = app(DeveloperDatabaseService::class)->browse('db_admin_sample', ['search' => $name]);
+        $row = collect($browse['rows'] ?? [])
+            ->first(static fn (array $row): bool => ($row['values']['name'] ?? null) === $name);
+        $this->assertIsArray($row);
+        $this->assertNotEmpty($row['key'] ?? null);
+
+        return (string) $row['key'];
     }
 
     /** @param array<string, mixed> $overrides */
