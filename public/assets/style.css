@@ -16012,17 +16012,15 @@ details[open] > summary .activity-disclosure-icon::after {
 
 .developer-db-shell {
   display: grid;
-  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
-  gap: 22px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
   align-items: start;
 }
 
 .developer-db-sidebar {
-  position: sticky;
-  top: 24px;
   display: grid;
   gap: 16px;
-  max-height: calc(100vh - 48px);
+  max-height: none;
   padding: 20px;
   overflow: hidden;
 }
@@ -16040,10 +16038,12 @@ details[open] > summary .activity-disclosure-icon::after {
 }
 
 .developer-db-table-list {
-  display: grid;
+  display: flex;
   gap: 10px;
-  overflow: auto;
-  padding: 2px 4px 6px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 4px 8px 0;
+  scroll-snap-type: x proximity;
 }
 
 .developer-db-table-list::-webkit-scrollbar,
@@ -16069,6 +16069,7 @@ details[open] > summary .activity-disclosure-icon::after {
 
 .developer-db-table-link {
   display: grid;
+  flex: 0 0 190px;
   gap: 5px;
   min-height: 64px;
   align-content: center;
@@ -16078,6 +16079,7 @@ details[open] > summary .activity-disclosure-icon::after {
   background: #fff;
   color: #0f172a;
   text-decoration: none;
+  scroll-snap-align: start;
   transition: background .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
@@ -16405,13 +16407,8 @@ details[open] > summary .activity-disclosure-icon::after {
     padding-inline: 22px;
   }
 
-  .developer-db-shell {
-    grid-template-columns: 1fr;
-  }
-
   .developer-db-sidebar {
-    position: static;
-    max-height: 260px;
+    max-height: none;
   }
 }
 
@@ -16438,5 +16435,9 @@ details[open] > summary .activity-disclosure-icon::after {
 
   .developer-db-data-table td {
     max-width: 190px;
+  }
+
+  .developer-db-table-link {
+    flex-basis: 165px;
   }
 }
