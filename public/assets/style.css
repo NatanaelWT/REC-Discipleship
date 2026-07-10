@@ -16330,6 +16330,17 @@ details[open] > summary .activity-disclosure-icon::after {
   text-overflow: ellipsis;
 }
 
+.developer-db-data-table th:last-child,
+.developer-db-data-table td:last-child {
+  width: 430px;
+  min-width: 430px;
+  max-width: none;
+}
+
+.developer-db-data-table td:last-child {
+  overflow: visible;
+}
+
 .developer-db-data-table tbody tr:nth-child(even) td {
   background: rgba(248, 250, 252, .58);
 }
@@ -16367,14 +16378,17 @@ details[open] > summary .activity-disclosure-icon::after {
 }
 
 .developer-db-row-actions {
-  width: 320px;
-  min-width: 320px;
+  width: 100%;
+  min-width: 390px;
+  max-width: 430px;
+  overflow: hidden;
 }
 
 .developer-db-row-actions .developer-db-row-form {
   grid-template-columns: 1fr;
-  max-height: 420px;
-  overflow: auto;
+  max-height: min(560px, 64vh);
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
 }
 
