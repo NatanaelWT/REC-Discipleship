@@ -223,7 +223,8 @@ class DeveloperAccessTest extends TestCase
             ->assertOk()
             ->assertSee('Manajemen Cabang')
             ->assertSee('Tambah Cabang')
-            ->assertSee('Mode Eksperimen Developer');
+            ->assertSee('Tidak Aktif')
+            ->assertDontSee('Produksi aktif muncul di public form dan pilihan user cabang.');
 
         $this->post('/developer/branches', [
             'label' => 'Surabaya',

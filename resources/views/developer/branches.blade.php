@@ -39,10 +39,9 @@
         <label class="developer-config-field">
           <span>Status</span>
           <select name="is_active">
-            <option value="0" selected>Mode Eksperimen Developer</option>
-            <option value="1">Produksi Aktif</option>
+            <option value="0" selected>Tidak Aktif</option>
+            <option value="1">Aktif</option>
           </select>
-          <small>Produksi aktif muncul di public form dan pilihan user cabang.</small>
         </label>
         @foreach ($targetFields as $field => $label)
           <label class="developer-config-field">
@@ -93,8 +92,8 @@
                 <label class="developer-config-field">
                   <span>Status</span>
                   <select name="is_active">
-                    <option value="1" @selected($active)>Produksi Aktif</option>
-                    <option value="0" @selected(! $active)>Mode Eksperimen Developer</option>
+                    <option value="1" @selected($active)>Aktif</option>
+                    <option value="0" @selected(! $active)>Tidak Aktif</option>
                   </select>
                 </label>
                 @foreach ($targetFields as $field => $label)
