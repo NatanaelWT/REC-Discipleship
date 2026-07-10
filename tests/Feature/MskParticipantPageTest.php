@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\Branches\BranchCatalog;
 use App\Services\MskParticipants\MskParticipantExportService;
 use App\Services\MskParticipants\MskParticipantHistoryData;
 use Illuminate\Database\Schema\Blueprint;
@@ -624,6 +625,7 @@ class MskParticipantPageTest extends TestCase
     private function createMskTables(): void
     {
         Schema::dropIfExists('orang');
+        $this->createBranchesTable();
 
         Schema::create('orang', function (Blueprint $table): void {
             $table->id();
@@ -644,6 +646,33 @@ class MskParticipantPageTest extends TestCase
             $table->json('photos')->nullable();
             $table->timestamps();
         });
+    }
+
+    private function createBranchesTable(): void
+    {
+        Schema::dropIfExists('cabang');
+
+        Schema::create('cabang', function (Blueprint $table): void {
+            $table->id();
+            $table->string('label')->unique();
+            $table->boolean('is_active')->default(true);
+            $table->unsignedInteger('camp_gap_participant_target')->default(50);
+            $table->unsignedInteger('msk_completion_target')->default(50);
+            $table->unsignedInteger('dg1_completion_target')->default(50);
+            $table->unsignedInteger('dg2_completion_target')->default(50);
+            $table->unsignedInteger('dg3_completion_target')->default(50);
+            $table->timestamps();
+        });
+
+        DB::table('cabang')->insert([
+            ['id' => 1, 'label' => 'Kutisari', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'label' => 'GM', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 3, 'label' => 'Darmo', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 4, 'label' => 'Merr', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 5, 'label' => 'Batam', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 6, 'label' => 'Nginden', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        app(BranchCatalog::class)->clearCache();
     }
 
     private function createDiscipleshipHistoryTables(): void

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Branches\BranchCatalog;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -123,6 +124,7 @@ class AuthLoginTest extends TestCase
     {
         Schema::dropIfExists('percobaan_login');
         Schema::dropIfExists('users');
+        $this->createBranchesTable();
 
         Schema::create('users', function (Blueprint $table): void {
             $table->id();
@@ -145,6 +147,28 @@ class AuthLoginTest extends TestCase
             $table->timestamp('last_attempted_at')->nullable();
             $table->timestamps();
         });
+    }
+
+    private function createBranchesTable(): void
+    {
+        Schema::dropIfExists('cabang');
+
+        Schema::create('cabang', function (Blueprint $table): void {
+            $table->id();
+            $table->string('label')->unique();
+            $table->boolean('is_active')->default(true);
+            $table->unsignedInteger('camp_gap_participant_target')->default(50);
+            $table->unsignedInteger('msk_completion_target')->default(50);
+            $table->unsignedInteger('dg1_completion_target')->default(50);
+            $table->unsignedInteger('dg2_completion_target')->default(50);
+            $table->unsignedInteger('dg3_completion_target')->default(50);
+            $table->timestamps();
+        });
+
+        DB::table('cabang')->insert([
+            ['id' => 1, 'label' => 'Kutisari', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        app(BranchCatalog::class)->clearCache();
     }
 
     /**

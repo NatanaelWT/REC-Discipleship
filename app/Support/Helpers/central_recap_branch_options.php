@@ -14,7 +14,10 @@ function central_recap_branch_options(): array
         : public_dg_branch_options();
 
     foreach ($branchOptions as $branchOption) {
-        $branchCode = normalize_user_branch((string) ($branchOption['code'] ?? 'kutisari'));
+        $branchCode = normalize_user_branch((string) ($branchOption['code'] ?? ''));
+        if ($branchCode === '') {
+            continue;
+        }
         $branchLabel = trim((string) ($branchOption['label'] ?? strtoupper($branchCode)));
         if ($branchLabel === '') {
             $branchLabel = strtoupper($branchCode);

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Activity\ActivityRecorder;
+use App\Services\Branches\BranchCatalog;
 use App\Services\DiscipleshipPeople\DiscipleshipPeopleExportService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -545,6 +546,7 @@ class DiscipleshipPeopleListTest extends TestCase
         Schema::dropIfExists('relasi_dg');
         Schema::dropIfExists('kelompok_dg');
         Schema::dropIfExists('orang');
+        $this->createBranchesTable();
 
         Schema::create('orang', function (Blueprint $table): void {
             $table->id();
@@ -581,6 +583,33 @@ class DiscipleshipPeopleListTest extends TestCase
             $table->string('end_reason')->nullable();
             $table->timestamps();
         });
+    }
+
+    private function createBranchesTable(): void
+    {
+        Schema::dropIfExists('cabang');
+
+        Schema::create('cabang', function (Blueprint $table): void {
+            $table->id();
+            $table->string('label')->unique();
+            $table->boolean('is_active')->default(true);
+            $table->unsignedInteger('camp_gap_participant_target')->default(50);
+            $table->unsignedInteger('msk_completion_target')->default(50);
+            $table->unsignedInteger('dg1_completion_target')->default(50);
+            $table->unsignedInteger('dg2_completion_target')->default(50);
+            $table->unsignedInteger('dg3_completion_target')->default(50);
+            $table->timestamps();
+        });
+
+        DB::table('cabang')->insert([
+            ['id' => 1, 'label' => 'Kutisari', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'label' => 'GM', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 3, 'label' => 'Darmo', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 4, 'label' => 'Merr', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 5, 'label' => 'Batam', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 6, 'label' => 'Nginden', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        app(BranchCatalog::class)->clearCache();
     }
 }
 

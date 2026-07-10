@@ -108,6 +108,7 @@ class BranchCatalog
 
     public function clearCache(): void
     {
+        Cache::store($this->cacheStore())->forget('rec.branch-catalog.v3');
         Cache::store($this->cacheStore())->forget(self::CACHE_KEY);
         $this->allOptions = null;
         $this->activeOptions = [];
@@ -129,11 +130,11 @@ class BranchCatalog
                 fn (): array => $this->databaseOptions(),
             );
         } catch (Throwable) {
-            $options = self::fallbackOptionsWithState();
+            $options = [];
         }
 
-        if (! is_array($options) || $options === []) {
-            $options = self::fallbackOptionsWithState();
+        if (! is_array($options)) {
+            $options = [];
         }
 
         $this->allOptions = array_values($options);
@@ -204,27 +205,4 @@ class BranchCatalog
         return app()->environment('testing') ? 'array' : 'file';
     }
 
-    /** @return array<int, array{id:int,slug:string,label:string,active:bool}> */
-    private static function fallbackOptionsWithState(): array
-    {
-        return array_map(
-            static fn (array $option): array => [...$option, 'active' => true],
-            self::fallbackOptions(),
-        );
-    }
-
-    /**
-     * @return array<int, array{id:int,slug:string,label:string}>
-     */
-    private static function fallbackOptions(): array
-    {
-        return [
-            ['id' => 1, 'slug' => 'kutisari', 'label' => 'Kutisari'],
-            ['id' => 2, 'slug' => 'gm', 'label' => 'GM'],
-            ['id' => 3, 'slug' => 'darmo', 'label' => 'Darmo'],
-            ['id' => 4, 'slug' => 'merr', 'label' => 'Merr'],
-            ['id' => 5, 'slug' => 'batam', 'label' => 'Batam'],
-            ['id' => 6, 'slug' => 'nginden', 'label' => 'Nginden'],
-        ];
-    }
 }

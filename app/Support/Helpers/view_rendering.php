@@ -73,7 +73,7 @@ function icon_svg(string $name): string
 function page_header_active_group(string $currentPage): string
 {
     $groupPages = [
-        'developer' => ['developer_dashboard', 'developer_users', 'developer_config', 'developer_statistics', 'developer_activities'],
+        'developer' => ['developer_dashboard', 'developer_branches', 'developer_users', 'developer_config', 'developer_statistics', 'developer_activities'],
         'pemuridan' => array_merge(array_keys(discipleship_page_map()), ['discipleship_targets', 'difficult_questions_admin']),
         'worship' => ['worship_penatalayan'],
     ];
@@ -297,6 +297,7 @@ function render_sidebar_navigation(string $currentPage, string $currentBranch, b
     if ($developerAccess) {
         render_sidebar_nav_group('Developer', 'developer', [
             ['label' => 'Dashboard', 'page' => 'developer_dashboard', 'href' => route('developer.dashboard')],
+            ['label' => 'Cabang', 'page' => 'developer_branches', 'href' => route('developer.branches')],
             ['label' => 'User', 'page' => 'developer_users', 'href' => route('developer.users')],
             ['label' => 'Config', 'page' => 'developer_config', 'href' => route('developer.config')],
             ['label' => 'Statistik', 'page' => 'developer_statistics', 'href' => route('developer.statistics')],

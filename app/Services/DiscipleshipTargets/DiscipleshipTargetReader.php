@@ -109,9 +109,14 @@ class DiscipleshipTargetReader
 
         $branch = Branch::query()->findOrFail(branch_id_from_slug($branchCode));
         $branch->fill($values)->save();
-        Cache::store($this->cacheStore())->put(self::CACHE_VERSION_KEY, (string) hrtime(true));
+        $this->invalidateCache();
 
         return $branch;
+    }
+
+    public function invalidateCache(): void
+    {
+        Cache::store($this->cacheStore())->put(self::CACHE_VERSION_KEY, (string) hrtime(true));
     }
 
     private function cacheStore(): string

@@ -40,6 +40,7 @@ class DeveloperAccessTest extends TestCase
 
         $this->get('/developer')->assertRedirect('/pemuridan/dashboard?error=access_denied');
         $this->get('/developer/users')->assertRedirect('/pemuridan/dashboard?error=access_denied');
+        $this->get('/developer/branches')->assertRedirect('/pemuridan/dashboard?error=access_denied');
         $this->get('/developer/config')->assertRedirect('/pemuridan/dashboard?error=access_denied');
         $this->get('/developer/statistics')->assertRedirect('/pemuridan/dashboard?error=access_denied');
     }
@@ -210,6 +211,105 @@ class DeveloperAccessTest extends TestCase
         $this->get('/developer/users?user='.$branchUserId)
             ->assertOk()
             ->assertSee('<details class="developer-user-item" data-developer-user open>', false);
+    }
+
+    public function test_developer_can_manage_branches_from_database(): void
+    {
+        $this->createCoreTables();
+        $this->seedDeveloper();
+        $this->loginAs('developer');
+
+        $this->get('/developer/branches')
+            ->assertOk()
+            ->assertSee('Manajemen Cabang')
+            ->assertSee('Tambah Cabang')
+            ->assertSee('Mode Eksperimen Developer');
+
+        $this->post('/developer/branches', [
+            'label' => 'Surabaya',
+            'is_active' => '0',
+            'camp_gap_participant_target' => 61,
+            'msk_completion_target' => 62,
+            'dg1_completion_target' => 63,
+            'dg2_completion_target' => 64,
+            'dg3_completion_target' => 65,
+        ])->assertRedirect('/developer/branches?status=created');
+
+        $branchId = (int) DB::table('cabang')->where('label', 'Surabaya')->value('id');
+        $this->assertGreaterThan(0, $branchId);
+        $this->assertDatabaseHas('cabang', [
+            'id' => $branchId,
+            'label' => 'Surabaya',
+            'is_active' => false,
+            'camp_gap_participant_target' => 61,
+        ]);
+        RuntimeBootstrap::load();
+        $this->assertNull(app(BranchCatalog::class)->idForSlug('surabaya'));
+        $this->assertSame($branchId, app(BranchCatalog::class)->idForSlug('surabaya', true));
+
+        $this->get('/developer/users')
+            ->assertOk()
+            ->assertDontSee('Surabaya');
+
+        $this->post('/developer/branches/'.$branchId, [
+            'label' => 'Surabaya Raya',
+            'is_active' => '1',
+            'camp_gap_participant_target' => 71,
+            'msk_completion_target' => 72,
+            'dg1_completion_target' => 73,
+            'dg2_completion_target' => 74,
+            'dg3_completion_target' => 75,
+        ])->assertRedirect('/developer/branches?status=updated&branch='.$branchId);
+
+        $this->assertDatabaseHas('cabang', [
+            'id' => $branchId,
+            'label' => 'Surabaya Raya',
+            'is_active' => true,
+            'msk_completion_target' => 72,
+        ]);
+        $this->assertSame($branchId, app(BranchCatalog::class)->idForSlug('surabaya-raya'));
+        $this->get('/developer/users')
+            ->assertOk()
+            ->assertSee('Surabaya Raya');
+
+        $this->post('/developer/branches/'.$branchId, [
+            'label' => 'GM',
+            'is_active' => '1',
+            'camp_gap_participant_target' => 71,
+            'msk_completion_target' => 72,
+            'dg1_completion_target' => 73,
+            'dg2_completion_target' => 74,
+            'dg3_completion_target' => 75,
+        ])->assertRedirect('/developer/branches?error=label_taken&branch='.$branchId);
+    }
+
+    public function test_developer_can_delete_only_empty_branches(): void
+    {
+        $this->createCoreTables();
+        $this->seedDeveloper();
+        $usedBranchId = (int) DB::table('cabang')->insertGetId([
+            'label' => 'Used Branch',
+            'is_active' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $emptyBranchId = (int) DB::table('cabang')->insertGetId([
+            'label' => 'Empty Branch',
+            'is_active' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->seedUser('used_branch_user', 'pemuridan_cabang', ['branch_id' => $usedBranchId]);
+        app(BranchCatalog::class)->clearCache();
+        $this->loginAs('developer');
+
+        $this->post('/developer/branches/'.$usedBranchId.'/delete')
+            ->assertRedirect('/developer/branches?error=branch_not_empty&branch='.$usedBranchId);
+        $this->assertDatabaseHas('cabang', ['id' => $usedBranchId]);
+
+        $this->post('/developer/branches/'.$emptyBranchId.'/delete')
+            ->assertRedirect('/developer/branches?status=deleted');
+        $this->assertDatabaseMissing('cabang', ['id' => $emptyBranchId]);
     }
 
     public function test_developer_can_access_as_active_user_and_return_to_developer(): void
@@ -458,6 +558,11 @@ class DeveloperAccessTest extends TestCase
             $table->id();
             $table->string('label')->unique();
             $table->boolean('is_active')->default(true);
+            $table->unsignedInteger('camp_gap_participant_target')->default(50);
+            $table->unsignedInteger('msk_completion_target')->default(50);
+            $table->unsignedInteger('dg1_completion_target')->default(50);
+            $table->unsignedInteger('dg2_completion_target')->default(50);
+            $table->unsignedInteger('dg3_completion_target')->default(50);
             $table->timestamps();
         });
 

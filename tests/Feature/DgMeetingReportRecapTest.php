@@ -417,6 +417,19 @@ class DgMeetingReportRecapTest extends TestCase
         Schema::dropIfExists('keanggotaan_kelompok_dg');
         Schema::dropIfExists('kelompok_dg');
         Schema::dropIfExists('orang');
+        Schema::dropIfExists('cabang');
+
+        Schema::create('cabang', function (Blueprint $table): void {
+            $table->id();
+            $table->string('label')->unique();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+        DB::table('cabang')->insert([
+            ['id' => 1, 'label' => 'Kutisari', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'label' => 'GM', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        app(BranchCatalog::class)->clearCache();
 
         Schema::create('orang', function (Blueprint $table): void {
             $table->id();

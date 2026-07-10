@@ -24,6 +24,7 @@ class AppPageRouteMap
         'login' => 'auth.login',
         'settings' => 'settings',
         'developer_dashboard' => 'developer.dashboard',
+        'developer_branches' => 'developer.branches',
         'developer_users' => 'developer.users',
         'developer_config' => 'developer.config',
         'developer_statistics' => 'developer.statistics',

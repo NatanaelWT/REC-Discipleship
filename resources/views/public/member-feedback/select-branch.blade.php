@@ -28,16 +28,17 @@
         <div class="public-branch-grid">
           @foreach ($branchOptions as $branchOption)
             @php
-                $branchCode = normalize_public_branch_code((string) ($branchOption['code'] ?? 'kutisari'));
-                $branchLabel = trim((string) ($branchOption['label'] ?? 'Kutisari'));
+                $branchCode = normalize_public_branch_code((string) ($branchOption['code'] ?? ''));
+                $branchLabel = trim((string) ($branchOption['label'] ?? strtoupper($branchCode)));
                 if ($branchLabel === '') {
-                    $branchLabel = 'Kutisari';
+                    $branchLabel = strtoupper($branchCode);
                 }
                 $hrefParams = ['cabang' => $branchCode];
                 if ($feedbackSessionParam !== 0) {
                     $hrefParams['feedback_session'] = $feedbackSessionParam;
                 }
             @endphp
+            @continue($branchCode === '')
             <a class="public-branch-link-card" href="{{ route('public.member-feedback.form', $hrefParams) }}" aria-label="Isi jurnal umpan balik cabang {{ $branchLabel }}">
               <span class="public-branch-card-eyebrow">Cabang</span>
               <span class="public-branch-card-title">{{ $branchLabel }}</span>

@@ -28,12 +28,13 @@
         <div class="public-branch-grid">
           @foreach ($branchOptions as $branchOption)
             @php
-                $branchCode = normalize_public_branch_code((string) ($branchOption['code'] ?? 'kutisari'));
-                $branchLabel = trim((string) ($branchOption['label'] ?? 'Kutisari'));
+                $branchCode = normalize_public_branch_code((string) ($branchOption['code'] ?? ''));
+                $branchLabel = trim((string) ($branchOption['label'] ?? strtoupper($branchCode)));
                 if ($branchLabel === '') {
-                    $branchLabel = 'Kutisari';
+                    $branchLabel = strtoupper($branchCode);
                 }
             @endphp
+            @continue($branchCode === '')
             <a class="public-branch-link-card" href="{{ route('public.dg.report', ['branch' => $branchCode]) }}" aria-label="Isi laporan cabang {{ $branchLabel }}">
               <span class="public-branch-card-eyebrow">Cabang</span>
               <span class="public-branch-card-title">{{ $branchLabel }}</span>

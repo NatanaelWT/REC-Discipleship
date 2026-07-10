@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Developer\DeveloperAccessController;
 use App\Http\Controllers\Developer\DeveloperActivityController;
+use App\Http\Controllers\Developer\DeveloperBranchController;
 use App\Http\Controllers\Developer\DeveloperConfigController;
 use App\Http\Controllers\Developer\DeveloperController;
 use App\Http\Controllers\Developer\DeveloperStatisticsController;
@@ -50,6 +51,10 @@ Route::middleware('rec.maintenance')->group(function (): void {
 
     Route::prefix('developer')->name('developer.')->middleware('rec.page:developer_dashboard')->group(function (): void {
         Route::get('/', [DeveloperController::class, 'index'])->name('dashboard');
+        Route::get('/branches', [DeveloperBranchController::class, 'index'])->name('branches');
+        Route::post('/branches', [DeveloperBranchController::class, 'store'])->name('branches.store');
+        Route::post('/branches/{branch}', [DeveloperBranchController::class, 'update'])->name('branches.update');
+        Route::post('/branches/{branch}/delete', [DeveloperBranchController::class, 'delete'])->name('branches.delete');
         Route::get('/users', [DeveloperUserController::class, 'index'])->name('users');
         Route::post('/users', [DeveloperUserController::class, 'store'])->name('users.store');
         Route::post('/users/{user}/access', [DeveloperAccessController::class, 'start'])->name('users.access');
