@@ -363,6 +363,14 @@ class DeveloperAccessTest extends TestCase
 
         $fkBrowse = app(DeveloperDatabaseService::class)->browse('db_admin_fk_child');
         $this->assertSame('Parent Alpha', $fkBrowse['rows'][0]['foreign_labels']['owner_id']['label'] ?? null);
+
+        $this->get('/developer/database/db_admin_group_child')
+            ->assertOk()
+            ->assertSee('DG2')
+            ->assertSee('Kutisari');
+
+        $groupFkBrowse = app(DeveloperDatabaseService::class)->browse('db_admin_group_child');
+        $this->assertSame('DG2 · Kutisari', $groupFkBrowse['rows'][0]['foreign_labels']['discipleship_group_id']['label'] ?? null);
     }
 
     public function test_developer_database_admin_can_insert_update_and_delete_rows(): void
@@ -868,6 +876,8 @@ class DeveloperAccessTest extends TestCase
     private function createDatabaseAdminSampleTables(): void
     {
         Schema::dropIfExists('db_admin_imported');
+        Schema::dropIfExists('db_admin_group_child');
+        Schema::dropIfExists('discipleship_groups');
         Schema::dropIfExists('db_admin_fk_child');
         Schema::dropIfExists('db_admin_fk_owner');
         Schema::dropIfExists('db_admin_no_pk');
@@ -894,6 +904,18 @@ class DeveloperAccessTest extends TestCase
             $table->string('note')->nullable();
             $table->foreign('owner_id')->references('id')->on('db_admin_fk_owner');
         });
+        Schema::create('discipleship_groups', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->string('stage', 40)->nullable();
+            $table->string('status', 40)->default('active');
+        });
+        Schema::create('db_admin_group_child', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('discipleship_group_id');
+            $table->string('note')->nullable();
+            $table->foreign('discipleship_group_id')->references('id')->on('discipleship_groups');
+        });
 
         DB::table('db_admin_sample')->insert([
             ['name' => 'Alpha', 'score' => 10, 'notes' => 'First row', 'created_at' => now(), 'updated_at' => now()],
@@ -904,6 +926,13 @@ class DeveloperAccessTest extends TestCase
         ]);
         $ownerId = (int) DB::table('db_admin_fk_owner')->insertGetId(['label' => 'Parent Alpha']);
         DB::table('db_admin_fk_child')->insert(['owner_id' => $ownerId, 'note' => 'Child row']);
+        $branchId = (int) DB::table('cabang')->where('label', 'Kutisari')->value('id');
+        $groupId = (int) DB::table('discipleship_groups')->insertGetId([
+            'branch_id' => $branchId,
+            'stage' => 'DG 2',
+            'status' => 'active',
+        ]);
+        DB::table('db_admin_group_child')->insert(['discipleship_group_id' => $groupId, 'note' => 'Group child row']);
     }
 
     private function rowKeyForSampleName(string $name): string

@@ -801,6 +801,13 @@ class DeveloperDatabaseService
             return [];
         }
 
+        if ($this->isDiscipleshipGroupTable($foreignTable)) {
+            $groupLabels = $this->discipleshipGroupReferenceLabels($foreignTable, $foreignColumn, $values, $columnNames);
+            if ($groupLabels !== []) {
+                return $groupLabels;
+            }
+        }
+
         $displayColumns = $this->foreignDisplayColumns($columnNames, $foreignColumn);
         $selectColumns = array_values(array_unique(array_merge([$foreignColumn], $displayColumns)));
 
@@ -825,6 +832,128 @@ class DeveloperDatabaseService
         }
 
         return $labels;
+    }
+
+    /**
+     * @param array<int, mixed> $values
+     * @param array<int, string> $columnNames
+     * @return array<string, string>
+     */
+    private function discipleshipGroupReferenceLabels(string $foreignTable, string $foreignColumn, array $values, array $columnNames): array
+    {
+        if (! in_array('branch_id', $columnNames, true)) {
+            return [];
+        }
+
+        $stageColumn = in_array('stage', $columnNames, true)
+            ? 'stage'
+            : (in_array('current_stage', $columnNames, true) ? 'current_stage' : '');
+        if ($stageColumn === '') {
+            return [];
+        }
+
+        try {
+            $records = DB::table($foreignTable)
+                ->select([$foreignColumn, 'branch_id', $stageColumn])
+                ->whereIn($foreignColumn, $values)
+                ->limit(max(count($values), 1))
+                ->get();
+        } catch (Throwable) {
+            return [];
+        }
+
+        $branchIds = [];
+        foreach ($records as $record) {
+            $branchId = (int) (((array) $record)['branch_id'] ?? 0);
+            if ($branchId > 0) {
+                $branchIds[$branchId] = $branchId;
+            }
+        }
+        $branchLabels = $this->branchLabelsByIds(array_values($branchIds));
+
+        $labels = [];
+        foreach ($records as $record) {
+            $row = (array) $record;
+            if (! array_key_exists($foreignColumn, $row)) {
+                continue;
+            }
+
+            $stage = $this->discipleshipGroupStageLabel($row[$stageColumn] ?? '');
+            $branchId = (int) ($row['branch_id'] ?? 0);
+            $branchLabel = $branchLabels[$branchId] ?? ($branchId > 0 ? 'Cabang '.$branchId : '');
+            $parts = array_values(array_filter([$stage, $branchLabel], static fn (string $part): bool => $part !== ''));
+            if ($parts === []) {
+                continue;
+            }
+
+            $labels[$this->referenceKey($row[$foreignColumn])] = implode(' · ', $parts);
+        }
+
+        return $labels;
+    }
+
+    private function isDiscipleshipGroupTable(string $table): bool
+    {
+        return in_array($table, ['kelompok_dg', 'discipleship_groups'], true);
+    }
+
+    /**
+     * @param array<int, int> $branchIds
+     * @return array<int, string>
+     */
+    private function branchLabelsByIds(array $branchIds): array
+    {
+        $branchIds = array_values(array_unique(array_filter(array_map('intval', $branchIds), static fn (int $id): bool => $id > 0)));
+        if ($branchIds === []) {
+            return [];
+        }
+
+        $branchTable = $this->normalizeTable('cabang') ?? $this->normalizeTable('branches');
+        if ($branchTable === null) {
+            return [];
+        }
+
+        $columns = array_values(array_map(static fn (array $column): string => (string) $column['name'], $this->columns($branchTable)));
+        $labelColumn = in_array('label', $columns, true)
+            ? 'label'
+            : (in_array('name', $columns, true) ? 'name' : '');
+        if (! in_array('id', $columns, true) || $labelColumn === '') {
+            return [];
+        }
+
+        try {
+            $records = DB::table($branchTable)
+                ->select(['id', $labelColumn])
+                ->whereIn('id', $branchIds)
+                ->get();
+        } catch (Throwable) {
+            return [];
+        }
+
+        $labels = [];
+        foreach ($records as $record) {
+            $row = (array) $record;
+            $id = (int) ($row['id'] ?? 0);
+            $label = trim((string) ($row[$labelColumn] ?? ''));
+            if ($id > 0 && $label !== '') {
+                $labels[$id] = $label;
+            }
+        }
+
+        return $labels;
+    }
+
+    private function discipleshipGroupStageLabel(mixed $stage): string
+    {
+        $stage = strtoupper(trim((string) $stage));
+        if ($stage === '') {
+            return '';
+        }
+        if (preg_match('/^DG\s*([0-9]+)$/', $stage, $matches) === 1) {
+            return 'DG'.$matches[1];
+        }
+
+        return $this->shortString($stage, 24);
     }
 
     /**
