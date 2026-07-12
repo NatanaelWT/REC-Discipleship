@@ -11424,8 +11424,13 @@ button.member-feedback-recap-count-pill:focus-visible {
 .discipleship-page-header::before {
   content: "";
   position: absolute;
-  inset: 0 0 auto 0;
+  top: 0;
+  right: 0;
+  left: 0;
   height: 5px;
+  border-radius: inherit;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
   background: linear-gradient(90deg, var(--discipleship-kgap) 0%, color-mix(in srgb, var(--discipleship-dg1) 72%, white) 46%, var(--discipleship-dg3) 100%);
 }
 
@@ -11527,6 +11532,16 @@ button.member-feedback-recap-count-pill:focus-visible {
   margin-top: 18px;
   padding-top: 18px;
   border-top: 1px solid rgba(203, 213, 225, 0.7);
+}
+
+.discipleship-page-header.is-tools-only {
+  padding-top: 18px;
+}
+
+.discipleship-page-header.is-tools-only .discipleship-page-header__tools {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .discipleship-page-header__filter {
@@ -16767,7 +16782,7 @@ details[open] > summary .activity-disclosure-icon::after {
 .discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header {
   flex: 0 0 auto;
   margin: 0 0 12px;
-  padding: 10px 12px;
+  padding: 14px 12px 10px;
   overflow: visible;
   border-color: rgba(148, 163, 184, 0.28);
   border-radius: 14px;
@@ -16775,7 +16790,17 @@ details[open] > summary .activity-disclosure-icon::after {
 }
 
 .discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header::before {
+  top: 0;
+  right: 0;
+  left: 0;
   height: 3px;
+  border-radius: inherit;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header.is-tools-only {
+  padding: 16px 12px 10px;
 }
 
 .discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__main {
@@ -16814,8 +16839,9 @@ details[open] > summary .activity-disclosure-icon::after {
 
 .discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__tools {
   gap: 10px;
-  margin-top: 9px;
-  padding-top: 9px;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__filter {
@@ -17609,6 +17635,10 @@ details[open] > summary .activity-disclosure-icon::after {
 
   .discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header {
     padding: 9px;
+  }
+
+  .discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header.is-tools-only {
+    padding: 13px 9px 9px;
   }
 
   .discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__stats {

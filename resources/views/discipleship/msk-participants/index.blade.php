@@ -559,9 +559,6 @@ if ($page === 'msk_classes') {
 
     echo view('discipleship.partials.page-header', [
         'header' => [
-            'kicker' => 'Mengapa Saya Kristen',
-            'title' => 'Kelas MSK',
-            'description' => 'Pantau batch aktif, progres penyelesaian sesi, dan kelola peserta MSK dari satu panel yang lebih ringkas.',
             'tools' => [
                 'element' => 'div',
                 'attributes' => ['class' => 'table-tools msk-table-tools'],

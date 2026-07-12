@@ -36,9 +36,6 @@
 
   @include('discipleship.partials.page-header', [
       'header' => [
-          'kicker' => 'Umpan Balik Anggota',
-          'title' => 'Jurnal Umpan Balik',
-          'description' => 'Pantau kesehatan kelompok DG dari jurnal umpan balik anggota, mulai dari skor tiap dimensi, coverage pengisian, prioritas tindak lanjut, sampai catatan detail.',
           'tools' => [
               'element' => 'div',
               'attributes' => ['class' => 'table-tools member-feedback-recap-tools'],

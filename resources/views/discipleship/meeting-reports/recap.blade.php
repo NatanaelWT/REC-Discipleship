@@ -795,9 +795,6 @@ if ($page === 'dg_reports_recap') {
 
     echo view('discipleship.partials.page-header', [
         'header' => [
-            'kicker' => 'Monitoring Pertemuan DG',
-            'title' => 'Jurnal Temu DG',
-            'description' => 'Ringkas performa pemimpin, perkembangan kelompok, dan catatan pertemuan DG dalam satu tampilan yang lebih mudah dipantau.',
             'tools' => [
                 'element' => 'div',
                 'partial' => 'discipleship.partials.page-header-controls.meeting-recap',

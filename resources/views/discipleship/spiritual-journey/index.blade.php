@@ -749,9 +749,6 @@ if ($page === 'spiritual_journey') {
     }
     echo view('discipleship.partials.page-header', [
         'header' => [
-            'kicker' => 'Pemantauan Pertumbuhan',
-            'title' => 'Spiritual Journey',
-            'description' => 'Pantau progres MSK peserta dan siapkan tahap lanjutan perjalanan pemuridannya dalam satu tampilan yang lebih rapi.',
             'tools' => [
                 'element' => 'form',
                 'method' => 'get',
