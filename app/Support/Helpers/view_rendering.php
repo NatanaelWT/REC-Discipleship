@@ -74,7 +74,6 @@ function page_header_active_group(string $currentPage): string
 {
     $groupPages = [
         'developer' => ['developer_dashboard', 'developer_branches', 'developer_users', 'developer_config', 'developer_statistics', 'developer_activities'],
-        'database' => ['developer_database'],
         'pemuridan' => array_merge(array_keys(discipleship_page_map()), ['discipleship_targets', 'difficult_questions_admin']),
         'worship' => ['worship_penatalayan'],
     ];
@@ -345,8 +344,6 @@ function render_sidebar_navigation(string $currentPage, string $currentBranch, b
             ['label' => 'Statistik', 'page' => 'developer_statistics', 'href' => route('developer.statistics')],
             ['label' => 'Aktivitas', 'page' => 'developer_activities', 'href' => route('developer.activities')],
         ], $currentPage, $activeGroup);
-
-        render_sidebar_nav_link('Database', route('developer.database'), $activeGroup === 'database');
 
         render_sidebar_nav_group('Ibadah Umum', 'worship', [
             ['label' => 'Penatalayan', 'page' => 'worship_penatalayan', 'href' => route('worship.penatalayan')],
