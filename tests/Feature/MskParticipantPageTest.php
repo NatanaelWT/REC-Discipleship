@@ -39,8 +39,8 @@ class MskParticipantPageTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Kelas MSK');
-        $response->assertSee('discipleship-page-header__stats', false);
-        $response->assertSee('discipleship-page-header__stat', false);
+        $response->assertDontSee('discipleship-page-header__stats', false);
+        $response->assertDontSee('discipleship-page-header__stat', false);
         $response->assertSee('msk-batch-actions', false);
         $response->assertSee('msk-transfer-button', false);
         $response->assertSee(icon_svg('upload'), false);

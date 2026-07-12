@@ -127,7 +127,8 @@ class DifficultQuestionAdminTest extends TestCase
         $response->assertSee('Bagaimana menjelaskan pemuridan?');
         $response->assertDontSee('Budi');
         $response->assertDontSee('Clara');
-        $response->assertSee('Dengan WA');
+        $response->assertDontSee('discipleship-page-header__stats', false);
+        $response->assertDontSee('Dengan WA');
     }
 
     public function test_developer_can_save_answer_from_difficult_question_admin(): void

@@ -39,13 +39,6 @@
           'kicker' => 'Umpan Balik Anggota',
           'title' => 'Jurnal Umpan Balik',
           'description' => 'Pantau kesehatan kelompok DG dari jurnal umpan balik anggota, mulai dari skor tiap dimensi, coverage pengisian, prioritas tindak lanjut, sampai catatan detail.',
-          'stats_aria_label' => 'Ringkasan rekap feedback anggota',
-          'stats' => [
-              ['label' => 'Total Jurnal', 'value' => (string) ($summary['total_journals'] ?? 0)],
-              ['label' => 'Skor Rata-rata', 'value' => $scoreLabel($summary['overall_score'] ?? 0).'/10'],
-              ['label' => 'Kelompok Terisi', 'value' => (string) ($summary['feedback_group_count'] ?? 0)],
-              ['label' => 'Coverage Aktif', 'value' => $percentLabel($summary['coverage_percent'] ?? 0)],
-          ],
           'tools' => [
               'element' => 'div',
               'attributes' => ['class' => 'table-tools member-feedback-recap-tools'],

@@ -752,7 +752,6 @@ if ($page === 'spiritual_journey') {
             'kicker' => 'Pemantauan Pertumbuhan',
             'title' => 'Spiritual Journey',
             'description' => 'Pantau progres MSK peserta dan siapkan tahap lanjutan perjalanan pemuridannya dalam satu tampilan yang lebih rapi.',
-            'stats' => $journeyHeaderStats,
             'tools' => [
                 'element' => 'form',
                 'method' => 'get',

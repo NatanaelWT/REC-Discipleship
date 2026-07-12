@@ -26,6 +26,8 @@ class MemberFeedbackRecapTest extends TestCase
         $response->assertSee('Pemimpin Test');
         $response->assertSee('Anggota Test');
         $response->assertSee('card discipleship-page-header', false);
+        $response->assertDontSee('discipleship-page-header__stats', false);
+        $response->assertDontSee('discipleship-page-header__stat', false);
         $response->assertDontSee('member-feedback-recap-score-card', false);
         $response->assertDontSee('member-feedback-recap-panel-grid', false);
         $response->assertDontSee('Pengisian per Pertemuan');
@@ -80,7 +82,7 @@ class MemberFeedbackRecapTest extends TestCase
         $content = $this->get('/pemuridan/umpan-balik-anggota')->assertOk()->getContent();
 
         $this->assertStringContainsString('Pengisi Feedback per Kelompok', $content);
-        $this->assertStringContainsString('Kelompok Terisi', $content);
+        $this->assertStringNotContainsString('discipleship-page-header__stats', $content);
         $this->assertStringContainsString('DG 1 (Pemimpin Test)', $content);
         $this->assertStringContainsString('DG 1 (Pemimpin Tanpa Feedback)', $content);
         $this->assertMatchesRegularExpression('/DG 1 \(Pemimpin Test\).*?1 orang.*?1 orang.*?1 orang/s', $content);

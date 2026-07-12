@@ -33,8 +33,8 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertSee('Pemimpin Test');
         $response->assertSee('Materi Test');
         $response->assertSee('card discipleship-page-header', false);
-        $response->assertSee('discipleship-page-header__stats', false);
-        $response->assertSee('discipleship-page-header__stat', false);
+        $response->assertDontSee('discipleship-page-header__stats', false);
+        $response->assertDontSee('discipleship-page-header__stat', false);
         $response->assertSee('discipleship-page-header__filter', false);
         $response->assertSee('data-filter-role="recap-progress"', false);
         $response->assertSee('discipleship-page-header__search', false);

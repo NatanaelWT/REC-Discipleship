@@ -562,13 +562,6 @@ if ($page === 'msk_classes') {
             'kicker' => 'Mengapa Saya Kristen',
             'title' => 'Kelas MSK',
             'description' => 'Pantau batch aktif, progres penyelesaian sesi, dan kelola peserta MSK dari satu panel yang lebih ringkas.',
-            'stats_aria_label' => 'Ringkasan kelas MSK',
-            'stats' => [
-                ['label' => 'Filter', 'value' => $batchMonthFilterLabel, 'value_attributes' => ['data-msk-stat' => 'filter']],
-                ['label' => 'Peserta', 'value' => (string) $totalParticipantsFiltered, 'value_attributes' => ['data-msk-stat' => 'total']],
-                ['label' => 'Selesai', 'value' => (string) $completedParticipantsFiltered, 'value_attributes' => ['data-msk-stat' => 'complete']],
-                ['label' => 'Berjalan', 'value' => (string) $inProgressParticipantsFiltered, 'value_attributes' => ['data-msk-stat' => 'progress']],
-            ],
             'tools' => [
                 'element' => 'div',
                 'attributes' => ['class' => 'table-tools msk-table-tools'],

@@ -798,17 +798,6 @@ if ($page === 'dg_reports_recap') {
             'kicker' => 'Monitoring Pertemuan DG',
             'title' => 'Jurnal Temu DG',
             'description' => 'Ringkas performa pemimpin, perkembangan kelompok, dan catatan pertemuan DG dalam satu tampilan yang lebih mudah dipantau.',
-            'stats' => [
-                ['label' => 'Total Laporan', 'value' => (string) $totalReports],
-                ['label' => 'Pemimpin Aktif', 'value' => (string) $totalLeaders],
-                ['label' => 'Kelompok', 'value' => (string) $totalGroups],
-                [
-                    'label' => 'Lihat Kalender',
-                    'value' => 'Laporan',
-                    'type' => 'button',
-                    'attributes' => ['data-dg-calendar-open' => true],
-                ],
-            ],
             'tools' => [
                 'element' => 'div',
                 'partial' => 'discipleship.partials.page-header-controls.meeting-recap',
