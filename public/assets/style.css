@@ -16864,12 +16864,36 @@ details[open] > summary .activity-disclosure-icon::after {
 }
 
 .discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__filter .search,
-.discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__search .search {
+.discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__search .search,
+.discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__tools .msk-batch-select {
   height: 36px;
   min-height: 36px;
   padding: 7px 10px;
   border-radius: 10px;
   font-size: 12px;
+}
+
+.discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__tools .people-export-button,
+.discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__tools .msk-transfer-button,
+.discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__tools .btn.tiny.icon-btn {
+  box-sizing: border-box;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  line-height: 1;
+}
+
+.discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__tools .btn.tiny.icon-btn {
+  width: 36px;
+  padding: 0;
+}
+
+.discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__tools .msk-hero-controls,
+.discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__tools .msk-batch-actions,
+.discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__tools .msk-import-inline-form,
+.discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__tools .msk-export-inline-form {
+  min-height: 36px;
 }
 
 .discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-list-card.table-card-plain {
