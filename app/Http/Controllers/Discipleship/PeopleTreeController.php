@@ -11,6 +11,7 @@ use App\Http\Requests\DiscipleshipPeopleTree\PeopleTreeActionRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\ReactivatePeopleTreeGroupRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\SavePeopleTreeGroupRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\SavePeopleTreePersonRequest;
+use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DiscipleshipPeopleTree\PeopleTreePageData;
 use App\Services\DiscipleshipPeopleTree\PeopleTreeWriter;
 use App\Support\RuntimeBootstrap;
@@ -21,14 +22,33 @@ use Illuminate\View\View;
 
 class PeopleTreeController extends Controller
 {
-    public function index(Request $request, PeopleTreePageData $pageData): RedirectResponse|View
-    {
+    public function index(
+        Request $request,
+        PeopleTreePageData $pageData,
+        CurrentDiscipleshipScope $scope,
+    ): RedirectResponse|View {
         $redirect = $this->guardPageAccess($request);
         if ($redirect !== null) {
             return $redirect;
         }
 
-        return view('discipleship.people-tree.index', $pageData->forCurrentContext($request));
+        $data = [
+            ...$pageData->forCurrentContext($request),
+            'pageTitle' => 'Pohon Pemuridan',
+        ];
+
+        if ($request->header('X-Discipleship-Fragment') === 'tab') {
+            return view('discipleship.people-tree.panel', $data);
+        }
+
+        return view('discipleship.workspace.index', [
+            ...$data,
+            'activeTab' => 'tree',
+            'currentPage' => 'people_tree',
+            'panelView' => 'discipleship.people-tree.panel',
+            'selectedBranchLabel' => $scope->selectedLabel(),
+            'tabBranchId' => $this->tabBranchId($request, $scope),
+        ]);
     }
 
     public function treeV2(Request $request): RedirectResponse
@@ -121,5 +141,16 @@ class PeopleTreeController extends Controller
         RuntimeBootstrap::boot($request);
 
         return null;
+    }
+
+    private function tabBranchId(Request $request, CurrentDiscipleshipScope $scope): int|string|null
+    {
+        if (! $request->query->has('branch_id')) {
+            return null;
+        }
+
+        return $scope->includesAllBranches()
+            ? 'all'
+            : $scope->selectedBranchId();
     }
 }

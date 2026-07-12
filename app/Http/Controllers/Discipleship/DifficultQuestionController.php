@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Discipleship;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DifficultQuestions\AnswerDifficultQuestionRequest;
 use App\Models\DifficultQuestion;
+use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DifficultQuestions\DifficultQuestionAdminPageData;
 use App\Services\DifficultQuestions\DifficultQuestionTextNormalizer;
 use App\Support\RuntimeBootstrap;
@@ -14,11 +15,30 @@ use Illuminate\View\View;
 
 class DifficultQuestionController extends Controller
 {
-    public function index(Request $request, DifficultQuestionAdminPageData $pageData): View
-    {
+    public function index(
+        Request $request,
+        DifficultQuestionAdminPageData $pageData,
+        CurrentDiscipleshipScope $scope,
+    ): View {
         RuntimeBootstrap::boot($request);
 
-        return view('discipleship.difficult-questions.index', $pageData->forRequest($request));
+        $pageTitle = 'Pertanyaan Sulit';
+        $data = [
+            ...$pageData->forRequest($request),
+            'pageTitle' => $pageTitle,
+        ];
+
+        if ($request->header('X-Discipleship-Fragment') === 'tab') {
+            return view('discipleship.difficult-questions.panel', $data);
+        }
+
+        return view('discipleship.journals.workspace', [
+            ...$data,
+            'activeTab' => 'questions',
+            'currentPage' => 'difficult_questions_admin',
+            'panelView' => 'discipleship.difficult-questions.panel',
+            'tabBranchId' => $this->tabBranchId($request, $scope),
+        ]);
     }
 
     public function answer(
@@ -67,5 +87,16 @@ class DifficultQuestionController extends Controller
             'answered_at' => now(),
             'updated_at' => now(),
         ])->save();
+    }
+
+    private function tabBranchId(Request $request, CurrentDiscipleshipScope $scope): int|string|null
+    {
+        if (! $request->query->has('branch_id') && ! $request->query->has('rekap_cabang')) {
+            return null;
+        }
+
+        return $scope->includesAllBranches()
+            ? 'all'
+            : $scope->selectedBranchId();
     }
 }

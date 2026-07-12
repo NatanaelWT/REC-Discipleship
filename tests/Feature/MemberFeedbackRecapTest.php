@@ -100,7 +100,8 @@ class MemberFeedbackRecapTest extends TestCase
 
         $this->get('/pemuridan/umpan-balik-anggota?rekap_cabang=all')
             ->assertOk()
-            ->assertSee('Mode Pusat')
+            ->assertSee('data-discipleship-branch-group="all" open', false)
+            ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('Pemimpin Kutisari')
             ->assertSee('Pemimpin GM');
 

@@ -1,7 +1,12 @@
 <?php
 
 if ($page === 'spiritual_journey') {
-    page_header('Spiritual Journey', $settings, $page, false, 'page-discipleship-table-scroll');
+    $renderAsTabPanel = (bool) ($renderAsTabPanel ?? false);
+    if (! $renderAsTabPanel) {
+        page_header('Spiritual Journey', $settings, $page, false, 'page-discipleship-table-scroll');
+    } else {
+        echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-list-panel journey-workspace-panel spiritual-journey-panel" id="discipleship-tabpanel-spiritual" role="tabpanel" aria-labelledby="discipleship-tab-spiritual" tabindex="0" data-discipleship-tab-panel data-tab-key="spiritual" data-page-title="Spiritual Journey" data-body-class="page-spiritual_journey">'."\n";
+    }
     $peopleByMemberId = [];
     $peopleByName = [];
     foreach ($people as $personRow) {
@@ -797,5 +802,9 @@ if ($page === 'spiritual_journey') {
         'bodyHtml' => '<div class="panel-note">Klik Lihat profil pada tabel untuk membuka profil peserta.</div>',
         'footerHtml' => '<button class="btn ghost" type="button" data-spiritual-journey-view-close>Tutup</button>',
     ])->render();
-    page_footer();
+    if ($renderAsTabPanel) {
+        echo "</section>\n";
+    } else {
+        page_footer();
+    }
 }

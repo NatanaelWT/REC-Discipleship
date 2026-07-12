@@ -1,7 +1,12 @@
 <?php
 
 if ($page === 'dg_reports_recap') {
-    page_header('Rekap Jurnal Temu DG', $settings, $page, false, 'page-discipleship-table-scroll');
+    $renderAsTabPanel = (bool) ($renderAsTabPanel ?? false);
+    if (! $renderAsTabPanel) {
+        page_header('Rekap Jurnal Temu DG', $settings, $page, false, 'page-discipleship-table-scroll');
+    } else {
+        echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-journal-panel dg-meeting-recap-panel" id="discipleship-tabpanel-meeting" role="tabpanel" aria-labelledby="discipleship-tab-meeting" tabindex="0" data-discipleship-tab-panel data-tab-key="meeting" data-page-title="Jurnal Temu DG" data-body-class="page-dg_reports_recap">'."\n";
+    }
     $peopleById = index_by_id($people);
     $normalizeProgressLabel = function (string $value): string {
         $value = trim($value);
@@ -1427,5 +1432,9 @@ if ($page === 'dg_reports_recap') {
     echo "})();\n";
     echo "</script>\n";
 
-    page_footer();
+    if ($renderAsTabPanel) {
+        echo "</section>\n";
+    } else {
+        page_footer();
+    }
 }

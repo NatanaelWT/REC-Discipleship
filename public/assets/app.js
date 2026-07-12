@@ -163,9 +163,15 @@
 
     enhanceTableCards();
 
-    const setupSuccessAlerts = () => {
-      const alerts = document.querySelectorAll('.alert.success');
+    const setupSuccessAlerts = (scope = document) => {
+      const alerts = scope && scope.matches && scope.matches('.alert.success')
+        ? [scope]
+        : Array.from(scope.querySelectorAll('.alert.success'));
       alerts.forEach((alertEl, index) => {
+        if (alertEl.getAttribute('data-success-alert-ready') === '1') {
+          return;
+        }
+        alertEl.setAttribute('data-success-alert-ready', '1');
         const dismissAlert = () => {
           if (alertEl.dataset.dismissed === '1') {
             return;
@@ -213,10 +219,20 @@
 
       viewportFillTableConfigs.forEach((config) => {
         const wraps = document.querySelectorAll(config.selector);
-        const isActivePage = document.body.classList.contains(config.bodyClass);
 
         wraps.forEach((wrap) => {
-          if (!isActivePage || isNarrow) {
+          const tabPanel = wrap.closest('[data-discipleship-tab-panel]');
+          const workspacePanels = wrap.closest('[data-discipleship-panels]');
+          const isActivePage = tabPanel
+            ? !tabPanel.hidden
+            : document.body.classList.contains(config.bodyClass);
+          const isWorkspacePanel = Boolean(tabPanel && workspacePanels);
+          if (isWorkspacePanel) {
+            clearViewportTableHeight(wrap);
+            return;
+          }
+          const skipForNarrowViewport = isNarrow && !isWorkspacePanel;
+          if (!isActivePage || skipForNarrowViewport) {
             clearViewportTableHeight(wrap);
             return;
           }
@@ -271,15 +287,24 @@
     window.setTimeout(scheduleViewportTableHeights, 120);
     window.addEventListener('resize', scheduleViewportTableHeights);
 
-    const searchInputs = document.querySelectorAll('[data-filter]');
-    searchInputs.forEach(input => {
-      input.addEventListener('input', function () {
-        filterTable(input);
+    const setupFilterControls = (scope = document) => {
+      const root = scope && scope.querySelectorAll ? scope : document;
+      const searchInputs = root.querySelectorAll('[data-filter]');
+      searchInputs.forEach(input => {
+        if (input.getAttribute('data-filter-ready') === '1') {
+          return;
+        }
+        input.setAttribute('data-filter-ready', '1');
+        input.addEventListener('input', function () {
+          filterTable(input);
+        });
+        input.addEventListener('change', function () {
+          filterTable(input);
+        });
       });
-      input.addEventListener('change', function () {
-        filterTable(input);
-      });
-    });
+    };
+
+    setupFilterControls(document);
 
     const archiveWrap = document.querySelector('.member-left-archive-wrap');
     if (archiveWrap) {
@@ -327,35 +352,44 @@
       }
     }
 
-    const autoSubmitSearchForms = document.querySelectorAll('[data-auto-submit-search-form]');
-    autoSubmitSearchForms.forEach((form) => {
-      const input = form.querySelector('[data-auto-submit-search-input]');
-      if (!input) {
-        return;
-      }
-      let submitTimer = null;
-      const submitNow = () => {
-        if (typeof form.requestSubmit === 'function') {
-          form.requestSubmit();
-        } else {
-          form.submit();
+    const setupAutoSubmitSearchForms = (scope = document) => {
+      const root = scope && scope.querySelectorAll ? scope : document;
+      const autoSubmitSearchForms = root.querySelectorAll('[data-auto-submit-search-form]');
+      autoSubmitSearchForms.forEach((form) => {
+        if (form.getAttribute('data-auto-submit-search-ready') === '1') {
+          return;
         }
-      };
-      input.addEventListener('input', function () {
-        if (submitTimer !== null) {
-          window.clearTimeout(submitTimer);
+        const input = form.querySelector('[data-auto-submit-search-input]');
+        if (!input) {
+          return;
         }
-        submitTimer = window.setTimeout(function () {
-          submitNow();
-        }, 300);
+        form.setAttribute('data-auto-submit-search-ready', '1');
+        let submitTimer = null;
+        const submitNow = () => {
+          if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+          } else {
+            form.submit();
+          }
+        };
+        input.addEventListener('input', function () {
+          if (submitTimer !== null) {
+            window.clearTimeout(submitTimer);
+          }
+          submitTimer = window.setTimeout(function () {
+            submitNow();
+          }, 300);
+        });
+        form.addEventListener('submit', function () {
+          if (submitTimer !== null) {
+            window.clearTimeout(submitTimer);
+            submitTimer = null;
+          }
+        });
       });
-      form.addEventListener('submit', function () {
-        if (submitTimer !== null) {
-          window.clearTimeout(submitTimer);
-          submitTimer = null;
-        }
-      });
-    });
+    };
+
+    setupAutoSubmitSearchForms(document);
 
     const cssAttributeValue = (value) => {
       const text = String(value || '');
@@ -431,16 +465,26 @@
       filterRows();
     };
 
-    const setupDiscipleshipPeopleList = () => {
-      const root = document.querySelector('[data-discipleship-people-list]');
-      const form = document.querySelector('[data-discipleship-people-search-form]');
+    const setupDiscipleshipPeopleList = (scope = document) => {
+      const root = scope && scope.matches && scope.matches('[data-discipleship-people-list]')
+        ? scope
+        : scope.querySelector('[data-discipleship-people-list]');
+      const panel = root ? (root.closest('[data-discipleship-tab-panel]') || root.parentElement || document) : null;
+      const form = panel ? panel.querySelector('[data-discipleship-people-search-form]') : null;
       if (!root || !form) {
         return;
       }
+      if (root.getAttribute('data-discipleship-people-list-ready') === '1') {
+        return;
+      }
+      root.setAttribute('data-discipleship-people-list-ready', '1');
 
       const input = form.querySelector('[data-discipleship-people-search-input]');
       const progressInput = form.querySelector('[data-discipleship-people-progress-input]');
-      const scrollArea = root.querySelector('[data-discipleship-people-scroll]');
+      const tableScrollArea = root.querySelector('[data-discipleship-people-scroll]');
+      const scrollArea = panel && panel.closest('[data-discipleship-workspace]')
+        ? panel
+        : tableScrollArea;
       const body = root.querySelector('[data-discipleship-people-list-body]');
       const emptyRow = root.querySelector('[data-discipleship-people-search-empty]');
       const loadingRow = root.querySelector('[data-discipleship-people-loading]');
@@ -450,10 +494,10 @@
       }
 
       const statNodes = {
-        total: document.querySelector('[data-people-stat="total"]'),
-        dg1: document.querySelector('[data-people-stat="dg1"]'),
-        dg2: document.querySelector('[data-people-stat="dg2"]'),
-        dg3: document.querySelector('[data-people-stat="dg3"]')
+        total: panel.querySelector('[data-people-stat="total"]'),
+        dg1: panel.querySelector('[data-people-stat="dg1"]'),
+        dg2: panel.querySelector('[data-people-stat="dg2"]'),
+        dg3: panel.querySelector('[data-people-stat="dg3"]')
       };
       let hasMore = root.getAttribute('data-has-more') === '1';
       let nextPage = parseInt(root.getAttribute('data-next-page') || '0', 10) || null;
@@ -462,9 +506,13 @@
       let requestSeq = 0;
       let isLoading = false;
       let searchTimer = null;
+      let activeRequest = null;
+      let pendingRequest = null;
+      let destroyed = false;
 
       const currentQuery = () => String(input.value || '').trim();
       const currentProgress = () => String(progressInput ? progressInput.value : 'all').trim() || 'all';
+      const isPanelHidden = () => destroyed || Boolean(panel && panel.hidden);
 
       const updateStats = (stats) => {
         if (!stats || typeof stats !== 'object') {
@@ -535,6 +583,9 @@
         url.searchParams.delete('page');
         url.searchParams.delete('per_page');
         window.history.replaceState(window.history.state, '', url.toString());
+        window.dispatchEvent(new CustomEvent('discipleship:panel-url-change', {
+          detail: { tabKey: 'people', url: url.toString() }
+        }));
       };
 
       const buildRowsUrl = (page) => {
@@ -570,6 +621,10 @@
       };
 
       const loadPage = (page, mode) => {
+        if (isPanelHidden()) {
+          pendingRequest = { page, mode, syncUrl: false };
+          return;
+        }
         if (mode === 'append' && (!hasMore || !nextPage || isLoading)) {
           return;
         }
@@ -577,7 +632,10 @@
           activeController.abort();
         }
         activeController = new AbortController();
+        const controller = activeController;
         const requestId = ++requestSeq;
+        activeRequest = { page, mode };
+        pendingRequest = null;
         isLoading = true;
         setLoading(true);
         window.fetch(buildRowsUrl(page).toString(), {
@@ -585,7 +643,7 @@
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
           },
-          signal: activeController.signal
+          signal: controller.signal
         })
           .then((response) => {
             if (!response.ok) {
@@ -614,6 +672,10 @@
               return;
             }
             isLoading = false;
+            activeRequest = null;
+            if (activeController === controller) {
+              activeController = null;
+            }
             setLoading(false);
           });
       };
@@ -624,6 +686,10 @@
         }
         searchTimer = window.setTimeout(() => {
           searchTimer = null;
+          if (isPanelHidden()) {
+            pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+            return;
+          }
           syncUrl();
           loadPage(1, 'replace');
         }, 250);
@@ -638,6 +704,9 @@
       };
 
       const loadMoreIfNeeded = () => {
+        if (isPanelHidden()) {
+          return;
+        }
         if (hasMore && nextPage && !isLoading && nearBottom()) {
           loadPage(nextPage, 'append');
         }
@@ -649,6 +718,10 @@
           if (searchTimer !== null) {
             window.clearTimeout(searchTimer);
             searchTimer = null;
+          }
+          if (isPanelHidden()) {
+            pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+            return;
           }
           syncUrl();
           loadPage(1, 'replace');
@@ -663,6 +736,10 @@
           window.clearTimeout(searchTimer);
           searchTimer = null;
         }
+        if (isPanelHidden()) {
+          pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+          return;
+        }
         syncUrl();
         loadPage(1, 'replace');
       });
@@ -671,19 +748,70 @@
       }
       window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
       window.addEventListener('resize', loadMoreIfNeeded);
+      const suspendPanel = () => {
+        if (searchTimer !== null) {
+          window.clearTimeout(searchTimer);
+          searchTimer = null;
+          pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+        }
+        if (activeController) {
+          if (!pendingRequest && activeRequest) {
+            pendingRequest = { ...activeRequest, syncUrl: false };
+          }
+          requestSeq += 1;
+          activeController.abort();
+          activeController = null;
+          activeRequest = null;
+          isLoading = false;
+          setLoading(false);
+        }
+      };
+      panel.addEventListener('discipleship:panel-deactivate', suspendPanel);
+      panel.addEventListener('discipleship:panel-destroy', () => {
+        suspendPanel();
+        destroyed = true;
+        pendingRequest = null;
+        window.removeEventListener('scroll', loadMoreIfNeeded);
+        window.removeEventListener('resize', loadMoreIfNeeded);
+      });
+      panel.addEventListener('discipleship:panel-activate', () => {
+        if (destroyed) {
+          return;
+        }
+        if (pendingRequest) {
+          const request = pendingRequest;
+          pendingRequest = null;
+          if (request.syncUrl) {
+            syncUrl();
+          }
+          loadPage(request.page, request.mode);
+          return;
+        }
+        window.requestAnimationFrame(loadMoreIfNeeded);
+      });
       setEmptyState('Peserta tidak ditemukan.');
     };
 
-    const setupDiscipleshipGroupsList = () => {
-      const root = document.querySelector('[data-discipleship-groups-list]');
-      const form = document.querySelector('[data-discipleship-groups-search-form]');
+    const setupDiscipleshipGroupsList = (scope = document) => {
+      const root = scope && scope.matches && scope.matches('[data-discipleship-groups-list]')
+        ? scope
+        : scope.querySelector('[data-discipleship-groups-list]');
+      const panel = root ? (root.closest('[data-discipleship-tab-panel]') || root.parentElement || document) : null;
+      const form = panel ? panel.querySelector('[data-discipleship-groups-search-form]') : null;
       if (!root || !form) {
         return;
       }
+      if (root.getAttribute('data-discipleship-groups-list-ready') === '1') {
+        return;
+      }
+      root.setAttribute('data-discipleship-groups-list-ready', '1');
 
       const input = form.querySelector('[data-discipleship-groups-search-input]');
       const statusInput = form.querySelector('[data-discipleship-groups-status-input]');
-      const scrollArea = root.querySelector('[data-discipleship-groups-scroll]');
+      const tableScrollArea = root.querySelector('[data-discipleship-groups-scroll]');
+      const scrollArea = panel && panel.closest('[data-discipleship-workspace]')
+        ? panel
+        : tableScrollArea;
       const body = root.querySelector('[data-discipleship-groups-list-body]');
       const emptyRow = root.querySelector('[data-discipleship-groups-empty]');
       const loadingRow = root.querySelector('[data-discipleship-groups-loading]');
@@ -693,10 +821,10 @@
       }
 
       const statNodes = {
-        total: document.querySelector('[data-groups-stat="total"]'),
-        dg1: document.querySelector('[data-groups-stat="dg1"]'),
-        dg2: document.querySelector('[data-groups-stat="dg2"]'),
-        dg3: document.querySelector('[data-groups-stat="dg3"]')
+        total: panel.querySelector('[data-groups-stat="total"]'),
+        dg1: panel.querySelector('[data-groups-stat="dg1"]'),
+        dg2: panel.querySelector('[data-groups-stat="dg2"]'),
+        dg3: panel.querySelector('[data-groups-stat="dg3"]')
       };
       let hasMore = root.getAttribute('data-has-more') === '1';
       let nextPage = parseInt(root.getAttribute('data-next-page') || '0', 10) || null;
@@ -705,9 +833,13 @@
       let requestSeq = 0;
       let isLoading = false;
       let searchTimer = null;
+      let activeRequest = null;
+      let pendingRequest = null;
+      let destroyed = false;
 
       const currentQuery = () => String(input.value || '').trim();
       const currentStatus = () => String(statusInput ? statusInput.value : 'all').trim() || 'all';
+      const isPanelHidden = () => destroyed || Boolean(panel && panel.hidden);
 
       const updateStats = (stats) => {
         if (!stats || typeof stats !== 'object') {
@@ -778,6 +910,9 @@
         url.searchParams.delete('page');
         url.searchParams.delete('per_page');
         window.history.replaceState(window.history.state, '', url.toString());
+        window.dispatchEvent(new CustomEvent('discipleship:panel-url-change', {
+          detail: { tabKey: 'groups', url: url.toString() }
+        }));
       };
 
       const buildRowsUrl = (page) => {
@@ -812,6 +947,10 @@
       };
 
       const loadPage = (page, mode) => {
+        if (isPanelHidden()) {
+          pendingRequest = { page, mode, syncUrl: false };
+          return;
+        }
         if (mode === 'append' && (!hasMore || !nextPage || isLoading)) {
           return;
         }
@@ -819,7 +958,10 @@
           activeController.abort();
         }
         activeController = new AbortController();
+        const controller = activeController;
         const requestId = ++requestSeq;
+        activeRequest = { page, mode };
+        pendingRequest = null;
         isLoading = true;
         setLoading(true);
         window.fetch(buildRowsUrl(page).toString(), {
@@ -827,7 +969,7 @@
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
           },
-          signal: activeController.signal
+          signal: controller.signal
         })
           .then((response) => {
             if (!response.ok) {
@@ -856,6 +998,10 @@
               return;
             }
             isLoading = false;
+            activeRequest = null;
+            if (activeController === controller) {
+              activeController = null;
+            }
             setLoading(false);
           });
       };
@@ -866,6 +1012,10 @@
         }
         searchTimer = window.setTimeout(() => {
           searchTimer = null;
+          if (isPanelHidden()) {
+            pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+            return;
+          }
           syncUrl();
           loadPage(1, 'replace');
         }, 250);
@@ -880,6 +1030,9 @@
       };
 
       const loadMoreIfNeeded = () => {
+        if (isPanelHidden()) {
+          return;
+        }
         if (hasMore && nextPage && !isLoading && nearBottom()) {
           loadPage(nextPage, 'append');
         }
@@ -892,6 +1045,10 @@
             window.clearTimeout(searchTimer);
             searchTimer = null;
           }
+          if (isPanelHidden()) {
+            pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+            return;
+          }
           syncUrl();
           loadPage(1, 'replace');
         });
@@ -902,6 +1059,10 @@
           window.clearTimeout(searchTimer);
           searchTimer = null;
         }
+        if (isPanelHidden()) {
+          pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+          return;
+        }
         syncUrl();
         loadPage(1, 'replace');
       });
@@ -910,34 +1071,299 @@
       }
       window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
       window.addEventListener('resize', loadMoreIfNeeded);
+      const suspendPanel = () => {
+        if (searchTimer !== null) {
+          window.clearTimeout(searchTimer);
+          searchTimer = null;
+          pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+        }
+        if (activeController) {
+          if (!pendingRequest && activeRequest) {
+            pendingRequest = { ...activeRequest, syncUrl: false };
+          }
+          requestSeq += 1;
+          activeController.abort();
+          activeController = null;
+          activeRequest = null;
+          isLoading = false;
+          setLoading(false);
+        }
+      };
+      panel.addEventListener('discipleship:panel-deactivate', suspendPanel);
+      panel.addEventListener('discipleship:panel-destroy', () => {
+        suspendPanel();
+        destroyed = true;
+        pendingRequest = null;
+        window.removeEventListener('scroll', loadMoreIfNeeded);
+        window.removeEventListener('resize', loadMoreIfNeeded);
+      });
+      panel.addEventListener('discipleship:panel-activate', () => {
+        if (destroyed) {
+          return;
+        }
+        if (pendingRequest) {
+          const request = pendingRequest;
+          pendingRequest = null;
+          if (request.syncUrl) {
+            syncUrl();
+          }
+          loadPage(request.page, request.mode);
+          return;
+        }
+        window.requestAnimationFrame(loadMoreIfNeeded);
+      });
       setEmptyState('Kelompok tidak ditemukan.');
     };
 
-    const setupMskList = () => {
-      const root = document.querySelector('[data-msk-list]');
-      const form = document.querySelector('[data-msk-search-form]');
+    const setupDiscipleshipDashboard = (scope = document) => {
+      const panel = scope && scope.matches && scope.matches('[data-discipleship-dashboard-panel]')
+        ? scope
+        : scope.querySelector('[data-discipleship-dashboard-panel]');
+      if (!panel || panel.getAttribute('data-discipleship-dashboard-ready') === '1') {
+        return;
+      }
+      panel.setAttribute('data-discipleship-dashboard-ready', '1');
+
+      const sections = Array.from(panel.querySelectorAll('[data-dashboard-section]'));
+      const modal = panel.querySelector('[data-msk-edit-modal]');
+      const sectionStates = new Map();
+      let destroyed = false;
+
+      sections.forEach((section) => {
+        sectionStates.set(section, {
+          controller: null,
+          loaded: section.getAttribute('data-dashboard-section-loaded') === '1',
+          pending: section.getAttribute('data-dashboard-section-loaded') !== '1',
+          sequence: 0
+        });
+      });
+
+      const isPanelHidden = () => panel.hidden || panel.getAttribute('aria-hidden') === 'true';
+
+      const closeMskEditor = () => {
+        if (!modal) {
+          return;
+        }
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        syncBodyModalState();
+      };
+
+      const templateForParticipant = (participantId) => {
+        const key = String(participantId || '').trim();
+        if (!key) {
+          return null;
+        }
+        return Array.from(panel.querySelectorAll('template[data-msk-edit-template]')).find((template) => (
+          String(template.getAttribute('data-msk-edit-template') || '') === key
+        )) || null;
+      };
+
+      const openMskEditor = (template) => {
+        if (!modal || !template || isPanelHidden()) {
+          return;
+        }
+        const titleEl = modal.querySelector('[data-msk-edit-title]');
+        const bodyEl = modal.querySelector('[data-msk-edit-body]');
+        if (titleEl) {
+          titleEl.textContent = template.getAttribute('data-msk-edit-template-title') || 'Edit Sesi MSK';
+        }
+        if (bodyEl) {
+          bodyEl.innerHTML = template.innerHTML;
+        }
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+        const firstInput = bodyEl ? bodyEl.querySelector('input, select, textarea') : null;
+        if (firstInput && typeof firstInput.focus === 'function') {
+          firstInput.focus();
+        }
+      };
+
+      const openRequestedEditor = (section) => {
+        const participantId = String(section.getAttribute('data-auto-edit-id') || '').trim();
+        if (!participantId) {
+          return;
+        }
+        const template = templateForParticipant(participantId);
+        if (template) {
+          section.removeAttribute('data-auto-edit-id');
+          openMskEditor(template);
+        }
+      };
+
+      const showSectionError = (section) => {
+        section.removeAttribute('aria-busy');
+        section.innerHTML = '<div class="dashboard-section-error"><strong>Data belum dapat dimuat.</strong><button class="btn tiny secondary" type="button" data-dashboard-section-retry>Coba lagi</button></div>';
+      };
+
+      const loadSection = async (section) => {
+        const state = sectionStates.get(section);
+        const url = String(section.getAttribute('data-section-url') || '').trim();
+        if (!state || !url || destroyed) {
+          return;
+        }
+        if (isPanelHidden()) {
+          state.pending = !state.loaded;
+          return;
+        }
+        if (state.loaded || state.controller) {
+          return;
+        }
+
+        const controller = new AbortController();
+        const sequence = ++state.sequence;
+        state.controller = controller;
+        state.pending = false;
+        section.setAttribute('aria-busy', 'true');
+
+        try {
+          const response = await window.fetch(url, {
+            credentials: 'same-origin',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'text/html'
+            },
+            signal: controller.signal
+          });
+          if (controller.signal.aborted || sequence !== state.sequence || destroyed) {
+            return;
+          }
+          if (response.redirected) {
+            window.location.assign(response.url || url);
+            return;
+          }
+          const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+          if (!response.ok || !contentType.includes('text/html')) {
+            throw new Error('dashboard-section');
+          }
+          const html = await response.text();
+          if (controller.signal.aborted || sequence !== state.sequence || destroyed) {
+            return;
+          }
+          section.innerHTML = html;
+          section.removeAttribute('aria-busy');
+          section.setAttribute('data-dashboard-section-loaded', '1');
+          state.loaded = true;
+          state.pending = false;
+          openRequestedEditor(section);
+        } catch (error) {
+          if (controller.signal.aborted || sequence !== state.sequence || destroyed) {
+            return;
+          }
+          state.pending = false;
+          showSectionError(section);
+        } finally {
+          if (state.controller === controller) {
+            state.controller = null;
+          }
+        }
+      };
+
+      const activatePanel = () => {
+        if (destroyed || isPanelHidden()) {
+          return;
+        }
+        sections.forEach((section) => {
+          const state = sectionStates.get(section);
+          if (state && !state.loaded && state.pending) {
+            loadSection(section);
+          }
+        });
+      };
+
+      const suspendPanel = () => {
+        sectionStates.forEach((state, section) => {
+          if (state.controller) {
+            state.sequence += 1;
+            state.controller.abort();
+            state.controller = null;
+            section.removeAttribute('aria-busy');
+            state.pending = !state.loaded;
+          }
+        });
+        closeMskEditor();
+      };
+
+      panel.addEventListener('click', (event) => {
+        const retry = event.target.closest('[data-dashboard-section-retry]');
+        if (retry) {
+          const section = retry.closest('[data-dashboard-section]');
+          const state = section ? sectionStates.get(section) : null;
+          if (section && state) {
+            state.pending = true;
+            loadSection(section);
+          }
+          return;
+        }
+
+        const edit = event.target.closest('[data-msk-edit-open]');
+        if (edit) {
+          const template = templateForParticipant(edit.getAttribute('data-msk-edit-open'));
+          if (template) {
+            event.preventDefault();
+            openMskEditor(template);
+          }
+          return;
+        }
+
+        if (modal && (event.target === modal || event.target.closest('[data-msk-edit-close]'))) {
+          event.preventDefault();
+          closeMskEditor();
+        }
+      });
+      panel.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal && modal.classList.contains('is-open')) {
+          closeMskEditor();
+        }
+      });
+      panel.addEventListener('discipleship:panel-activate', activatePanel);
+      panel.addEventListener('discipleship:panel-deactivate', suspendPanel);
+      panel.addEventListener('discipleship:panel-destroy', () => {
+        suspendPanel();
+        destroyed = true;
+        sectionStates.clear();
+      });
+
+      setupSuccessAlerts(panel);
+      activatePanel();
+    };
+
+    const setupMskList = (scope = document) => {
+      const root = scope && scope.matches && scope.matches('[data-msk-list]')
+        ? scope
+        : (scope && scope.querySelector ? scope.querySelector('[data-msk-list]') : null);
+      const panel = root ? (root.closest('[data-discipleship-tab-panel]') || root.parentElement || document) : null;
+      const form = panel ? panel.querySelector('[data-msk-search-form]') : null;
       if (!root || !form) {
         return;
       }
+      if (root.getAttribute('data-msk-list-ready') === '1') {
+        return;
+      }
+      root.setAttribute('data-msk-list-ready', '1');
 
       const input = form.querySelector('[data-msk-search-input]');
-      const batchInput = document.querySelector('[data-msk-batch-input]');
-      const scrollArea = root.querySelector('[data-msk-scroll]');
+      const batchInput = panel.querySelector('[data-msk-batch-input]');
+      const tableScrollArea = root.querySelector('[data-msk-scroll]');
+      const scrollArea = panel && panel.closest('[data-discipleship-workspace]')
+        ? panel
+        : tableScrollArea;
       const body = root.querySelector('[data-msk-list-body]');
       const emptyRow = root.querySelector('[data-msk-search-empty]');
       const loadingRow = root.querySelector('[data-msk-loading]');
-      const templatesContainer = document.querySelector('[data-msk-view-templates]');
-      const editTemplatesContainer = document.querySelector('[data-msk-edit-templates]');
+      const templatesContainer = panel.querySelector('[data-msk-view-templates]');
+      const editTemplatesContainer = panel.querySelector('[data-msk-edit-templates]');
       const rowsUrl = root.getAttribute('data-rows-url') || '';
       if (!input || !body || !rowsUrl) {
         return;
       }
 
       const statNodes = {
-        filter: document.querySelector('[data-msk-stat="filter"]'),
-        total: document.querySelector('[data-msk-stat="total"]'),
-        complete: document.querySelector('[data-msk-stat="complete"]'),
-        progress: document.querySelector('[data-msk-stat="progress"]')
+        filter: panel.querySelector('[data-msk-stat="filter"]'),
+        total: panel.querySelector('[data-msk-stat="total"]'),
+        complete: panel.querySelector('[data-msk-stat="complete"]'),
+        progress: panel.querySelector('[data-msk-stat="progress"]')
       };
       let hasMore = root.getAttribute('data-has-more') === '1';
       let nextPage = parseInt(root.getAttribute('data-next-page') || '0', 10) || null;
@@ -959,14 +1385,14 @@
 
       const syncBatchHiddenInputs = () => {
         const batch = currentBatch();
-        document.querySelectorAll('input[name="batch_month"]').forEach((node) => {
+        panel.querySelectorAll('input[name="batch_month"]').forEach((node) => {
           node.value = batch;
         });
       };
 
       const syncSearchHiddenInputs = () => {
         const query = currentQuery();
-        document.querySelectorAll('input[type="hidden"][name="q"]').forEach((node) => {
+        panel.querySelectorAll('input[type="hidden"][name="q"]').forEach((node) => {
           node.value = query;
         });
       };
@@ -1002,7 +1428,7 @@
       };
 
       const clearStaleSelectionAlerts = () => {
-        document.querySelectorAll('.alert.danger').forEach((alertEl) => {
+        panel.querySelectorAll('.alert.danger').forEach((alertEl) => {
           const message = String(alertEl.textContent || '').trim();
           if (
             message === 'Data peserta kelas MSK yang ingin diedit tidak ditemukan.' ||
@@ -1080,11 +1506,14 @@
         url.searchParams.delete('edit');
         url.searchParams.delete('view');
         window.history.replaceState(window.history.state, '', url.toString());
+        window.dispatchEvent(new CustomEvent('discipleship:panel-url-change', {
+          detail: { tabKey: 'msk', url: url.toString() }
+        }));
       };
 
       const buildRowsUrl = (page) => {
         const url = new URL(rowsUrl, window.location.origin);
-        const branchInput = form.querySelector('input[name="branch_id"]') || document.querySelector('input[name="branch_id"]');
+        const branchInput = form.querySelector('input[name="branch_id"]') || panel.querySelector('input[name="branch_id"]');
         const query = currentQuery();
         if (query) {
           url.searchParams.set('q', query);
@@ -1228,30 +1657,40 @@
     };
 
 
-    const setupSpiritualJourneyList = () => {
-      const root = document.querySelector('[data-spiritual-journey-list]');
-      const form = document.querySelector('[data-spiritual-journey-search-form]');
+    const setupSpiritualJourneyList = (scope = document) => {
+      const root = scope && scope.matches && scope.matches('[data-spiritual-journey-list]')
+        ? scope
+        : (scope && scope.querySelector ? scope.querySelector('[data-spiritual-journey-list]') : null);
+      const panel = root ? (root.closest('[data-discipleship-tab-panel]') || root.parentElement || document) : null;
+      const form = panel ? panel.querySelector('[data-spiritual-journey-search-form]') : null;
       if (!root || !form) {
         return;
       }
+      if (root.getAttribute('data-spiritual-journey-list-ready') === '1') {
+        return;
+      }
+      root.setAttribute('data-spiritual-journey-list-ready', '1');
 
       const input = form.querySelector('[data-spiritual-journey-search-input]');
       const filterInput = form.querySelector('[data-spiritual-journey-filter-input]');
-      const scrollArea = root.querySelector('[data-spiritual-journey-scroll]');
+      const tableScrollArea = root.querySelector('[data-spiritual-journey-scroll]');
+      const scrollArea = panel && panel.closest('[data-discipleship-workspace]')
+        ? panel
+        : tableScrollArea;
       const body = root.querySelector('[data-spiritual-journey-list-body]');
       const emptyRow = root.querySelector('[data-spiritual-journey-search-empty]');
       const loadingRow = root.querySelector('[data-spiritual-journey-loading]');
-      const templatesContainer = document.querySelector('[data-spiritual-journey-view-templates]');
+      const templatesContainer = panel.querySelector('[data-spiritual-journey-view-templates]');
       const rowsUrl = root.getAttribute('data-rows-url') || '';
       if (!input || !body || !rowsUrl) {
         return;
       }
 
       const statNodes = {
-        dg1: document.querySelector('[data-spiritual-journey-stat="dg1"]'),
-        kgap: document.querySelector('[data-spiritual-journey-stat="kgap"]'),
-        dg2: document.querySelector('[data-spiritual-journey-stat="dg2"]'),
-        dg3: document.querySelector('[data-spiritual-journey-stat="dg3"]')
+        dg1: panel.querySelector('[data-spiritual-journey-stat="dg1"]'),
+        kgap: panel.querySelector('[data-spiritual-journey-stat="kgap"]'),
+        dg2: panel.querySelector('[data-spiritual-journey-stat="dg2"]'),
+        dg3: panel.querySelector('[data-spiritual-journey-stat="dg3"]')
       };
       let hasMore = root.getAttribute('data-has-more') === '1';
       let nextPage = parseInt(root.getAttribute('data-next-page') || '0', 10) || null;
@@ -1348,11 +1787,14 @@
         url.searchParams.delete('edit');
         url.searchParams.delete('view');
         window.history.replaceState(window.history.state, '', url.toString());
+        window.dispatchEvent(new CustomEvent('discipleship:panel-url-change', {
+          detail: { tabKey: 'spiritual', url: url.toString() }
+        }));
       };
 
       const buildRowsUrl = (page) => {
         const url = new URL(rowsUrl, window.location.origin);
-        const branchInput = form.querySelector('input[name="branch_id"]') || document.querySelector('input[name="branch_id"]');
+        const branchInput = form.querySelector('input[name="branch_id"]') || panel.querySelector('input[name="branch_id"]');
         const query = currentQuery();
         if (query) {
           url.searchParams.set('q', query);
@@ -1485,6 +1927,7 @@
     };
 
     setupSpiritualJourneyList();
+    setupDiscipleshipDashboard();
     setupDiscipleshipPeopleList();
     setupDiscipleshipGroupsList();
     setupMskList();
@@ -1626,7 +2069,11 @@
       });
     }
 
-    const mskViewModal = document.querySelector('[data-msk-view-modal]');
+    const mskViewModalCandidate = document.querySelector('[data-msk-view-modal]');
+    const mskViewModal = mskViewModalCandidate
+      && !mskViewModalCandidate.closest('[data-discipleship-workspace]')
+      ? mskViewModalCandidate
+      : null;
     if (mskViewModal) {
       const titleEl = mskViewModal.querySelector('[data-msk-view-title]');
       const bodyEl = mskViewModal.querySelector('[data-msk-view-body]');
@@ -1723,7 +2170,12 @@
       }
     }
 
-    const mskEditModal = document.querySelector('[data-msk-edit-modal]');
+    const mskEditModalCandidate = document.querySelector('[data-msk-edit-modal]');
+    const mskEditModal = mskEditModalCandidate
+      && !mskEditModalCandidate.closest('[data-discipleship-dashboard-panel]')
+      && !mskEditModalCandidate.closest('[data-discipleship-workspace]')
+      ? mskEditModalCandidate
+      : null;
     if (mskEditModal) {
       const titleEl = mskEditModal.querySelector('[data-msk-edit-title]');
       const bodyEl = mskEditModal.querySelector('[data-msk-edit-body]');
@@ -1828,7 +2280,11 @@
       }
     }
 
-    const spiritualJourneyViewModal = document.querySelector('[data-spiritual-journey-view-modal]');
+    const spiritualJourneyViewModalCandidate = document.querySelector('[data-spiritual-journey-view-modal]');
+    const spiritualJourneyViewModal = spiritualJourneyViewModalCandidate
+      && !spiritualJourneyViewModalCandidate.closest('[data-discipleship-workspace]')
+      ? spiritualJourneyViewModalCandidate
+      : null;
     if (spiritualJourneyViewModal) {
       const titleEl = spiritualJourneyViewModal.querySelector('[data-spiritual-journey-view-title]');
       const bodyEl = spiritualJourneyViewModal.querySelector('[data-spiritual-journey-view-body]');
@@ -1908,14 +2364,17 @@
       });
     }
 
-    const treeV2HistoryModal = document.querySelector('[data-tree-v2-history-modal]');
-    if (treeV2HistoryModal) {
+    const setupDiscipleshipTreeHistory = (scope) => {
+      const treeV2HistoryModal = scope.querySelector('[data-tree-v2-history-modal]');
+      if (!treeV2HistoryModal) {
+        return;
+      }
       const titleEl = treeV2HistoryModal.querySelector('[data-tree-v2-history-title]');
       const bodyEl = treeV2HistoryModal.querySelector('[data-tree-v2-history-body]');
       const closeButtons = treeV2HistoryModal.querySelectorAll('[data-tree-v2-history-close]');
       const templateMap = new Map();
 
-      document.querySelectorAll('template[data-tree-v2-history-template]').forEach((templateEl) => {
+      scope.querySelectorAll('template[data-tree-v2-history-template]').forEach((templateEl) => {
         const groupKey = templateEl.getAttribute('data-tree-v2-history-template') || '';
         if (groupKey) {
           templateMap.set(groupKey, templateEl);
@@ -1949,7 +2408,7 @@
         document.body.classList.remove('modal-open');
       };
 
-      document.addEventListener('click', function (event) {
+      scope.addEventListener('click', function (event) {
         const trigger = event.target.closest('[data-tree-v2-history-open]');
         if (!trigger) {
           return;
@@ -1958,7 +2417,7 @@
         openTreeV2History(trigger.getAttribute('data-tree-v2-history-open') || '');
       });
 
-      document.addEventListener('keydown', function (event) {
+      scope.addEventListener('keydown', function (event) {
         if (!event || (event.key !== 'Enter' && event.key !== ' ')) return;
         const target = event.target;
         if (!target || !target.matches || !target.matches('[data-tree-v2-history-open]')) return;
@@ -1978,14 +2437,18 @@
         }
       });
 
-      document.addEventListener('keydown', function (event) {
+      scope.addEventListener('keydown', function (event) {
         if (event.key === 'Escape' && treeV2HistoryModal.classList.contains('is-open')) {
           closeTreeV2History();
         }
       });
-    }
+    };
 
-    const mskCreateModal = document.querySelector('[data-msk-create-modal]');
+    const mskCreateModalCandidate = document.querySelector('[data-msk-create-modal]');
+    const mskCreateModal = mskCreateModalCandidate
+      && !mskCreateModalCandidate.closest('[data-discipleship-workspace]')
+      ? mskCreateModalCandidate
+      : null;
     if (mskCreateModal) {
       const openMskCreate = () => {
         mskCreateModal.classList.add('is-open');
@@ -2190,8 +2653,11 @@
       handleViewportChange();
     }
 
-    const modal = document.querySelector('[data-modal]');
-    if (modal) {
+    const setupDiscipleshipTreePeopleModal = (scope) => {
+      const modal = scope.querySelector('[data-modal]');
+      if (!modal) {
+        return;
+      }
       const titleEl = modal.querySelector('[data-modal-title]');
       const addForm = modal.querySelector('[data-modal-form="add"]');
       const editForm = modal.querySelector('[data-modal-form="edit"]');
@@ -2405,7 +2871,7 @@
 
       const findTrigger = (el) => {
         let current = el;
-        while (current && current !== document) {
+        while (current && current !== scope.parentElement) {
           if (current.getAttribute && current.getAttribute('data-modal-open')) {
             return current;
           }
@@ -2414,7 +2880,7 @@
         return null;
       };
 
-      document.addEventListener('click', function (event) {
+      scope.addEventListener('click', function (event) {
         const trigger = findTrigger(event.target);
         if (!trigger) return;
         event.preventDefault();
@@ -2434,7 +2900,7 @@
         }
       });
 
-      document.addEventListener('keydown', function (event) {
+      scope.addEventListener('keydown', function (event) {
         if (event.key === 'Escape' && modal.classList.contains('is-open')) {
           closeModal();
         }
@@ -2442,7 +2908,7 @@
 
       const editId = modal.getAttribute('data-edit-id');
       if (editId) {
-        const autoBtn = document.querySelector('[data-modal-open="edit"][data-person-id="' + editId + '"]');
+        const autoBtn = scope.querySelector('[data-modal-open="edit"][data-person-id="' + editId + '"]');
         if (autoBtn) {
           openModal('edit', autoBtn);
         }
@@ -2502,17 +2968,20 @@
           syncAddMemberRows(memberPicker);
         }
       }
-    }
+    };
 
-    const groupModal = document.querySelector('[data-group-modal]');
-    if (groupModal) {
+    const setupDiscipleshipTreeGroupModal = (scope) => {
+      const groupModal = scope.querySelector('[data-group-modal]');
+      if (!groupModal) {
+        return;
+      }
       const titleEl = groupModal.querySelector('[data-group-title]');
       const addForm = groupModal.querySelector('[data-group-form="add"]');
       const editForm = groupModal.querySelector('[data-group-form="edit"]');
       const closeButtons = groupModal.querySelectorAll('[data-group-close]');
       const groupMemberSourceMap = new Map();
 
-      document.querySelectorAll('script[data-group-member-source]').forEach((sourceEl) => {
+      scope.querySelectorAll('script[data-group-member-source]').forEach((sourceEl) => {
         const groupId = sourceEl.getAttribute('data-group-member-source') || '';
         if (!groupId) {
           return;
@@ -2711,7 +3180,7 @@
         document.body.classList.remove('modal-open');
       };
 
-      document.addEventListener('click', function (event) {
+      scope.addEventListener('click', function (event) {
         const trigger = event.target.closest('[data-group-open]');
         if (!trigger) return;
         event.preventDefault();
@@ -2731,7 +3200,7 @@
         }
       });
 
-      document.addEventListener('keydown', function (event) {
+      scope.addEventListener('keydown', function (event) {
         if (event.key === 'Escape' && groupModal.classList.contains('is-open')) {
           closeGroupModal();
         }
@@ -2757,11 +3226,15 @@
           window.alert('Upgrade DG harus menyisakan minimal 1 anggota yang lanjut.');
         });
       }
-    }
+    };
 
-    const treeV2ActionModal = document.querySelector('[data-tree-v2-action-modal]');
-    const personProfileModal = document.querySelector('[data-tree-v2-person-profile-modal]');
-    if (treeV2ActionModal || personProfileModal) {
+    const setupDiscipleshipTreeActions = (scope) => {
+      const treeV2ActionModal = scope.querySelector('[data-tree-v2-action-modal]');
+      const treeV2HistoryModal = scope.querySelector('[data-tree-v2-history-modal]');
+      const personProfileModal = scope.querySelector('[data-tree-v2-person-profile-modal]');
+      if (!treeV2ActionModal && !personProfileModal) {
+        return;
+      }
       const titleEl = treeV2ActionModal ? treeV2ActionModal.querySelector('[data-tree-v2-action-title]') : null;
       const closeButtons = treeV2ActionModal ? treeV2ActionModal.querySelectorAll('[data-tree-v2-action-close]') : [];
       const modalActionButtons = treeV2ActionModal ? Array.from(treeV2ActionModal.querySelectorAll('[data-tree-v2-action-do]')) : [];
@@ -2772,14 +3245,14 @@
       const personProfileCloseButtons = personProfileModal ? personProfileModal.querySelectorAll('[data-tree-v2-person-profile-close]') : [];
       const personProfileActionButtons = personProfileModal ? personProfileModal.querySelectorAll('[data-tree-v2-profile-action]') : [];
       const personProfileTemplates = new Map();
-      const addMemberProxy = document.querySelector('[data-tree-v2-proxy="add-member"]');
-      const editPersonProxy = document.querySelector('[data-tree-v2-proxy="edit-person"]');
-      const addGroupProxy = document.querySelector('[data-tree-v2-proxy="add-group"]');
-      const viewHistoryProxy = document.querySelector('[data-tree-v2-proxy="view-history"]');
-      const leaveGroupForm = document.querySelector('[data-tree-v2-leave-form]');
-      const deletePersonForm = document.querySelector('[data-tree-v2-delete-person-form]');
-      const completeGroupForm = document.querySelector('[data-tree-v2-complete-group-form]');
-      const reactivateGroupForm = document.querySelector('[data-tree-v2-reactivate-group-form]');
+      const addMemberProxy = scope.querySelector('[data-tree-v2-proxy="add-member"]');
+      const editPersonProxy = scope.querySelector('[data-tree-v2-proxy="edit-person"]');
+      const addGroupProxy = scope.querySelector('[data-tree-v2-proxy="add-group"]');
+      const viewHistoryProxy = scope.querySelector('[data-tree-v2-proxy="view-history"]');
+      const leaveGroupForm = scope.querySelector('[data-tree-v2-leave-form]');
+      const deletePersonForm = scope.querySelector('[data-tree-v2-delete-person-form]');
+      const completeGroupForm = scope.querySelector('[data-tree-v2-complete-group-form]');
+      const reactivateGroupForm = scope.querySelector('[data-tree-v2-reactivate-group-form]');
       const buttonsByAction = {};
       actionButtons.forEach(button => {
         const action = button.getAttribute('data-tree-v2-action-do') || '';
@@ -2790,7 +3263,7 @@
           buttonsByAction[action].push(button);
         }
       });
-      document.querySelectorAll('template[data-tree-v2-person-profile-template]').forEach(templateEl => {
+      scope.querySelectorAll('template[data-tree-v2-person-profile-template]').forEach(templateEl => {
         const personKey = templateEl.getAttribute('data-tree-v2-person-profile-template') || '';
         if (personKey !== '') {
           personProfileTemplates.set(personKey, templateEl);
@@ -2907,7 +3380,7 @@
         if (!personId || nodeData.isRoot) return false;
         let templateEl = personProfileTemplates.get(personId);
         if (!templateEl) {
-          templateEl = queryTemplateByAttribute('data-tree-v2-person-profile-template', personId);
+          templateEl = scope.querySelector('template[data-tree-v2-person-profile-template="' + cssAttributeValue(personId) + '"]');
           if (templateEl) {
             personProfileTemplates.set(personId, templateEl);
           }
@@ -3005,14 +3478,14 @@
         document.body.classList.add('modal-open');
       };
 
-      document.addEventListener('click', function (event) {
+      scope.addEventListener('click', function (event) {
         const node = event.target.closest('[data-tree-v2-node-action]');
         if (!node) return;
         event.preventDefault();
         openActionModal(node);
       });
 
-      document.addEventListener('keydown', function (event) {
+      scope.addEventListener('keydown', function (event) {
         if (!event || (event.key !== 'Enter' && event.key !== ' ')) return;
         const target = event.target;
         if (!target || !target.matches || !target.matches('[data-tree-v2-node-action]')) return;
@@ -3046,7 +3519,7 @@
         });
       }
 
-      document.addEventListener('keydown', function (event) {
+      scope.addEventListener('keydown', function (event) {
         if (
           event.key === 'Escape'
           && (
@@ -3194,10 +3667,15 @@
           }
         });
       });
-    }
+    };
 
-    const filePreviewModal = document.querySelector('[data-file-preview-modal]');
-    if (filePreviewModal) {
+    const setupFilePreviewModal = (scope = document) => {
+      const filePreviewModal = scope.querySelector('[data-file-preview-modal]');
+      if (!filePreviewModal || filePreviewModal.getAttribute('data-file-preview-ready') === '1') {
+        return;
+      }
+      filePreviewModal.setAttribute('data-file-preview-ready', '1');
+      const eventScope = scope === document ? document : scope;
       const titleEl = filePreviewModal.querySelector('[data-file-preview-title]');
       const textEl = filePreviewModal.querySelector('[data-file-preview-text]');
       const imageWrapEl = filePreviewModal.querySelector('[data-file-preview-image-wrap]');
@@ -3334,7 +3812,7 @@
         resetPreviewContent();
       };
 
-      document.addEventListener('click', function (event) {
+      eventScope.addEventListener('click', function (event) {
         const trigger = event.target.closest('[data-file-preview-open]');
         if (!trigger) return;
         event.preventDefault();
@@ -3353,15 +3831,16 @@
         }
       });
 
-      document.addEventListener('keydown', function (event) {
+      eventScope.addEventListener('keydown', function (event) {
         if (event.key === 'Escape' && filePreviewModal.classList.contains('is-open')) {
           closePreviewModal();
         }
       });
-    }
+    };
 
-    const dragScrollAreas = document.querySelectorAll('[data-drag-scroll]');
-    dragScrollAreas.forEach(area => {
+    const setupDiscipleshipTreeViewport = (scope) => {
+      const dragScrollAreas = scope.querySelectorAll('[data-drag-scroll]');
+      dragScrollAreas.forEach(area => {
       let isDown = false;
       let startX = 0;
       let startY = 0;
@@ -3413,10 +3892,16 @@
       area.addEventListener('mouseleave', endDrag);
     });
 
-    const zoomTarget = document.querySelector('[data-tree-zoom]');
-    const zoomControls = document.querySelector('[data-zoom-controls]');
-    const treeScrollArea = document.querySelector('[data-drag-scroll]');
-    const treeViewportStorageKey = 'people_tree_viewport_state';
+      const zoomTarget = scope.querySelector('[data-tree-zoom]');
+      const zoomControls = scope.querySelector('[data-zoom-controls]');
+      const treeScrollArea = scope.querySelector('[data-drag-scroll]');
+    const workspaceScope = scope.closest('[data-discipleship-workspace]');
+    const selectedBranchKey = String(
+      workspaceScope?.getAttribute('data-selected-branch')
+      || new URL(window.location.href).searchParams.get('branch_id')
+      || 'session'
+    );
+    const treeViewportStorageKey = 'people_tree_viewport_state:' + encodeURIComponent(selectedBranchKey);
     const hasSessionStorage = (() => {
       try {
         return typeof window.sessionStorage !== 'undefined';
@@ -3504,13 +3989,13 @@
       applyZoom();
     }
 
-    const treeSearchInput = document.querySelector('[data-tree-search-input]');
-    const treeSearchSubmit = document.querySelector('[data-tree-search-submit]');
+      const treeSearchInput = scope.querySelector('[data-tree-search-input]');
+      const treeSearchSubmit = scope.querySelector('[data-tree-search-submit]');
     if (treeScrollArea && treeSearchInput && treeSearchSubmit) {
       let searchHighlightTimer = null;
 
       const clearSearchHighlight = () => {
-        document.querySelectorAll('.tree-v2-node.is-search-hit').forEach((node) => {
+        scope.querySelectorAll('.tree-v2-node.is-search-hit').forEach((node) => {
           node.classList.remove('is-search-hit');
         });
       };
@@ -3522,7 +4007,7 @@
         if (!normalizedQuery) {
           return null;
         }
-        const nodeEls = Array.from(document.querySelectorAll('.tree-v2-node[data-search-name]'));
+        const nodeEls = Array.from(scope.querySelectorAll('.tree-v2-node[data-search-name]'));
         let startsWithMatch = null;
         let includesMatch = null;
         for (const nodeEl of nodeEls) {
@@ -3606,7 +4091,7 @@
         saveTreeViewportState();
       }, { passive: true });
 
-      document.querySelectorAll('form').forEach((form) => {
+      scope.querySelectorAll('form').forEach((form) => {
         form.addEventListener('submit', () => {
           saveTreeViewportState();
         });
@@ -3615,7 +4100,990 @@
       window.addEventListener('beforeunload', () => {
         saveTreeViewportState();
       });
-    }
+      }
+    };
+
+    const initDiscipleshipTreePane = (panel) => {
+      if (
+        !panel
+        || panel.getAttribute('data-tab-key') !== 'tree'
+        || panel.getAttribute('data-discipleship-tree-ready') === '1'
+      ) {
+        return;
+      }
+
+      panel.setAttribute('data-discipleship-tree-ready', '1');
+      setupDiscipleshipTreeHistory(panel);
+      setupDiscipleshipTreePeopleModal(panel);
+      setupDiscipleshipTreeGroupModal(panel);
+      setupDiscipleshipTreeActions(panel);
+      setupFilePreviewModal(panel);
+      setupDiscipleshipTreeViewport(panel);
+    };
+
+    const setupMemberFeedbackRecap = (scope = document) => {
+      const panel = scope && scope.matches && scope.matches('[data-member-feedback-recap-panel]')
+        ? scope
+        : (scope && scope.querySelector ? scope.querySelector('[data-member-feedback-recap-panel]') : null);
+      if (!panel || panel.getAttribute('data-member-feedback-recap-ready') === '1') {
+        return;
+      }
+      panel.setAttribute('data-member-feedback-recap-ready', '1');
+
+      const groupModal = panel.querySelector('[data-member-feedback-group-modal]');
+      const detailModal = panel.querySelector('[data-member-feedback-detail-modal]');
+      const openModal = (modal) => {
+        if (!modal) {
+          return;
+        }
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+      };
+      const closeModal = (modal) => {
+        if (!modal) {
+          return;
+        }
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        syncBodyModalState();
+      };
+      const templateByAttribute = (attribute, value) => {
+        const key = String(value || '').trim();
+        if (!key) {
+          return null;
+        }
+
+        return panel.querySelector('template[' + attribute + '="' + cssAttributeValue(key) + '"]');
+      };
+
+      if (groupModal) {
+        const titleEl = groupModal.querySelector('[data-member-feedback-group-title]');
+        const bodyEl = groupModal.querySelector('[data-member-feedback-group-body]');
+        const closeButtons = groupModal.querySelectorAll('[data-member-feedback-group-close]');
+        const openGroup = (groupSessionId) => {
+          const templateEl = templateByAttribute('data-member-feedback-group-template', groupSessionId);
+          if (!templateEl) {
+            return;
+          }
+          if (titleEl) {
+            titleEl.textContent = templateEl.getAttribute('data-member-feedback-group-template-title') || 'Feedback Kelompok';
+          }
+          if (bodyEl) {
+            bodyEl.innerHTML = templateEl.innerHTML;
+          }
+          openModal(groupModal);
+        };
+
+        panel.addEventListener('click', (event) => {
+          const trigger = event.target.closest('[data-member-feedback-group-open]');
+          if (!trigger || !panel.contains(trigger)) {
+            return;
+          }
+          event.preventDefault();
+          openGroup(trigger.getAttribute('data-member-feedback-group-open') || '');
+        });
+        closeButtons.forEach((button) => {
+          button.addEventListener('click', () => closeModal(groupModal));
+        });
+        groupModal.addEventListener('click', (event) => {
+          if (event.target === groupModal) {
+            closeModal(groupModal);
+          }
+        });
+      }
+
+      if (detailModal) {
+        const titleEl = detailModal.querySelector('[data-member-feedback-detail-title]');
+        const bodyEl = detailModal.querySelector('[data-member-feedback-detail-body]');
+        const closeButtons = detailModal.querySelectorAll('[data-member-feedback-detail-close]');
+        const openDetail = (feedbackId) => {
+          const templateEl = templateByAttribute('data-member-feedback-detail-template', feedbackId);
+          if (!templateEl) {
+            return;
+          }
+          if (titleEl) {
+            titleEl.textContent = templateEl.getAttribute('data-member-feedback-detail-template-title') || 'Detail Feedback';
+          }
+          if (bodyEl) {
+            bodyEl.innerHTML = templateEl.innerHTML;
+          }
+          openModal(detailModal);
+        };
+
+        panel.addEventListener('click', (event) => {
+          const trigger = event.target.closest('[data-member-feedback-detail-open]');
+          if (!trigger || !panel.contains(trigger)) {
+            return;
+          }
+          event.preventDefault();
+          openDetail(trigger.getAttribute('data-member-feedback-detail-open') || '');
+        });
+        closeButtons.forEach((button) => {
+          button.addEventListener('click', () => closeModal(detailModal));
+        });
+        detailModal.addEventListener('click', (event) => {
+          if (event.target === detailModal) {
+            closeModal(detailModal);
+          }
+        });
+      }
+
+      panel.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') {
+          return;
+        }
+        if (detailModal && detailModal.classList.contains('is-open')) {
+          closeModal(detailModal);
+          return;
+        }
+        if (groupModal && groupModal.classList.contains('is-open')) {
+          closeModal(groupModal);
+        }
+      });
+    };
+
+    const setupMskPanelInteractions = (scope = document) => {
+      const panel = scope && scope.matches && scope.matches('[data-tab-key="msk"]')
+        ? scope
+        : (scope && scope.querySelector ? scope.querySelector('[data-tab-key="msk"]') : null);
+      if (!panel || panel.getAttribute('data-msk-panel-ready') === '1') {
+        return;
+      }
+      panel.setAttribute('data-msk-panel-ready', '1');
+
+      const templateByAttribute = (attribute, value) => {
+        const key = String(value || '').trim();
+        if (!key) {
+          return null;
+        }
+
+        return panel.querySelector('template[' + attribute + '="' + cssAttributeValue(key) + '"]');
+      };
+      const openModal = (modal) => {
+        if (!modal) {
+          return;
+        }
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+      };
+      const closeModal = (modal) => {
+        if (!modal) {
+          return;
+        }
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        syncBodyModalState();
+      };
+      const clearSelectionAlerts = () => {
+        panel.querySelectorAll('.alert.danger').forEach((alertEl) => {
+          const message = String(alertEl.textContent || '').trim();
+          if (
+            message === 'Data peserta kelas MSK yang ingin diedit tidak ditemukan.' ||
+            message === 'Data peserta kelas MSK yang ingin dilihat tidak ditemukan.'
+          ) {
+            alertEl.remove();
+          }
+        });
+      };
+
+      const viewModal = panel.querySelector('[data-msk-view-modal]');
+      if (viewModal) {
+        const titleEl = viewModal.querySelector('[data-msk-view-title]');
+        const bodyEl = viewModal.querySelector('[data-msk-view-body]');
+        const editLinkEl = viewModal.querySelector('[data-msk-view-edit-link]');
+        const openView = (participantId) => {
+          const templateEl = templateByAttribute('data-msk-view-template', participantId);
+          if (!templateEl) {
+            return false;
+          }
+          if (titleEl) {
+            titleEl.textContent = templateEl.getAttribute('data-msk-view-template-title') || 'Detail Peserta MSK';
+          }
+          if (bodyEl) {
+            bodyEl.innerHTML = templateEl.innerHTML;
+          }
+          const editHref = templateEl.getAttribute('data-msk-view-template-edit') || '';
+          if (editLinkEl) {
+            if (editHref) {
+              editLinkEl.setAttribute('href', editHref);
+              editLinkEl.classList.remove('is-hidden');
+            } else {
+              editLinkEl.removeAttribute('href');
+              editLinkEl.classList.add('is-hidden');
+            }
+          }
+          openModal(viewModal);
+
+          return true;
+        };
+
+        panel.addEventListener('click', (event) => {
+          const trigger = event.target.closest('[data-msk-view-open]');
+          if (!trigger || !panel.contains(trigger)) {
+            return;
+          }
+          event.preventDefault();
+          const opened = openView(trigger.getAttribute('data-msk-view-open') || '');
+          if (!opened && trigger.getAttribute('data-msk-view-href')) {
+            window.location.href = trigger.getAttribute('data-msk-view-href');
+          }
+        });
+        viewModal.addEventListener('click', (event) => {
+          if (event.target === viewModal || event.target.closest('[data-msk-view-close]')) {
+            event.preventDefault();
+            closeModal(viewModal);
+          }
+        });
+        const autoOpenId = viewModal.getAttribute('data-msk-view-auto-open') || '';
+        if (autoOpenId) {
+          openView(autoOpenId);
+        }
+      }
+
+      const editModal = panel.querySelector('[data-msk-edit-modal]');
+      if (editModal) {
+        const titleEl = editModal.querySelector('[data-msk-edit-title]');
+        const bodyEl = editModal.querySelector('[data-msk-edit-body]');
+        const openEdit = (participantId) => {
+          const templateEl = templateByAttribute('data-msk-edit-template', participantId);
+          if (!templateEl) {
+            return false;
+          }
+          if (titleEl) {
+            titleEl.textContent = templateEl.getAttribute('data-msk-edit-template-title') || 'Edit Peserta MSK';
+          }
+          if (bodyEl) {
+            bodyEl.innerHTML = templateEl.innerHTML;
+            initMskForms(bodyEl);
+          }
+          openModal(editModal);
+          clearSelectionAlerts();
+
+          const firstInput = bodyEl ? bodyEl.querySelector('input, select, textarea') : null;
+          if (firstInput && typeof firstInput.focus === 'function') {
+            firstInput.focus();
+          }
+
+          return true;
+        };
+
+        panel.addEventListener('click', (event) => {
+          const trigger = event.target.closest('[data-msk-edit-open]');
+          if (!trigger || !panel.contains(trigger)) {
+            return;
+          }
+          event.preventDefault();
+          const opened = openEdit(trigger.getAttribute('data-msk-edit-open') || '');
+          if (!opened && trigger.getAttribute('data-msk-edit-href')) {
+            window.location.href = trigger.getAttribute('data-msk-edit-href');
+          }
+        });
+        editModal.addEventListener('click', (event) => {
+          if (event.target === editModal || event.target.closest('[data-msk-edit-close]')) {
+            event.preventDefault();
+            closeModal(editModal);
+          }
+        });
+        const autoOpenId = editModal.getAttribute('data-msk-edit-auto-open') || '';
+        if (autoOpenId) {
+          openEdit(autoOpenId);
+        }
+      }
+
+      const createModal = panel.querySelector('[data-msk-create-modal]');
+      if (createModal) {
+        const openCreate = () => {
+          openModal(createModal);
+          initMskForms(createModal);
+          const firstInput = createModal.querySelector('input, select, textarea');
+          if (firstInput && typeof firstInput.focus === 'function') {
+            firstInput.focus();
+          }
+        };
+
+        panel.addEventListener('click', (event) => {
+          const trigger = event.target.closest('[data-msk-create-open]');
+          if (!trigger || !panel.contains(trigger)) {
+            return;
+          }
+          event.preventDefault();
+          openCreate();
+        });
+        createModal.addEventListener('click', (event) => {
+          if (event.target === createModal || event.target.closest('[data-msk-create-close]')) {
+            event.preventDefault();
+            closeModal(createModal);
+          }
+        });
+      }
+
+      panel.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') {
+          return;
+        }
+        [createModal, editModal, viewModal].forEach((modal) => {
+          if (modal && modal.classList.contains('is-open')) {
+            closeModal(modal);
+          }
+        });
+      });
+    };
+
+    const setupSpiritualJourneyPanelInteractions = (scope = document) => {
+      const panel = scope && scope.matches && scope.matches('[data-tab-key="spiritual"]')
+        ? scope
+        : (scope && scope.querySelector ? scope.querySelector('[data-tab-key="spiritual"]') : null);
+      if (!panel || panel.getAttribute('data-spiritual-journey-panel-ready') === '1') {
+        return;
+      }
+      panel.setAttribute('data-spiritual-journey-panel-ready', '1');
+
+      const modal = panel.querySelector('[data-spiritual-journey-view-modal]');
+      if (!modal) {
+        return;
+      }
+      const titleEl = modal.querySelector('[data-spiritual-journey-view-title]');
+      const bodyEl = modal.querySelector('[data-spiritual-journey-view-body]');
+      const templateByKey = (personKey) => {
+        const key = String(personKey || '').trim();
+        if (!key) {
+          return null;
+        }
+
+        return panel.querySelector('template[data-spiritual-journey-view-template="' + cssAttributeValue(key) + '"]');
+      };
+      const openView = (personKey) => {
+        const templateEl = templateByKey(personKey);
+        if (!templateEl) {
+          return false;
+        }
+        if (titleEl) {
+          titleEl.textContent = templateEl.getAttribute('data-spiritual-journey-view-template-title') || 'Profil Spiritual';
+        }
+        if (bodyEl) {
+          bodyEl.innerHTML = templateEl.innerHTML;
+        }
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+
+        return true;
+      };
+      const closeView = () => {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        syncBodyModalState();
+      };
+
+      panel.addEventListener('click', (event) => {
+        const trigger = event.target.closest('[data-spiritual-journey-view-open]');
+        if (!trigger || !panel.contains(trigger)) {
+          return;
+        }
+        event.preventDefault();
+        openView(trigger.getAttribute('data-spiritual-journey-view-open') || '');
+      });
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal || event.target.closest('[data-spiritual-journey-view-close]')) {
+          event.preventDefault();
+          closeView();
+        }
+      });
+      panel.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+          closeView();
+        }
+      });
+    };
+
+    const executePanelScripts = (panel) => {
+      if (!panel || !panel.querySelectorAll) {
+        return;
+      }
+      panel.querySelectorAll('script').forEach((scriptEl) => {
+        const executableScript = document.createElement('script');
+        Array.from(scriptEl.attributes).forEach((attribute) => {
+          executableScript.setAttribute(attribute.name, attribute.value);
+        });
+        executableScript.textContent = scriptEl.textContent || '';
+        scriptEl.replaceWith(executableScript);
+      });
+    };
+
+    const setupDiscipleshipWorkspace = () => {
+      const workspace = document.querySelector('[data-discipleship-workspace]');
+      if (!workspace || workspace.getAttribute('data-discipleship-workspace-ready') === '1') {
+        return;
+      }
+
+      const panelsHost = workspace.querySelector('[data-discipleship-panels]');
+      const tabList = workspace.querySelector('[data-discipleship-tabs]');
+      const tabEls = Array.from(workspace.querySelectorAll('[data-discipleship-tab]'));
+      const initialPanels = Array.from(workspace.querySelectorAll('[data-discipleship-tab-panel]'));
+      if (!panelsHost || !tabList || tabEls.length === 0 || initialPanels.length !== 1) {
+        return;
+      }
+
+      const tabs = new Map();
+      tabEls.forEach((tabEl) => {
+        const key = String(tabEl.getAttribute('data-tab-key') || '').trim();
+        if (key) {
+          tabs.set(key, tabEl);
+        }
+      });
+      if (tabs.size === 0) {
+        return;
+      }
+
+      const initialPanel = initialPanels[0];
+      const initialKey = String(initialPanel.getAttribute('data-tab-key') || '').trim();
+      if (!initialKey || !tabs.has(initialKey)) {
+        return;
+      }
+
+      workspace.setAttribute('data-discipleship-workspace-ready', '1');
+
+      const panels = new Map([[initialKey, initialPanel]]);
+      const panelUrls = new Map([[initialKey, window.location.href]]);
+      const bodyClassByTab = {
+        dashboard: 'page-discipleship-dashboard',
+        tree: 'page-tree-v2',
+        people: 'page-discipleship-people-list',
+        groups: 'page-discipleship-groups-list'
+      };
+      tabEls.forEach((tabEl) => {
+        const key = String(tabEl.getAttribute('data-tab-key') || '').trim();
+        const bodyClass = String(tabEl.getAttribute('data-body-class') || '').trim();
+        if (key && bodyClass) {
+          bodyClassByTab[key] = bodyClass;
+        }
+      });
+      if (initialKey) {
+        const initialBodyClass = String(initialPanel.getAttribute('data-body-class') || '').trim();
+        if (initialBodyClass) {
+          bodyClassByTab[initialKey] = initialBodyClass;
+        }
+      }
+      const managedBodyClasses = new Set();
+      const addManagedBodyClasses = (classNames) => {
+        String(classNames || '').split(/\s+/).forEach((className) => {
+          if (className) {
+            managedBodyClasses.add(className);
+          }
+        });
+      };
+      Object.values(bodyClassByTab).forEach(addManagedBodyClasses);
+      let currentKey = initialKey;
+      let activeController = null;
+      let requestSequence = 0;
+      let retryTarget = null;
+
+      const statusEl = document.createElement('div');
+      statusEl.className = 'discipleship-workspace__status';
+      statusEl.setAttribute('role', 'status');
+      statusEl.setAttribute('aria-live', 'polite');
+      statusEl.hidden = true;
+
+      const loadingEl = document.createElement('span');
+      loadingEl.textContent = 'Memuat tampilan...';
+      statusEl.appendChild(loadingEl);
+
+      const retryButton = document.createElement('button');
+      retryButton.className = 'btn tiny ghost';
+      retryButton.type = 'button';
+      retryButton.textContent = 'Coba lagi';
+      retryButton.hidden = true;
+      statusEl.appendChild(retryButton);
+      panelsHost.appendChild(statusEl);
+
+      const initializePanel = (panel) => {
+        const key = String(panel.getAttribute('data-tab-key') || '').trim();
+        if (key) {
+          if (!panel.id) {
+            panel.id = 'discipleship-tabpanel-' + key;
+          }
+          const panelBodyClass = String(panel.getAttribute('data-body-class') || '').trim();
+          if (panelBodyClass) {
+            bodyClassByTab[key] = panelBodyClass;
+            addManagedBodyClasses(panelBodyClass);
+          }
+          panel.setAttribute('role', 'tabpanel');
+          panel.setAttribute('aria-labelledby', 'discipleship-tab-' + key);
+          panel.setAttribute('tabindex', '0');
+        }
+        if (panel.getAttribute('data-discipleship-panel-lifecycle-ready') !== '1') {
+          panel.setAttribute('data-discipleship-panel-lifecycle-ready', '1');
+          panel.addEventListener('discipleship:panel-deactivate', () => {
+            panel.querySelectorAll('.modal.is-open').forEach((modalEl) => {
+              modalEl.classList.remove('is-open');
+              modalEl.setAttribute('aria-hidden', 'true');
+            });
+            syncBodyModalState();
+          });
+        }
+        setupDiscipleshipDashboard(panel);
+        setupDiscipleshipPeopleList(panel);
+        setupDiscipleshipGroupsList(panel);
+        setupSpiritualJourneyList(panel);
+        setupMskList(panel);
+        setupSpiritualJourneyPanelInteractions(panel);
+        setupMskPanelInteractions(panel);
+        setupFilterControls(panel);
+        setupAutoSubmitSearchForms(panel);
+        setupMemberFeedbackRecap(panel);
+        initDiscipleshipTreePane(panel);
+      };
+
+      const canonicalUrlForTab = (key) => {
+        const tabEl = tabs.get(key);
+        return tabEl ? new URL(tabEl.href, window.location.href).toString() : '';
+      };
+
+      const comparableUrl = (url) => {
+        try {
+          const parsed = new URL(url, window.location.href);
+          parsed.hash = '';
+          parsed.searchParams.sort();
+          return parsed.toString();
+        } catch (_error) {
+          return String(url || '');
+        }
+      };
+
+      const setBusy = (isBusy) => {
+        workspace.classList.toggle('is-loading', isBusy);
+        panelsHost.classList.toggle('is-loading', isBusy);
+        workspace.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+        panelsHost.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+        if (isBusy) {
+          statusEl.classList.add('discipleship-workspace__loading');
+          statusEl.classList.remove('discipleship-workspace__retry');
+          loadingEl.textContent = 'Memuat tampilan...';
+          retryButton.hidden = true;
+          statusEl.hidden = false;
+        } else {
+          statusEl.classList.remove('discipleship-workspace__loading');
+          if (!retryTarget) {
+            statusEl.hidden = true;
+          }
+        }
+      };
+
+      const showRetry = (key, url, shouldPush, forceReload) => {
+        retryTarget = { key, url, shouldPush, forceReload };
+        workspace.classList.remove('is-loading');
+        panelsHost.classList.remove('is-loading');
+        workspace.setAttribute('aria-busy', 'false');
+        panelsHost.setAttribute('aria-busy', 'false');
+        statusEl.classList.remove('discipleship-workspace__loading');
+        statusEl.classList.add('discipleship-workspace__retry');
+        loadingEl.textContent = 'Tampilan gagal dimuat.';
+        retryButton.hidden = false;
+        statusEl.hidden = false;
+      };
+
+      const clearRetry = () => {
+        retryTarget = null;
+        statusEl.classList.remove('discipleship-workspace__retry');
+        retryButton.hidden = true;
+        if (workspace.getAttribute('aria-busy') !== 'true') {
+          statusEl.hidden = true;
+        }
+      };
+
+      const cancelRequest = () => {
+        requestSequence += 1;
+        if (activeController) {
+          activeController.abort();
+          activeController = null;
+        }
+      };
+
+      const replaceLegacyBodyClass = (key) => {
+        managedBodyClasses.forEach((className) => {
+          document.body.classList.remove(className);
+        });
+        const nextClass = String(bodyClassByTab[key] || '').trim();
+        if (nextClass) {
+          nextClass.split(/\s+/).forEach((className) => {
+            if (className) {
+              document.body.classList.add(className);
+            }
+          });
+        }
+      };
+
+      const updateTabs = (key) => {
+        tabs.forEach((tabEl, tabKey) => {
+          const isActive = tabKey === key;
+          tabEl.classList.toggle('is-active', isActive);
+          tabEl.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          tabEl.setAttribute('tabindex', isActive ? '0' : '-1');
+          if (isActive) {
+            tabEl.setAttribute('aria-current', 'page');
+          } else {
+            tabEl.removeAttribute('aria-current');
+          }
+        });
+      };
+
+      const updateBranchLinks = (url) => {
+        let activeUrl;
+        try {
+          activeUrl = new URL(url || window.location.href, window.location.href);
+        } catch (_error) {
+          return;
+        }
+
+        const discardedParams = [
+          'page',
+          'per_page',
+          'rekap_cabang',
+          'edit',
+          'view',
+          'error',
+          'conflict',
+          'left_group',
+          'person_archived',
+          'group_completed',
+          'group_reactivated',
+          'edit_msk_sessions',
+          'msk_session_saved',
+          'converted',
+          'imported',
+          'import_msk_inserted',
+          'import_msk_updated',
+          'import_error_count',
+          'import_error_preview'
+        ];
+        discardedParams.forEach((param) => activeUrl.searchParams.delete(param));
+
+        document.querySelectorAll('[data-discipleship-branch-option]').forEach((branchLink) => {
+          let branchUrl;
+          try {
+            branchUrl = new URL(branchLink.href, window.location.href);
+          } catch (_error) {
+            return;
+          }
+          const branchId = branchUrl.searchParams.get('branch_id');
+          const nextUrl = new URL(activeUrl.toString());
+          if (branchId !== null && branchId !== '') {
+            nextUrl.searchParams.set('branch_id', branchId);
+          } else {
+            nextUrl.searchParams.delete('branch_id');
+          }
+          branchLink.href = nextUrl.toString();
+        });
+      };
+
+      const setHistoryUrl = (url, shouldPush, key) => {
+        if (!url || !window.history) {
+          return;
+        }
+        const state = Object.assign({}, window.history.state || {}, {
+          discipleshipTab: key
+        });
+        if (shouldPush && typeof window.history.pushState === 'function') {
+          window.history.pushState(state, '', url);
+        }
+      };
+
+      const showPanel = (key, url, shouldPush) => {
+        const nextPanel = panels.get(key);
+        if (!nextPanel) {
+          return;
+        }
+
+        panels.forEach((panel, panelKey) => {
+          const isActive = panelKey === key;
+          const wasActive = !panel.hidden;
+          panel.hidden = !isActive;
+          panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+          if (!isActive && wasActive) {
+            panel.dispatchEvent(new CustomEvent('discipleship:panel-deactivate', {
+              detail: { tabKey: panelKey }
+            }));
+          }
+        });
+
+        currentKey = key;
+        panelUrls.set(key, url);
+        workspace.setAttribute('data-active-tab', key);
+        updateTabs(key);
+        updateBranchLinks(url);
+        replaceLegacyBodyClass(key);
+
+        const pageTitle = String(nextPanel.getAttribute('data-page-title') || '').trim();
+        if (pageTitle) {
+          document.title = pageTitle;
+        }
+
+        setHistoryUrl(url, shouldPush, key);
+        nextPanel.dispatchEvent(new CustomEvent('discipleship:panel-activate', {
+          detail: { tabKey: key }
+        }));
+        scheduleViewportTableHeights();
+        window.setTimeout(scheduleViewportTableHeights, 80);
+      };
+
+      const hardNavigate = (url) => {
+        window.location.assign(url || window.location.href);
+      };
+
+      const parsePanel = (html, expectedKey) => {
+        const parsed = new DOMParser().parseFromString(String(html || ''), 'text/html');
+        const markedPanels = parsed.querySelectorAll('[data-discipleship-tab-panel]');
+        if (markedPanels.length !== 1) {
+          return null;
+        }
+        const panel = markedPanels[0];
+        if (String(panel.getAttribute('data-tab-key') || '').trim() !== expectedKey) {
+          return null;
+        }
+        return panel;
+      };
+
+      const loadTab = async (key, url, shouldPush, forceReload = false) => {
+        cancelRequest();
+        clearRetry();
+
+        if (panels.has(key) && !forceReload) {
+          setBusy(false);
+          showPanel(key, url, shouldPush);
+          return;
+        }
+
+        const controller = new AbortController();
+        activeController = controller;
+        const sequence = requestSequence;
+        setBusy(true);
+
+        let response;
+        try {
+          response = await window.fetch(url, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+              'X-Discipleship-Fragment': 'tab',
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'text/html'
+            },
+            signal: controller.signal
+          });
+        } catch (error) {
+          if (controller.signal.aborted || sequence !== requestSequence) {
+            return;
+          }
+          activeController = null;
+          setBusy(false);
+          showRetry(key, url, shouldPush, forceReload);
+          return;
+        }
+
+        if (controller.signal.aborted || sequence !== requestSequence) {
+          return;
+        }
+
+        if (response.redirected) {
+          if (activeController === controller) {
+            activeController = null;
+          }
+          setBusy(false);
+          hardNavigate(response.url || url);
+          return;
+        }
+
+        const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+        if (!response.ok || !contentType.includes('text/html')) {
+          if (activeController === controller) {
+            activeController = null;
+          }
+          setBusy(false);
+          hardNavigate(url);
+          return;
+        }
+
+        let html;
+        try {
+          html = await response.text();
+        } catch (error) {
+          if (controller.signal.aborted || sequence !== requestSequence) {
+            return;
+          }
+          if (activeController === controller) {
+            activeController = null;
+          }
+          setBusy(false);
+          showRetry(key, url, shouldPush, forceReload);
+          return;
+        }
+        if (controller.signal.aborted || sequence !== requestSequence) {
+          return;
+        }
+        if (activeController === controller) {
+          activeController = null;
+        }
+
+        const panel = parsePanel(html, key);
+        if (!panel) {
+          setBusy(false);
+          hardNavigate(url);
+          return;
+        }
+
+        panel.hidden = true;
+        panel.setAttribute('aria-hidden', 'true');
+        const stalePanel = panels.get(key);
+        if (stalePanel) {
+          stalePanel.hidden = true;
+          stalePanel.setAttribute('aria-hidden', 'true');
+          stalePanel.dispatchEvent(new CustomEvent('discipleship:panel-destroy', {
+            detail: { tabKey: key }
+          }));
+          stalePanel.replaceWith(panel);
+        } else {
+          panelsHost.appendChild(panel);
+        }
+        executePanelScripts(panel);
+        panels.set(key, panel);
+        panelUrls.set(key, url);
+        initializePanel(panel);
+        setBusy(false);
+        showPanel(key, url, shouldPush);
+      };
+
+      const activateTab = (key, options = {}) => {
+        if (!tabs.has(key)) {
+          return;
+        }
+        const targetUrl = String(
+          options.url
+          || panelUrls.get(key)
+          || canonicalUrlForTab(key)
+        );
+        if (!targetUrl) {
+          return;
+        }
+        loadTab(key, targetUrl, options.push === true, options.forceReload === true);
+      };
+
+      tabList.addEventListener('click', (event) => {
+        const tabEl = event.target.closest('[data-discipleship-tab]');
+        if (
+          !tabEl
+          || event.defaultPrevented
+          || event.button !== 0
+          || event.metaKey
+          || event.ctrlKey
+          || event.shiftKey
+          || event.altKey
+        ) {
+          return;
+        }
+
+        const key = String(tabEl.getAttribute('data-tab-key') || '').trim();
+        if (!tabs.has(key)) {
+          return;
+        }
+        event.preventDefault();
+        const targetUrl = panelUrls.get(key) || new URL(tabEl.href, window.location.href).toString();
+        activateTab(key, { url: targetUrl, push: key !== currentKey });
+      });
+
+      tabList.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+          return;
+        }
+
+        const currentTab = event.target.closest('[data-discipleship-tab]');
+        const currentIndex = tabEls.indexOf(currentTab);
+        if (currentIndex < 0) {
+          return;
+        }
+
+        event.preventDefault();
+        let nextIndex = currentIndex;
+        if (event.key === 'Home') {
+          nextIndex = 0;
+        } else if (event.key === 'End') {
+          nextIndex = tabEls.length - 1;
+        } else if (event.key === 'ArrowRight') {
+          nextIndex = (currentIndex + 1) % tabEls.length;
+        } else {
+          nextIndex = (currentIndex - 1 + tabEls.length) % tabEls.length;
+        }
+
+        const nextTab = tabEls[nextIndex];
+        const nextKey = String(nextTab.getAttribute('data-tab-key') || '').trim();
+        nextTab.focus();
+        activateTab(nextKey, {
+          url: panelUrls.get(nextKey) || new URL(nextTab.href, window.location.href).toString(),
+          push: nextKey !== currentKey
+        });
+      });
+
+      retryButton.addEventListener('click', () => {
+        if (!retryTarget) {
+          return;
+        }
+        const target = retryTarget;
+        activateTab(target.key, {
+          url: target.url,
+          push: target.shouldPush === true,
+          forceReload: target.forceReload === true
+        });
+      });
+
+      window.addEventListener('popstate', () => {
+        const currentUrl = new URL(window.location.href);
+        let matchedKey = '';
+        tabs.forEach((tabEl, key) => {
+          const tabUrl = new URL(tabEl.href, window.location.href);
+          if (!matchedKey && tabUrl.origin === currentUrl.origin && tabUrl.pathname === currentUrl.pathname) {
+            matchedKey = key;
+          }
+        });
+        if (matchedKey) {
+          const targetUrl = currentUrl.toString();
+          const cachedUrl = panelUrls.get(matchedKey) || '';
+          const forceReload = ['dashboard', 'people', 'groups', 'spiritual', 'msk'].includes(matchedKey)
+            && panels.has(matchedKey)
+            && comparableUrl(cachedUrl) !== comparableUrl(targetUrl);
+          activateTab(matchedKey, { url: targetUrl, push: false, forceReload });
+        }
+      });
+
+      window.addEventListener('discipleship:panel-url-change', (event) => {
+        const detail = event && event.detail ? event.detail : {};
+        const key = String(detail.tabKey || '').trim();
+        const url = String(detail.url || '').trim();
+        if (!tabs.has(key) || !url) {
+          return;
+        }
+        try {
+          const nextUrl = new URL(url, window.location.href);
+          if (nextUrl.origin === window.location.origin) {
+            panelUrls.set(key, nextUrl.toString());
+            if (key === currentKey) {
+              updateBranchLinks(nextUrl.toString());
+            }
+          }
+        } catch (_error) {
+          // Ignore malformed URLs emitted by a panel.
+        }
+      });
+
+      initializePanel(initialPanel);
+      showPanel(initialKey, window.location.href, false);
+    };
+
+    setupDiscipleshipWorkspace();
+    document.querySelectorAll('[data-discipleship-tab-panel][data-tab-key="tree"]').forEach((panel) => {
+      initDiscipleshipTreePane(panel);
+    });
+    setupFilePreviewModal(document);
 
   });
 })();

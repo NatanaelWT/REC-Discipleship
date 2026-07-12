@@ -1,7 +1,16 @@
+<section
+  class="discipleship-tab-panel discipleship-workspace__panel discipleship-dashboard-panel"
+  id="discipleship-tabpanel-dashboard"
+  role="tabpanel"
+  aria-labelledby="discipleship-tab-dashboard"
+  tabindex="0"
+  data-discipleship-tab-panel
+  data-discipleship-dashboard-panel
+  data-tab-key="dashboard"
+  data-page-title="{{ $pageTitle ?? 'Dashboard Pemuridan' }}"
+>
 <?php
 
-$page = 'discipleship_dashboard';
-page_header('Dashboard Pemuridan', $settings, $page, false, 'page-discipleship-dashboard');
 $branchParam = $allBranches ? 'all' : ($selectedBranchId ?? 'all');
 $formatPercent = static function (float $value): string {
     $label = number_format(max(0, min(100, $value)), 1, ',', '.');
@@ -108,87 +117,4 @@ $formatPercent = static function (float $value): string {
   ])
 @endif
 
-<script>
-(function () {
-  var modal = document.querySelector('[data-msk-edit-modal]');
-
-  function sectionError(section) {
-    section.removeAttribute('aria-busy');
-    section.innerHTML = '<div class="dashboard-section-error"><strong>Data belum dapat dimuat.</strong><button class="btn tiny secondary" type="button" data-dashboard-section-retry>Coba lagi</button></div>';
-  }
-
-  function openMskEditor(template) {
-    if (!modal || !template) return;
-    modal.querySelector('[data-msk-edit-title]').textContent = template.getAttribute('data-msk-edit-template-title') || 'Edit Sesi MSK';
-    modal.querySelector('[data-msk-edit-body]').innerHTML = template.innerHTML;
-    modal.classList.add('is-open');
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('modal-open');
-  }
-
-  function closeMskEditor() {
-    if (!modal) return;
-    modal.classList.remove('is-open');
-    modal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('modal-open');
-  }
-
-  function openRequestedEditor(section) {
-    var id = section.getAttribute('data-auto-edit-id') || '';
-    if (id === '') return;
-    var button = section.querySelector('[data-msk-edit-open="' + CSS.escape(id) + '"]');
-    section.removeAttribute('data-auto-edit-id');
-    if (button) button.click();
-  }
-
-  function loadSection(section, url) {
-    section.setAttribute('aria-busy', 'true');
-    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html'}})
-      .then(function (response) {
-        if (!response.ok) throw new Error('section');
-        return response.text();
-      })
-      .then(function (html) {
-        section.innerHTML = html;
-        section.removeAttribute('aria-busy');
-        section.setAttribute('data-section-url', url);
-        openRequestedEditor(section);
-      })
-      .catch(function () { sectionError(section); });
-  }
-
-  document.querySelectorAll('[data-dashboard-section]').forEach(function (section) {
-    loadSection(section, section.getAttribute('data-section-url'));
-  });
-
-  document.addEventListener('click', function (event) {
-    var retry = event.target.closest('[data-dashboard-section-retry]');
-    if (retry) {
-      var retrySection = retry.closest('[data-dashboard-section]');
-      if (retrySection) loadSection(retrySection, retrySection.getAttribute('data-section-url'));
-      return;
-    }
-
-    var edit = event.target.closest('[data-msk-edit-open]');
-    if (edit && modal) {
-      var template = document.querySelector('template[data-msk-edit-template="' + CSS.escape(edit.getAttribute('data-msk-edit-open')) + '"]');
-      if (!template) return;
-      event.preventDefault();
-      openMskEditor(template);
-      return;
-    }
-
-    if (event.target.closest('[data-msk-edit-close]') && modal) {
-      closeMskEditor();
-    }
-  });
-
-  document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape' && modal) {
-      closeMskEditor();
-    }
-  });
-})();
-</script>
-
-<?php page_footer(); ?>
+</section>

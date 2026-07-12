@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Discipleship;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SpiritualJourney\UpdateSpiritualJourneyBridgeStatusRequest;
 use App\Models\Person;
+use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\SpiritualJourney\SpiritualJourneyBridgeStatusService;
 use App\Services\SpiritualJourney\SpiritualJourneyPageData;
 use App\Support\RuntimeBootstrap;
@@ -12,14 +13,35 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\View\View;
 
 class SpiritualJourneyController extends Controller
 {
-    public function index(Request $request, SpiritualJourneyPageData $pageData): Response
-    {
+    public function index(
+        Request $request,
+        SpiritualJourneyPageData $pageData,
+        CurrentDiscipleshipScope $scope,
+    ): Response|View {
         RuntimeBootstrap::boot($request);
 
-        return response(view('discipleship.spiritual-journey.index', $pageData->forCurrentContext($request))->render());
+        $pageTitle = 'Spiritual Journey';
+        $data = [
+            ...$pageData->forCurrentContext($request),
+            'pageTitle' => $pageTitle,
+            'renderAsTabPanel' => true,
+        ];
+
+        if ($request->header('X-Discipleship-Fragment') === 'tab') {
+            return response(view('discipleship.spiritual-journey.index', $data)->render());
+        }
+
+        return view('discipleship.journey.workspace', [
+            ...$data,
+            'activeTab' => 'spiritual',
+            'currentPage' => 'spiritual_journey',
+            'panelView' => 'discipleship.spiritual-journey.index',
+            'tabBranchId' => $this->tabBranchId($request, $scope),
+        ]);
     }
 
     public function rows(Request $request, SpiritualJourneyPageData $pageData): JsonResponse
@@ -78,5 +100,16 @@ class SpiritualJourneyController extends Controller
         }
 
         return redirect()->route('discipleship.spiritual-journey', ['saved' => 1]);
+    }
+
+    private function tabBranchId(Request $request, CurrentDiscipleshipScope $scope): int|string|null
+    {
+        if (! $request->query->has('branch_id') && ! $request->query->has('rekap_cabang')) {
+            return null;
+        }
+
+        return $scope->includesAllBranches()
+            ? 'all'
+            : $scope->selectedBranchId();
     }
 }

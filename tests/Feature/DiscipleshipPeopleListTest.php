@@ -9,11 +9,14 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Tests\Concerns\AssertsDiscipleshipWorkspace;
 use Tests\TestCase;
 use ZipArchive;
 
 class DiscipleshipPeopleListTest extends TestCase
 {
+    use AssertsDiscipleshipWorkspace;
+
     public function test_legacy_people_list_query_is_rejected(): void
     {
         $response = $this->get('/pemuridan/anggota?page=people_list');
@@ -87,10 +90,36 @@ class DiscipleshipPeopleListTest extends TestCase
         $response->assertSee('>Export</span>', false);
         $response->assertDontSee('Export Excel');
         $response->assertSee(route('discipleship.people-list.export'), false);
-        $response->assertSee('discipleship-page-header__stats', false);
-        $response->assertSee('discipleship-page-header__stat', false);
+        $response->assertDontSee('discipleship-page-header__stats', false);
+        $response->assertDontSee('discipleship-page-header__stat', false);
         $response->assertSee('people-export-button', false);
         $response->assertSee(icon_svg('download'), false);
+    }
+
+    public function test_people_list_renders_shared_workspace_with_people_tab_active(): void
+    {
+        $this->createDiscipleshipTables();
+        $this->actingAsRecUser();
+
+        $content = (string) $this->get('/pemuridan/anggota')->assertOk()->getContent();
+
+        $this->assertDiscipleshipWorkspace($content, 'people');
+        $this->assertUnifiedDiscipleshipSidebar($content, 'Kutisari');
+    }
+
+    public function test_people_list_tab_fragment_returns_only_the_marked_panel(): void
+    {
+        $this->createDiscipleshipTables();
+        $this->actingAsRecUser();
+
+        $response = $this->withHeaders([
+            'X-Discipleship-Fragment' => 'tab',
+            'X-Requested-With' => 'XMLHttpRequest',
+            'Accept' => 'text/html',
+        ])->get('/pemuridan/anggota')->assertOk();
+
+        $response->assertSee('Daftar Anggota DG');
+        $this->assertDiscipleshipTabFragment((string) $response->getContent(), 'people');
     }
 
     public function test_people_list_hides_archived_duplicate_identity(): void
@@ -325,10 +354,7 @@ class DiscipleshipPeopleListTest extends TestCase
             ->assertSee('Peserta Terakhir DG 2')
             ->assertDontSee('Identitas Arsip DG')
             ->assertDontSee('Belum Pernah DG')
-            ->assertSee('data-people-stat="total">3</strong>', false)
-            ->assertSee('data-people-stat="dg1">2</strong>', false)
-            ->assertSee('data-people-stat="dg2">1</strong>', false)
-            ->assertSee('data-people-stat="dg3">0</strong>', false)
+            ->assertDontSee('data-people-stat=', false)
             ->assertSee('Terakhir menyelesaikan DG 1')
             ->assertSee('Terakhir menyelesaikan DG 2');
     }
@@ -404,7 +430,7 @@ class DiscipleshipPeopleListTest extends TestCase
             ->assertSee('data-rows-url="'.route('discipleship.people-list.rows').'"', false)
             ->assertSee('data-per-page="50"', false)
             ->assertSee('data-next-page="2"', false)
-            ->assertSee('data-people-stat="total">1000</strong>', false)
+            ->assertDontSee('data-people-stat=', false)
             ->assertSee('data-discipleship-people-search-form', false)
             ->assertSee('data-discipleship-people-search-input', false)
             ->assertSee('data-discipleship-people-search-row', false)

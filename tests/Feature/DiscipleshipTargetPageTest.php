@@ -32,8 +32,9 @@ class DiscipleshipTargetPageTest extends TestCase
 
         $this->get('/pemuridan/target?branch_id=2')
             ->assertOk()
-            ->assertSee('Mode Pusat')
-            ->assertSee('Rekap aktif: <strong>GM</strong>', false)
+            ->assertSee('data-discipleship-branch-nav', false)
+            ->assertSee('data-discipleship-branch-group="gm" open', false)
+            ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('Cabang GM')
             ->assertSee('class="card settings-target-card"', false)
             ->assertSee('class="settings-target-field-value">222</span>', false)
@@ -51,7 +52,8 @@ class DiscipleshipTargetPageTest extends TestCase
 
         $this->get('/pemuridan/target?branch_id=all')
             ->assertOk()
-            ->assertSee('Rekap aktif: <strong>Semua Cabang</strong>', false)
+            ->assertSee('data-discipleship-branch-group="all" open', false)
+            ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('data-target-section="msk_completed"', false)
             ->assertSee('data-target-section="dg1_people"', false)
             ->assertSee('data-target-section="dg_total_people"', false)
@@ -80,7 +82,8 @@ class DiscipleshipTargetPageTest extends TestCase
 
         $this->get('/pemuridan/target?branch_id=all')
             ->assertOk()
-            ->assertSee('Rekap aktif: <strong>Semua Cabang</strong>', false)
+            ->assertSee('data-discipleship-branch-group="all" open', false)
+            ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('data-target-section="msk_completed"', false)
             ->assertSee('data-branch-code="gm"', false)
             ->assertSee('<strong>222</strong>', false)
@@ -97,7 +100,9 @@ class DiscipleshipTargetPageTest extends TestCase
 
         $this->get('/pemuridan/target?branch_id='.$testingBranchId)
             ->assertOk()
-            ->assertSee('Mode Eksperimen Developer')
+            ->assertSee('is-developer-experiment-branch', false)
+            ->assertSee('data-discipleship-branch-group="testing" open', false)
+            ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('Cabang Testing')
             ->assertSee('name="target_msk_completed"', false)
             ->assertSee('Simpan Target');

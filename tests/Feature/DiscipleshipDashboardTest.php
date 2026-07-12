@@ -7,10 +7,13 @@ use App\Services\DiscipleshipDashboard\DiscipleshipDashboardSummaryQuery;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\AssertsDiscipleshipWorkspace;
 use Tests\TestCase;
 
 class DiscipleshipDashboardTest extends TestCase
 {
+    use AssertsDiscipleshipWorkspace;
+
     public function test_dashboard_renders_from_laravel_tables(): void
     {
         $this->createDashboardTables();
@@ -37,6 +40,8 @@ class DiscipleshipDashboardTest extends TestCase
         );
         $response->assertDontSee('Peserta MSK Dashboard');
         $response->assertDontSee('?page=discipleship_dashboard', false);
+        $this->assertDiscipleshipWorkspace((string) $response->getContent(), 'dashboard');
+        $this->assertUnifiedDiscipleshipSidebar((string) $response->getContent(), 'Kutisari');
 
         $section = $this->get('/pemuridan/dashboard/sections/incomplete-msk');
         $section->assertOk();
@@ -45,8 +50,7 @@ class DiscipleshipDashboardTest extends TestCase
         $section->assertSee('href="https://wa.me/62833333333"', false);
         $section->assertSee('data-msk-edit-open', false);
         $section->assertDontSee('dashboard-section-pagination', false);
-        $response->assertSee("modal.classList.add('is-open');", false);
-        $response->assertDontSee("modal.classList.add('open');", false);
+        $response->assertSee('data-msk-edit-modal', false);
 
         $overdueSection = $this->get('/pemuridan/dashboard/sections/overdue-groups');
         $overdueSection->assertOk();
@@ -54,6 +58,24 @@ class DiscipleshipDashboardTest extends TestCase
         $overdueSection->assertDontSee('<span>Kelompok</span>', false);
         $overdueSection->assertDontSee('<strong>Kelompok Dashboard</strong>', false);
         $overdueSection->assertDontSee('dashboard-section-pagination', false);
+    }
+
+    public function test_dashboard_tab_fragment_returns_only_the_marked_panel(): void
+    {
+        $this->createDashboardTables();
+        $this->seedDashboardData();
+        $this->actingAsRecUser();
+
+        $response = $this->withHeaders([
+            'X-Discipleship-Fragment' => 'tab',
+            'X-Requested-With' => 'XMLHttpRequest',
+            'Accept' => 'text/html',
+        ])->get('/pemuridan/dashboard')->assertOk();
+
+        $response->assertSee('Dashboard Pemuridan');
+        $response->assertSee('data-discipleship-dashboard-header', false);
+        $response->assertDontSee('<script', false);
+        $this->assertDiscipleshipTabFragment((string) $response->getContent(), 'dashboard');
     }
 
     public function test_dashboard_updates_msk_sessions_to_laravel_tables(): void
@@ -120,7 +142,9 @@ class DiscipleshipDashboardTest extends TestCase
 
         $this->get('/pemuridan/dashboard?branch_id='.$testingBranchId)
             ->assertOk()
-            ->assertSee('Mode Eksperimen Developer')
+            ->assertSee('is-developer-experiment-branch', false)
+            ->assertSee('data-discipleship-branch-group="testing" open', false)
+            ->assertDontSee('central-rekap-toolbar', false)
             ->assertDontSee('Peserta MSK Dashboard');
         $this->get('/pemuridan/dashboard/sections/incomplete-msk')
             ->assertOk()

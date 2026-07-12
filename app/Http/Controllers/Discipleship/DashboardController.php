@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Discipleship;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DiscipleshipDashboard\UpdateDashboardMskSessionsRequest;
+use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DiscipleshipDashboard\DashboardMskSessionUpdater;
 use App\Services\DiscipleshipDashboard\DashboardPageData;
 use App\Services\DiscipleshipDashboard\DashboardSectionData;
@@ -14,14 +15,34 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request, DashboardPageData $pageData): RedirectResponse|View
-    {
+    public function index(
+        Request $request,
+        DashboardPageData $pageData,
+        CurrentDiscipleshipScope $scope,
+    ): RedirectResponse|View {
         $redirect = $this->guardPageAccess($request);
         if ($redirect !== null) {
             return $redirect;
         }
 
-        return view('discipleship.dashboard.index', $pageData->forCurrentContext($request));
+        $pageTitle = 'Dashboard Pemuridan';
+        $data = [
+            ...$pageData->forCurrentContext($request),
+            'pageTitle' => $pageTitle,
+        ];
+
+        if ($request->header('X-Discipleship-Fragment') === 'tab') {
+            return view('discipleship.dashboard.index', $data);
+        }
+
+        return view('discipleship.workspace.index', [
+            ...$data,
+            'activeTab' => 'dashboard',
+            'currentPage' => 'discipleship_dashboard',
+            'panelView' => 'discipleship.dashboard.index',
+            'selectedBranchLabel' => $scope->selectedLabel(),
+            'tabBranchId' => $this->tabBranchId($request, $scope),
+        ]);
     }
 
     public function updateMskSessions(
@@ -64,5 +85,16 @@ class DashboardController extends Controller
         RuntimeBootstrap::boot($request);
 
         return null;
+    }
+
+    private function tabBranchId(Request $request, CurrentDiscipleshipScope $scope): int|string|null
+    {
+        if (! $request->query->has('branch_id')) {
+            return null;
+        }
+
+        return $scope->includesAllBranches()
+            ? 'all'
+            : $scope->selectedBranchId();
     }
 }

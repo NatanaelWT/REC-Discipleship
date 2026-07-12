@@ -172,64 +172,6 @@ function render_pemuridan_import_feedback(): void
     }
 }
 
-function render_central_rekap_toolbar(string $currentPage): void
-{
-    $isDeveloperSession = function_exists('is_developer_session') && is_developer_session();
-    $shouldShowBranchToolbar = is_effective_central_discipleship_readonly() || $isDeveloperSession;
-    if (! $shouldShowBranchToolbar || page_header_active_group($currentPage) !== 'pemuridan') {
-        return;
-    }
-    $selectedBranch = central_recap_selected_branch();
-    $selectedBranchLabel = central_recap_branch_label($selectedBranch);
-    $preservedQueryParams = [];
-    foreach ($_GET as $paramKey => $paramValue) {
-        if (! is_string($paramKey)) {
-            continue;
-        }
-        if (in_array($paramKey, ['page', 'branch_id', 'rekap_cabang'], true)) {
-            continue;
-        }
-        $preservedQueryParams[$paramKey] = $paramValue;
-    }
-    $buildRekapHref = function (int|string|null $branchId) use ($currentPage, $preservedQueryParams): string {
-        $params = array_merge([
-            'branch_id' => $branchId ?? 'all',
-        ], $preservedQueryParams);
-
-        if (class_exists(AppPageRouteMap::class) && AppPageRouteMap::hasPage($currentPage)) {
-            return AppPageRouteMap::pageUrl($currentPage, $params);
-        }
-
-        return '?'.http_build_query($params);
-    };
-
-    echo "  <section class=\"central-rekap-toolbar\" aria-label=\"Filter rekap Pusat Pemuridan\">\n";
-    echo "    <div class=\"central-rekap-toolbar-body\">\n";
-    echo "      <div class=\"central-rekap-head\">\n";
-    echo "        <div class=\"central-rekap-title-row\">\n";
-    $modeLabel = function_exists('is_developer_experiment_branch') && is_developer_experiment_branch()
-        ? 'Mode Eksperimen Developer'
-        : 'Mode Pusat';
-    echo '          <span class="badge warning">'.h($modeLabel)."</span>\n";
-    echo '          <span class="central-rekap-current">Rekap aktif: <strong>'.h($selectedBranchLabel)."</strong>. Klik nama cabang di bawah untuk ganti tampilan.</span>\n";
-    echo "        </div>\n";
-    echo "      </div>\n";
-    echo "      <div class=\"central-rekap-quick\" aria-label=\"Pilih cabang rekap Pusat Pemuridan\">\n";
-    foreach (central_recap_branch_options() as $branchOption) {
-        $branchCode = normalize_central_recap_branch((string) ($branchOption['code'] ?? 'all'));
-        $branchId = $branchOption['id'] ?? null;
-        $branchLabel = trim((string) ($branchOption['label'] ?? $branchCode));
-        if ($branchLabel === '') {
-            $branchLabel = $branchCode;
-        }
-        $chipClass = $branchCode === $selectedBranch ? 'central-rekap-chip active' : 'central-rekap-chip';
-        echo '        <a class="'.h($chipClass).'" href="'.h($buildRekapHref($branchId)).'">'.h($branchLabel)."</a>\n";
-    }
-    echo "      </div>\n";
-    echo "    </div>\n";
-    echo "  </section>\n";
-}
-
 function render_app_script_tag(): void
 {
     $jsVersion = asset_version('assets/app.js');
@@ -292,6 +234,105 @@ function render_sidebar_nav_group(string $label, string $groupKey, array $items,
     echo "        </details>\n";
 }
 
+function discipleship_sidebar_branch_scopes(string $currentBranch): array
+{
+    $scope = app(\App\Services\Discipleship\CurrentDiscipleshipScope::class);
+    $developerAccess = function_exists('is_developer_session') && is_developer_session();
+    $canSwitchBranch = is_effective_central_discipleship_readonly() || $developerAccess;
+
+    if (! $canSwitchBranch) {
+        return [[
+            'id' => $scope->selectedBranchId(),
+            'slug' => $scope->selectedSlug() !== '' ? $scope->selectedSlug() : normalize_user_branch($currentBranch),
+            'label' => user_branch_label($currentBranch),
+            'selected' => true,
+        ]];
+    }
+
+    $scopes = [[
+        'id' => null,
+        'slug' => 'all',
+        'label' => 'Semua Cabang',
+        'selected' => $scope->includesAllBranches(),
+    ]];
+    $selectedBranchId = $scope->selectedBranchId();
+    foreach ($scope->branchOptions() as $branchOption) {
+        $branchId = (int) ($branchOption['id'] ?? 0);
+        if ($branchId <= 0) {
+            continue;
+        }
+
+        $branchLabel = trim((string) ($branchOption['label'] ?? ''));
+        if ($branchLabel === '') {
+            $branchLabel = 'Cabang '.$branchId;
+        }
+        $scopes[] = [
+            'id' => $branchId,
+            'slug' => trim((string) ($branchOption['slug'] ?? '')),
+            'label' => $branchLabel,
+            'selected' => $selectedBranchId === $branchId,
+        ];
+    }
+
+    return $scopes;
+}
+
+function discipleship_sidebar_item_href(string $routeName, ?int $branchId): string
+{
+    $params = [];
+    if ($branchId === null) {
+        $params['branch_id'] = 'all';
+    } elseif ($branchId > 0) {
+        $params['branch_id'] = $branchId;
+    }
+
+    return route($routeName, $params);
+}
+
+function render_discipleship_sidebar_navigation(string $currentPage, string $currentBranch, string $activeGroup): void
+{
+    $scopes = discipleship_sidebar_branch_scopes($currentBranch);
+    $isPemuridanActive = $activeGroup === 'pemuridan';
+
+    $discipleshipNavItems = [
+        ['label' => 'Dashboard', 'page' => 'discipleship_dashboard', 'active_pages' => ['people_tree', 'people_tree_v2', 'people_list', 'groups_list'], 'route' => 'discipleship.dashboard'],
+        ['label' => 'Journey & MSK', 'page' => 'spiritual_journey', 'active_pages' => ['msk_classes'], 'route' => 'discipleship.spiritual-journey'],
+        ['label' => 'Jurnal & Pertanyaan', 'page' => 'dg_reports_recap', 'active_pages' => ['member_feedback_recap', 'difficult_questions_admin'], 'route' => 'discipleship.reports-recap'],
+        ['label' => 'Target DG & MSK', 'page' => 'discipleship_targets', 'route' => 'discipleship.targets'],
+    ];
+
+    echo "        <div class=\"discipleship-branch-nav\" data-discipleship-branch-nav>\n";
+    foreach ($scopes as $scopeOption) {
+        $scopeLabel = trim((string) ($scopeOption['label'] ?? 'Cabang'));
+        $scopeSlug = trim((string) ($scopeOption['slug'] ?? ''));
+        $scopeBranchId = isset($scopeOption['id']) && is_int($scopeOption['id']) ? $scopeOption['id'] : null;
+        $isSelected = ! empty($scopeOption['selected']);
+        $isOpen = $isPemuridanActive && $isSelected;
+        $summaryClass = $isOpen ? 'nav-item active has-sub' : 'nav-item has-sub';
+
+        echo '        <details class="nav-group discipleship-branch-group" data-discipleship-branch-group="'.h($scopeSlug !== '' ? $scopeSlug : 'branch').'"'.($isOpen ? ' open' : '').">\n";
+        echo '          <summary class="'.h($summaryClass).'">'.h($scopeLabel)."<span class=\"chevron\">&#9662;</span></summary>\n";
+        echo "          <div class=\"nav-sub\">\n";
+        foreach ($discipleshipNavItems as $item) {
+            $page = trim((string) ($item['page'] ?? ''));
+            $extraActivePages = $item['active_pages'] ?? [];
+            if (! is_array($extraActivePages)) {
+                $extraActivePages = [];
+            }
+            $isActive = $page !== '' && ($page === $currentPage || in_array($currentPage, $extraActivePages, true));
+            render_sidebar_nav_link(
+                (string) ($item['label'] ?? ''),
+                discipleship_sidebar_item_href((string) ($item['route'] ?? ''), $scopeBranchId),
+                $isSelected && $isActive,
+                '            ',
+            );
+        }
+        echo "          </div>\n";
+        echo "        </details>\n";
+    }
+    echo "        </div>\n";
+}
+
 function render_sidebar_navigation(string $currentPage, string $currentBranch, bool $discipleshipOnlyAccess, bool $worshipOnlyAccess, string $activeGroup, bool $hideMemberDataFeatures = false, bool $worshipScopeWithoutFeature = false): void
 {
     $developerAccess = function_exists('is_developer_session') && is_developer_session();
@@ -327,21 +368,7 @@ function render_sidebar_navigation(string $currentPage, string $currentBranch, b
         return;
     }
 
-    $discipleshipNavItems = [
-        ['label' => 'Dashboard', 'page' => 'discipleship_dashboard', 'href' => route('discipleship.dashboard')],
-        ['label' => 'Kelompok DG', 'page' => 'groups_list', 'href' => route('discipleship.groups')],
-        ['label' => 'Anggota DG', 'page' => 'people_list', 'href' => route('discipleship.people-list')],
-        ['label' => 'Pohon Pemuridan', 'page' => 'people_tree', 'href' => route('discipleship.tree')],
-        ['label' => 'Spiritual Journey', 'page' => 'spiritual_journey', 'href' => route('discipleship.spiritual-journey')],
-        ['label' => 'Jurnal Temu DG', 'page' => 'dg_reports_recap', 'href' => route('discipleship.reports-recap')],
-        ['label' => 'Jurnal Umpan Balik', 'page' => 'member_feedback_recap', 'href' => route('discipleship.member-feedback-recap')],
-        ['label' => 'Kelas MSK', 'page' => 'msk_classes', 'href' => route('discipleship.msk-classes')],
-        ['label' => 'Target DG & MSK', 'page' => 'discipleship_targets', 'href' => route('discipleship.targets')],
-    ];
-    if (can_manage_difficult_questions()) {
-        $discipleshipNavItems[] = ['label' => 'Pertanyaan Sulit', 'page' => 'difficult_questions_admin', 'href' => route('discipleship.difficult-questions')];
-    }
-    render_sidebar_nav_group('Pemuridan', 'pemuridan', $discipleshipNavItems, $currentPage, $activeGroup);
+    render_discipleship_sidebar_navigation($currentPage, $currentBranch, $activeGroup);
 
     if ($discipleshipOnlyAccess) {
         render_sidebar_nav_link('Setting', route('settings'), $activeGroup === 'settings');
@@ -1009,8 +1036,6 @@ function page_header(string $title, array $settings, string $currentPage, bool $
     append_body_classes($bodyClasses, $bodyClass);
     $classAttr = body_class_attr($bodyClasses);
     $activeGroup = page_header_active_group($currentPage);
-    $showCentralToolbar = ($isCentralReadonlySession || (function_exists('is_developer_session') && is_developer_session()))
-        && $activeGroup === 'pemuridan';
     render_app_document_head($app);
     echo '<body'.$classAttr.">\n";
     echo "<div class=\"app-shell\">\n";
@@ -1049,17 +1074,8 @@ function page_header(string $title, array $settings, string $currentPage, bool $
     if (function_exists('is_developer_session') && is_developer_session() && function_exists('developer_debug_banner_enabled') && developer_debug_banner_enabled()) {
         echo '  <div class="developer-debug-banner">Developer debug aktif &middot; cabang '.h(user_branch_label($currentBranch))."</div>\n";
     }
-    $showCentralToolbarBeforeTitle = $showCentralToolbar && $showTitle;
-    if ($showTitle && ! $showCentralToolbarBeforeTitle) {
+    if ($showTitle) {
         echo '  <h1>'.h($title)."</h1>\n";
-    }
-    if ($showCentralToolbar) {
-        render_central_rekap_toolbar($currentPage);
-    }
-    if ($showCentralToolbarBeforeTitle) {
-        echo "  <div class=\"card-row discipleship-page-head central-page-head\">\n";
-        echo '    <h1>'.h($title)."</h1>\n";
-        echo "  </div>\n";
     }
 }
 

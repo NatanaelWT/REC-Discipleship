@@ -7,7 +7,5 @@
 ])
 
 @section('content')
-    @include('discipleship.difficult-questions.partials.alerts')
-    @include('discipleship.difficult-questions.partials.hero')
-    @include('discipleship.difficult-questions.partials.question-list')
+    @include('discipleship.difficult-questions.panel')
 @endsection

@@ -116,7 +116,7 @@ class DeveloperAccessTest extends TestCase
             ->assertDontSee('Cabang Aktif')
             ->assertDontSee('Pakai')
             ->assertDontSee('Mode Pusat')
-            ->assertDontSee('Semua Cabang');
+            ->assertSee('data-discipleship-branch-nav', false);
 
         $this->post('/developer/branch', ['branch_id' => 2])->assertNotFound();
 
@@ -709,7 +709,9 @@ class DeveloperAccessTest extends TestCase
 
         $this->get('/pemuridan/target?branch_id='.$testingBranchId)
             ->assertOk()
-            ->assertSee('Mode Eksperimen Developer')
+            ->assertSee('is-developer-experiment-branch', false)
+            ->assertSee('data-discipleship-branch-group="testing" open', false)
+            ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('Cabang Testing')
             ->assertSee('name="target_msk_completed"', false)
             ->assertSee('Simpan Target');

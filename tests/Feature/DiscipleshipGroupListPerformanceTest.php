@@ -6,10 +6,39 @@ use App\Services\Branches\BranchCatalog;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\AssertsDiscipleshipWorkspace;
 use Tests\TestCase;
 
 class DiscipleshipGroupListPerformanceTest extends TestCase
 {
+    use AssertsDiscipleshipWorkspace;
+
+    public function test_group_list_renders_shared_workspace_with_groups_tab_active(): void
+    {
+        $this->createTables();
+        $this->actingAsRecUser();
+
+        $content = (string) $this->get('/pemuridan/kelompok')->assertOk()->getContent();
+
+        $this->assertDiscipleshipWorkspace($content, 'groups');
+        $this->assertUnifiedDiscipleshipSidebar($content, 'Kutisari');
+    }
+
+    public function test_group_list_tab_fragment_returns_only_the_marked_panel(): void
+    {
+        $this->createTables();
+        $this->actingAsRecUser();
+
+        $response = $this->withHeaders([
+            'X-Discipleship-Fragment' => 'tab',
+            'X-Requested-With' => 'XMLHttpRequest',
+            'Accept' => 'text/html',
+        ])->get('/pemuridan/kelompok')->assertOk();
+
+        $response->assertSee('Daftar Kelompok DG');
+        $this->assertDiscipleshipTabFragment((string) $response->getContent(), 'groups');
+    }
+
     public function test_group_list_lazy_loads_rows_and_searches_server_side(): void
     {
         $this->createTables();
@@ -48,9 +77,9 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
             ->assertSee('data-discipleship-groups-search-form', false)
             ->assertSee('data-discipleship-groups-search-input', false)
             ->assertSee('data-next-page="2"', false)
-            ->assertSee('discipleship-page-header__stats', false)
-            ->assertSee('discipleship-page-header__stat', false)
-            ->assertSee('data-groups-stat="total">300', false)
+            ->assertDontSee('discipleship-page-header__stats', false)
+            ->assertDontSee('discipleship-page-header__stat', false)
+            ->assertDontSee('data-groups-stat=', false)
             ->assertDontSee('>Cari</button>', false);
         $this->assertLessThanOrEqual(12, $queries);
 
@@ -114,7 +143,7 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
 
         $this->get('/pemuridan/kelompok')
             ->assertOk()
-            ->assertSee('data-groups-stat="total">0', false)
+            ->assertDontSee('data-groups-stat=', false)
             ->assertSee('Belum ada kelompok.');
     }
 

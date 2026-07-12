@@ -7,10 +7,13 @@ use App\Services\DiscipleshipPeopleTree\PeopleTreeModelStore;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\AssertsDiscipleshipWorkspace;
 use Tests\TestCase;
 
 class PeopleTreePageTest extends TestCase
 {
+    use AssertsDiscipleshipWorkspace;
+
     public function test_legacy_people_tree_query_is_rejected(): void
     {
         $response = $this->get('/pemuridan/pohon?page=people_tree');
@@ -52,6 +55,78 @@ class PeopleTreePageTest extends TestCase
         $response->assertDontSee('Lihat Riwayat Pemuridan');
         $response->assertDontSee('spiritual-journey-view-modal', false);
         $response->assertDontSee('data-tree-v2-proxy="view-person-journey"', false);
+    }
+
+    public function test_people_tree_renders_shared_workspace_and_branch_workspace_sidebar(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $this->actingAsRecUser();
+
+        $content = (string) $this->get('/pemuridan/pohon')->assertOk()->getContent();
+
+        $this->assertDiscipleshipWorkspace($content, 'tree');
+        $this->assertUnifiedDiscipleshipSidebar($content, 'Kutisari');
+
+        $xpath = $this->discipleshipMarkupXpath($content);
+        $branchNav = '//*[@id="app-sidebar"]//*[@data-discipleship-branch-nav]';
+        $this->assertSame(1.0, $xpath->evaluate('count('.$branchNav.')'));
+        $this->assertSame(1.0, $xpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="kutisari" and @open])'));
+        $this->assertSame(1.0, $xpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="kutisari"]/summary[starts-with(normalize-space(.), "Kutisari")])'));
+        $this->assertSame(1.0, $xpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="kutisari"]//a[normalize-space(.) = "Dashboard" and contains(@href, "branch_id=1")])'));
+    }
+
+    public function test_people_tree_tab_fragment_returns_only_the_marked_panel(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $this->actingAsRecUser();
+
+        $response = $this->withHeaders([
+            'X-Discipleship-Fragment' => 'tab',
+            'X-Requested-With' => 'XMLHttpRequest',
+            'Accept' => 'text/html',
+        ])->get('/pemuridan/pohon')->assertOk();
+
+        $response->assertSee('Leader Test');
+        $this->assertDiscipleshipTabFragment((string) $response->getContent(), 'tree');
+    }
+
+    public function test_central_and_developer_have_switchable_branch_sidebar_without_legacy_toolbar(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+
+        $this->actingAsRecUser('central_reader', null, 'pemuridan_pusat');
+        $centralContent = (string) $this->get('/pemuridan/pohon?branch_id=all&q=Yohanes&per_page=10&edit=123&error=invalid_person&conflict=1')->assertOk()->getContent();
+        $centralXpath = $this->discipleshipMarkupXpath($centralContent);
+        $branchNav = '//*[@id="app-sidebar"]//*[@data-discipleship-branch-nav]';
+
+        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.')'));
+        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="all" and @open]/summary[starts-with(normalize-space(.), "Semua Cabang")])'));
+        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="kutisari"]/summary[starts-with(normalize-space(.), "Kutisari")])'));
+        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="gm"]/summary[starts-with(normalize-space(.), "GM")])'));
+        $this->assertSame(0.0, $centralXpath->evaluate('count(//*[contains(concat(" ", normalize-space(@class), " "), " central-rekap-toolbar ")])'));
+
+        $gmBranchLink = $centralXpath->query($branchNav.'//details[@data-discipleship-branch-group="gm"]//a[normalize-space(.) = "Dashboard"]')?->item(0);
+        $this->assertNotNull($gmBranchLink);
+        parse_str((string) parse_url($gmBranchLink->getAttribute('href'), PHP_URL_QUERY), $gmBranchQuery);
+        $this->assertSame('2', $gmBranchQuery['branch_id'] ?? null);
+
+        $testingBranchId = (int) DB::table('cabang')->insertGetId([
+            'label' => 'Testing',
+            'is_active' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        app(BranchCatalog::class)->clearCache();
+
+        $this->actingAsRecUser('developer', null, 'developer');
+        $developerContent = (string) $this->get('/pemuridan/pohon?branch_id='.$testingBranchId)->assertOk()->getContent();
+        $developerXpath = $this->discipleshipMarkupXpath($developerContent);
+
+        $this->assertSame(1.0, $developerXpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="all"]/summary[starts-with(normalize-space(.), "Semua Cabang")])'));
+        $this->assertSame(0.0, $developerXpath->evaluate('count(//*[contains(concat(" ", normalize-space(@class), " "), " central-rekap-toolbar ")])'));
     }
 
     public function test_people_tree_renders_cross_branch_leader_without_local_duplicate(): void

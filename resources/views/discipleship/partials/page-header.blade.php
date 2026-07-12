@@ -42,7 +42,7 @@
 
     @if ($asidePartial !== '')
       @include($asidePartial, $asideData)
-    @else
+    @elseif (count($headerStats) > 0)
       <div class="discipleship-page-header__stats" aria-label="{{ $header['stats_aria_label'] ?? ('Ringkasan '.$header['title']) }}">
         @foreach ($headerStats as $stat)
           @php

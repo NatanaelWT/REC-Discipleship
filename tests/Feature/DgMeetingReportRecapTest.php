@@ -122,7 +122,8 @@ class DgMeetingReportRecapTest extends TestCase
         $this->get('/pemuridan/laporan-dg?rekap_cabang=all')
             ->assertOk()
             ->assertSee('Materi Test')
-            ->assertSee('Mode Pusat')
+            ->assertSee('data-discipleship-branch-group="all" open', false)
+            ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('Semua Cabang');
 
         $this->get('/pemuridan/laporan-dg?rekap_cabang=gm')

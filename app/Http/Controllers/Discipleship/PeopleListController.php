@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Discipleship;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DiscipleshipPeople\ExportDiscipleshipPeopleRequest;
+use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DiscipleshipPeople\DiscipleshipPeopleExportService;
 use App\Services\DiscipleshipPeople\DiscipleshipPeopleListData;
 use App\Support\RuntimeBootstrap;
@@ -15,11 +16,31 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PeopleListController extends Controller
 {
-    public function index(Request $request, DiscipleshipPeopleListData $peopleListData): View
-    {
+    public function index(
+        Request $request,
+        DiscipleshipPeopleListData $peopleListData,
+        CurrentDiscipleshipScope $scope,
+    ): View {
         RuntimeBootstrap::boot($request);
 
-        return view('discipleship.people-list.index', $peopleListData->forCurrentContext($request));
+        $pageTitle = 'Daftar Anggota DG';
+        $pageData = [
+            ...$peopleListData->forCurrentContext($request),
+            'pageTitle' => $pageTitle,
+        ];
+
+        if ($request->header('X-Discipleship-Fragment') === 'tab') {
+            return view('discipleship.people-list.index', $pageData);
+        }
+
+        return view('discipleship.workspace.index', [
+            ...$pageData,
+            'activeTab' => 'people',
+            'currentPage' => 'people_list',
+            'panelView' => 'discipleship.people-list.index',
+            'selectedBranchLabel' => $scope->selectedLabel(),
+            'tabBranchId' => $this->tabBranchId($request, $scope),
+        ]);
     }
 
     public function rows(Request $request, DiscipleshipPeopleListData $peopleListData): JsonResponse
@@ -49,5 +70,16 @@ class PeopleListController extends Controller
         RuntimeBootstrap::boot($request);
 
         return $exporter->export($request);
+    }
+
+    private function tabBranchId(Request $request, CurrentDiscipleshipScope $scope): int|string|null
+    {
+        if (! $request->query->has('branch_id')) {
+            return null;
+        }
+
+        return $scope->includesAllBranches()
+            ? 'all'
+            : $scope->selectedBranchId();
     }
 }

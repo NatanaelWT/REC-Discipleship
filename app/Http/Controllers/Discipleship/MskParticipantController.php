@@ -12,6 +12,7 @@ use App\Http\Requests\MskParticipants\StoreMskParticipantRequest;
 use App\Http\Requests\MskParticipants\UpdateMskParticipantRequest;
 use App\Http\Requests\MskParticipants\UpdateMskParticipantSessionsRequest;
 use App\Models\Person;
+use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\MskParticipants\MskParticipantExportService;
 use App\Services\MskParticipants\MskParticipantImportService;
 use App\Services\MskParticipants\MskParticipantPageData;
@@ -21,15 +22,36 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class MskParticipantController extends Controller
 {
-    public function index(Request $request, MskParticipantPageData $pageData): RedirectResponse|Response
-    {
+    public function index(
+        Request $request,
+        MskParticipantPageData $pageData,
+        CurrentDiscipleshipScope $scope,
+    ): RedirectResponse|Response|View {
         RuntimeBootstrap::boot($request);
 
-        return response(view('discipleship.msk-participants.index', $pageData->forCurrentContext($request))->render());
+        $pageTitle = 'Kelas MSK';
+        $data = [
+            ...$pageData->forCurrentContext($request),
+            'pageTitle' => $pageTitle,
+            'renderAsTabPanel' => true,
+        ];
+
+        if ($request->header('X-Discipleship-Fragment') === 'tab') {
+            return response(view('discipleship.msk-participants.index', $data)->render());
+        }
+
+        return view('discipleship.journey.workspace', [
+            ...$data,
+            'activeTab' => 'msk',
+            'currentPage' => 'msk_classes',
+            'panelView' => 'discipleship.msk-participants.index',
+            'tabBranchId' => $this->tabBranchId($request, $scope),
+        ]);
     }
 
     public function rows(Request $request, MskParticipantPageData $pageData): JsonResponse
@@ -232,5 +254,16 @@ class MskParticipantController extends Controller
         $batchMonth = import_normalize_month_strict($batchMonthInput);
 
         return $batchMonth !== '' ? ['batch_month' => $batchMonth] : [];
+    }
+
+    private function tabBranchId(Request $request, CurrentDiscipleshipScope $scope): int|string|null
+    {
+        if (! $request->query->has('branch_id') && ! $request->query->has('rekap_cabang')) {
+            return null;
+        }
+
+        return $scope->includesAllBranches()
+            ? 'all'
+            : $scope->selectedBranchId();
     }
 }

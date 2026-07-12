@@ -1,7 +1,12 @@
 <?php
 
 if ($page === 'msk_classes') {
-    page_header('Kelas MSK', $settings, $page, false, 'page-discipleship-table-scroll');
+    $renderAsTabPanel = (bool) ($renderAsTabPanel ?? false);
+    if (! $renderAsTabPanel) {
+        page_header('Kelas MSK', $settings, $page, false, 'page-discipleship-table-scroll');
+    } else {
+        echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-list-panel journey-workspace-panel msk-classes-panel" id="discipleship-tabpanel-msk" role="tabpanel" aria-labelledby="discipleship-tab-msk" tabindex="0" data-discipleship-tab-panel data-tab-key="msk" data-page-title="Kelas MSK" data-body-class="page-msk_classes">'."\n";
+    }
     $centralReadOnly = is_effective_central_discipleship_readonly();
     $mskIndexAction = route('discipleship.msk-classes');
     $mskStoreAction = route('discipleship.msk-classes.store');
@@ -775,5 +780,9 @@ if ($page === 'msk_classes') {
         ])->render();
     }
 
-    page_footer();
+    if ($renderAsTabPanel) {
+        echo "</section>\n";
+    } else {
+        page_footer();
+    }
 }
