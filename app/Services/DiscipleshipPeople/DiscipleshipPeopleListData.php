@@ -66,6 +66,7 @@ class DiscipleshipPeopleListData
             'peopleInDg1Count' => $stats['dg1'],
             'peopleInDg2Count' => $stats['dg2'],
             'peopleInDg3Count' => $stats['dg3'],
+            'peopleProgressFilterCounts' => $this->progressFilterCounts($search),
             'peopleSearch' => $search,
             'peopleProgressFilter' => $progress,
             'peoplePage' => $page,
@@ -100,6 +101,7 @@ class DiscipleshipPeopleListData
             'peopleInDg1Count' => $stats['dg1'],
             'peopleInDg2Count' => $stats['dg2'],
             'peopleInDg3Count' => $stats['dg3'],
+            'peopleProgressFilterCounts' => $this->progressFilterCounts($search),
             'peopleSearch' => $search,
             'peopleProgressFilter' => $progress,
         ];
@@ -430,6 +432,82 @@ class DiscipleshipPeopleListData
             ->first();
 
         return ['total' => (int) ($row->total ?? 0), 'dg1' => (int) ($row->dg1 ?? 0), 'dg2' => (int) ($row->dg2 ?? 0), 'dg3' => (int) ($row->dg3 ?? 0)];
+    }
+
+    /** @return array<string, int> */
+    private function progressFilterCounts(string $search): array
+    {
+        $people = $this->filteredPeopleQuery($search, 'all')
+            ->select(['people.id', 'people.branch_id']);
+
+        $row = DB::query()
+            ->fromSub($people, 'filtered_people')
+            ->selectRaw("COUNT(*) AS all_count,
+                SUM(CASE WHEN ".$this->activeStageExistsSql('DG 1')." THEN 1 ELSE 0 END) AS active_dg1,
+                SUM(CASE WHEN ".$this->completedStageExistsSql(1)." THEN 1 ELSE 0 END) AS complete_dg1,
+                SUM(CASE WHEN ".$this->activeStageExistsSql('DG 2')." THEN 1 ELSE 0 END) AS active_dg2,
+                SUM(CASE WHEN ".$this->completedStageExistsSql(2)." THEN 1 ELSE 0 END) AS complete_dg2,
+                SUM(CASE WHEN ".$this->activeStageExistsSql('DG 3')." THEN 1 ELSE 0 END) AS active_dg3,
+                SUM(CASE WHEN ".$this->completedStageExistsSql(3)." THEN 1 ELSE 0 END) AS complete_dg3")
+            ->first();
+
+        return [
+            'all' => (int) ($row->all_count ?? 0),
+            'active_dg1' => (int) ($row->active_dg1 ?? 0),
+            'complete_dg1' => (int) ($row->complete_dg1 ?? 0),
+            'active_dg2' => (int) ($row->active_dg2 ?? 0),
+            'complete_dg2' => (int) ($row->complete_dg2 ?? 0),
+            'active_dg3' => (int) ($row->active_dg3 ?? 0),
+            'complete_dg3' => (int) ($row->complete_dg3 ?? 0),
+        ];
+    }
+
+    private function activeStageExistsSql(string $stage): string
+    {
+        $stage = str_replace("'", "''", $stage);
+
+        return "EXISTS (
+            SELECT 1
+            FROM keanggotaan_kelompok_dg AS filter_count_gp
+            WHERE filter_count_gp.person_id = filtered_people.id
+              AND filter_count_gp.branch_id = filtered_people.branch_id
+              AND filter_count_gp.role = 'member'
+              AND filter_count_gp.stage = '{$stage}'
+              AND filter_count_gp.status = 'active'
+              AND filter_count_gp.ended_on IS NULL
+        )";
+    }
+
+    private function completedStageExistsSql(int $rank): string
+    {
+        $reasons = "'continued_to_child_group', 'group_completed', 'stage_transition'";
+        $groupCondition = match ($rank) {
+            1 => "filter_count_gp.stage IN ('DG 2', 'DG 3') OR (filter_count_gp.stage = 'DG 1' AND filter_count_gp.end_reason IN ({$reasons}))",
+            2 => "filter_count_gp.stage = 'DG 3' OR (filter_count_gp.stage = 'DG 2' AND filter_count_gp.end_reason IN ({$reasons}))",
+            default => "filter_count_gp.stage = 'DG 3' AND filter_count_gp.end_reason IN ({$reasons})",
+        };
+
+        $sql = "EXISTS (
+            SELECT 1
+            FROM keanggotaan_kelompok_dg AS filter_count_gp
+            WHERE filter_count_gp.person_id = filtered_people.id
+              AND filter_count_gp.branch_id = filtered_people.branch_id
+              AND filter_count_gp.role = 'member'
+              AND ({$groupCondition})
+        )";
+
+        if (Schema::hasTable('dg_manual')) {
+            $manualStages = $rank === 1 ? "'DG 1', 'DG 2', 'DG 3'" : ($rank === 2 ? "'DG 2', 'DG 3'" : "'DG 3'");
+            $sql .= " OR EXISTS (
+                SELECT 1
+                FROM dg_manual AS manual_count_journey
+                WHERE manual_count_journey.person_id = filtered_people.id
+                  AND manual_count_journey.branch_id = filtered_people.branch_id
+                  AND manual_count_journey.stage IN ({$manualStages})
+            )";
+        }
+
+        return '('.$sql.')';
     }
 
     private function manualGroupPeople(array $personIds)

@@ -2,10 +2,14 @@
   <input type="hidden" name="branch_id" value="{{ request()->query('branch_id') }}">
 @endif
 
+@php
+    $spiritualJourneyFilterCounts = is_array($spiritualJourneyFilterCounts ?? null) ? $spiritualJourneyFilterCounts : [];
+@endphp
+
 <div class="discipleship-page-header__filter">
   <select name="journey_filter" class="search journey-status-filter" aria-label="Filter spiritual journey" data-spiritual-journey-filter-input>
     @foreach ($journeyFilterOptions as $filterValue => $filterLabel)
-      <option value="{{ $filterValue }}" @selected($journeyFilter === $filterValue)>{{ $filterLabel }}</option>
+      <option value="{{ $filterValue }}" @selected($journeyFilter === $filterValue)>{{ $filterLabel }} ({{ (string) ((int) ($spiritualJourneyFilterCounts[$filterValue] ?? 0)) }})</option>
     @endforeach
   </select>
 </div>

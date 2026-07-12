@@ -223,7 +223,7 @@ class DiscipleshipPeopleListTest extends TestCase
         $this->get('/pemuridan/anggota?progress=kgap_complete')
             ->assertOk()
             ->assertSee('Peserta Progres DG')
-            ->assertSee('<option value="all" selected>Semua Peserta</option>', false)
+            ->assertSee('<option value="all" selected>Semua Peserta (1)</option>', false)
             ->assertSee('people-progress-track', false)
             ->assertSee('people-progress-step is-complete', false)
             ->assertSee('people-progress-step is-current', false)

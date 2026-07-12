@@ -792,12 +792,20 @@ if ($page === 'dg_reports_recap') {
         }
     }
     $defaultCalendarMonth = $calendarMaxMonth !== '' ? $calendarMaxMonth : date('Y-m');
+    $recapProgressFilterCounts = ['all' => count($groupRows), 'dg1' => 0, 'dg2' => 0, 'dg3' => 0];
+    foreach ($groupRows as $groupRow) {
+        $progressKey = strtolower(str_replace(' ', '', $normalizeProgressLabel((string) ($groupRow['progress'] ?? ''))));
+        if (isset($recapProgressFilterCounts[$progressKey])) {
+            $recapProgressFilterCounts[$progressKey]++;
+        }
+    }
 
     echo view('discipleship.partials.page-header', [
         'header' => [
             'tools' => [
                 'element' => 'div',
                 'partial' => 'discipleship.partials.page-header-controls.meeting-recap',
+                'data' => compact('recapProgressFilterCounts'),
             ],
         ],
     ])->render();

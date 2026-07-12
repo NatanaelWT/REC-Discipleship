@@ -2,11 +2,20 @@
   <input type="hidden" name="branch_id" value="{{ request()->query('branch_id') }}">
 @endif
 
+@php
+    $groupsStatusFilterCounts = is_array($groupsStatusFilterCounts ?? null) ? $groupsStatusFilterCounts : [];
+    $groupsStatusOptions = [
+        'all' => 'Semua Kelompok',
+        'active' => 'Kelompok Aktif',
+        'inactive' => 'Kelompok Tidak Aktif',
+    ];
+@endphp
+
 <div class="discipleship-page-header__filter">
   <select name="status" class="search groups-status-filter" aria-label="Filter status kelompok DG" data-discipleship-groups-status-input>
-    <option value="all" @selected($groupsStatusFilter === 'all')>Semua Kelompok</option>
-    <option value="active" @selected($groupsStatusFilter === 'active')>Kelompok Aktif</option>
-    <option value="inactive" @selected($groupsStatusFilter === 'inactive')>Kelompok Tidak Aktif</option>
+    @foreach ($groupsStatusOptions as $statusValue => $statusLabel)
+      <option value="{{ $statusValue }}" @selected($groupsStatusFilter === $statusValue)>{{ $statusLabel }} ({{ (string) ((int) ($groupsStatusFilterCounts[$statusValue] ?? 0)) }})</option>
+    @endforeach
   </select>
 </div>
 

@@ -59,6 +59,7 @@ class DiscipleshipGroupIndexData
             'groupsInDg1Count' => $stats['dg1'],
             'groupsInDg2Count' => $stats['dg2'],
             'groupsInDg3Count' => $stats['dg3'],
+            'groupsStatusFilterCounts' => $this->statusFilterCounts($search),
             'groupsSearch' => $search,
             'groupsStatusFilter' => $status,
             'groupsPage' => $page,
@@ -187,6 +188,16 @@ class DiscipleshipGroupIndexData
             'dg1' => (int) ($row->dg1 ?? 0),
             'dg2' => (int) ($row->dg2 ?? 0),
             'dg3' => (int) ($row->dg3 ?? 0),
+        ];
+    }
+
+    /** @return array<string, int> */
+    private function statusFilterCounts(string $search): array
+    {
+        return [
+            'all' => (int) $this->filteredGroupQuery($search, 'all')->count('discipleship_groups.id'),
+            'active' => (int) $this->filteredGroupQuery($search, 'active')->count('discipleship_groups.id'),
+            'inactive' => (int) $this->filteredGroupQuery($search, 'inactive')->count('discipleship_groups.id'),
         ];
     }
 

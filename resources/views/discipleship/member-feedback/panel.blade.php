@@ -32,6 +32,13 @@
       $progressKey = fn (string $value): string => strtolower(str_replace(' ', '', normalize_dg_progress_value($value) ?: $value));
       $feedbackRowKey = fn (array $row): string => (string) ($row['id'] ?? md5(json_encode($row) ?: 'feedback'));
       $groupSessionKey = fn ($groupId, int $session): string => (string) ((int) $groupId).'-'.(string) $session;
+      $memberFeedbackProgressFilterCounts = ['all' => count($groupRows), 'dg1' => 0, 'dg2' => 0, 'dg3' => 0];
+      foreach ($groupRows as $groupRow) {
+          $feedbackProgressKey = $progressKey((string) ($groupRow['group_progress'] ?? ''));
+          if (isset($memberFeedbackProgressFilterCounts[$feedbackProgressKey])) {
+              $memberFeedbackProgressFilterCounts[$feedbackProgressKey]++;
+          }
+      }
   @endphp
 
   @include('discipleship.partials.page-header', [
@@ -40,7 +47,7 @@
               'element' => 'div',
               'attributes' => ['class' => 'table-tools member-feedback-recap-tools'],
               'partial' => 'discipleship.partials.page-header-controls.member-feedback-recap',
-              'data' => compact('filters'),
+              'data' => compact('filters', 'memberFeedbackProgressFilterCounts'),
           ],
       ],
   ])

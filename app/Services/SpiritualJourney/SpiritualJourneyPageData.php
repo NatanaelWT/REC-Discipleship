@@ -100,6 +100,7 @@ class SpiritualJourneyPageData
             'mskClasses' => $participantRows,
             'spiritualJourneySearch' => $search,
             'spiritualJourneyFilter' => $journeyFilter,
+            'spiritualJourneyFilterCounts' => $this->journeyFilterCounts($search),
             'spiritualJourneyTotalParticipants' => $stats['total'],
             'spiritualJourneyStats' => $stats,
             'spiritualJourneyPage' => $page,
@@ -292,6 +293,28 @@ class SpiritualJourneyPageData
                 });
             }
         });
+    }
+
+    /** @return array<string, int> */
+    private function journeyFilterCounts(string $search): array
+    {
+        $counts = [];
+        foreach (['all', 'dg_without_kgap'] as $filter) {
+            $query = Person::query()
+                ->from('orang as people')
+                ->whereIn('branch_id', $this->scope->branchIds());
+            $effectiveFilter = $filter;
+            $this->applyJourneyFilter($query, $effectiveFilter);
+            if ($search !== '') {
+                $query->where(static function (Builder $builder) use ($search): void {
+                    $builder->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%'])
+                        ->orWhereRaw('LOWER(whatsapp) LIKE ?', ['%'.$search.'%']);
+                });
+            }
+            $counts[$filter] = (int) $query->count('people.id');
+        }
+
+        return $counts;
     }
 
     private function people(array $personIds): array

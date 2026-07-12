@@ -738,6 +738,7 @@ if ($page === 'spiritual_journey') {
         'all' => 'Semua Peserta',
         'dg_without_kgap' => 'Minimal DG 1, Belum Kamp GAP',
     ];
+    $spiritualJourneyFilterCounts = is_array($spiritualJourneyFilterCounts ?? null) ? $spiritualJourneyFilterCounts : [];
     $journeyHeaderStats = [];
     $journeyHeaderStatKeys = ['dg1', 'kgap', 'dg2', 'dg3'];
     foreach ($journeyProgressRows as $statIndex => $row) {
@@ -758,6 +759,7 @@ if ($page === 'spiritual_journey') {
                 'data' => compact(
                     'journeyFilter',
                     'journeyFilterOptions',
+                    'spiritualJourneyFilterCounts',
                     'spiritualJourneySearch',
                 ),
             ],
