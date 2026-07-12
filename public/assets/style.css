@@ -16710,12 +16710,22 @@ details[open] > summary .activity-disclosure-icon::after {
 .discipleship-workspace__status {
   position: absolute;
   z-index: 30;
-  top: 12px;
-  left: 50%;
-  width: min(calc(100% - 24px), 560px);
+  top: 10px;
+  right: 10px;
+  left: auto;
+  justify-content: flex-start;
+  width: auto;
+  max-width: min(calc(100% - 20px), 360px);
   margin: 0;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-  transform: translateX(-50%);
+  padding: 7px 10px;
+  border-style: solid;
+  border-color: rgba(203, 213, 225, 0.78);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.94);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
+  text-align: left;
+  transform: none;
+  backdrop-filter: blur(8px);
 }
 
 .discipleship-workspace__status[hidden],
@@ -16740,8 +16750,8 @@ details[open] > summary .activity-disclosure-icon::after {
 .discipleship-workspace__loading::before,
 .discipleship-tab-loading::before {
   content: "";
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   border: 3px solid rgba(15, 118, 110, 0.18);
   border-top-color: var(--discipleship-kgap);
   border-radius: 999px;
@@ -17615,6 +17625,14 @@ details[open] > summary .activity-disclosure-icon::after {
   .discipleship-workspace__tabs {
     padding-inline: 5px;
     scroll-snap-type: x proximity;
+  }
+
+  .discipleship-workspace__status {
+    top: 8px;
+    right: 8px;
+    max-width: calc(100% - 16px);
+    padding: 6px 9px;
+    font-size: 12px;
   }
 
   .discipleship-workspace__tab {
