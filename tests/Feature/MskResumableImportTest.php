@@ -2,18 +2,25 @@
 
 namespace Tests\Feature;
 
+use App\Http\Requests\MskParticipants\ImportMskParticipantsRequest;
 use App\Models\MskImportJob;
 use App\Services\Branches\BranchCatalog;
+use App\Services\MskParticipants\MskImportBatchProcessor;
+use App\Services\MskParticipants\MskImportCoordinator;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\RejectsTrackingQueries;
 use Tests\TestCase;
 
 class MskResumableImportTest extends TestCase
 {
+    use RejectsTrackingQueries;
+
     /** @var array<int,string> */
     private array $temporaryFiles = [];
 
@@ -23,7 +30,6 @@ class MskResumableImportTest extends TestCase
         RuntimeBootstrap::load();
         Storage::fake('local');
         config([
-            'activity.enabled' => false,
             'msk_import.disk' => 'local',
             'msk_import.batch_size' => 1,
             'msk_import.batch_seconds' => 8,
@@ -44,6 +50,8 @@ class MskResumableImportTest extends TestCase
 
     public function test_import_is_persisted_resumable_and_batch_tokens_are_idempotent(): void
     {
+        $this->startTrackingQueryGuard();
+
         $aliceId = DB::table('orang')->insertGetId($this->person('Alice Lama', '0811'));
         $removedId = DB::table('orang')->insertGetId($this->person('Tidak Ada di File', '0822'));
         $xlsx = $this->xlsx([
@@ -138,6 +146,7 @@ class MskResumableImportTest extends TestCase
         $job = MskImportJob::query()->findOrFail($jobId);
         Storage::disk('local')->assertMissing((string) $job->source_path);
         Storage::disk('local')->assertMissing((string) $job->staged_path);
+        $this->assertNoTrackingQueriesWereExecuted();
     }
 
     public function test_preflight_validation_fails_before_any_domain_row_is_changed(): void
@@ -166,6 +175,78 @@ class MskResumableImportTest extends TestCase
             ->assertJsonPath('status', 'failed')
             ->assertJsonPath('errors.0.code', 'invalid_msk_month');
         $this->assertDatabaseHas('orang', ['id' => $aliceId, 'full_name' => 'Alice Aman']);
+    }
+
+    public function test_outer_transaction_failure_removes_new_import_files_and_job(): void
+    {
+        $xlsx = $this->xlsx([[
+            'full_name' => 'Rollback Upload',
+            'whatsapp' => '08123',
+            'msk_month' => '2026-07',
+            'session_numbers' => [1],
+        ]]);
+
+        Route::middleware('web')->post(
+            '/_tests/msk-import/start-rollback',
+            static function (ImportMskParticipantsRequest $request, MskImportCoordinator $imports) {
+                $imports->start($request);
+
+                return response('force outer rollback', 500);
+            },
+        );
+
+        $this->post('/_tests/msk-import/start-rollback', [
+            'action' => 'import_pemuridan_excel',
+            'idempotency_token' => 'rollback-upload',
+            'import_pemuridan_excel' => new UploadedFile($xlsx, 'rollback.xlsx', null, null, true),
+        ])->assertStatus(500);
+
+        $this->assertDatabaseCount('msk_import_jobs', 0);
+        $this->assertSame([], Storage::disk('local')->allFiles('imports/msk'));
+    }
+
+    public function test_outer_batch_failure_keeps_resumable_files_until_a_real_commit(): void
+    {
+        $xlsx = $this->xlsx([[
+            'full_name' => 'Resume Setelah Rollback',
+            'whatsapp' => '08456',
+            'msk_month' => '2026-07',
+            'session_numbers' => [1],
+        ]]);
+        $start = $this->withHeader('Accept', 'application/json')->post('/pemuridan/msk/impor', [
+            'action' => 'import_pemuridan_excel',
+            'idempotency_token' => 'batch-rollback',
+            'import_pemuridan_excel' => new UploadedFile($xlsx, 'batch-rollback.xlsx', null, null, true),
+        ])->assertStatus(202);
+        $jobId = (string) $start->json('id');
+        $job = MskImportJob::query()->findOrFail($jobId);
+        Storage::disk('local')->assertExists((string) $job->source_path);
+        Storage::disk('local')->assertExists((string) $job->staged_path);
+
+        Route::middleware('web')->post(
+            '/_tests/msk-import/{importJob}/batch-rollback',
+            static function (MskImportJob $importJob, MskImportBatchProcessor $processor) {
+                $processor->process($importJob, 'rolled-back-batch');
+
+                return response('force outer rollback', 500);
+            },
+        );
+
+        $this->post("/_tests/msk-import/{$jobId}/batch-rollback")->assertStatus(500);
+        $job->refresh();
+        $this->assertSame('pending', $job->status);
+        $this->assertSame(0, (int) $job->processed_rows);
+        Storage::disk('local')->assertExists((string) $job->source_path);
+        Storage::disk('local')->assertExists((string) $job->staged_path);
+
+        $this->postJson("/pemuridan/msk/impor/{$jobId}/batch", [
+            'action' => 'import_pemuridan_excel',
+            'batch_token' => 'committed-batch',
+        ])->assertOk()->assertJsonPath('status', 'completed');
+
+        $this->assertDatabaseHas('orang', ['full_name' => 'Resume Setelah Rollback']);
+        Storage::disk('local')->assertMissing((string) $job->source_path);
+        Storage::disk('local')->assertMissing((string) $job->staged_path);
     }
 
     /** @param array<int,array<string,mixed>> $participants */

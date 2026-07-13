@@ -4,7 +4,6 @@ namespace App\Services\MskParticipants;
 
 use App\Http\Requests\MskParticipants\ExportMskParticipantsRequest;
 use App\Models\Person;
-use App\Services\Activity\ActivityRecorder;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use Illuminate\Http\RedirectResponse;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -13,7 +12,6 @@ class MskParticipantExportService
 {
     public function __construct(
         private readonly CurrentDiscipleshipScope $scope,
-        private readonly ActivityRecorder $activity,
     ) {}
 
     public function export(ExportMskParticipantsRequest $request): BinaryFileResponse|RedirectResponse
@@ -43,7 +41,6 @@ class MskParticipantExportService
                         ->orWhereRaw('LOWER(email) LIKE ?', ['%'.$search.'%']);
                 });
             });
-        $participantCount = (clone $query)->count();
         $participantsToExport = (static function () use ($query): \Generator {
             foreach ($query->lazyById(500) as $participant) {
                 if ($participant instanceof Person) {
@@ -56,15 +53,6 @@ class MskParticipantExportService
         $xlsxPath = create_msk_import_export_xlsx($participantsToExport, $exportError);
         if ($xlsxPath === null) {
             $error = $exportError === 'zip_unavailable' ? 'export_zip_unavailable' : ($exportError === 'template_missing' ? 'export_template_missing' : 'export_failed');
-            $this->activity->record(
-                'export',
-                'msk.export.failed',
-                'msk_export',
-                $this->scope->selectedSlug(),
-                null,
-                'Ekspor peserta MSK gagal.',
-                metadata: ['error' => $error, 'batch_month' => $batchMonth, 'q' => $search],
-            );
 
             return redirect()->route('discipleship.msk-classes', $batchMonthParam + ['error' => $error]);
         }
@@ -81,24 +69,6 @@ class MskParticipantExportService
         if ($asciiDownloadName === '') {
             $asciiDownloadName = 'kelas-msk.xlsx';
         }
-
-        $this->activity->record(
-            'export',
-            'msk.export.completed',
-            'msk_export',
-            $this->scope->selectedSlug(),
-            $downloadName,
-            'Data peserta MSK diekspor.',
-            metadata: [
-                'batch_month' => $batchMonth,
-                'q' => $search,
-                'participant_count' => $participantCount,
-                'name' => $downloadName,
-                'size_bytes' => is_file($xlsxPath) ? (int) filesize($xlsxPath) : 0,
-                'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'sha256' => is_file($xlsxPath) ? hash_file('sha256', $xlsxPath) : null,
-            ],
-        );
 
         return response()
             ->download($xlsxPath, $asciiDownloadName, [

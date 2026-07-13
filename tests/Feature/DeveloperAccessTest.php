@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\ActivityRequest;
 use App\Models\User;
 use App\Services\Branches\BranchCatalog;
 use App\Services\Developer\DeveloperDiagnosticsService;
@@ -11,7 +10,6 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class DeveloperAccessTest extends TestCase
@@ -43,7 +41,9 @@ class DeveloperAccessTest extends TestCase
         $this->get('/developer/branches')->assertRedirect('/pemuridan/dashboard?error=access_denied');
         $this->get('/developer/config')->assertRedirect('/pemuridan/dashboard?error=access_denied');
         $this->get('/developer/database')->assertNotFound();
-        $this->get('/developer/statistics')->assertRedirect('/pemuridan/dashboard?error=access_denied');
+        $this->get('/developer/statistics')->assertNotFound();
+        $this->get('/developer/activities')->assertNotFound();
+        $this->get('/developer/maintenance')->assertNotFound();
     }
 
     public function test_database_admin_routes_and_sidebar_menu_are_removed(): void
@@ -436,13 +436,11 @@ class DeveloperAccessTest extends TestCase
         $this->assertSame(3, $summary['counts']['branches']);
     }
 
-    public function test_developer_dashboard_shows_operational_overview_and_omits_diagnostics(): void
+    public function test_developer_dashboard_shows_domain_overview_without_tracking_data(): void
     {
         $this->createCoreTables();
         $this->seedDeveloper();
-        $branchUserId = $this->seedUser('branch_user', 'pemuridan_cabang');
-        $this->createDashboardTelemetryTables();
-        $this->seedDashboardTelemetry($branchUserId);
+        $this->seedUser('branch_user', 'pemuridan_cabang');
         $this->loginAs('developer');
 
         $summary = app(DeveloperDiagnosticsService::class)->summary();
@@ -455,15 +453,19 @@ class DeveloperAccessTest extends TestCase
             ->assertSee('data-developer-header', false)
             ->assertSee('discipleship-page-header__stats', false)
             ->assertDontSee('developer-hub-nav', false)
-            ->assertSee('Kondisi Aplikasi')
-            ->assertSee('Kunjungan Publik')
-            ->assertSee('Aktivitas Terbaru')
-            ->assertSee('Perlu Dicek')
-            ->assertSee('Total Request')
-            ->assertSee('Error 5xx')
-            ->assertSee('/pemuridan/anggota', false)
-            ->assertSee('/pemuridan/gagal', false)
-            ->assertSee('/publik/materi', false)
+            ->assertSee('Akun dan Cabang')
+            ->assertSee('Total User')
+            ->assertSee('User Aktif')
+            ->assertSee('Developer Aktif')
+            ->assertSee('Cabang Pemuridan')
+            ->assertDontSee('Kondisi Aplikasi')
+            ->assertDontSee('Kunjungan Publik')
+            ->assertDontSee('Aktivitas Terbaru')
+            ->assertDontSee('Total Request')
+            ->assertDontSee('Error 5xx')
+            ->assertDontSee('/developer/statistics', false)
+            ->assertDontSee('/developer/activities', false)
+            ->assertDontSee('/developer/maintenance', false)
             ->assertDontSee('Aktif 5 Menit')
             ->assertDontSee('Akses Cepat')
             ->assertDontSee('Navigasi')
@@ -560,10 +562,6 @@ class DeveloperAccessTest extends TestCase
         foreach (['jurnal_umpan_balik', 'jurnal_temu_dg', 'dg_manual', 'keanggotaan_kelompok_dg', 'kelompok_dg', 'orang'] as $table) {
             Schema::dropIfExists($table);
         }
-        Schema::dropIfExists('aktivitas');
-        Schema::dropIfExists('kunjungan_halaman');
-        Schema::dropIfExists('peristiwa_aktivitas');
-        Schema::dropIfExists('permintaan_aktivitas');
         Schema::dropIfExists('konfigurasi');
         Schema::dropIfExists('percobaan_login');
         Schema::dropIfExists('cabang');
@@ -642,149 +640,6 @@ class DeveloperAccessTest extends TestCase
         app(BranchCatalog::class)->clearCache();
 
         return $id;
-    }
-
-    private function createDashboardTelemetryTables(): void
-    {
-        Schema::dropIfExists('aktivitas');
-        Schema::dropIfExists('kunjungan_halaman');
-        Schema::dropIfExists('peristiwa_aktivitas');
-        Schema::dropIfExists('permintaan_aktivitas');
-
-        $mergeMigration = require database_path('migrations/2026_07_07_000001_merge_activity_audit_tables.php');
-        $mergeMigration->up();
-    }
-
-    private function seedDashboardTelemetry(int $branchUserId): void
-    {
-        $recentId = (string) Str::ulid();
-        $developerId = (string) Str::ulid();
-        $errorId = (string) Str::ulid();
-        $now = now('UTC');
-
-        DB::table('aktivitas')->insert([
-            [
-                'id' => $recentId,
-                'actor_type' => 'user',
-                'user_id' => $branchUserId,
-                'username' => 'branch_user',
-                'role' => 'pemuridan_cabang',
-                'method' => 'POST',
-                'route_name' => 'discipleship.people-list',
-                'path' => '/pemuridan/anggota',
-                'category' => 'data',
-                'action' => 'people.update',
-                'http_status' => 200,
-                'outcome' => 'success',
-                'duration_ms' => 84.5,
-                'started_at' => $now->copy()->subMinutes(20)->format('Y-m-d H:i:s.u'),
-                'completed_at' => $now->copy()->subMinutes(20)->addMilliseconds(85)->format('Y-m-d H:i:s.u'),
-            ],
-            [
-                'id' => $developerId,
-                'actor_type' => 'user',
-                'user_id' => 1,
-                'username' => 'developer',
-                'role' => 'developer',
-                'method' => 'GET',
-                'route_name' => 'developer.config',
-                'path' => '/developer/config',
-                'category' => 'developer',
-                'action' => 'config.open',
-                'http_status' => 200,
-                'outcome' => 'success',
-                'duration_ms' => 33.1,
-                'started_at' => $now->copy()->subMinutes(10)->format('Y-m-d H:i:s.u'),
-                'completed_at' => $now->copy()->subMinutes(10)->addMilliseconds(34)->format('Y-m-d H:i:s.u'),
-            ],
-            [
-                'id' => $errorId,
-                'actor_type' => 'user',
-                'user_id' => $branchUserId,
-                'username' => 'branch_user',
-                'role' => 'pemuridan_cabang',
-                'method' => 'GET',
-                'route_name' => 'discipleship.error',
-                'path' => '/pemuridan/gagal',
-                'category' => 'request',
-                'action' => 'request.failed',
-                'http_status' => 500,
-                'outcome' => 'error',
-                'duration_ms' => 140.2,
-                'started_at' => $now->copy()->subMinutes(5)->format('Y-m-d H:i:s.u'),
-                'completed_at' => $now->copy()->subMinutes(5)->addMilliseconds(141)->format('Y-m-d H:i:s.u'),
-            ],
-        ]);
-
-        ActivityRequest::query()->findOrFail($recentId)->appendEventEntry(['category' => 'data', 'action' => 'people.updated', 'subject_label' => 'Peserta Test', 'description' => 'Updated person', 'occurred_at' => $now->copy()->subMinutes(20)->format('Y-m-d H:i:s.u')]);
-        ActivityRequest::query()->findOrFail($recentId)->appendEventEntry(['category' => 'data', 'action' => 'audit.logged', 'subject_label' => 'Peserta Test', 'description' => 'Audit logged', 'occurred_at' => $now->copy()->subMinutes(20)->format('Y-m-d H:i:s.u')]);
-        ActivityRequest::query()->findOrFail($errorId)->appendEventEntry(['category' => 'request', 'action' => 'request.failed', 'subject_label' => 'Error Test', 'description' => 'Failure logged', 'occurred_at' => $now->copy()->subMinutes(5)->format('Y-m-d H:i:s.u')]);
-
-        DB::table('aktivitas')->insert([
-            $this->dashboardPageViewRow([
-                'id' => (string) Str::ulid(),
-                'visitor_hash' => str_repeat('a', 64),
-                'user_id' => null,
-                'segment' => 'publik',
-                'route_name' => 'public.materials',
-                'path' => '/publik/materi',
-                'is_bot' => false,
-                'is_prefetch' => false,
-                'response_ms' => 52.4,
-                'occurred_at' => $now->copy()->subDay()->format('Y-m-d H:i:s.u'),
-            ]),
-            $this->dashboardPageViewRow([
-                'id' => (string) Str::ulid(),
-                'visitor_hash' => str_repeat('b', 64),
-                'user_id' => null,
-                'segment' => 'publik',
-                'route_name' => 'public.bot',
-                'path' => '/publik/bot',
-                'is_bot' => true,
-                'is_prefetch' => false,
-                'response_ms' => 20.0,
-                'occurred_at' => $now->copy()->subDay()->format('Y-m-d H:i:s.u'),
-            ]),
-            $this->dashboardPageViewRow([
-                'id' => (string) Str::ulid(),
-                'visitor_hash' => str_repeat('c', 64),
-                'user_id' => null,
-                'segment' => 'publik',
-                'route_name' => 'public.prefetch',
-                'path' => '/publik/prefetch',
-                'is_bot' => false,
-                'is_prefetch' => true,
-                'response_ms' => 19.0,
-                'occurred_at' => $now->copy()->subDay()->format('Y-m-d H:i:s.u'),
-            ]),
-        ]);
-    }
-
-    /** @param array<string, mixed> $overrides */
-    private function dashboardPageViewRow(array $overrides): array
-    {
-        $id = (string) ($overrides['id'] ?? Str::ulid());
-        $occurredAt = (string) ($overrides['occurred_at'] ?? now('UTC')->format('Y-m-d H:i:s.u'));
-        $path = (string) ($overrides['path'] ?? '/');
-
-        return array_merge([
-            'id' => $id,
-            'actor_type' => 'anonymous',
-            'method' => 'GET',
-            'path' => $path,
-            'category' => 'request',
-            'action' => 'request.page_view',
-            'http_status' => 200,
-            'outcome' => 'succeeded',
-            'started_at' => $occurredAt,
-            'completed_at' => $occurredAt,
-            'is_page_view' => true,
-            'identity_source' => 'legacy_session',
-            'device_type' => 'unknown',
-            'is_bot' => false,
-            'is_prefetch' => false,
-            'occurred_at' => $occurredAt,
-        ], $overrides, ['id' => $id]);
     }
 
     private function seedDeveloper(): int

@@ -71,10 +71,8 @@ class DiscipleshipHeroStatsLayoutTest extends TestCase
         foreach ([
             'dashboard.blade.php',
             'users.blade.php',
+            'branches.blade.php',
             'config.blade.php',
-            'statistics/index.blade.php',
-            'activities/index.blade.php',
-            'activities/show.blade.php',
         ] as $relativePath) {
             $source = file_get_contents(resource_path('views/developer/'.$relativePath));
             $this->assertIsString($source);

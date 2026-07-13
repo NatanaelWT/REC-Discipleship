@@ -21,10 +21,6 @@ const domainPatterns = {
     developer: [
         /(?:^|[^a-z0-9_-])page-developer/i,
         /(?:^|[^a-z0-9_-])developer-/i,
-        /(?:^|[^a-z0-9_-])page-activities/i,
-        /(?:^|[^a-z0-9_-])activity-/i,
-        /(?:^|[^a-z0-9_-])page-analytics/i,
-        /(?:^|[^a-z0-9_-])analytics-/i,
     ],
     worship: [
         /(?:^|[^a-z0-9_-])page-worship/i,

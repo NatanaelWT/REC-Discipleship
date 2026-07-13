@@ -2,24 +2,12 @@
 
 namespace App\Providers;
 
-use App\Models\AppConfig;
-use App\Models\Branch;
-use App\Models\DifficultQuestion;
-use App\Models\DiscipleshipFeedback;
-use App\Models\DiscipleshipGroup;
-use App\Models\DiscipleshipGroupPerson;
-use App\Models\DiscipleshipMeetingReport;
-use App\Models\Person;
-use App\Models\PublicMaterialFile;
-use App\Models\User;
-use App\Models\WorshipServiceSchedule;
-use App\Observers\AuditableModelObserver;
-use App\Services\Activity\ActivityContext;
 use App\Services\AppConfig\AppConfigService;
 use App\Services\Auth\CurrentUserContext;
 use App\Services\Branches\BranchCatalog;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\Discipleship\DiscipleshipReadCache;
+use App\Services\Mutation\MutationLifecycle;
 use App\Services\Performance\RequestPerformanceMonitor;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -35,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(DiscipleshipReadCache::class);
         $this->app->scoped(CurrentUserContext::class);
         $this->app->scoped(CurrentDiscipleshipScope::class);
-        $this->app->scoped(ActivityContext::class);
+        $this->app->scoped(MutationLifecycle::class);
         $this->app->singleton(RequestPerformanceMonitor::class);
     }
 
@@ -54,22 +42,6 @@ class AppServiceProvider extends ServiceProvider
         if ((bool) config('performance.enabled') || $this->app->environment(['local', 'staging'])) {
             $monitor = $this->app->make(RequestPerformanceMonitor::class);
             DB::listen($monitor->record(...));
-        }
-
-        foreach ([
-            AppConfig::class,
-            Branch::class,
-            DifficultQuestion::class,
-            DiscipleshipFeedback::class,
-            DiscipleshipGroup::class,
-            DiscipleshipGroupPerson::class,
-            DiscipleshipMeetingReport::class,
-            Person::class,
-            PublicMaterialFile::class,
-            User::class,
-            WorshipServiceSchedule::class,
-        ] as $model) {
-            $model::observe(AuditableModelObserver::class);
         }
     }
 }

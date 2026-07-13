@@ -3463,10 +3463,6 @@ textarea:focus-visible {
 
 .nav-item-visual[data-nav-icon="config"] .nav-item-visual-icon::before { content: "⚙"; }
 
-.nav-item-visual[data-nav-icon="statistics"] .nav-item-visual-icon::before { content: "▥"; }
-
-.nav-item-visual[data-nav-icon="activities"] .nav-item-visual-icon::before { content: "↻"; }
-
 .nav-item-visual.active .nav-item-visual-icon {
   background: rgba(45, 212, 191, .18);
   color: #5eead4;
@@ -3479,10 +3475,6 @@ textarea:focus-visible {
 .nav-item-visual[data-nav-icon="users"] .nav-item-visual-icon::before { content: "\25CE"; }
 
 .nav-item-visual[data-nav-icon="config"] .nav-item-visual-icon::before { content: "\2699"; }
-
-.nav-item-visual[data-nav-icon="statistics"] .nav-item-visual-icon::before { content: "\25A5"; }
-
-.nav-item-visual[data-nav-icon="activities"] .nav-item-visual-icon::before { content: "\21BB"; }
 
 /* Developer branch management */
 

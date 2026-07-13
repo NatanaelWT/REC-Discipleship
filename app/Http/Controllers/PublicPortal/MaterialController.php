@@ -6,7 +6,7 @@ use App\Enums\PublicMaterialMenuKey;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicMaterials\ShowPublicMaterialRequest;
 use App\Models\PublicMaterialFile;
-use App\Services\Activity\ActivityRecorder;
+use App\Services\Mutation\MutationLifecycle;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,7 +53,7 @@ class MaterialController extends Controller
     public function upload(
         Request $request,
         string $menu,
-        ActivityRecorder $activity,
+        MutationLifecycle $lifecycle,
     ): RedirectResponse {
         if (! can_manage_public_materials()) {
             abort(403, 'Akses tidak diizinkan.');
@@ -97,9 +97,13 @@ class MaterialController extends Controller
         @chmod($fullPath, 0644);
         $relativePath = public_material_file_relative_path($folderPath, $targetFileName);
         if ($relativePath === '' || ! is_file($fullPath)) {
+            if (is_file($fullPath)) {
+                @unlink($fullPath);
+            }
+
             return $this->redirectToMaterialMenu($menu, ['material_error' => 'upload_failed']);
         }
-        $activity->onRollback(static function () use ($fullPath): void {
+        $lifecycle->onRollback(static function () use ($fullPath): void {
             if (is_file($fullPath)) {
                 @unlink($fullPath);
             }

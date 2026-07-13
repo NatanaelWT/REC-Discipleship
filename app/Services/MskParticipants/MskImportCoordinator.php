@@ -5,6 +5,7 @@ namespace App\Services\MskParticipants;
 use App\Exceptions\MskImportException;
 use App\Http\Requests\MskParticipants\ImportMskParticipantsRequest;
 use App\Models\MskImportJob;
+use App\Services\Mutation\MutationLifecycle;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -13,7 +14,10 @@ use Throwable;
 
 class MskImportCoordinator
 {
-    public function __construct(private readonly MskImportSpreadsheetStager $stager) {}
+    public function __construct(
+        private readonly MskImportSpreadsheetStager $stager,
+        private readonly MutationLifecycle $lifecycle,
+    ) {}
 
     public function start(ImportMskParticipantsRequest $request): MskImportJob
     {
@@ -84,6 +88,8 @@ class MskImportCoordinator
 
         $disk = Storage::disk((string) config('msk_import.disk', 'local'));
         $sourcePath = 'imports/msk/'.$job->getKey().'/source.xlsx';
+        $stagedPath = 'imports/msk/'.$job->getKey().'/rows.jsonl';
+        $this->lifecycle->onRollback(static fn () => $disk->delete([$sourcePath, $stagedPath]));
         try {
             if (! $disk->putFileAs(dirname($sourcePath), $file, basename($sourcePath))) {
                 throw new MskImportException('import_upload_failed');
@@ -105,7 +111,7 @@ class MskImportCoordinator
 
             return $job->refresh();
         } catch (Throwable $exception) {
-            $disk->delete([$sourcePath, 'imports/msk/'.$job->getKey().'/rows.jsonl']);
+            $disk->delete([$sourcePath, $stagedPath]);
             $error = $exception instanceof MskImportException ? $exception : new MskImportException('import_invalid_excel');
             $job->forceFill([
                 'status' => 'failed',

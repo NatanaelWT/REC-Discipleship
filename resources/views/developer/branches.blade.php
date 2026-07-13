@@ -57,7 +57,7 @@
 
     <section class="card developer-panel developer-section-card">
       <div class="developer-section-head">
-        <span class="developer-section-icon is-blue">@include('developer._icon', ['name' => 'statistics'])</span>
+        <span class="developer-section-icon is-blue">@include('developer._icon', ['name' => 'branches'])</span>
         <div><span class="developer-section-kicker">Data cabang</span><h2>Daftar Cabang</h2><p>Aktifkan cabang untuk produksi, atau nonaktifkan untuk eksperimen developer-only.</p></div>
         <span class="developer-count-pill">{{ number_format(count($branches), 0, ',', '.') }} cabang</span>
       </div>

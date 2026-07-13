@@ -6,7 +6,6 @@ use App\Enums\PublicMaterialMenuKey;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicMaterials\StreamPublicMaterialRequest;
 use App\Models\PublicMaterialFile;
-use App\Services\Activity\ActivityRecorder;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
 use App\Services\PublicMaterials\PublicMaterialFileStreamer;
 use App\Services\PublicMaterials\PublicMaterialRouteResolver;
@@ -43,7 +42,6 @@ class MaterialPreviewController extends Controller
         PublicMaterialCatalog $catalog,
         PublicMaterialFileStreamer $streamer,
         PublicMaterialTextFormatter $textFormatter,
-        ActivityRecorder $activity,
     ): BinaryFileResponse|RedirectResponse|Response|View {
         $menu = PublicMaterialMenuKey::fromKey($menu);
         if (! $menu instanceof PublicMaterialMenuKey) {
@@ -63,21 +61,6 @@ class MaterialPreviewController extends Controller
         if (public_material_resolve_path($path) === null) {
             return response('File tidak ditemukan.', 404);
         }
-
-        $activity->record(
-            'file',
-            'material.previewed',
-            'materi_publik',
-            $churchFile->getKey(),
-            (string) $churchFile->title,
-            'Materi dibuka untuk pratinjau.',
-            metadata: [
-                'name' => (string) $churchFile->original_file_name,
-                'size_bytes' => (int) $churchFile->size_bytes,
-                'mime_type' => (string) $churchFile->mime_type,
-                'sha256' => $this->storedChecksum($churchFile),
-            ],
-        );
 
         if (! is_public_material_previewable_path($path)) {
             return redirect()->route('materials.download', [
@@ -144,12 +127,5 @@ class MaterialPreviewController extends Controller
         $title = trim((string) preg_replace('/\s+/', ' ', $title));
 
         return $title !== '' ? $title : 'Materi DG';
-    }
-
-    private function storedChecksum(PublicMaterialFile $file): ?string
-    {
-        $checksum = strtolower(trim((string) $file->sha256));
-
-        return preg_match('/\A[a-f0-9]{64}\z/', $checksum) === 1 ? $checksum : null;
     }
 }

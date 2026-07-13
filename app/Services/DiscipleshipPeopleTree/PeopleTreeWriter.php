@@ -2,7 +2,6 @@
 
 namespace App\Services\DiscipleshipPeopleTree;
 
-use App\Services\Activity\ActivityRecorder;
 use App\Services\Branches\BranchCatalog;
 use App\Services\Routing\AppPageRouteMap;
 use Illuminate\Http\RedirectResponse;
@@ -14,7 +13,6 @@ class PeopleTreeWriter
     public function __construct(
         private readonly PeopleTreeModelStore $modelStore,
         private readonly BranchCatalog $branches,
-        private readonly ActivityRecorder $activity,
     ) {}
 
     public function savePerson(Request $request): RedirectResponse
@@ -89,21 +87,6 @@ class PeopleTreeWriter
             return redirect()->route('discipleship.tree', $redirectParams);
         }
 
-        $this->activity->record(
-            'export',
-            'people_tree.exported',
-            'discipleship_branch',
-            $targetBranch,
-            user_branch_label($targetBranch),
-            'Pohon pemuridan diekspor sebagai Graphviz DOT.',
-            metadata: [
-                'name' => 'pohon_pemuridan_'.$targetBranch.'.dot',
-                'size_bytes' => strlen($dotContent),
-                'mime_type' => 'text/vnd.graphviz',
-                'sha256' => hash('sha256', $dotContent),
-            ],
-        );
-
         $branchLabel = sanitize_file_name_component($targetBranch, 'cabang');
         $downloadName = preg_replace('/[\x00-\x1F\x7F"\\\\]+/', '_', 'pohon_pemuridan_'.$branchLabel.'.dot') ?? 'pohon_pemuridan.dot';
         if ($downloadName === '') {
@@ -141,7 +124,6 @@ class PeopleTreeWriter
 
         $branchCode = normalize_user_branch(current_user_branch());
         $model = $this->modelStore->modelForBranch($branchCode);
-        $beforeModel = $model;
         $members = [];
         $mskClasses = $this->modelStore->participantsForBranches([$branchCode], false);
         $result = ['ok' => false, 'error' => 'invalid_action'];
@@ -176,10 +158,7 @@ class PeopleTreeWriter
         }
 
         if (! empty($result['ok'])) {
-            $this->activity->withoutModelEvents(
-                fn () => $this->modelStore->replaceBranchModel($branchCode, $model),
-            );
-            $this->recordLogicalChanges($branchCode, $action, $beforeModel, $model);
+            $this->modelStore->replaceBranchModel($branchCode, $model);
 
             return $this->successRedirect($request, $action);
         }
@@ -250,81 +229,5 @@ class PeopleTreeWriter
             'complete_group',
             'reactivate_group',
         ];
-    }
-
-    /**
-     * @param  array<string, mixed>  $beforeModel
-     * @param  array<string, mixed>  $afterModel
-     */
-    private function recordLogicalChanges(string $branchCode, string $requestedAction, array $beforeModel, array $afterModel): void
-    {
-        $collections = [
-            'discipleship_persons' => 'orang',
-            'discipleship_groups' => 'kelompok_dg',
-            'group_memberships' => 'keanggotaan_kelompok_dg',
-            'group_leaderships' => 'keanggotaan_kelompok_dg',
-            'group_multiplications' => 'discipleship_group_multiplications',
-        ];
-        $counts = ['created' => 0, 'updated' => 0, 'deleted' => 0];
-
-        foreach ($collections as $collection => $subjectType) {
-            $beforeRows = $this->rowsByLogicalId($beforeModel[$collection] ?? []);
-            $afterRows = $this->rowsByLogicalId($afterModel[$collection] ?? []);
-            foreach (array_unique(array_merge(array_keys($beforeRows), array_keys($afterRows))) as $id) {
-                $before = $beforeRows[$id] ?? null;
-                $after = $afterRows[$id] ?? null;
-                if ($before === $after) {
-                    continue;
-                }
-
-                $operation = $before === null ? 'created' : ($after === null ? 'deleted' : 'updated');
-                $counts[$operation]++;
-                $row = $after ?? $before ?? [];
-                $label = trim((string) ($row['full_name'] ?? $row['name'] ?? $row['group_name'] ?? '')) ?: null;
-                $this->activity->record(
-                    'data',
-                    'people_tree.'.$requestedAction.'.'.$collection.'.'.$operation,
-                    $subjectType,
-                    $id,
-                    $label,
-                    ucfirst($operation).' data logis '.$collection.'.',
-                    is_array($before) ? $before : null,
-                    is_array($after) ? $after : null,
-                    ['branch' => $branchCode, 'requested_action' => $requestedAction],
-                );
-            }
-        }
-
-        $this->activity->record(
-            'data',
-            'people_tree.'.$requestedAction,
-            'discipleship_branch',
-            $branchCode,
-            user_branch_label($branchCode),
-            'Perubahan pohon pemuridan disimpan.',
-            metadata: ['branch' => $branchCode, 'counts' => $counts],
-        );
-    }
-
-    /** @return array<string, array<string, mixed>> */
-    private function rowsByLogicalId(mixed $rows): array
-    {
-        if (! is_array($rows)) {
-            return [];
-        }
-
-        $indexed = [];
-        foreach ($rows as $index => $row) {
-            if (! is_array($row)) {
-                continue;
-            }
-            $id = trim((string) ($row['id'] ?? ''));
-            if ($id === '') {
-                $id = 'row-'.$index.'-'.substr(hash('sha256', json_encode($row) ?: ''), 0, 16);
-            }
-            $indexed[$id] = $row;
-        }
-
-        return $indexed;
     }
 }

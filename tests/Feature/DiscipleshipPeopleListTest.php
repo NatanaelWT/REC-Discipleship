@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Services\Activity\ActivityRecorder;
 use App\Services\Branches\BranchCatalog;
 use App\Services\DiscipleshipPeople\DiscipleshipPeopleExportService;
 use Illuminate\Database\Schema\Blueprint;
@@ -10,12 +9,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\Concerns\AssertsDiscipleshipWorkspace;
+use Tests\Concerns\RejectsTrackingQueries;
 use Tests\TestCase;
 use ZipArchive;
 
 class DiscipleshipPeopleListTest extends TestCase
 {
-    use AssertsDiscipleshipWorkspace;
+    use AssertsDiscipleshipWorkspace, RejectsTrackingQueries;
 
     public function test_legacy_people_list_query_is_rejected(): void
     {
@@ -510,11 +510,8 @@ class DiscipleshipPeopleListTest extends TestCase
                 'updated_at' => now(),
             ],
         ]);
-        $this->mock(ActivityRecorder::class)
-            ->shouldReceive('record')
-            ->once()
-            ->andReturnNull();
         $this->actingAsRecUser();
+        $this->startTrackingQueryGuard();
 
         $response = $this->get('/pemuridan/anggota/ekspor?progress=all&q=Export+Utama');
 
@@ -556,6 +553,7 @@ class DiscipleshipPeopleListTest extends TestCase
         } finally {
             @unlink($path);
         }
+        $this->assertNoTrackingQueriesWereExecuted();
     }
 
     public function test_central_and_developer_can_export_people(): void
@@ -657,6 +655,3 @@ class DiscipleshipPeopleListTest extends TestCase
         app(BranchCatalog::class)->clearCache();
     }
 }
-
-
-

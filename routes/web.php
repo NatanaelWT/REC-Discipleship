@@ -3,12 +3,9 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Developer\DeveloperAccessController;
-use App\Http\Controllers\Developer\DeveloperActivityController;
 use App\Http\Controllers\Developer\DeveloperBranchController;
 use App\Http\Controllers\Developer\DeveloperConfigController;
 use App\Http\Controllers\Developer\DeveloperController;
-use App\Http\Controllers\Developer\DeveloperMaintenanceController;
-use App\Http\Controllers\Developer\DeveloperStatisticsController;
 use App\Http\Controllers\Developer\DeveloperUserController;
 use App\Http\Controllers\Discipleship\DashboardController as DiscipleshipDashboardController;
 use App\Http\Controllers\Discipleship\DifficultQuestionController as DiscipleshipDifficultQuestionController;
@@ -34,6 +31,8 @@ use App\Http\Controllers\Settings\SettingsController;
 use App\Http\Controllers\SystemRouteController;
 use App\Http\Controllers\Worship\ServiceScheduleController as WorshipServiceScheduleController;
 use App\Http\Controllers\Worship\ServiceScheduleImageController as WorshipServiceScheduleImageController;
+use App\Http\Middleware\WrapUnsafeRequestInTransaction;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('rec.maintenance')->group(function (): void {
@@ -42,9 +41,13 @@ Route::middleware('rec.maintenance')->group(function (): void {
 
     Route::get('/login', [LoginController::class, 'show'])->name('auth.login');
     Route::post('/login', [LoginController::class, 'store'])->name('auth.login.store');
-    Route::post('/logout', [LogoutController::class, 'destroy'])->middleware('rec.auth')->name('auth.logout');
+    Route::post('/logout', [LogoutController::class, 'destroy'])
+        ->middleware('rec.auth')
+        ->withoutMiddleware(WrapUnsafeRequestInTransaction::class)
+        ->name('auth.logout');
     Route::post('/developer/access/return', [DeveloperAccessController::class, 'stop'])
         ->middleware('rec.auth')
+        ->withoutMiddleware(WrapUnsafeRequestInTransaction::class)
         ->name('developer.access.return');
     Route::get('/pengaturan', [SettingsController::class, 'index'])->middleware('rec.page:settings')->name('settings');
     Route::post('/pengaturan', [SettingsController::class, 'update'])->middleware('rec.page:settings')->name('settings.update');
@@ -57,19 +60,13 @@ Route::middleware('rec.maintenance')->group(function (): void {
         Route::post('/branches/{branch}/delete', [DeveloperBranchController::class, 'delete'])->name('branches.delete');
         Route::get('/users', [DeveloperUserController::class, 'index'])->name('users');
         Route::post('/users', [DeveloperUserController::class, 'store'])->name('users.store');
-        Route::post('/users/{user}/access', [DeveloperAccessController::class, 'start'])->name('users.access');
+        Route::post('/users/{user}/access', [DeveloperAccessController::class, 'start'])
+            ->withoutMiddleware(WrapUnsafeRequestInTransaction::class)
+            ->name('users.access');
         Route::post('/users/{user}', [DeveloperUserController::class, 'update'])->name('users.update');
         Route::post('/users/{user}/password', [DeveloperUserController::class, 'resetPassword'])->name('users.password');
         Route::get('/config', [DeveloperConfigController::class, 'index'])->name('config');
         Route::post('/config', [DeveloperConfigController::class, 'update'])->name('config.update');
-        Route::get('/statistics', [DeveloperStatisticsController::class, 'index'])->name('statistics');
-        Route::get('/activities', [DeveloperActivityController::class, 'index'])->name('activities');
-        Route::get('/activities/{activityRequest}', [DeveloperActivityController::class, 'show'])->name('activities.show');
-        Route::get('/maintenance', [DeveloperMaintenanceController::class, 'index'])->name('maintenance');
-        Route::post('/maintenance', [DeveloperMaintenanceController::class, 'start'])->name('maintenance.start');
-        Route::post('/maintenance/{maintenanceRun}/batch', [DeveloperMaintenanceController::class, 'batch'])->name('maintenance.batch');
-        Route::post('/maintenance/quarantine/restore', [DeveloperMaintenanceController::class, 'restoreQuarantine'])->name('maintenance.quarantine.restore');
-        Route::post('/maintenance/quarantine/delete', [DeveloperMaintenanceController::class, 'deleteQuarantine'])->name('maintenance.quarantine.delete');
     });
 
     Route::prefix('publik')->name('public.')->group(function (): void {
@@ -88,7 +85,9 @@ Route::middleware('rec.maintenance')->group(function (): void {
         Route::get('/pertanyaan-sulit/kirim', [PublicDifficultQuestionController::class, 'create'])->name('difficult-question.submit');
         Route::post('/pertanyaan-sulit/kirim', [PublicDifficultQuestionController::class, 'store'])->name('difficult-question.store');
         Route::get('/pertanyaan-sulit/jawaban', [PublicDifficultAnswerController::class, 'show'])->name('difficult-question.answer');
-        Route::post('/pertanyaan-sulit/jawaban', [PublicDifficultAnswerController::class, 'lookup'])->name('difficult-question.lookup');
+        Route::post('/pertanyaan-sulit/jawaban', [PublicDifficultAnswerController::class, 'lookup'])
+            ->withoutMiddleware(WrapUnsafeRequestInTransaction::class)
+            ->name('difficult-question.lookup');
         Route::get('/menu-kosong', [PublicHomeController::class, 'emptyMenu'])->name('menu-empty');
     });
 
@@ -127,7 +126,10 @@ Route::middleware('rec.maintenance')->group(function (): void {
         Route::post('/pohon/kelompok/keluar', [DiscipleshipPeopleTreeController::class, 'leavePersonGroup'])->middleware('rec.page:people_tree')->name('tree.groups.leave');
         Route::post('/pohon/kelompok/selesai', [DiscipleshipPeopleTreeController::class, 'completeGroup'])->middleware('rec.page:people_tree')->name('tree.groups.complete');
         Route::post('/pohon/kelompok/aktifkan', [DiscipleshipPeopleTreeController::class, 'reactivateGroup'])->middleware('rec.page:people_tree')->name('tree.groups.reactivate');
-        Route::post('/pohon/export-dot', [DiscipleshipPeopleTreeController::class, 'exportDot'])->middleware('rec.page:people_tree')->name('tree.export-dot');
+        Route::post('/pohon/export-dot', [DiscipleshipPeopleTreeController::class, 'exportDot'])
+            ->middleware('rec.page:people_tree')
+            ->withoutMiddleware(WrapUnsafeRequestInTransaction::class)
+            ->name('tree.export-dot');
         Route::get('/spiritual-journey', [DiscipleshipSpiritualJourneyController::class, 'index'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey');
         Route::get('/spiritual-journey/rows', [DiscipleshipSpiritualJourneyController::class, 'rows'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.rows');
         Route::get('/spiritual-journey/{participant}/detail', [DiscipleshipSpiritualJourneyController::class, 'detail'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.detail');
@@ -142,7 +144,10 @@ Route::middleware('rec.maintenance')->group(function (): void {
         Route::post('/msk/impor', [DiscipleshipMskParticipantController::class, 'import'])->middleware('rec.page:msk_classes')->name('msk-classes.import');
         Route::get('/msk/impor/{importJob}/status', [DiscipleshipMskParticipantController::class, 'importStatus'])->middleware('rec.page:msk_classes')->name('msk-classes.import-status');
         Route::post('/msk/impor/{importJob}/batch', [DiscipleshipMskParticipantController::class, 'importBatch'])->middleware('rec.page:msk_classes')->name('msk-classes.import-batch');
-        Route::post('/msk/ekspor', [DiscipleshipMskParticipantController::class, 'export'])->middleware('rec.page:msk_classes')->name('msk-classes.export');
+        Route::post('/msk/ekspor', [DiscipleshipMskParticipantController::class, 'export'])
+            ->middleware('rec.page:msk_classes')
+            ->withoutMiddleware(WrapUnsafeRequestInTransaction::class)
+            ->name('msk-classes.export');
         Route::post('/msk/{participant}/sesi', [DiscipleshipMskParticipantController::class, 'updateSessions'])->middleware('rec.page:msk_classes')->name('msk-classes.sessions');
         Route::post('/msk/{participant}/nonaktif', [DiscipleshipMskParticipantController::class, 'deactivate'])->middleware('rec.page:msk_classes')->name('msk-classes.deactivate');
         Route::post('/msk/{participant}/aktif', [DiscipleshipMskParticipantController::class, 'reactivate'])->middleware('rec.page:msk_classes')->name('msk-classes.reactivate');
@@ -168,5 +173,6 @@ Route::middleware('rec.maintenance')->group(function (): void {
 
     Route::match(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], '/{fallbackPath}', [SystemRouteController::class, 'notFound'])
         ->where('fallbackPath', '.*')
+        ->withoutMiddleware(ValidateCsrfToken::class)
         ->fallback();
 });

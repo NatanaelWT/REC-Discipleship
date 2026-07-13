@@ -4,7 +4,7 @@ namespace App\Services\MskParticipants;
 
 use App\Models\MskImportJob;
 use App\Models\Person;
-use App\Services\Activity\ActivityRecorder;
+use App\Services\Mutation\MutationLifecycle;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -12,7 +12,7 @@ use Throwable;
 
 class MskImportBatchProcessor
 {
-    public function __construct(private readonly ActivityRecorder $activity) {}
+    public function __construct(private readonly MutationLifecycle $lifecycle) {}
 
     /** @return array<string,mixed> */
     public function process(MskImportJob $requestedJob, string $batchToken): array
@@ -133,34 +133,17 @@ class MskImportBatchProcessor
                     'updated_at' => now(),
                 ]);
 
-                $this->activity->record(
-                    'import',
-                    $completed ? 'msk.import.completed' : 'msk.import.batch',
-                    'msk_import',
-                    $job->getKey(),
-                    $job->source_name,
-                    $completed ? 'Import peserta MSK selesai.' : 'Batch import peserta MSK diproses.',
-                    metadata: [
-                        'branch_id' => (int) $job->branch_id,
-                        'batch_rows' => count($rows),
-                        'inserted' => $inserted,
-                        'updated' => $updated,
-                        'processed' => $processed,
-                        'total' => (int) $job->total_rows,
-                    ],
-                );
-
                 return $result;
             });
 
             if (($result['status'] ?? '') === 'completed') {
-                $this->cleanupFiles($claimed);
+                $this->scheduleFileCleanup($claimed);
             }
 
             return $result;
         } catch (Throwable $exception) {
             $failed = $this->fail($claimed, $lockToken, $batchToken, $exception);
-            $this->cleanupFiles($failed);
+            $this->scheduleFileCleanup($failed);
 
             return $this->status($failed);
         }
@@ -360,6 +343,17 @@ class MskImportBatchProcessor
                 $disk->delete($path);
             }
         }
+    }
+
+    private function scheduleFileCleanup(MskImportJob $job): void
+    {
+        if (! $this->lifecycle->active()) {
+            $this->cleanupFiles($job);
+
+            return;
+        }
+
+        $this->lifecycle->onCommit(fn () => $this->cleanupFiles($job));
     }
 
     /** @return array<string,mixed>|null */

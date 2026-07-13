@@ -1,6 +1,8 @@
 <?php
 
+use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\Routing\AppPageRouteMap;
+use Illuminate\Foundation\Vite;
 
 function append_body_classes(array &$bodyClasses, string $classes): void
 {
@@ -73,7 +75,7 @@ function icon_svg(string $name): string
 function page_header_active_group(string $currentPage): string
 {
     $groupPages = [
-        'developer' => ['developer_dashboard', 'developer_branches', 'developer_users', 'developer_config', 'developer_statistics', 'developer_activities'],
+        'developer' => ['developer_dashboard', 'developer_branches', 'developer_users', 'developer_config'],
         'pemuridan' => array_merge(array_keys(discipleship_page_map()), ['discipleship_targets', 'difficult_questions_admin']),
         'worship' => ['worship_penatalayan'],
     ];
@@ -96,7 +98,7 @@ function render_vite_entries(array $entries): bool
         return false;
     }
 
-    echo (string) app(\Illuminate\Foundation\Vite::class)($entries);
+    echo (string) app(Vite::class)($entries);
 
     return true;
 }
@@ -104,7 +106,7 @@ function render_vite_entries(array $entries): bool
 function frontend_asset_domain(string $currentPage = '', string $bodyClass = ''): string
 {
     $context = strtolower(trim($currentPage.' '.$bodyClass));
-    if (str_contains($context, 'developer') || str_contains($context, 'activities') || str_contains($context, 'analytics')) {
+    if (str_contains($context, 'developer')) {
         return 'developer';
     }
     if (str_contains($context, 'worship') || str_contains($context, 'penatalayan')) {
@@ -278,7 +280,7 @@ function render_sidebar_nav_group(string $label, string $groupKey, array $items,
 
 function discipleship_sidebar_branch_scopes(string $currentBranch): array
 {
-    $scope = app(\App\Services\Discipleship\CurrentDiscipleshipScope::class);
+    $scope = app(CurrentDiscipleshipScope::class);
     $developerAccess = function_exists('is_developer_session') && is_developer_session();
     $canSwitchBranch = is_effective_central_discipleship_readonly() || $developerAccess;
 
@@ -384,8 +386,6 @@ function render_sidebar_navigation(string $currentPage, string $currentBranch, b
             ['label' => 'Cabang', 'page' => 'developer_branches', 'href' => route('developer.branches')],
             ['label' => 'User', 'page' => 'developer_users', 'href' => route('developer.users')],
             ['label' => 'Config', 'page' => 'developer_config', 'href' => route('developer.config')],
-            ['label' => 'Statistik', 'page' => 'developer_statistics', 'href' => route('developer.statistics')],
-            ['label' => 'Aktivitas', 'page' => 'developer_activities', 'href' => route('developer.activities')],
         ], $currentPage, $activeGroup);
 
         render_sidebar_nav_group('Ibadah Umum', 'worship', [

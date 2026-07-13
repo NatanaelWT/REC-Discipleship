@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Auth;
 class DeveloperAccessSession
 {
     private const ORIGINAL_USER_ID = 'developer_access.original_user_id';
+
     private const TARGET_USER_ID = 'developer_access.target_user_id';
+
     private const STARTED_AT = 'developer_access.started_at';
 
     /** @return array<int, string> */
@@ -129,20 +131,6 @@ class DeveloperAccessSession
         $session = $this->session();
 
         return $session instanceof Store ? trim((string) $session->get(self::STARTED_AT, '')) : '';
-    }
-
-    /** @return array<string, mixed> */
-    public function metadata(?User $target = null): array
-    {
-        $original = $this->authenticatedUser();
-        $target ??= $this->targetUser($original);
-
-        return [
-            'original_user_id' => $original instanceof User ? (int) $original->getKey() : null,
-            'original_username' => $original instanceof User ? trim((string) $original->username) : null,
-            'target_user_id' => $target instanceof User ? (int) $target->getKey() : null,
-            'target_username' => $target instanceof User ? trim((string) $target->username) : null,
-        ];
     }
 
     private function authenticatedUser(): ?User

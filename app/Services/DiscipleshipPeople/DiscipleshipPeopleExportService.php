@@ -3,7 +3,6 @@
 namespace App\Services\DiscipleshipPeople;
 
 use App\Http\Requests\DiscipleshipPeople\ExportDiscipleshipPeopleRequest;
-use App\Services\Activity\ActivityRecorder;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use Illuminate\Http\RedirectResponse;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -14,7 +13,6 @@ class DiscipleshipPeopleExportService
         private readonly DiscipleshipPeopleListData $listData,
         private readonly DiscipleshipPeopleXlsxWriter $writer,
         private readonly CurrentDiscipleshipScope $scope,
-        private readonly ActivityRecorder $activity,
     ) {}
 
     public function export(ExportDiscipleshipPeopleRequest $request): BinaryFileResponse|RedirectResponse
@@ -51,15 +49,6 @@ class DiscipleshipPeopleExportService
         $xlsxPath = $this->writer->create($headers, $rows, $subtitle, $errorCode);
         if ($xlsxPath === null) {
             $error = $errorCode === 'zip_unavailable' ? 'export_zip_unavailable' : 'export_failed';
-            $this->activity->record(
-                'export',
-                'people.export.failed',
-                'people_export',
-                $this->scope->selectedSlug(),
-                null,
-                'Ekspor Anggota DG gagal.',
-                metadata: ['error' => $error, 'progress' => $progress, 'search' => $search],
-            );
 
             return redirect()->route('discipleship.people-list', $this->redirectParams($request) + ['error' => $error]);
         }
@@ -68,24 +57,6 @@ class DiscipleshipPeopleExportService
         $filterLabel = sanitize_file_name_component($progressLabel, 'semua-peserta');
         $downloadName = 'anggota-dg-'.$branchLabel.'-'.$filterLabel.'-'.now()->format('Y-m-d').'.xlsx';
         $asciiDownloadName = preg_replace('/[^A-Za-z0-9._-]+/', '_', $downloadName) ?: 'anggota-dg.xlsx';
-
-        $this->activity->record(
-            'export',
-            'people.export.completed',
-            'people_export',
-            $this->scope->selectedSlug(),
-            $downloadName,
-            'Data Anggota DG diekspor.',
-            metadata: [
-                'progress' => $progress,
-                'search' => $search,
-                'people_count' => (int) $context['total'],
-                'name' => $downloadName,
-                'size_bytes' => (int) filesize($xlsxPath),
-                'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'sha256' => hash_file('sha256', $xlsxPath),
-            ],
-        );
 
         return response()
             ->download($xlsxPath, $asciiDownloadName, [

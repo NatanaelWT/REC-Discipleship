@@ -1,17 +1,17 @@
 <?php
 
 use App\Http\Middleware\BootstrapRuntime;
+use App\Http\Middleware\ExpireLegacyAnalyticsIdentity;
 use App\Http\Middleware\HandleMaintenanceMode;
 use App\Http\Middleware\InvalidateDiscipleshipReadCache;
 use App\Http\Middleware\MeasureRequestPerformance;
 use App\Http\Middleware\RejectLegacyPageQuery;
 use App\Http\Middleware\RequireRecAuthentication;
 use App\Http\Middleware\RequireRecPageAccess;
-use App\Http\Middleware\ValidateCsrfTokenAndRecordActivity;
+use App\Http\Middleware\WrapUnsafeRequestInTransaction;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,11 +20,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(prepend: [BootstrapRuntime::class]);
+        $middleware->web(
+            prepend: [BootstrapRuntime::class],
+            append: [ExpireLegacyAnalyticsIdentity::class, WrapUnsafeRequestInTransaction::class],
+        );
         $middleware->append(MeasureRequestPerformance::class);
         $middleware->append(RejectLegacyPageQuery::class);
         $middleware->append(InvalidateDiscipleshipReadCache::class);
-        $middleware->replaceInGroup('web', ValidateCsrfToken::class, ValidateCsrfTokenAndRecordActivity::class);
         $middleware->alias([
             'rec.maintenance' => HandleMaintenanceMode::class,
             'rec.auth' => RequireRecAuthentication::class,

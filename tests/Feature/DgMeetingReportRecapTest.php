@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\ActivityRequest;
 use App\Services\Branches\BranchCatalog;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
@@ -308,7 +307,6 @@ class DgMeetingReportRecapTest extends TestCase
     {
         $this->createTables();
         $ids = $this->seedGmReportFormData();
-        $this->createActivityTables();
 
         $response = $this->post('/publik/jurnal-dg/gm/laporan', [
             'public_cabang' => 'gm',
@@ -331,9 +329,6 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertSessionMissing('public_dg_report_old.meeting_photos');
         $this->assertSame(0, DB::table('jurnal_temu_dg')->count());
 
-        $activity = ActivityRequest::query()->findOrFail($response->headers->get('X-Activity-Request-Id'));
-        $this->assertSame('failed', $activity->outcome);
-        $this->assertTrue($activity->events()->where('action', 'request.validation_failed')->exists());
     }
 
     public function test_public_dg_report_rejects_oversized_photo_without_server_error(): void
@@ -394,12 +389,11 @@ class DgMeetingReportRecapTest extends TestCase
         $this->assertSame($filesBefore, $filesAfter);
     }
 
-    public function test_public_dg_report_rejects_real_leader_group_mismatch_and_audits_failure(): void
+    public function test_public_dg_report_rejects_real_leader_group_mismatch(): void
     {
         $this->createTables();
         $ids = $this->seedReport();
         $otherLeaderId = $this->seedOtherLeaderGroup();
-        $this->createActivityTables();
         $initialReportCount = DB::table('jurnal_temu_dg')->count();
 
         $response = $this->post('/publik/jurnal-dg/kutisari/laporan', [
@@ -418,9 +412,6 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertSessionHas('public_dg_report_old.group_id', (string) $ids['group_id']);
         $this->assertSame($initialReportCount, DB::table('jurnal_temu_dg')->count());
 
-        $activity = ActivityRequest::query()->findOrFail($response->headers->get('X-Activity-Request-Id'));
-        $this->assertSame('failed', $activity->outcome);
-        $this->assertTrue($activity->events()->where('action', 'request.validation_failed')->exists());
     }
 
     private function createTables(): void
@@ -505,22 +496,6 @@ class DgMeetingReportRecapTest extends TestCase
             $table->timestamps();
         });
 
-    }
-
-    private function createActivityTables(): void
-    {
-        config(['activity.enabled' => true, 'activity.storage' => 'legacy']);
-        Schema::dropIfExists('aktivitas');
-        Schema::dropIfExists('peristiwa_aktivitas');
-        Schema::dropIfExists('permintaan_aktivitas');
-        Schema::dropIfExists('activity_events');
-        Schema::dropIfExists('activity_requests');
-        $activityMigration = require database_path('migrations/2026_06_21_000001_create_activity_audit_tables.php');
-        $activityMigration->up();
-        $renameMigration = require database_path('migrations/2026_07_04_000003_rename_domain_tables_to_indonesian.php');
-        $renameMigration->up();
-        $mergeMigration = require database_path('migrations/2026_07_07_000001_merge_activity_audit_tables.php');
-        $mergeMigration->up();
     }
 
     /** @return array{leader_id:int,member_id:int,group_id:int,report_id:int} */
@@ -674,6 +649,3 @@ class DgMeetingReportRecapTest extends TestCase
         return $png;
     }
 }
-
-
-

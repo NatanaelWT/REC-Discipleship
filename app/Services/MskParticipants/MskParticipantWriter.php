@@ -4,14 +4,14 @@ namespace App\Services\MskParticipants;
 
 use App\Http\Requests\MskParticipants\MskParticipantWriteRequest;
 use App\Models\Person;
-use App\Services\Activity\ActivityRecorder;
 use App\Services\Media\ClientImageVariantStore;
+use App\Services\Mutation\MutationLifecycle;
 use Illuminate\Support\Facades\DB;
 
 class MskParticipantWriter
 {
     public function __construct(
-        private readonly ActivityRecorder $activity,
+        private readonly MutationLifecycle $lifecycle,
         private readonly ClientImageVariantStore $variantStore,
     ) {}
 
@@ -41,7 +41,7 @@ class MskParticipantWriter
             ];
         }
         if ($uploadResult['photos'] !== []) {
-            $this->activity->onRollback(fn () => $this->deleteUploadedPhotos($uploadResult['photos']));
+            $this->lifecycle->onRollback(fn () => $this->deleteUploadedPhotos($uploadResult['photos']));
         }
 
         $finalPhotos = $this->mergePhotos($existingViewRow, $payload['remove_photo_paths'] ?? [], $uploadResult['photos']);
@@ -54,7 +54,7 @@ class MskParticipantWriter
 
         $removePhotoPaths = $payload['remove_photo_paths'] ?? [];
         if ($removePhotoPaths !== []) {
-            $this->activity->onCommit(function () use ($branchCode, $removePhotoPaths): void {
+            $this->lifecycle->onCommit(function () use ($branchCode, $removePhotoPaths): void {
                 $participants = $this->participantsForBranch($branchCode);
                 foreach ($removePhotoPaths as $pathToDelete) {
                     delete_photo_file_if_unused([], $participants, (string) $pathToDelete);

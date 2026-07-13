@@ -19,7 +19,7 @@ class FrontendAssetDomainTest extends TestCase
         $this->assertSame('public', frontend_asset_domain('', 'page-login'));
         $this->assertSame('discipleship', frontend_asset_domain('msk_classes', 'page-msk_classes'));
         $this->assertSame('discipleship', frontend_asset_domain('difficult_questions_admin', 'page-difficult-questions-admin'));
-        $this->assertSame('developer', frontend_asset_domain('developer_statistics', 'page-developer page-analytics'));
+        $this->assertSame('developer', frontend_asset_domain('developer_dashboard', 'page-developer'));
         $this->assertSame('worship', frontend_asset_domain('worship_penatalayan'));
         $this->assertSame('core', frontend_asset_domain('settings', 'page-settings'));
         $this->assertSame('core', frontend_asset_domain('', 'page-file-preview-standalone'));

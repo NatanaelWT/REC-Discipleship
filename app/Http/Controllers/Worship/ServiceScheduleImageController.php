@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Worship;
 
 use App\Http\Controllers\Controller;
-use App\Services\Activity\ActivityRecorder;
 use App\Services\WorshipServiceSchedules\WorshipServiceScheduleBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,7 +13,6 @@ class ServiceScheduleImageController extends Controller
     public function download(
         Request $request,
         WorshipServiceScheduleBuilder $scheduleBuilder,
-        ActivityRecorder $activity,
     ): RedirectResponse|Response {
         $selectedMonth = normalize_month_value((string) $request->query('month', date('Y-m')));
         $selectedExistingSchedule = $scheduleBuilder->recordForMonth($selectedMonth);
@@ -44,21 +42,6 @@ class ServiceScheduleImageController extends Controller
         if ($asciiDownloadName === '') {
             $asciiDownloadName = 'Jadwal_Pelayanan_Ibadah_Umum.png';
         }
-
-        $activity->record(
-            'export',
-            'worship.schedule_image.exported',
-            'jadwal_pelayanan_ibadah',
-            $selectedMonth,
-            $downloadName,
-            'Jadwal penatalayan diekspor sebagai gambar.',
-            metadata: [
-                'name' => $downloadName,
-                'size_bytes' => strlen($pngContent),
-                'mime_type' => 'image/png',
-                'sha256' => hash('sha256', $pngContent),
-            ],
-        );
 
         return response($pngContent, 200, [
             'Content-Type' => 'image/png',

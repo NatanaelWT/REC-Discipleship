@@ -28,8 +28,6 @@
     @if (($configValues['maintenance_mode'] ?? '0') === '1')
       <div class="alert danger">Maintenance mode aktif. Login dan akses aplikasi untuk non-developer sedang dikunci.</div>
     @endif
-    <p><a class="btn tiny ghost developer-link-button" href="{{ route('developer.maintenance') }}">Buka Maintenance Data</a></p>
-
     <section class="card developer-panel developer-section-card">
       <div class="developer-section-head">
         <span class="developer-section-icon">@include('developer._icon', ['name' => 'config'])</span>

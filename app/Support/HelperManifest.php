@@ -107,8 +107,6 @@ class HelperManifest
             $groups[] = self::FILES;
         } elseif (str_starts_with($path, 'file-aman')) {
             $groups[] = self::FILES;
-        } elseif (str_starts_with($path, 'developer/maintenance')) {
-            $groups[] = self::FILES;
         }
 
         return array_values(array_unique(array_merge(...$groups)));

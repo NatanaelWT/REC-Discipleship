@@ -6,7 +6,6 @@ use App\Enums\PublicMaterialMenuKey;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicMaterials\StreamPublicMaterialRequest;
 use App\Models\PublicMaterialFile;
-use App\Services\Activity\ActivityRecorder;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
 use App\Services\PublicMaterials\PublicMaterialFileStreamer;
 use App\Services\PublicMaterials\PublicMaterialRouteResolver;
@@ -38,7 +37,6 @@ class MaterialDownloadController extends Controller
         PublicMaterialFile $churchFile,
         PublicMaterialCatalog $catalog,
         PublicMaterialFileStreamer $streamer,
-        ActivityRecorder $activity,
     ): BinaryFileResponse|Response {
         $menu = PublicMaterialMenuKey::fromKey($menu);
         if (! $menu instanceof PublicMaterialMenuKey) {
@@ -49,34 +47,6 @@ class MaterialDownloadController extends Controller
             return response('File tidak ditemukan.', 404);
         }
 
-        $activity->record(
-            'file',
-            'material.downloaded',
-            'materi_publik',
-            $churchFile->getKey(),
-            (string) $churchFile->title,
-            'Materi diunduh.',
-            metadata: $this->fileMetadata($churchFile),
-        );
-
         return $streamer->stream($churchFile, 'attachment');
-    }
-
-    /** @return array<string, mixed> */
-    private function fileMetadata(PublicMaterialFile $file): array
-    {
-        return [
-            'name' => (string) $file->original_file_name,
-            'size_bytes' => (int) $file->size_bytes,
-            'mime_type' => (string) $file->mime_type,
-            'sha256' => $this->storedChecksum($file),
-        ];
-    }
-
-    private function storedChecksum(PublicMaterialFile $file): ?string
-    {
-        $checksum = strtolower(trim((string) $file->sha256));
-
-        return preg_match('/\A[a-f0-9]{64}\z/', $checksum) === 1 ? $checksum : null;
     }
 }

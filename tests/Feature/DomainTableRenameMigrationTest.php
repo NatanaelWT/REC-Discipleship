@@ -14,8 +14,6 @@ class DomainTableRenameMigrationTest extends TestCase
         'app_configs' => 'konfigurasi',
         'branches' => 'cabang',
         'login_attempts' => 'percobaan_login',
-        'activity_requests' => 'permintaan_aktivitas',
-        'activity_events' => 'peristiwa_aktivitas',
         'difficult_questions' => 'pertanyaan_sulit',
         'people' => 'orang',
         'discipleship_groups' => 'kelompok_dg',
@@ -25,8 +23,6 @@ class DomainTableRenameMigrationTest extends TestCase
         'discipleship_feedbacks' => 'jurnal_umpan_balik',
         'discipleship_manual_journey_records' => 'dg_manual',
         'public_material_files' => 'materi_publik',
-        'website_sessions' => 'sesi',
-        'website_page_views' => 'kunjungan_halaman',
         'worship_service_schedules' => 'jadwal_pelayanan_ibadah',
     ];
 

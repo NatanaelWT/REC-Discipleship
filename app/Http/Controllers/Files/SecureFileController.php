@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Files;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SecureFiles\ShowSecureFileRequest;
-use App\Services\Activity\ActivityRecorder;
-use App\Services\SecureFiles\FileChecksumCache;
 use App\Services\SecureFiles\SecureFilePreviewData;
 use App\Services\SecureFiles\SecureFileResolver;
 use App\Services\SecureFiles\SecureFileStreamer;
@@ -21,27 +19,9 @@ class SecureFileController extends Controller
         SecureFileResolver $resolver,
         SecureFilePreviewData $previewData,
         SecureFileStreamer $streamer,
-        FileChecksumCache $checksums,
-        ActivityRecorder $activity,
     ): BinaryFileResponse|Response|View {
         try {
             $file = $resolver->resolve($request);
-            $activity->record(
-                'file',
-                $file->download ? 'secure_file.downloaded' : 'secure_file.previewed',
-                'secure_file',
-                hash('sha256', $file->relativePath),
-                $file->downloadName,
-                $file->download ? 'File aman diunduh.' : 'File aman dibuka.',
-                metadata: [
-                    'relative_path' => $file->relativePath,
-                    'name' => $file->downloadName,
-                    'size_bytes' => $file->contentLength,
-                    'mime_type' => $file->mimeType,
-                    'sha256' => $checksums->sha256($file->fullPath),
-                ],
-            );
-
             if ($previewData->shouldPreview($request, $file)) {
                 return view('files.secure-preview', $previewData->forRequest($request, $file));
             }

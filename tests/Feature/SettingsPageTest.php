@@ -7,10 +7,13 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\RejectsTrackingQueries;
 use Tests\TestCase;
 
 class SettingsPageTest extends TestCase
 {
+    use RejectsTrackingQueries;
+
     public function test_legacy_settings_query_is_rejected(): void
     {
         $response = $this->get('/index.php?page=settings');
@@ -34,6 +37,7 @@ class SettingsPageTest extends TestCase
     {
         $this->seedUserAccount();
         $this->loginAsSettingsUser();
+        $this->startTrackingQueryGuard();
 
         $response = $this->post('/pengaturan', [
             'current_password' => 'old-secret',
@@ -45,6 +49,7 @@ class SettingsPageTest extends TestCase
         $storedPassword = (string) DB::table('users')->where('username', 'admin_settings_test')->value('password');
         $this->assertNotSame('new-secret', $storedPassword);
         $this->assertTrue(Hash::check('new-secret', $storedPassword));
+        $this->assertNoTrackingQueriesWereExecuted();
     }
 
     public function test_central_discipleship_toolbar_is_hidden_outside_discipleship_pages(): void

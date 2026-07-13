@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Developer;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Services\Activity\ActivityRecorder;
 use App\Services\Auth\CurrentUserContext;
 use App\Services\Auth\DeveloperAccessSession;
 use App\Services\Routing\AppPageRouteMap;
@@ -17,7 +16,6 @@ class DeveloperAccessController extends Controller
         Request $request,
         User $user,
         DeveloperAccessSession $access,
-        ActivityRecorder $activity,
     ): RedirectResponse {
         $error = $access->start($request, $user);
         if ($error !== null) {
@@ -27,38 +25,16 @@ class DeveloperAccessController extends Controller
             ]);
         }
 
-        $activity->record(
-            'developer',
-            'developer.access.started',
-            'users',
-            $user->getKey(),
-            (string) $user->username,
-            'Developer memakai akses user.',
-            metadata: $access->metadata($user),
-        );
-
         return redirect(AppPageRouteMap::pageUrl(app(CurrentUserContext::class)->homePage()));
     }
 
     public function stop(
         Request $request,
         DeveloperAccessSession $access,
-        ActivityRecorder $activity,
     ): RedirectResponse {
         if (! $access->active()) {
             return redirect(AppPageRouteMap::pageUrl(app(CurrentUserContext::class)->homePage()));
         }
-
-        $metadata = $access->metadata();
-        $activity->record(
-            'developer',
-            'developer.access.stopped',
-            'users',
-            $metadata['target_user_id'] ?? null,
-            $metadata['target_username'] ?? null,
-            'Developer kembali ke akses asli.',
-            metadata: $metadata,
-        );
 
         $access->stop($request);
 

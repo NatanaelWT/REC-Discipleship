@@ -8,6 +8,7 @@ use App\Services\Discipleship\DiscipleshipReadCache;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\ViewErrorBag;
 use Symfony\Component\HttpFoundation\Response;
 
 class InvalidateDiscipleshipReadCache
@@ -54,7 +55,11 @@ class InvalidateDiscipleshipReadCache
         if ($request->isMethodSafe() || $response->getStatusCode() >= 400) {
             return false;
         }
-        if ($request->attributes->get('activity.validation_failed') === true
+        $routeName = (string) optional($request->route())->getName();
+        if (str_ends_with($routeName, '.export') || str_ends_with($routeName, '.export-dot')) {
+            return false;
+        }
+        if ($this->hasValidationErrors($request, $response)
             || $request->attributes->get('discipleship.no_mutation') === true) {
             return false;
         }
@@ -63,6 +68,17 @@ class InvalidateDiscipleshipReadCache
 
         return $location === ''
             || preg_match('/(?:^|[?&])(error|material_error)=/', $location) !== 1;
+    }
+
+    private function hasValidationErrors(Request $request, Response $response): bool
+    {
+        if (! $response->isRedirect() || ! $request->hasSession()) {
+            return false;
+        }
+
+        $errors = $request->session()->get('errors');
+
+        return $errors instanceof ViewErrorBag && $errors->any();
     }
 
     /** @return array<int, int> */

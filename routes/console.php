@@ -4,7 +4,6 @@ use App\Enums\PublicMaterialMenuKey;
 use App\Services\Branches\BranchCatalog;
 use App\Services\Developer\DeveloperUserService;
 use App\Services\DiscipleshipDashboard\DiscipleshipDashboardSummaryQuery;
-use App\Services\PublicMaterials\PublicMaterialTextExtractor;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -355,7 +354,7 @@ Artisan::command('materials:audit-files', function () use ($materialPhysicalFile
     return Command::SUCCESS;
 })->purpose('Audit public material file records against public material files');
 
-Artisan::command('materials:sync-files', function (PublicMaterialTextExtractor $textExtractor) use ($materialPhysicalFiles): int {
+Artisan::command('materials:sync-files', function () use ($materialPhysicalFiles): int {
     RuntimeBootstrap::load();
 
     if (! Schema::hasTable('materi_publik')) {
@@ -398,7 +397,7 @@ Artisan::command('materials:sync-files', function (PublicMaterialTextExtractor $
                 $title = basename($fullPath);
             }
 
-            $fileId = DB::table('materi_publik')->insertGetId(array_merge([
+            $fileId = DB::table('materi_publik')->insertGetId([
                 'menu' => $menu->value,
                 'title' => $title,
                 'category_name' => null,
@@ -409,7 +408,7 @@ Artisan::command('materials:sync-files', function (PublicMaterialTextExtractor $
                 'mime_type' => detect_file_mime_type($fullPath),
                 'created_at' => now(),
                 'updated_at' => now(),
-            ], $textExtractor->extractForStorage($menu, $fullPath)));
+            ]);
 
             $inserted[] = [
                 $menu->value,
@@ -429,122 +428,3 @@ Artisan::command('materials:sync-files', function (PublicMaterialTextExtractor $
 
     return Command::SUCCESS;
 })->purpose('Sync public material records from public material files');
-
-Artisan::command('materials:extract-text {--menu= : Public material menu key. Empty means all DG menus} {--force : Re-extract files that already have text}', function (PublicMaterialTextExtractor $textExtractor): int {
-    RuntimeBootstrap::load();
-
-    if (! Schema::hasTable('materi_publik')) {
-        $this->error('Tabel materi_publik tidak ditemukan.');
-
-        return Command::FAILURE;
-    }
-
-    foreach (['text_content', 'text_extracted_at', 'text_extraction_error'] as $column) {
-        if (! Schema::hasColumn('materi_publik', $column)) {
-            $this->error('Kolom teks materi belum tersedia. Jalankan migrasi terlebih dahulu.');
-
-            return Command::FAILURE;
-        }
-    }
-
-    $menuOption = trim((string) $this->option('menu'));
-    $menus = [];
-    if ($menuOption === '') {
-        $menus = array_values(array_filter(
-            PublicMaterialMenuKey::cases(),
-            static fn (PublicMaterialMenuKey $menu): bool => $menu->isDgSessionMenu(),
-        ));
-    } else {
-        $menu = PublicMaterialMenuKey::fromKey($menuOption);
-        if (! $menu instanceof PublicMaterialMenuKey) {
-            $this->error('Menu materi tidak valid.');
-
-            return Command::FAILURE;
-        }
-
-        if (! $menu->isDgSessionMenu()) {
-            $this->error('Ekstraksi teks saat ini hanya tersedia untuk materi DG-1, DG-2, dan DG-3.');
-
-            return Command::FAILURE;
-        }
-
-        $menus = [$menu];
-    }
-
-    $force = (bool) $this->option('force');
-    $extracted = [];
-    $failed = [];
-    $skipped = 0;
-
-    foreach ($menus as $menu) {
-        $rows = DB::table('materi_publik')
-            ->select(['id', 'menu', 'title', 'relative_path', 'text_content'])
-            ->where('menu', $menu->value)
-            ->orderBy('id')
-            ->get();
-
-        foreach ($rows as $row) {
-            $path = sanitize_relative_upload_path((string) ($row->relative_path ?? ''));
-            if ($path === '' || secure_file_extension($path) !== 'pdf') {
-                $skipped++;
-
-                continue;
-            }
-
-            if (! $force && trim((string) ($row->text_content ?? '')) !== '') {
-                $skipped++;
-
-                continue;
-            }
-
-            $fullPath = public_material_resolve_path($path);
-            if ($fullPath === null) {
-                DB::table('materi_publik')
-                    ->where('id', $row->id)
-                    ->update([
-                        'text_content' => null,
-                        'text_extracted_at' => now(),
-                        'text_extraction_error' => 'File PDF tidak ditemukan.',
-                        'updated_at' => now(),
-                    ]);
-                $failed[] = [$menu->value, (string) $row->id, (string) ($row->title ?? ''), 'File PDF tidak ditemukan.'];
-
-                continue;
-            }
-
-            $payload = $textExtractor->extractForStorage($menu, $fullPath);
-            if ($payload === []) {
-                $skipped++;
-
-                continue;
-            }
-
-            DB::table('materi_publik')
-                ->where('id', $row->id)
-                ->update(array_merge($payload, ['updated_at' => now()]));
-
-            $error = trim((string) ($payload['text_extraction_error'] ?? ''));
-            if ($error !== '') {
-                $failed[] = [$menu->value, (string) $row->id, (string) ($row->title ?? ''), $error];
-
-                continue;
-            }
-
-            $extracted[] = [$menu->value, (string) $row->id, (string) ($row->title ?? ''), $path];
-        }
-    }
-
-    $this->info('File teks berhasil diekstrak: '.(string) count($extracted));
-    $this->info('File gagal/teks kosong: '.(string) count($failed));
-    $this->info('File dilewati: '.(string) $skipped);
-
-    if (count($extracted) > 0) {
-        $this->table(['Menu', 'ID', 'Judul', 'Path'], $extracted);
-    }
-    if (count($failed) > 0) {
-        $this->warn('File dengan error ekstraksi:');
-        $this->table(['Menu', 'ID', 'Judul', 'Error'], $failed);
-    }
-
-    return count($failed) > 0 ? Command::FAILURE : Command::SUCCESS;
-})->purpose('Extract text content for DG public material PDFs');
