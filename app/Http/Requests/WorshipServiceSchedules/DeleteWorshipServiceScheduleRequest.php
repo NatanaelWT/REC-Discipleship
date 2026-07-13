@@ -4,7 +4,6 @@ namespace App\Http\Requests\WorshipServiceSchedules;
 
 use App\Services\Auth\CurrentUserContext;
 use App\Services\Routing\AppPageRouteMap;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -12,7 +11,6 @@ class DeleteWorshipServiceScheduleRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        RuntimeBootstrap::boot($this);
         $context = app(CurrentUserContext::class);
 
         return $context->isLoggedIn()
@@ -22,8 +20,6 @@ class DeleteWorshipServiceScheduleRequest extends FormRequest
 
     protected function prepareForValidation()
     {
-        RuntimeBootstrap::boot($this);
-
         $this->merge([
             'month' => normalize_month_value((string) ($this->route('month') ?? $this->input('month', date('Y-m')))),
         ]);

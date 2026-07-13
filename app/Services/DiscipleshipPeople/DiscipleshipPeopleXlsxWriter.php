@@ -2,15 +2,16 @@
 
 namespace App\Services\DiscipleshipPeople;
 
+use Throwable;
 use ZipArchive;
 
 class DiscipleshipPeopleXlsxWriter
 {
     /**
      * @param  array<int, string>  $headers
-     * @param  array<int, array<int, string|int|float|null>>  $rows
+     * @param  iterable<int, array<int, string|int|float|null>>  $rows
      */
-    public function create(array $headers, array $rows, string $subtitle, string &$errorCode): ?string
+    public function create(array $headers, iterable $rows, string $subtitle, string &$errorCode): ?string
     {
         $errorCode = '';
         if (! class_exists(ZipArchive::class)) {
@@ -27,90 +28,190 @@ class DiscipleshipPeopleXlsxWriter
         }
         @unlink($tempBasePath);
         $xlsxPath = $tempBasePath.'.xlsx';
+        $worksheetPath = null;
+        $zip = null;
+        $zipOpen = false;
+        $completed = false;
 
-        $zip = new ZipArchive;
-        if ($zip->open($xlsxPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        try {
+            $worksheetPath = $this->writeWorksheetFile($headers, $rows, $subtitle);
+            if ($worksheetPath === null) {
+                $errorCode = 'export_failed';
+
+                return null;
+            }
+
+            $zip = new ZipArchive;
+            if ($zip->open($xlsxPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                $errorCode = 'export_failed';
+
+                return null;
+            }
+            $zipOpen = true;
+
+            $entries = [
+                '[Content_Types].xml' => $this->contentTypesXml(),
+                '_rels/.rels' => $this->rootRelationshipsXml(),
+                'docProps/app.xml' => $this->appPropertiesXml(),
+                'docProps/core.xml' => $this->corePropertiesXml(),
+                'xl/workbook.xml' => $this->workbookXml(),
+                'xl/_rels/workbook.xml.rels' => $this->workbookRelationshipsXml(),
+                'xl/styles.xml' => $this->stylesXml(),
+            ];
+
+            foreach ($entries as $path => $contents) {
+                if (! $zip->addFromString($path, $contents)) {
+                    $errorCode = 'export_failed';
+
+                    return null;
+                }
+            }
+
+            if (! $zip->addFile($worksheetPath, 'xl/worksheets/sheet1.xml')) {
+                $errorCode = 'export_failed';
+
+                return null;
+            }
+
+            if (! $zip->close()) {
+                $zipOpen = false;
+                $errorCode = 'export_failed';
+
+                return null;
+            }
+            $zipOpen = false;
+
+            if (! is_file($xlsxPath)) {
+                $errorCode = 'export_failed';
+
+                return null;
+            }
+
+            $completed = true;
+
+            return $xlsxPath;
+        } catch (Throwable) {
             $errorCode = 'export_failed';
 
             return null;
-        }
-
-        $entries = [
-            '[Content_Types].xml' => $this->contentTypesXml(),
-            '_rels/.rels' => $this->rootRelationshipsXml(),
-            'docProps/app.xml' => $this->appPropertiesXml(),
-            'docProps/core.xml' => $this->corePropertiesXml(),
-            'xl/workbook.xml' => $this->workbookXml(),
-            'xl/_rels/workbook.xml.rels' => $this->workbookRelationshipsXml(),
-            'xl/styles.xml' => $this->stylesXml(),
-            'xl/worksheets/sheet1.xml' => $this->worksheetXml($headers, $rows, $subtitle),
-        ];
-
-        $failed = false;
-        foreach ($entries as $path => $contents) {
-            if (! $zip->addFromString($path, $contents)) {
-                $failed = true;
-                break;
+        } finally {
+            if ($zipOpen && $zip instanceof ZipArchive) {
+                $zip->close();
+            }
+            if (is_string($worksheetPath) && is_file($worksheetPath)) {
+                @unlink($worksheetPath);
+            }
+            if (! $completed && is_file($xlsxPath)) {
+                @unlink($xlsxPath);
             }
         }
-        $zip->close();
-
-        if ($failed || ! is_file($xlsxPath)) {
-            @unlink($xlsxPath);
-            $errorCode = 'export_failed';
-
-            return null;
-        }
-
-        return $xlsxPath;
     }
 
     /**
      * @param  array<int, string>  $headers
-     * @param  array<int, array<int, string|int|float|null>>  $rows
+     * @param  iterable<int, array<int, string|int|float|null>>  $rows
      */
-    private function worksheetXml(array $headers, array $rows, string $subtitle): string
+    private function writeWorksheetFile(array $headers, iterable $rows, string $subtitle): ?string
     {
+        $worksheetPath = tempnam(sys_get_temp_dir(), 'dgpeople_sheet_');
+        if ($worksheetPath === false) {
+            return null;
+        }
+
+        $handle = @fopen($worksheetPath, 'wb');
+        if ($handle === false) {
+            @unlink($worksheetPath);
+
+            return null;
+        }
+
         $lastColumn = export_xlsx_column_ref(max(0, count($headers) - 1));
-        $lastRow = max(4, count($rows) + 4);
-        $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-        $xml .= '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
-        $xml .= '<dimension ref="A1:'.$lastColumn.$lastRow.'"/>';
-        $xml .= '<sheetViews><sheetView workbookViewId="0"><pane ySplit="4" topLeftCell="A5" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>';
-        $xml .= '<sheetFormatPr defaultRowHeight="20"/>';
-        $xml .= '<cols>'
-            .'<col min="1" max="1" width="7" customWidth="1"/>'
-            .'<col min="2" max="2" width="30" customWidth="1"/>'
-            .'<col min="3" max="3" width="18" customWidth="1"/>'
-            .'<col min="4" max="4" width="16" customWidth="1"/>'
-            .'<col min="5" max="7" width="14" customWidth="1"/>'
-            .'<col min="8" max="8" width="32" customWidth="1"/>'
-            .'</cols>';
-        $xml .= '<sheetData>';
-        $xml .= '<row r="1" ht="28" customHeight="1">'.$this->inlineCell('A1', 'Daftar Anggota DG', 1).'</row>';
-        $xml .= '<row r="2" ht="24" customHeight="1">'.$this->inlineCell('A2', $subtitle, 2).'</row>';
-        $xml .= '<row r="4" ht="26" customHeight="1">';
-        foreach (array_values($headers) as $column => $header) {
-            $xml .= $this->inlineCell(export_xlsx_column_ref($column).'4', $header, 3);
-        }
-        $xml .= '</row>';
+        $lastRow = 4;
+        $success = false;
 
-        foreach (array_values($rows) as $rowIndex => $row) {
-            $excelRow = $rowIndex + 5;
-            $xml .= '<row r="'.$excelRow.'" ht="30" customHeight="1">';
-            foreach (array_values($row) as $column => $value) {
-                $xml .= $this->inlineCell(export_xlsx_column_ref($column).$excelRow, (string) ($value ?? ''), 4);
+        try {
+            if (! $this->writeAll($handle, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                .'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                .'<sheetViews><sheetView workbookViewId="0"><pane ySplit="4" topLeftCell="A5" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+                .'<sheetFormatPr defaultRowHeight="20"/>'
+                .'<cols>'
+                .'<col min="1" max="1" width="7" customWidth="1"/>'
+                .'<col min="2" max="2" width="30" customWidth="1"/>'
+                .'<col min="3" max="3" width="18" customWidth="1"/>'
+                .'<col min="4" max="4" width="16" customWidth="1"/>'
+                .'<col min="5" max="7" width="14" customWidth="1"/>'
+                .'<col min="8" max="8" width="32" customWidth="1"/>'
+                .'</cols><sheetData>'
+                .'<row r="1" ht="28" customHeight="1">'.$this->inlineCell('A1', 'Daftar Anggota DG', 1).'</row>'
+                .'<row r="2" ht="24" customHeight="1">'.$this->inlineCell('A2', $subtitle, 2).'</row>'
+                .'<row r="4" ht="26" customHeight="1">')) {
+                return null;
             }
-            $xml .= '</row>';
+
+            foreach (array_values($headers) as $column => $header) {
+                if (! $this->writeAll($handle, $this->inlineCell(export_xlsx_column_ref($column).'4', $header, 3))) {
+                    return null;
+                }
+            }
+            if (! $this->writeAll($handle, '</row>')) {
+                return null;
+            }
+
+            foreach ($rows as $row) {
+                $excelRow = ++$lastRow;
+                if (! $this->writeAll($handle, '<row r="'.$excelRow.'" ht="30" customHeight="1">')) {
+                    return null;
+                }
+                foreach (array_values($row) as $column => $value) {
+                    if (! $this->writeAll($handle, $this->inlineCell(export_xlsx_column_ref($column).$excelRow, (string) ($value ?? ''), 4))) {
+                        return null;
+                    }
+                }
+                if (! $this->writeAll($handle, '</row>')) {
+                    return null;
+                }
+            }
+
+            if (! $this->writeAll($handle, '</sheetData>'
+                .'<autoFilter ref="A4:'.$lastColumn.$lastRow.'"/>'
+                .'<mergeCells count="2"><mergeCell ref="A1:'.$lastColumn.'1"/><mergeCell ref="A2:'.$lastColumn.'2"/></mergeCells>'
+                .'<pageMargins left="0.35" right="0.35" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>'
+                .'</worksheet>')) {
+                return null;
+            }
+
+            if (! fflush($handle)) {
+                return null;
+            }
+
+            $success = true;
+
+            return $worksheetPath;
+        } finally {
+            fclose($handle);
+            if (! $success && is_file($worksheetPath)) {
+                @unlink($worksheetPath);
+            }
+        }
+    }
+
+    /**
+     * @param  resource  $handle
+     */
+    private function writeAll($handle, string $contents): bool
+    {
+        $length = strlen($contents);
+        $offset = 0;
+
+        while ($offset < $length) {
+            $written = fwrite($handle, substr($contents, $offset));
+            if ($written === false || $written === 0) {
+                return false;
+            }
+            $offset += $written;
         }
 
-        $xml .= '</sheetData>';
-        $xml .= '<autoFilter ref="A4:'.$lastColumn.$lastRow.'"/>';
-        $xml .= '<mergeCells count="2"><mergeCell ref="A1:'.$lastColumn.'1"/><mergeCell ref="A2:'.$lastColumn.'2"/></mergeCells>';
-        $xml .= '<pageMargins left="0.35" right="0.35" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>';
-        $xml .= '</worksheet>';
-
-        return $xml;
+        return true;
     }
 
     private function inlineCell(string $reference, string $value, int $style): string

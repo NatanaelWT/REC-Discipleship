@@ -6,8 +6,10 @@ use App\Models\WebsitePageView;
 use Carbon\CarbonImmutable;
 use DateTimeZone;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class WebsiteStatisticsService
@@ -20,9 +22,9 @@ class WebsiteStatisticsService
     public function dashboard(Request $request): array
     {
         $filters = $this->filters($request);
-        $cacheKey = 'analytics.dashboard.v5.'.sha1(json_encode($filters) ?: '[]');
+        $cacheKey = 'analytics.dashboard.v6.'.sha1(json_encode($filters) ?: '[]');
 
-        if (app()->environment('testing')) {
+        if (app()->environment('testing') && ! (bool) config('analytics.cache_in_testing', false)) {
             return $this->build($filters);
         }
 
@@ -36,46 +38,21 @@ class WebsiteStatisticsService
     /** @param array<string, mixed> $filters @return array<string, mixed> */
     private function build(array $filters): array
     {
+        if ($this->rollupsEnabled($filters)) {
+            return $this->buildWithRollups($filters);
+        }
+
         $human = $this->query($filters)->where('is_bot', false)->where('is_prefetch', false);
         $summary = $this->summary(clone $human, $filters);
         $comparison = $this->comparison($filters, $summary);
         $timezone = $this->timezone();
-        $timeRows = (clone $human)->orderBy('occurred_at')->cursor(['occurred_at', 'visitor_hash']);
-        $trend = [];
-        foreach ($this->dateKeys($filters) as $date) {
-            $trend[$date] = 0;
-        }
-        $accessHours = [];
-        $hourVisitors = [];
-        foreach (range(0, 23) as $hour) {
-            $key = str_pad((string) $hour, 2, '0', STR_PAD_LEFT);
-            $accessHours[$key] = [
-                'key' => $key,
-                'label' => $key.':00 - '.$key.':59',
-                'count' => 0,
-                'visitors' => 0,
-            ];
-            $hourVisitors[$key] = [];
-        }
-        foreach ($timeRows as $row) {
-            $date = $row->occurred_at?->setTimezone($timezone)->format('Y-m-d');
-            if ($date !== null && array_key_exists($date, $trend)) {
-                $trend[$date]++;
-            }
-            $hour = $row->occurred_at?->setTimezone($timezone)->format('H');
-            if ($hour !== null && array_key_exists($hour, $accessHours)) {
-                $accessHours[$hour]['count']++;
-                $hourVisitors[$hour][(string) $row->visitor_hash] = true;
+        $trend = array_fill_keys($this->dateKeys($filters), 0);
+        foreach ($this->trendCounts(clone $human) as $date => $count) {
+            if (array_key_exists($date, $trend)) {
+                $trend[$date] += $count;
             }
         }
-        foreach ($accessHours as $hour => $values) {
-            $accessHours[$hour]['visitors'] = count($hourVisitors[$hour]);
-        }
-        $accessHours = collect($accessHours)
-            ->filter(static fn (array $row): bool => $row['count'] > 0)
-            ->sort(static fn (array $left, array $right): int => ($right['count'] <=> $left['count']) ?: ($left['key'] <=> $right['key']))
-            ->values()
-            ->all();
+        $accessHours = $this->accessHourRows(clone $human);
 
         $optionQuery = WebsitePageView::query()
             ->whereNull('user_id')
@@ -106,6 +83,146 @@ class WebsiteStatisticsService
                 'routes' => (clone $optionQuery)->whereNotNull('route_name')->distinct()->orderBy('route_name')->pluck('route_name'),
             ],
         ];
+    }
+
+    /** @param array<string, mixed> $filters @return array<string, mixed> */
+    private function buildWithRollups(array $filters): array
+    {
+        // Detailed visitor/session drill-down intentionally remains limited to retained raw rows.
+        $retainedHuman = $this->query($filters)->where('is_bot', false)->where('is_prefetch', false);
+        $currentHuman = $this->currentDayQuery($filters)->where('is_bot', false)->where('is_prefetch', false);
+        $summary = $this->rollupSummary($filters, clone $retainedHuman, clone $currentHuman);
+        $comparison = $this->comparison($filters, $summary);
+        $timezone = $this->timezone();
+
+        $trend = array_fill_keys($this->dateKeys($filters), 0);
+        $rollupTrend = $this->summaryRollupQuery($filters)
+            ->selectRaw('activity_date, SUM(human_page_views) AS aggregate_count')
+            ->groupBy('activity_date')
+            ->get();
+        foreach ($rollupTrend as $row) {
+            $date = (string) $row->activity_date;
+            if (array_key_exists($date, $trend)) {
+                $trend[$date] += (int) $row->aggregate_count;
+            }
+        }
+        foreach ($this->trendCounts(clone $currentHuman) as $date => $count) {
+            if (array_key_exists($date, $trend)) {
+                $trend[$date] += $count;
+            }
+        }
+
+        $accessHours = $this->accessHourRows(clone $retainedHuman);
+
+        $optionQuery = WebsitePageView::query()
+            ->whereNull('user_id')
+            ->whereIn('segment', ['publik', 'login'])
+            ->whereBetween('occurred_at', [$filters['from_utc'], $filters['to_utc']])
+            ->where('is_bot', false)
+            ->where('is_prefetch', false);
+        $rollupOptions = $this->rollupQuery($filters);
+        $languageOptions = collect((clone $optionQuery)
+            ->whereNotNull('language_code')
+            ->select(['language_code', 'language_name'])
+            ->distinct()
+            ->get()
+            ->map(static fn ($row): array => [
+                'language_code' => (string) $row->language_code,
+                'language_name' => (string) ($row->language_name ?: $row->language_code),
+            ])
+            ->all())
+            ->merge(
+                (clone $rollupOptions)->where('language_code', '!=', '')->distinct()->pluck('language_code')
+                    ->map(static fn (string $code): array => ['language_code' => $code, 'language_name' => $code]),
+            )
+            ->unique('language_code')
+            ->sortBy('language_name')
+            ->values();
+        $routeOptions = (clone $optionQuery)->whereNotNull('route_name')->distinct()->pluck('route_name')
+            ->merge((clone $rollupOptions)->where('route_name', '!=', '')->distinct()->pluck('route_name'))
+            ->unique()->sort()->values();
+
+        return [
+            'filters' => $filters,
+            'summary' => $summary,
+            'comparison' => $comparison,
+            'trend' => collect($trend)->map(static fn (int $count, string $date): array => [
+                'date' => $date,
+                'label' => CarbonImmutable::parse($date, $timezone)->format('d M'),
+                'count' => $count,
+            ])->values()->all(),
+            'topPages' => $this->combinedGrouped($filters, clone $currentHuman, 'route_name', 'path', 10),
+            'languages' => $this->combinedGrouped($filters, clone $currentHuman, 'language_code', 'language_code', 15),
+            'accessHours' => $accessHours,
+            'devices' => $this->combinedGrouped($filters, clone $currentHuman, 'device_type', 'device_type', 10),
+            'browsers' => $this->grouped(clone $retainedHuman, 'browser_name', 'browser_name', 10),
+            'operatingSystems' => $this->grouped(clone $retainedHuman, 'os_name', 'os_name', 10),
+            'referrers' => $this->grouped(clone $retainedHuman, 'referer_host', 'referer_host', 10),
+            'visitors' => $this->visitors(clone $retainedHuman),
+            'options' => ['languages' => $languageOptions, 'routes' => $routeOptions],
+        ];
+    }
+
+    /** @param array<string, mixed> $filters @return array<string, int|float> */
+    private function rollupSummary(array $filters, Builder $retainedHuman, Builder $currentHuman): array
+    {
+        $rollup = $this->summaryRollupQuery($filters)
+            ->selectRaw('COALESCE(SUM(human_page_views), 0) AS page_views')
+            ->selectRaw('COALESCE(SUM(human_unique_visitors), 0) AS visitors')
+            ->selectRaw('COALESCE(SUM(bot_views), 0) AS bot_views')
+            ->selectRaw('COALESCE(SUM(human_total_response_ms), 0) AS response_total')
+            ->first();
+        $rawPageViews = (clone $currentHuman)->count();
+        $pageViews = (int) ($rollup->page_views ?? 0) + $rawPageViews;
+        $visitors = (int) ($rollup->visitors ?? 0) + (clone $currentHuman)->distinct()->count('visitor_hash');
+        $sessions = $this->sessionMetrics->count(clone $retainedHuman);
+        $active = (clone $retainedHuman)
+            ->where('occurred_at', '>=', CarbonImmutable::now('UTC')->subMinutes(5))
+            ->distinct()
+            ->count('visitor_hash');
+        $botViews = (int) ($rollup->bot_views ?? 0) + $this->currentDayQuery($filters)->where('is_bot', true)->count();
+        $responseTotal = (float) ($rollup->response_total ?? 0)
+            + (float) ((clone $currentHuman)->sum('response_ms') ?? 0);
+
+        return [
+            'page_views' => $pageViews,
+            // Daily anonymous uniqueness is intentionally additive after raw rows expire.
+            'visitors' => $visitors,
+            'sessions' => $sessions,
+            'pages_per_session' => $sessions > 0 ? round($pageViews / $sessions, 2) : 0.0,
+            'active_now' => $active,
+            'bot_views' => $botViews,
+            'average_response_ms' => $pageViews > 0 ? round($responseTotal / $pageViews, 1) : 0.0,
+        ];
+    }
+
+    /** @return array<int, array{key:string,label:string,count:int,visitors:int}> */
+    private function combinedGrouped(array $filters, Builder $currentHuman, string $keyColumn, string $labelColumn, int $limit): array
+    {
+        $rollupRows = $this->rollupQuery($filters)
+            ->selectRaw("COALESCE({$keyColumn}, '') AS item_key, COALESCE({$labelColumn}, '') AS item_label, SUM(human_page_views) AS aggregate_count, SUM(human_unique_visitors) AS aggregate_visitors")
+            ->groupBy($keyColumn, $labelColumn)
+            ->get()
+            ->map(static fn ($row): array => [
+                'key' => trim((string) $row->item_key),
+                'label' => trim((string) $row->item_label) ?: 'Tidak diketahui',
+                'count' => (int) $row->aggregate_count,
+                'visitors' => (int) $row->aggregate_visitors,
+            ]);
+        $rawRows = collect($this->grouped($currentHuman, $keyColumn, $labelColumn, 250));
+
+        return $rollupRows->merge($rawRows)
+            ->groupBy(static fn (array $row): string => $row['key']."\x1f".$row['label'])
+            ->map(static fn ($rows): array => [
+                'key' => (string) $rows->first()['key'],
+                'label' => (string) $rows->first()['label'],
+                'count' => (int) $rows->sum('count'),
+                'visitors' => (int) $rows->sum('visitors'),
+            ])
+            ->sortByDesc('count')
+            ->take($limit)
+            ->values()
+            ->all();
     }
 
     /** @param array<string, mixed> $filters @return array<string, int|float> */
@@ -140,12 +257,27 @@ class WebsiteStatisticsService
         $previous = $filters;
         $previous['to_utc'] = $filters['from_utc']->subSecond();
         $previous['from_utc'] = $previous['to_utc']->subSeconds($seconds - 1);
+        $previous['from'] = $previous['from_utc']->setTimezone($this->timezone())->format('Y-m-d');
+        $previous['to'] = $previous['to_utc']->setTimezone($this->timezone())->format('Y-m-d');
         $query = $this->query($previous)->where('is_bot', false)->where('is_prefetch', false);
-        $previousValues = [
-            'page_views' => (clone $query)->count(),
-            'visitors' => (clone $query)->distinct()->count('visitor_hash'),
-            'sessions' => $this->sessionMetrics->count(clone $query),
-        ];
+        if ($this->rollupsEnabled($previous)) {
+            $previousSummary = $this->rollupSummary(
+                $previous,
+                clone $query,
+                $this->currentDayQuery($previous)->where('is_bot', false)->where('is_prefetch', false),
+            );
+            $previousValues = [
+                'page_views' => (int) $previousSummary['page_views'],
+                'visitors' => (int) $previousSummary['visitors'],
+                'sessions' => (int) $previousSummary['sessions'],
+            ];
+        } else {
+            $previousValues = [
+                'page_views' => (clone $query)->count(),
+                'visitors' => (clone $query)->distinct()->count('visitor_hash'),
+                'sessions' => $this->sessionMetrics->count(clone $query),
+            ];
+        }
 
         return collect($previousValues)->mapWithKeys(static function (int $value, string $key) use ($current): array {
             if ($value === 0) {
@@ -173,18 +305,84 @@ class WebsiteStatisticsService
             ])->all();
     }
 
+    /** @return array<string, int> */
+    private function trendCounts(Builder $query): array
+    {
+        $expression = $this->localTimeExpression($query, 'date');
+
+        return (clone $query)
+            ->selectRaw($expression.' AS time_bucket, COUNT(*) AS aggregate_count')
+            ->groupByRaw($expression)
+            ->get()
+            ->mapWithKeys(static fn ($row): array => [
+                (string) $row->time_bucket => (int) $row->aggregate_count,
+            ])
+            ->all();
+    }
+
+    /** @return array<int, array{key:string,label:string,count:int,visitors:int}> */
+    private function accessHourRows(Builder $query): array
+    {
+        $expression = $this->localTimeExpression($query, 'hour');
+
+        return (clone $query)
+            ->selectRaw($expression.' AS time_bucket, COUNT(*) AS aggregate_count, COUNT(DISTINCT visitor_hash) AS aggregate_visitors')
+            ->groupByRaw($expression)
+            ->orderByDesc('aggregate_count')
+            ->orderBy('time_bucket')
+            ->get()
+            ->map(static function ($row): array {
+                $hour = str_pad((string) $row->time_bucket, 2, '0', STR_PAD_LEFT);
+
+                return [
+                    'key' => $hour,
+                    'label' => $hour.':00 - '.$hour.':59',
+                    'count' => (int) $row->aggregate_count,
+                    'visitors' => (int) $row->aggregate_visitors,
+                ];
+            })
+            ->all();
+    }
+
+    private function localTimeExpression(Builder $query, string $bucket): string
+    {
+        $driver = $query->getModel()->getConnection()->getDriverName();
+        $offset = $this->timezone()->getOffset(new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
+        $modifier = ($offset >= 0 ? '+' : '').$offset.' seconds';
+
+        return match ($driver) {
+            'sqlite' => $bucket === 'hour'
+                ? "strftime('%H', datetime(occurred_at, '{$modifier}'))"
+                : "strftime('%Y-%m-%d', datetime(occurred_at, '{$modifier}'))",
+            'pgsql' => $bucket === 'hour'
+                ? "TO_CHAR(occurred_at + INTERVAL '{$offset} seconds', 'HH24')"
+                : "TO_CHAR(occurred_at + INTERVAL '{$offset} seconds', 'YYYY-MM-DD')",
+            default => $bucket === 'hour'
+                ? "DATE_FORMAT(TIMESTAMPADD(SECOND, {$offset}, occurred_at), '%H')"
+                : "DATE_FORMAT(TIMESTAMPADD(SECOND, {$offset}, occurred_at), '%Y-%m-%d')",
+        };
+    }
+
     /** @return array<int, array<string, mixed>> */
     private function visitors(Builder $query): array
     {
         $timezone = $this->timezone();
-        $sessionsByVisitor = $this->sessionMetrics->countsByVisitor(clone $query);
-
-        return $query
+        $rows = (clone $query)
             ->selectRaw('visitor_hash, MAX(user_id) AS user_id, MAX(username) AS username, MAX(language_name) AS language_name, MAX(device_type) AS device_type, COUNT(*) AS page_views, MAX(occurred_at) AS last_seen_at')
             ->groupBy('visitor_hash')
             ->orderByDesc('page_views')
             ->limit(50)
-            ->get()
+            ->get();
+        $visitorHashes = $rows->pluck('visitor_hash')
+            ->filter(static fn (mixed $hash): bool => trim((string) $hash) !== '')
+            ->map(static fn (mixed $hash): string => (string) $hash)
+            ->values()
+            ->all();
+        $sessionsByVisitor = $visitorHashes !== []
+            ? $this->sessionMetrics->countsByVisitor((clone $query)->whereIn('visitor_hash', $visitorHashes))
+            : [];
+
+        return $rows
             ->map(static fn ($row): array => [
                 'visitor_hash' => (string) $row->visitor_hash,
                 'label' => trim((string) $row->username) ?: 'Anonim #'.substr((string) $row->visitor_hash, 0, 8),
@@ -208,6 +406,60 @@ class WebsiteStatisticsService
             ->when($filters['device'] !== '', fn (Builder $query) => $query->where('device_type', $filters['device']))
             ->when($filters['route'] !== '', fn (Builder $query) => $query->where('route_name', $filters['route']))
             ->when($filters['visitor'] !== '', fn (Builder $query) => $query->where('visitor_hash', $filters['visitor']));
+    }
+
+    /** @param array<string, mixed> $filters */
+    private function currentDayQuery(array $filters): Builder
+    {
+        $query = $this->query($filters);
+        $start = CarbonImmutable::now($this->timezone())->startOfDay()->utc();
+        if ($filters['to_utc']->lessThan($start)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where('occurred_at', '>=', $start);
+    }
+
+    /** @param array<string, mixed> $filters */
+    private function rollupQuery(array $filters, string $scope = 'detail'): QueryBuilder
+    {
+        $query = DB::table('website_daily_rollups')->where('rollup_scope', $scope);
+        $lastComplete = CarbonImmutable::now($this->timezone())->subDay()->format('Y-m-d');
+        $from = (string) $filters['from'];
+        $to = min((string) $filters['to'], $lastComplete);
+        if ($to < $from) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query
+            ->whereBetween('activity_date', [$from, $to])
+            ->when($filters['segment'] !== '', fn (QueryBuilder $builder) => $builder->where('segment', $filters['segment']))
+            ->when($filters['language'] !== '', fn (QueryBuilder $builder) => $builder->where('language_code', $filters['language']))
+            ->when($filters['device'] !== '', fn (QueryBuilder $builder) => $builder->where('device_type', $filters['device']))
+            ->when($filters['route'] !== '', fn (QueryBuilder $builder) => $builder->where('route_name', $filters['route']));
+    }
+
+    /** @param array<string, mixed> $filters */
+    private function summaryRollupQuery(array $filters): QueryBuilder
+    {
+        $hasDetailedFilter = (string) $filters['language'] !== ''
+            || (string) $filters['device'] !== ''
+            || (string) $filters['route'] !== '';
+        if ($hasDetailedFilter) {
+            return $this->rollupQuery($filters, 'detail');
+        }
+
+        return $this->rollupQuery(
+            $filters,
+            (string) $filters['segment'] !== '' ? 'segment_summary' : 'summary',
+        );
+    }
+
+    /** @param array<string, mixed> $filters */
+    private function rollupsEnabled(array $filters): bool
+    {
+        return config('activity.storage', 'legacy') === 'split'
+            && (string) ($filters['visitor'] ?? '') === '';
     }
 
     /** @return array<string, mixed> */

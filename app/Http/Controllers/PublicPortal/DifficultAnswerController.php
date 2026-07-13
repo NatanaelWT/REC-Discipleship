@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\DifficultQuestions\LookupDifficultAnswerRequest;
 use App\Services\DifficultQuestions\DifficultQuestionAnswerLookupPageData;
 use App\Services\DifficultQuestions\DifficultQuestionPasswordService;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,8 +14,6 @@ class DifficultAnswerController extends Controller
 {
     public function show(Request $request, DifficultQuestionAnswerLookupPageData $pageData): View
     {
-        RuntimeBootstrap::boot($request);
-
         return view('public.difficult-questions.lookup', $pageData->forRequest($request));
     }
 

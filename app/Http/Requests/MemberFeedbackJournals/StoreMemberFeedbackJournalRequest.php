@@ -5,7 +5,6 @@ namespace App\Http\Requests\MemberFeedbackJournals;
 use App\Services\MemberFeedbackJournals\MemberFeedbackFormData;
 use App\Services\MemberFeedbackJournals\MemberFeedbackQuestionCatalog;
 use App\Services\MemberFeedbackJournals\MemberFeedbackTextNormalizer;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -50,7 +49,6 @@ class StoreMemberFeedbackJournalRequest extends FormRequest
 
     protected function prepareForValidation()
     {
-        RuntimeBootstrap::boot($this);
         session()->put('public_member_feedback_old', $this->all());
     }
 

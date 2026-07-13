@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Discipleship;
 use App\Http\Controllers\Controller;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DgMeetingReports\DgMeetingReportRecapPageData;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
@@ -17,8 +16,6 @@ class MeetingReportRecapController extends Controller
         DgMeetingReportRecapPageData $pageData,
         CurrentDiscipleshipScope $scope,
     ): Response|View {
-        RuntimeBootstrap::boot($request);
-
         $pageTitle = 'Jurnal Temu DG';
         $data = [
             ...$pageData->forCurrentContext($request),

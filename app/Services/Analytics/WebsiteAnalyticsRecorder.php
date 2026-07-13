@@ -4,9 +4,7 @@ namespace App\Services\Analytics;
 
 use App\Models\ActivityRequest;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
-use Throwable;
 
 class WebsiteAnalyticsRecorder
 {
@@ -18,7 +16,7 @@ class WebsiteAnalyticsRecorder
 
     public function record(string $activityId, Request $request, Response $response): void
     {
-        if (! (bool) config('analytics.enabled', true) || ! $this->tablesAvailable()) {
+        if (! (bool) config('analytics.enabled', true)) {
             return;
         }
 
@@ -41,12 +39,29 @@ class WebsiteAnalyticsRecorder
         );
     }
 
-    private function tablesAvailable(): bool
+    /**
+     * Build analytics fields without reading or updating the activity row.
+     *
+     * @return array<string, mixed>
+     */
+    public function attributes(ActivityRequest $activity, Request $request, Response $response): array
     {
-        try {
-            return Schema::hasTable('aktivitas');
-        } catch (Throwable) {
-            return false;
+        if (! (bool) config('analytics.enabled', true) || ! $this->writer->qualifies($activity)) {
+            return [];
         }
+
+        $identity = $this->identities->resolve($activity, $request, $response);
+        $purpose = strtolower(trim(implode(' ', [
+            (string) $request->headers->get('purpose'),
+            (string) $request->headers->get('sec-purpose'),
+            (string) $request->headers->get('x-moz'),
+        ])));
+
+        return $this->writer->attributes(
+            $activity,
+            $identity,
+            str_contains($purpose, 'prefetch'),
+            $this->languages->classify($request->headers->get('Accept-Language')),
+        );
     }
 }

@@ -19,27 +19,28 @@ class DiscipleshipPeopleExportService
 
     public function export(ExportDiscipleshipPeopleRequest $request): BinaryFileResponse|RedirectResponse
     {
-        $data = $this->listData->allRowsForCurrentContext($request);
-        $search = trim((string) $request->query('q', ''));
-        $people = collect($data['people'] ?? []);
+        $context = $this->listData->exportContext($request);
+        $search = (string) $context['search'];
 
         $headers = ['No.', 'Nama', 'Cabang', 'Peran', 'DG 1', 'DG 2', 'DG 3', 'Ringkasan Progress'];
-        $rows = $people->values()->map(function (array $row, int $index): array {
-            $steps = collect($row['progress_steps'] ?? [])->keyBy('label');
+        $rows = (function () use ($request): \Generator {
+            $index = 0;
+            foreach ($this->listData->exportRowsForCurrentContext($request) as $row) {
+                $steps = collect($row['progress_steps'] ?? [])->keyBy('label');
+                yield [
+                    ++$index,
+                    (string) ($row['export_name'] ?? $row['name'] ?? '-'),
+                    (string) ($row['branch_label'] ?? 'Tanpa cabang'),
+                    (string) ($row['role_label'] ?? 'Anggota'),
+                    (string) ($steps->get('DG 1')['state_label'] ?? 'Belum'),
+                    (string) ($steps->get('DG 2')['state_label'] ?? 'Belum'),
+                    (string) ($steps->get('DG 3')['state_label'] ?? 'Belum'),
+                    (string) ($row['progress_summary'] ?? 'Belum memulai DG'),
+                ];
+            }
+        })();
 
-            return [
-                $index + 1,
-                (string) ($row['export_name'] ?? $row['name'] ?? '-'),
-                (string) ($row['branch_label'] ?? 'Tanpa cabang'),
-                (string) ($row['role_label'] ?? 'Anggota'),
-                (string) ($steps->get('DG 1')['state_label'] ?? 'Belum'),
-                (string) ($steps->get('DG 2')['state_label'] ?? 'Belum'),
-                (string) ($steps->get('DG 3')['state_label'] ?? 'Belum'),
-                (string) ($row['progress_summary'] ?? 'Belum memulai DG'),
-            ];
-        })->all();
-
-        $progress = (string) ($data['peopleProgressFilter'] ?? 'all');
+        $progress = (string) $context['progress'];
         $progressLabel = $this->progressLabel($progress);
         $subtitle = 'Cabang: '.$this->scope->selectedLabel()
             .' | Filter: '.$progressLabel
@@ -78,7 +79,7 @@ class DiscipleshipPeopleExportService
             metadata: [
                 'progress' => $progress,
                 'search' => $search,
-                'people_count' => count($rows),
+                'people_count' => (int) $context['total'],
                 'name' => $downloadName,
                 'size_bytes' => (int) filesize($xlsxPath),
                 'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -124,5 +125,4 @@ class DiscipleshipPeopleExportService
 
         return $params;
     }
-
 }

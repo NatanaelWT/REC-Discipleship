@@ -428,8 +428,8 @@ class DiscipleshipPeopleListTest extends TestCase
             ->assertDontSee('Peserta 1000 Rahasia')
             ->assertSee('data-discipleship-people-list', false)
             ->assertSee('data-rows-url="'.route('discipleship.people-list.rows').'"', false)
-            ->assertSee('data-per-page="50"', false)
-            ->assertSee('data-next-page="2"', false)
+            ->assertSee('data-limit="50"', false)
+            ->assertSee('data-next-cursor="', false)
             ->assertDontSee('data-people-stat=', false)
             ->assertSee('data-discipleship-people-search-form', false)
             ->assertSee('data-discipleship-people-search-input', false)
@@ -440,11 +440,16 @@ class DiscipleshipPeopleListTest extends TestCase
             ->assertDontSee('type="submit">Cari</button>', false);
         $this->assertLessThanOrEqual(30, $queries);
 
-        $pageTwo = $this->getJson('/pemuridan/anggota/rows?page=2');
+        preg_match('/data-next-cursor="([^"]+)"/', (string) $response->getContent(), $cursorMatch);
+        $this->assertNotEmpty($cursorMatch[1] ?? '');
+        $pageTwo = $this->getJson('/pemuridan/anggota/rows?'.http_build_query(['cursor' => $cursorMatch[1]]));
         $pageTwo->assertOk()
+            ->assertJsonStructure(['html', 'stats', 'has_more', 'next_cursor', 'empty'])
             ->assertJsonPath('has_more', true)
-            ->assertJsonPath('next_page', 3)
+            ->assertJsonPath('empty', false)
             ->assertJsonPath('stats.total', 1000);
+        $this->assertNotEmpty($pageTwo->json('next_cursor'));
+        $this->assertArrayNotHasKey('next_page', $pageTwo->json());
         $this->assertStringContainsString('Peserta 0051', (string) $pageTwo->json('html'));
         $this->assertStringContainsString('Peserta 0100', (string) $pageTwo->json('html'));
         $this->assertStringNotContainsString('Peserta 0050', (string) $pageTwo->json('html'));
@@ -453,15 +458,18 @@ class DiscipleshipPeopleListTest extends TestCase
         $search = $this->getJson('/pemuridan/anggota/rows?q=Peserta+1000');
         $search->assertOk()
             ->assertJsonPath('has_more', false)
-            ->assertJsonPath('next_page', null)
+            ->assertJsonPath('next_cursor', null)
+            ->assertJsonPath('empty', false)
             ->assertJsonPath('stats.total', 1)
             ->assertJsonPath('stats.dg1', 1);
         $this->assertStringContainsString('Peserta 1000', (string) $search->json('html'));
         $this->assertStringNotContainsString('Peserta 0001', (string) $search->json('html'));
         $this->assertStringNotContainsString('Peserta 1000 Rahasia', (string) $search->json('html'));
 
-        $largePage = $this->getJson('/pemuridan/anggota/rows?per_page=500');
-        $largePage->assertOk()->assertJsonPath('next_page', 2);
+        $largePage = $this->getJson('/pemuridan/anggota/rows?limit=500');
+        $largePage->assertOk()->assertJsonPath('has_more', true);
+        $this->assertNotEmpty($largePage->json('next_cursor'));
+        $this->assertArrayNotHasKey('next_page', $largePage->json());
         $this->assertStringContainsString('Peserta 0100', (string) $largePage->json('html'));
         $this->assertStringNotContainsString('Peserta 0101', (string) $largePage->json('html'));
     }
@@ -568,6 +576,7 @@ class DiscipleshipPeopleListTest extends TestCase
 
     private function createDiscipleshipTables(): void
     {
+        Schema::dropIfExists('dg_manual');
         Schema::dropIfExists('keanggotaan_kelompok_dg');
         Schema::dropIfExists('relasi_dg');
         Schema::dropIfExists('kelompok_dg');
@@ -607,6 +616,16 @@ class DiscipleshipPeopleListTest extends TestCase
             $table->date('started_on')->nullable();
             $table->date('ended_on')->nullable();
             $table->string('end_reason')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('dg_manual', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->unsignedBigInteger('person_id');
+            $table->string('stage');
+            $table->date('completed_on')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }

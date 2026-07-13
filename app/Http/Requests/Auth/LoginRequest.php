@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Auth;
 
-use App\Support\RuntimeBootstrap;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -11,8 +10,6 @@ class LoginRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        RuntimeBootstrap::boot($this);
-
         return true;
     }
 

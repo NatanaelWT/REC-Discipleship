@@ -5,25 +5,25 @@ namespace App\Support;
 class HelperManifest
 {
     private const CORE = [
-        'app_church_name', 'app_config_value', 'app_maintenance_mode_enabled', 'app_timezone', 'asset_version', 'auth_access_scope_label',
+        'app_church_name', 'app_config_value', 'app_maintenance_mode_enabled', 'app_timezone', 'asset_version', 'rec_public_path',
         'branch_can_access_page', 'branch_can_access_secure_upload_path', 'branch_can_use_action', 'branch_home_page',
         'branch_id_from_slug', 'branch_ids_from_slugs', 'branch_slug_from_id', 'can_manage_app_config',
         'can_manage_difficult_questions', 'can_manage_public_materials', 'can_manage_users', 'central_readonly_action_map',
         'central_readonly_page_map', 'central_recap_branch_label', 'central_recap_branch_options',
-        'central_recap_selected_branch', 'clear_removed_session_state', 'client_ip_address', 'current_auth_access_scope',
+        'central_recap_selected_branch', 'client_ip_address', 'current_auth_access_scope',
         'current_jakarta_time_label', 'current_username', 'current_user_branch', 'current_user_branch_id',
         'current_user_can_access_worship', 'developer_debug_banner_enabled', 'discipleship_action_map',
-        'discipleship_page_map', 'destroy_current_session', 'format_datetime_id',
+        'discipleship_page_map', 'format_datetime_id',
         'format_indo_date', 'format_indo_month', 'format_lock_wait_label', 'format_short_indo_date', 'format_short_indo_weekday_date',
         'h', 'is_central_discipleship_readonly_session', 'is_developer_access_mode', 'is_developer_experiment_branch',
-        'is_developer_session', 'is_developer_testing_branch', 'is_discipleship_action',
+        'is_developer_session',
         'is_discipleship_branch_scope', 'is_effective_central_discipleship_readonly', 'is_logged_in',
         'is_same_origin_url', 'is_superuser_session', 'is_valid_post_origin', 'is_worship_action',
         'is_worship_only_scope', 'is_worship_page', 'normalize_auth_access_scope', 'normalize_central_recap_branch',
         'normalize_public_branch_code', 'normalize_user_branch', 'normalize_whatsapp_digits', 'normalize_ymd_date',
         'now_iso', 'parse_bool_value', 'public_branch_label', 'public_dg_branch_options', 'request_host_name',
         'restricted_branch_action_map', 'restricted_branch_page_map', 'restricted_secure_upload_prefixes',
-        'secure_upload_prefixes_for_current_scope', 'secure_upload_url', 'today_date', 'user_branch_label',
+        'secure_upload_url', 'today_date', 'user_branch_label',
         'view_rendering', 'worship_action_map', 'worship_only_action_map', 'worship_only_page_map', 'worship_page_map',
         'developer_access_original_username', 'developer_access_target_username',
     ];
@@ -52,7 +52,7 @@ class HelperManifest
         'discipleship_action_map', 'discipleship_page_map',
         'discipleship_person_sources', 'discipleship_stage_color', 'discipleship_unified_identity_key',
         'export_xlsx_column_ref', 'export_xlsx_inline_text', 'extract_member_photos', 'extract_msk_participant_photos',
-        'filter_active_members', 'format_parent_names', 'get_parent_ids',
+        'filter_active_members', 'get_parent_ids',
         'import_build_header_map', 'import_is_blank_row', 'import_normalize_gender_value', 'import_normalize_month_strict',
         'import_parse_msk_session_numbers', 'import_read_xlsx_sheets', 'import_row_value', 'import_sheet_name_key',
         'import_split_csv_tokens', 'import_xlsx_column_index_from_ref', 'import_xlsx_shared_string_text',
@@ -63,8 +63,7 @@ class HelperManifest
         'normalize_msk_session_numbers', 'normalize_sheet_cell_value', 'person_label', 'pohon_dot_attrs',
         'pohon_dot_group_label', 'pohon_dot_group_node_id', 'pohon_dot_group_stage', 'pohon_dot_id',
         'pohon_dot_person_label', 'pohon_dot_person_name', 'pohon_dot_primary_group_leader_name', 'pohon_dot_quote',
-        'read_branch_discipleship_targets', 'temporary_model_id', 'upload_dg_meeting_photo',
-        'upload_dg_meeting_photos', 'upload_member_photo', 'upload_member_photos',
+        'temporary_model_id', 'upload_member_photo', 'upload_member_photos',
     ];
 
     private const PUBLIC_PORTAL = [
@@ -97,11 +96,18 @@ class HelperManifest
         } elseif (str_starts_with($path, 'ibadah')) {
             $groups[] = self::WORSHIP;
             $groups[] = self::FILES;
-        } elseif ($path === '' || str_starts_with($path, 'publik') || str_starts_with($path, 'materi') || str_starts_with($path, 'file-aman')) {
+        } elseif (str_starts_with($path, 'publik/jurnal-dg') || str_starts_with($path, 'publik/umpan-balik-anggota')) {
             $groups[] = self::PUBLIC_PORTAL;
             $groups[] = self::DISCIPLESHIP;
             $groups[] = self::FILES;
-        } else {
+        } elseif (str_starts_with($path, 'publik')) {
+            $groups[] = self::PUBLIC_PORTAL;
+        } elseif (str_starts_with($path, 'materi')) {
+            $groups[] = self::PUBLIC_PORTAL;
+            $groups[] = self::FILES;
+        } elseif (str_starts_with($path, 'file-aman')) {
+            $groups[] = self::FILES;
+        } elseif (str_starts_with($path, 'developer/maintenance')) {
             $groups[] = self::FILES;
         }
 

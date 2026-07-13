@@ -7,6 +7,7 @@ use App\Http\Controllers\Developer\DeveloperActivityController;
 use App\Http\Controllers\Developer\DeveloperBranchController;
 use App\Http\Controllers\Developer\DeveloperConfigController;
 use App\Http\Controllers\Developer\DeveloperController;
+use App\Http\Controllers\Developer\DeveloperMaintenanceController;
 use App\Http\Controllers\Developer\DeveloperStatisticsController;
 use App\Http\Controllers\Developer\DeveloperUserController;
 use App\Http\Controllers\Discipleship\DashboardController as DiscipleshipDashboardController;
@@ -30,15 +31,14 @@ use App\Http\Controllers\PublicPortal\MaterialDownloadController as PublicMateri
 use App\Http\Controllers\PublicPortal\MaterialPreviewController as PublicMaterialPreviewController;
 use App\Http\Controllers\PublicPortal\MemberFeedbackJournalController as PublicMemberFeedbackJournalController;
 use App\Http\Controllers\Settings\SettingsController;
+use App\Http\Controllers\SystemRouteController;
 use App\Http\Controllers\Worship\ServiceScheduleController as WorshipServiceScheduleController;
 use App\Http\Controllers\Worship\ServiceScheduleImageController as WorshipServiceScheduleImageController;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('rec.maintenance')->group(function (): void {
     Route::get('/', [PublicHomeController::class, 'index'])->name('home');
-    Route::get('/index.php', static fn (): RedirectResponse => redirect()->route('home'))->name('index.redirect');
+    Route::get('/index.php', [SystemRouteController::class, 'legacyIndex'])->name('index.redirect');
 
     Route::get('/login', [LoginController::class, 'show'])->name('auth.login');
     Route::post('/login', [LoginController::class, 'store'])->name('auth.login.store');
@@ -65,6 +65,11 @@ Route::middleware('rec.maintenance')->group(function (): void {
         Route::get('/statistics', [DeveloperStatisticsController::class, 'index'])->name('statistics');
         Route::get('/activities', [DeveloperActivityController::class, 'index'])->name('activities');
         Route::get('/activities/{activityRequest}', [DeveloperActivityController::class, 'show'])->name('activities.show');
+        Route::get('/maintenance', [DeveloperMaintenanceController::class, 'index'])->name('maintenance');
+        Route::post('/maintenance', [DeveloperMaintenanceController::class, 'start'])->name('maintenance.start');
+        Route::post('/maintenance/{maintenanceRun}/batch', [DeveloperMaintenanceController::class, 'batch'])->name('maintenance.batch');
+        Route::post('/maintenance/quarantine/restore', [DeveloperMaintenanceController::class, 'restoreQuarantine'])->name('maintenance.quarantine.restore');
+        Route::post('/maintenance/quarantine/delete', [DeveloperMaintenanceController::class, 'deleteQuarantine'])->name('maintenance.quarantine.delete');
     });
 
     Route::prefix('publik')->name('public.')->group(function (): void {
@@ -106,9 +111,7 @@ Route::middleware('rec.maintenance')->group(function (): void {
             ->name('dashboard.section');
         Route::post('/dashboard/msk-sessions', [DiscipleshipDashboardController::class, 'updateMskSessions'])->middleware('rec.page:discipleship_dashboard')->name('dashboard.msk-sessions');
         Route::get('/kelompok', [DiscipleshipGroupController::class, 'index'])->middleware('rec.page:groups_list')->name('groups');
-        Route::get('/orang', static function (Request $request): RedirectResponse {
-            return redirect()->route('discipleship.tree', $request->query());
-        })->name('people');
+        Route::get('/orang', [SystemRouteController::class, 'legacyPeople'])->name('people');
         Route::get('/kelompok/rows', [DiscipleshipGroupController::class, 'rows'])->middleware('rec.page:groups_list')->name('groups.rows');
         Route::get('/anggota', [DiscipleshipPeopleListController::class, 'index'])->middleware('rec.page:people_list')->name('people-list');
         Route::get('/anggota/rows', [DiscipleshipPeopleListController::class, 'rows'])->middleware('rec.page:people_list')->name('people-list.rows');
@@ -116,6 +119,8 @@ Route::middleware('rec.maintenance')->group(function (): void {
         Route::get('/pohon', [DiscipleshipPeopleTreeController::class, 'index'])->middleware('rec.page:people_tree')->name('tree');
         Route::post('/pohon', [DiscipleshipPeopleTreeController::class, 'handleFormAction'])->middleware('rec.page:people_tree')->name('tree.action');
         Route::get('/pohon-v2', [DiscipleshipPeopleTreeController::class, 'treeV2'])->middleware('rec.page:people_tree')->name('tree-v2');
+        Route::get('/pohon/orang/{person}/detail', [DiscipleshipPeopleTreeController::class, 'personDetail'])->whereNumber('person')->middleware('rec.page:people_tree')->name('tree.people.detail');
+        Route::get('/pohon/kelompok/{group}/detail', [DiscipleshipPeopleTreeController::class, 'groupDetail'])->whereNumber('group')->middleware('rec.page:people_tree')->name('tree.groups.detail');
         Route::post('/pohon/orang', [DiscipleshipPeopleTreeController::class, 'savePerson'])->middleware('rec.page:people_tree')->name('tree.people.save');
         Route::post('/pohon/orang/hapus', [DiscipleshipPeopleTreeController::class, 'deletePerson'])->middleware('rec.page:people_tree')->name('tree.people.delete');
         Route::post('/pohon/kelompok', [DiscipleshipPeopleTreeController::class, 'saveGroup'])->middleware('rec.page:people_tree')->name('tree.groups.save');
@@ -125,14 +130,18 @@ Route::middleware('rec.maintenance')->group(function (): void {
         Route::post('/pohon/export-dot', [DiscipleshipPeopleTreeController::class, 'exportDot'])->middleware('rec.page:people_tree')->name('tree.export-dot');
         Route::get('/spiritual-journey', [DiscipleshipSpiritualJourneyController::class, 'index'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey');
         Route::get('/spiritual-journey/rows', [DiscipleshipSpiritualJourneyController::class, 'rows'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.rows');
+        Route::get('/spiritual-journey/{participant}/detail', [DiscipleshipSpiritualJourneyController::class, 'detail'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.detail');
         Route::post('/spiritual-journey', [DiscipleshipSpiritualJourneyController::class, 'updateBridgeStatusFromForm'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.bridge-status-form');
         Route::post('/spiritual-journey/{participant}/bridge-status', [DiscipleshipSpiritualJourneyController::class, 'updateBridgeStatus'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.bridge-status');
         Route::get('/laporan-dg', [DiscipleshipMeetingReportRecapController::class, 'index'])->middleware('rec.page:dg_reports_recap')->name('reports-recap');
         Route::get('/umpan-balik-anggota', [DiscipleshipMemberFeedbackRecapController::class, 'index'])->middleware('rec.page:member_feedback_recap')->name('member-feedback-recap');
         Route::get('/msk', [DiscipleshipMskParticipantController::class, 'index'])->middleware('rec.page:msk_classes')->name('msk-classes');
         Route::get('/msk/rows', [DiscipleshipMskParticipantController::class, 'rows'])->middleware('rec.page:msk_classes')->name('msk-classes.rows');
+        Route::get('/msk/{participant}/detail', [DiscipleshipMskParticipantController::class, 'detail'])->middleware('rec.page:msk_classes')->name('msk-classes.detail');
         Route::post('/msk/peserta', [DiscipleshipMskParticipantController::class, 'store'])->middleware('rec.page:msk_classes')->name('msk-classes.store');
         Route::post('/msk/impor', [DiscipleshipMskParticipantController::class, 'import'])->middleware('rec.page:msk_classes')->name('msk-classes.import');
+        Route::get('/msk/impor/{importJob}/status', [DiscipleshipMskParticipantController::class, 'importStatus'])->middleware('rec.page:msk_classes')->name('msk-classes.import-status');
+        Route::post('/msk/impor/{importJob}/batch', [DiscipleshipMskParticipantController::class, 'importBatch'])->middleware('rec.page:msk_classes')->name('msk-classes.import-batch');
         Route::post('/msk/ekspor', [DiscipleshipMskParticipantController::class, 'export'])->middleware('rec.page:msk_classes')->name('msk-classes.export');
         Route::post('/msk/{participant}/sesi', [DiscipleshipMskParticipantController::class, 'updateSessions'])->middleware('rec.page:msk_classes')->name('msk-classes.sessions');
         Route::post('/msk/{participant}/nonaktif', [DiscipleshipMskParticipantController::class, 'deactivate'])->middleware('rec.page:msk_classes')->name('msk-classes.deactivate');
@@ -153,9 +162,11 @@ Route::middleware('rec.maintenance')->group(function (): void {
             ->name('penatalayan.destroy');
     });
 
-    Route::get('/file-aman', [SecureFileController::class, 'show'])->name('secure-file.show');
+    Route::get('/file-aman', [SecureFileController::class, 'show'])
+        ->middleware(['rec.auth', 'signed:relative'])
+        ->name('secure-file.show');
 
-    Route::match(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], '/{fallbackPath}', static function (): never {
-        abort(404);
-    })->where('fallbackPath', '.*')->fallback();
+    Route::match(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], '/{fallbackPath}', [SystemRouteController::class, 'notFound'])
+        ->where('fallbackPath', '.*')
+        ->fallback();
 });

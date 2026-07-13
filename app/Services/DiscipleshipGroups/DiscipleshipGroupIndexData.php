@@ -7,6 +7,7 @@ use App\Models\DiscipleshipGroupPerson;
 use App\Models\Person;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Support\DiscipleshipPersonProfile;
+use App\Support\StableNameCursor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -34,22 +35,27 @@ class DiscipleshipGroupIndexData
     {
         $search = $this->search($request);
         $status = $this->statusFilter($request);
-        $page = $this->page($request);
-        $perPage = $this->perPage($request);
+        $limit = $this->limit($request);
+        $cursor = StableNameCursor::decode($request->query('cursor'));
+        $nameExpression = $this->cursorNameExpression();
         $query = $this->filteredGroupQuery($search, $status)
-            ->select(['id', 'branch_id', 'status', 'stage', 'created_at'])
-            ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
-            ->orderBy('stage')
-            ->orderBy('id');
+            ->select(['discipleship_groups.id', 'branch_id', 'status', 'stage', 'created_at'])
+            ->addSelect(DB::raw($nameExpression.' as cursor_name'))
+            ->orderByRaw($nameExpression)
+            ->orderBy('discipleship_groups.id');
+        StableNameCursor::apply($query, $nameExpression, 'discipleship_groups.id', $cursor);
 
         $groups = $query
-            ->offset(($page - 1) * $perPage)
-            ->limit($perPage + 1)
+            ->limit($limit + 1)
             ->get();
-        $hasMore = $groups->count() > $perPage;
+        $hasMore = $groups->count() > $limit;
         if ($hasMore) {
-            $groups = $groups->slice(0, $perPage)->values();
+            $groups = $groups->slice(0, $limit)->values();
         }
+        $last = $groups->last();
+        $nextCursor = $hasMore && $last instanceof DiscipleshipGroup
+            ? StableNameCursor::encode((string) $last->cursor_name, (int) $last->id)
+            : null;
         $stats = $this->stats($search, $status);
 
         return [
@@ -62,10 +68,9 @@ class DiscipleshipGroupIndexData
             'groupsStatusFilterCounts' => $this->statusFilterCounts($search),
             'groupsSearch' => $search,
             'groupsStatusFilter' => $status,
-            'groupsPage' => $page,
-            'groupsPerPage' => $perPage,
+            'groupsLimit' => $limit,
             'hasMoreGroupRows' => $hasMore,
-            'nextGroupPage' => $hasMore ? $page + 1 : null,
+            'nextGroupCursor' => $nextCursor,
             'groupsEmptyMessage' => $this->emptyMessage($search, $status),
         ];
     }
@@ -261,14 +266,19 @@ class DiscipleshipGroupIndexData
         return in_array($status, ['all', 'active', 'inactive'], true) ? $status : 'all';
     }
 
-    private function page(Request $request): int
+    private function cursorNameExpression(): string
     {
-        return max(1, (int) $request->query('page', 1));
+        $statusPrefix = "CASE WHEN discipleship_groups.status = 'active' THEN '0|' ELSE '1|' END";
+        $stage = "LOWER(TRIM(COALESCE(discipleship_groups.stage, '')))";
+
+        return DB::connection()->getDriverName() === 'sqlite'
+            ? "({$statusPrefix}) || {$stage}"
+            : "CONCAT(({$statusPrefix}), {$stage})";
     }
 
-    private function perPage(Request $request): int
+    private function limit(Request $request): int
     {
-        return max(1, min(self::MAX_PER_PAGE, (int) $request->query('per_page', self::DEFAULT_PER_PAGE)));
+        return max(1, min(self::MAX_PER_PAGE, (int) $request->query('limit', self::DEFAULT_PER_PAGE)));
     }
 
     private function emptyMessage(string $search, string $status): string

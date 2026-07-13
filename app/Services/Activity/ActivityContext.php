@@ -18,10 +18,14 @@ class ActivityContext
     /** @var array<int, Closure(): void> */
     private array $commitCallbacks = [];
 
+    /** @var array<int, array<string, mixed>> */
+    private array $auditEvents = [];
+
     public function activate(string $requestId): void
     {
         $this->requestId = $requestId;
         $this->auditFailure = false;
+        $this->auditEvents = [];
     }
 
     public function requestId(): ?string
@@ -42,6 +46,28 @@ class ActivityContext
     public function hasAuditFailure(): bool
     {
         return $this->auditFailure;
+    }
+
+    /** @param array<string, mixed> $event */
+    public function queueAuditEvent(array $event): void
+    {
+        $this->auditEvents[] = $event;
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function auditEvents(): array
+    {
+        return $this->auditEvents;
+    }
+
+    public function auditEventCount(): int
+    {
+        return count($this->auditEvents);
+    }
+
+    public function discardAuditEvents(): void
+    {
+        $this->auditEvents = [];
     }
 
     public function modelEventsSuppressed(): bool
@@ -105,5 +131,6 @@ class ActivityContext
         $this->auditFailure = false;
         $this->rollbackCallbacks = [];
         $this->commitCallbacks = [];
+        $this->auditEvents = [];
     }
 }

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Worship;
 use App\Http\Controllers\Controller;
 use App\Services\Activity\ActivityRecorder;
 use App\Services\WorshipServiceSchedules\WorshipServiceScheduleBuilder;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -17,8 +16,6 @@ class ServiceScheduleImageController extends Controller
         WorshipServiceScheduleBuilder $scheduleBuilder,
         ActivityRecorder $activity,
     ): RedirectResponse|Response {
-        RuntimeBootstrap::boot($request);
-
         $selectedMonth = normalize_month_value((string) $request->query('month', date('Y-m')));
         $selectedExistingSchedule = $scheduleBuilder->recordForMonth($selectedMonth);
         if ($selectedExistingSchedule === null) {

@@ -4,14 +4,14 @@ namespace App\Services\PublicMaterials;
 
 use App\Models\PublicMaterialFile;
 use App\Support\RuntimeBootstrap;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PublicMaterialFileStreamer
 {
     /**
-     * @param "inline"|"attachment" $disposition
+     * @param  "inline"|"attachment"  $disposition
      */
-    public function stream(PublicMaterialFile $file, string $disposition): StreamedResponse
+    public function stream(PublicMaterialFile $file, string $disposition): BinaryFileResponse
     {
         RuntimeBootstrap::load();
 
@@ -49,7 +49,6 @@ class PublicMaterialFileStreamer
             $contentType = 'application/octet-stream';
         }
 
-        $contentLength = (int) @filesize($fullPath);
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
         }
@@ -59,31 +58,25 @@ class PublicMaterialFileStreamer
             'X-Content-Type-Options' => 'nosniff',
             'Cross-Origin-Resource-Policy' => 'same-origin',
             'X-Download-Options' => 'noopen',
-            'Cache-Control' => 'private, no-store, no-cache, must-revalidate',
-            'Pragma' => 'no-cache',
-            'Expires' => '0',
-            'Content-Disposition' => $disposition . '; filename="' . $asciiDownloadName . '"; filename*=UTF-8\'\'' . rawurlencode($downloadName),
+            'Cache-Control' => 'public, max-age=3600, stale-while-revalidate=86400',
+            'Vary' => 'Accept-Encoding',
         ];
-        if ($contentLength > 0) {
-            $headers['Content-Length'] = (string) $contentLength;
+
+        $response = new BinaryFileResponse($fullPath, 200, $headers, true, null, false, true);
+        $response->setContentDisposition($disposition, $downloadName, $asciiDownloadName);
+        $checksum = strtolower(trim((string) $file->sha256));
+        if (preg_match('/\A[a-f0-9]{64}\z/', $checksum) === 1) {
+            $response->setEtag($checksum);
+        } else {
+            $response->setEtag($this->weakEntityTag($fullPath), true);
         }
+        $response->isNotModified(request());
 
-        return response()->stream(function () use ($fullPath): void {
-            $fp = fopen($fullPath, 'rb');
-            if ($fp === false) {
-                return;
-            }
+        return $response;
+    }
 
-            while (! feof($fp)) {
-                $chunk = fread($fp, 8192);
-                if ($chunk === false) {
-                    break;
-                }
-
-                echo $chunk;
-            }
-
-            fclose($fp);
-        }, 200, $headers);
+    private function weakEntityTag(string $path): string
+    {
+        return sha1((string) @filesize($path).':'.(string) @filemtime($path));
     }
 }

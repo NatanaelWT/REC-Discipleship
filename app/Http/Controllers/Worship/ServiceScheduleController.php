@@ -7,7 +7,6 @@ use App\Http\Requests\WorshipServiceSchedules\DeleteWorshipServiceScheduleReques
 use App\Http\Requests\WorshipServiceSchedules\StoreWorshipServiceScheduleRequest;
 use App\Services\Activity\ActivityRecorder;
 use App\Services\WorshipServiceSchedules\WorshipServiceScheduleBuilder;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -16,8 +15,6 @@ class ServiceScheduleController extends Controller
 {
     public function index(Request $request, WorshipServiceScheduleBuilder $scheduleBuilder): View
     {
-        RuntimeBootstrap::boot($request);
-
         $selectedMonth = normalize_month_value((string) $request->query('month', date('Y-m')));
         $schedules = $scheduleBuilder->allRecords();
         $selectedExistingSchedule = $this->recordByMonth($schedules, $selectedMonth);

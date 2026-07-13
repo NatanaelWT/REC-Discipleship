@@ -10,10 +10,10 @@ use App\Services\DiscipleshipTargets\DiscipleshipTargetReader;
 use App\Services\MskParticipants\MskParticipantHistoryData;
 use App\Services\MskParticipants\MskParticipantProfileData;
 use App\Support\DiscipleshipPersonProfile;
+use App\Support\StableNameCursor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class SpiritualJourneyPageData
 {
@@ -34,6 +34,34 @@ class SpiritualJourneyPageData
         return [
             'settings' => ['church_name' => app_church_name()],
             ...$this->paginatedRowsForCurrentContext($request),
+        ];
+    }
+
+    /** @return array{participant:array<string,mixed>,profile:array<string,mixed>}|null */
+    public function detailForCurrentContext(Request $request, int $participantId): ?array
+    {
+        if ($participantId < 1) {
+            return null;
+        }
+
+        $participant = Person::query()
+            ->select(Person::VIEW_COLUMNS)
+            ->whereIn('branch_id', $this->scope->branchIds())
+            ->whereKey($participantId)
+            ->first();
+        if (! $participant instanceof Person) {
+            return null;
+        }
+
+        $row = $participant->toViewArray();
+        $row['branch_code'] = $this->scope->optionsById()[(int) $participant->branch_id]['slug'] ?? '';
+        $histories = $this->historyData->forParticipants([$row], $this->scope->branchIds());
+        $profiles = $this->profileData->forParticipants([$row], $histories);
+        $id = (string) $participant->getKey();
+
+        return [
+            'participant' => $row,
+            'profile' => is_array($profiles[$id] ?? null) ? $profiles[$id] : [],
         ];
     }
 
@@ -59,17 +87,25 @@ class SpiritualJourneyPageData
         }
 
         $stats = $this->stats(clone $query);
-        $page = $this->page($request);
-        $perPage = $this->perPage($request);
-        $participants = (clone $query)
-            ->orderBy('full_name')->orderBy('id')
-            ->offset(($page - 1) * $perPage)
-            ->limit($perPage + 1)
+        $limit = $this->limit($request);
+        $cursor = StableNameCursor::decode($request->query('cursor'));
+        // full_name is normalized on write; keep the raw column order index-friendly.
+        $nameExpression = 'people.full_name';
+        $participantsQuery = (clone $query)
+            ->addSelect(DB::raw($nameExpression.' as cursor_name'))
+            ->orderByRaw($nameExpression)->orderBy('id')
+            ->limit($limit + 1);
+        StableNameCursor::apply($participantsQuery, $nameExpression, 'people.id', $cursor, nullableName: true);
+        $participants = $participantsQuery
             ->get();
-        $hasMore = $participants->count() > $perPage;
+        $hasMore = $participants->count() > $limit;
         if ($hasMore) {
-            $participants = $participants->slice(0, $perPage)->values();
+            $participants = $participants->slice(0, $limit)->values();
         }
+        $last = $participants->last();
+        $nextCursor = $hasMore && $last instanceof Person
+            ? StableNameCursor::encode($last->cursor_name !== null ? (string) $last->cursor_name : null, (int) $last->id)
+            : null;
         $personIds = $participants->pluck('id')->filter()->map(static fn ($id): int => (int) $id)->unique()->all();
         $groupPeople = $this->groupPeople($personIds);
         $groupIds = $groupPeople->pluck('discipleship_group_id')->filter()->map(static fn ($id): int => (int) $id)->unique()->all();
@@ -90,9 +126,6 @@ class SpiritualJourneyPageData
             return $row;
         })->values()->all();
 
-        $participantHistories = $this->historyData->forParticipants($participantRows, $this->scope->branchIds());
-        $participantProfiles = $this->profileData->forParticipants($participantRows, $participantHistories);
-
         return [
             'page' => 'spiritual_journey',
             'people' => array_values($people),
@@ -103,14 +136,13 @@ class SpiritualJourneyPageData
             'spiritualJourneyFilterCounts' => $this->journeyFilterCounts($search),
             'spiritualJourneyTotalParticipants' => $stats['total'],
             'spiritualJourneyStats' => $stats,
-            'spiritualJourneyPage' => $page,
-            'spiritualJourneyPerPage' => $perPage,
+            'spiritualJourneyLimit' => $limit,
             'hasMoreSpiritualJourneyRows' => $hasMore,
-            'nextSpiritualJourneyPage' => $hasMore ? $page + 1 : null,
+            'nextSpiritualJourneyCursor' => $nextCursor,
             'spiritualJourneyEmptyMessage' => $this->emptyMessage($search, $journeyFilter),
             'discipleshipTargets' => $this->targets(),
-            'participantHistories' => $participantHistories,
-            'participantProfiles' => $participantProfiles,
+            'participantHistories' => [],
+            'participantProfiles' => [],
             'spiritualJourneyRows' => $this->journeyRows($participantRows, $groupPeople),
             'discipleshipV2Model' => [
                 'discipleship_persons' => array_values($people),
@@ -124,45 +156,60 @@ class SpiritualJourneyPageData
     /** @return array{total:int,completed_msk:int,following_kgap:int,completed_dg1:int,completed_dg2:int,completed_dg3:int} */
     private function stats(Builder $query): array
     {
-        $participants = $query->get(['id', 'branch_id', 'journey_bridge_status', 'session_numbers']);
-        $personIds = $participants->pluck('id')->filter()->map(static fn ($id): int => (int) $id)->unique()->all();
-        $groupPeople = $this->groupPeople($personIds);
-        $completion = $this->completionMaps($groupPeople);
-        $completedMsk = 0;
-        $followingKgap = 0;
-        $completedDg1 = 0;
-        $completedDg2 = 0;
-        $completedDg3 = 0;
-
-        foreach ($participants as $participant) {
-            $sessionCount = count(normalize_msk_session_numbers($participant->session_numbers ?? []));
-            if ($sessionCount >= 12) {
-                $completedMsk++;
-            }
-            $bridgeStatus = normalize_journey_bridge_status((string) ($participant->journey_bridge_status ?? 'belum'));
-            if (in_array($bridgeStatus, ['sudah_kgap', 'ikut_keduanya'], true)) {
-                $followingKgap++;
-            }
-            $personId = (string) ((int) ($participant->id ?? 0));
-            if ($personId !== '0' && ! empty($completion['dg1'][$personId])) {
-                $completedDg1++;
-            }
-            if ($personId !== '0' && ! empty($completion['dg2'][$personId])) {
-                $completedDg2++;
-            }
-            if ($personId !== '0' && ! empty($completion['dg3'][$personId])) {
-                $completedDg3++;
-            }
-        }
+        $aggregate = (clone $query)
+            ->reorder()
+            ->select([])
+            ->selectRaw('COUNT(*) AS total')
+            ->selectRaw('COALESCE(SUM(CASE WHEN '.$this->sessionCountExpression().' >= 12 THEN 1 ELSE 0 END), 0) AS completed_msk')
+            ->selectRaw("COALESCE(SUM(CASE WHEN people.journey_bridge_status IN ('sudah_kgap', 'ikut_keduanya') THEN 1 ELSE 0 END), 0) AS following_kgap")
+            ->selectRaw('COALESCE(SUM(CASE WHEN '.$this->completedDgExpression(1).' THEN 1 ELSE 0 END), 0) AS completed_dg1')
+            ->selectRaw('COALESCE(SUM(CASE WHEN '.$this->completedDgExpression(2).' THEN 1 ELSE 0 END), 0) AS completed_dg2')
+            ->selectRaw('COALESCE(SUM(CASE WHEN '.$this->completedDgExpression(3).' THEN 1 ELSE 0 END), 0) AS completed_dg3')
+            ->toBase()
+            ->first();
 
         return [
-            'total' => $participants->count(),
-            'completed_msk' => $completedMsk,
-            'following_kgap' => $followingKgap,
-            'completed_dg1' => $completedDg1,
-            'completed_dg2' => $completedDg2,
-            'completed_dg3' => $completedDg3,
+            'total' => (int) ($aggregate->total ?? 0),
+            'completed_msk' => (int) ($aggregate->completed_msk ?? 0),
+            'following_kgap' => (int) ($aggregate->following_kgap ?? 0),
+            'completed_dg1' => (int) ($aggregate->completed_dg1 ?? 0),
+            'completed_dg2' => (int) ($aggregate->completed_dg2 ?? 0),
+            'completed_dg3' => (int) ($aggregate->completed_dg3 ?? 0),
         ];
+    }
+
+    private function sessionCountExpression(): string
+    {
+        return DB::connection()->getDriverName() === 'sqlite'
+            ? "COALESCE(json_array_length(people.session_numbers), 0)"
+            : 'COALESCE(JSON_LENGTH(people.session_numbers), 0)';
+    }
+
+    private function completedDgExpression(int $stage): string
+    {
+        $completionReasons = "'continued_to_child_group', 'group_completed', 'stage_transition', 'manual_completion'";
+        $membershipCondition = match ($stage) {
+            1 => "(completion_gp.stage IN ('DG 2', 'DG 3') OR (completion_gp.stage = 'DG 1' AND completion_gp.end_reason IN ({$completionReasons})))",
+            2 => "(completion_gp.stage = 'DG 3' OR (completion_gp.stage = 'DG 2' AND completion_gp.end_reason IN ({$completionReasons})))",
+            default => "completion_gp.stage = 'DG 3' AND completion_gp.end_reason IN ({$completionReasons})",
+        };
+        $manualStages = match ($stage) {
+            1 => "'DG 1', 'DG 2', 'DG 3'",
+            2 => "'DG 2', 'DG 3'",
+            default => "'DG 3'",
+        };
+
+        return "(EXISTS (
+            SELECT 1 FROM keanggotaan_kelompok_dg AS completion_gp
+            WHERE completion_gp.person_id = people.id
+              AND completion_gp.branch_id = people.branch_id
+              AND {$membershipCondition}
+        ) OR EXISTS (
+            SELECT 1 FROM dg_manual AS completion_manual
+            WHERE completion_manual.person_id = people.id
+              AND completion_manual.branch_id = people.branch_id
+              AND completion_manual.stage IN ({$manualStages})
+        ))";
     }
 
     private function journeyRows(array $participantRows, $groupPeople): array
@@ -200,16 +247,6 @@ class SpiritualJourneyPageData
                 'journey_view_key' => $journeyViewKey,
             ];
         }
-
-        usort($rows, function (array $a, array $b): int {
-            $sessionA = (int) ($a['session_count'] ?? 0);
-            $sessionB = (int) ($b['session_count'] ?? 0);
-            if ($sessionA !== $sessionB) {
-                return $sessionB <=> $sessionA;
-            }
-
-            return strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
-        });
 
         return $rows;
     }
@@ -258,63 +295,65 @@ class SpiritualJourneyPageData
             return;
         }
 
-        $hasGroupPeople = Schema::hasTable('keanggotaan_kelompok_dg');
-        $hasManualJourney = Schema::hasTable('dg_manual');
-
-        if (! $hasGroupPeople && ! $hasManualJourney) {
-            $query->whereRaw('1 = 0');
-
-            return;
-        }
-
         $query->where(static function (Builder $condition): void {
             $condition->whereNull('people.journey_bridge_status')
                 ->orWhereNotIn('people.journey_bridge_status', ['sudah_kgap', 'ikut_keduanya']);
         });
-        $query->where(static function (Builder $condition) use ($hasGroupPeople, $hasManualJourney): void {
-            if ($hasGroupPeople) {
-                $condition->whereExists(static function ($subquery): void {
-                    $subquery->selectRaw('1')
-                        ->from('keanggotaan_kelompok_dg as filter_gp')
-                        ->whereColumn('filter_gp.person_id', 'people.id')
-                        ->whereColumn('filter_gp.branch_id', 'people.branch_id')
-                        ->where('filter_gp.role', 'member')
-                        ->whereIn('filter_gp.stage', ['DG 1', 'DG 2', 'DG 3']);
-                });
-            }
-            if ($hasManualJourney) {
-                $method = $hasGroupPeople ? 'orWhereExists' : 'whereExists';
-                $condition->{$method}(static function ($subquery): void {
-                    $subquery->selectRaw('1')
-                        ->from('dg_manual as manual_journey')
-                        ->whereColumn('manual_journey.person_id', 'people.id')
-                        ->whereColumn('manual_journey.branch_id', 'people.branch_id')
-                        ->whereIn('manual_journey.stage', ['DG 1', 'DG 2', 'DG 3']);
-                });
-            }
+        $query->where(static function (Builder $condition): void {
+            $condition->whereExists(static function ($subquery): void {
+                $subquery->selectRaw('1')
+                    ->from('keanggotaan_kelompok_dg as filter_gp')
+                    ->whereColumn('filter_gp.person_id', 'people.id')
+                    ->whereColumn('filter_gp.branch_id', 'people.branch_id')
+                    ->where('filter_gp.role', 'member')
+                    ->whereIn('filter_gp.stage', ['DG 1', 'DG 2', 'DG 3']);
+            })->orWhereExists(static function ($subquery): void {
+                $subquery->selectRaw('1')
+                    ->from('dg_manual as manual_journey')
+                    ->whereColumn('manual_journey.person_id', 'people.id')
+                    ->whereColumn('manual_journey.branch_id', 'people.branch_id')
+                    ->whereIn('manual_journey.stage', ['DG 1', 'DG 2', 'DG 3']);
+            });
         });
     }
 
     /** @return array<string, int> */
     private function journeyFilterCounts(string $search): array
     {
-        $counts = [];
-        foreach (['all', 'dg_without_kgap'] as $filter) {
-            $query = Person::query()
-                ->from('orang as people')
-                ->whereIn('branch_id', $this->scope->branchIds());
-            $effectiveFilter = $filter;
-            $this->applyJourneyFilter($query, $effectiveFilter);
-            if ($search !== '') {
-                $query->where(static function (Builder $builder) use ($search): void {
-                    $builder->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%'])
-                        ->orWhereRaw('LOWER(whatsapp) LIKE ?', ['%'.$search.'%']);
-                });
-            }
-            $counts[$filter] = (int) $query->count('people.id');
+        $query = Person::query()
+            ->from('orang as people')
+            ->whereIn('branch_id', $this->scope->branchIds());
+        if ($search !== '') {
+            $query->where(static function (Builder $builder) use ($search): void {
+                $builder->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%'])
+                    ->orWhereRaw('LOWER(whatsapp) LIKE ?', ['%'.$search.'%']);
+            });
         }
 
-        return $counts;
+        $dgCondition = "COALESCE(people.journey_bridge_status, '') NOT IN ('sudah_kgap', 'ikut_keduanya')
+            AND (EXISTS (
+                SELECT 1 FROM keanggotaan_kelompok_dg AS filter_gp
+                WHERE filter_gp.person_id = people.id
+                  AND filter_gp.branch_id = people.branch_id
+                  AND filter_gp.role = 'member'
+                  AND filter_gp.stage IN ('DG 1', 'DG 2', 'DG 3')
+            ) OR EXISTS (
+                SELECT 1 FROM dg_manual AS manual_journey
+                WHERE manual_journey.person_id = people.id
+                  AND manual_journey.branch_id = people.branch_id
+                  AND manual_journey.stage IN ('DG 1', 'DG 2', 'DG 3')
+            ))";
+        $counts = $query
+            ->select([])
+            ->selectRaw('COUNT(*) AS all_count')
+            ->selectRaw("COALESCE(SUM(CASE WHEN {$dgCondition} THEN 1 ELSE 0 END), 0) AS dg_without_kgap_count")
+            ->toBase()
+            ->first();
+
+        return [
+            'all' => (int) ($counts->all_count ?? 0),
+            'dg_without_kgap' => (int) ($counts->dg_without_kgap_count ?? 0),
+        ];
     }
 
     private function people(array $personIds): array
@@ -436,10 +475,6 @@ class SpiritualJourneyPageData
 
     private function manualGroupPeople(array $personIds)
     {
-        if (! Schema::hasTable('dg_manual')) {
-            return collect();
-        }
-
         return DB::table('dg_manual')
             ->whereIn('branch_id', $this->scope->branchIds())
             ->whereIn('person_id', $personIds)
@@ -485,14 +520,9 @@ class SpiritualJourneyPageData
         return $total;
     }
 
-    private function page(Request $request): int
+    private function limit(Request $request): int
     {
-        return max(1, (int) $request->query('page', 1));
-    }
-
-    private function perPage(Request $request): int
-    {
-        return max(1, min(self::MAX_PER_PAGE, (int) $request->query('per_page', self::DEFAULT_PER_PAGE)));
+        return max(1, min(self::MAX_PER_PAGE, (int) $request->query('limit', self::DEFAULT_PER_PAGE)));
     }
 
     private function emptyMessage(string $search, string $journeyFilter): string

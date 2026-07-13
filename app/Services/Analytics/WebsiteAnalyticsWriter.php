@@ -4,7 +4,6 @@ namespace App\Services\Analytics;
 
 use App\Models\ActivityRequest;
 use App\Models\WebsitePageView;
-use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 class WebsiteAnalyticsWriter
@@ -20,35 +19,41 @@ class WebsiteAnalyticsWriter
             return null;
         }
 
-        $occurredAt = $activity->started_at instanceof CarbonImmutable
-            ? $activity->started_at
-            : CarbonImmutable::parse((string) $activity->started_at, 'UTC');
-        $client = $this->clients->classify($activity->user_agent);
-        $language = array_merge(['language_code' => null, 'language_name' => null], $language);
+        $attributes = $this->attributes($activity, $identity, $prefetch, $language);
 
-        return DB::transaction(function () use ($activity, $identity, $prefetch, $occurredAt, $client, $language): WebsitePageView {
+        return DB::transaction(function () use ($activity, $attributes): WebsitePageView {
             $existing = WebsitePageView::query()->find($activity->getKey());
             if ($existing instanceof WebsitePageView) {
                 return $existing;
             }
 
-            ActivityRequest::query()->whereKey((string) $activity->getKey())->update(array_merge($identity, $client, $language, [
-                'is_page_view' => true,
-                'user_id' => $activity->user_id,
-                'username' => $activity->username,
-                'actor_type' => $activity->actor_type,
-                'segment' => $this->segment((string) $activity->path),
-                'route_name' => $activity->route_name,
-                'path' => $activity->path,
-                'referer_host' => $this->refererHost($activity->referer),
-                'is_prefetch' => $prefetch,
-                'http_status' => (int) $activity->http_status,
-                'response_ms' => $activity->duration_ms,
-                'occurred_at' => $occurredAt,
-            ]));
+            ActivityRequest::query()->whereKey((string) $activity->getKey())->update($attributes);
 
             return WebsitePageView::query()->findOrFail((string) $activity->getKey());
         }, 3);
+    }
+
+    /**
+     * @param  array{visitor_hash:string,identity_source:string}  $identity
+     * @return array<string, mixed>
+     */
+    public function attributes(ActivityRequest $activity, array $identity, bool $prefetch = false, array $language = []): array
+    {
+        if (! $this->qualifies($activity)) {
+            return [];
+        }
+
+        $client = $this->clients->classify($activity->user_agent);
+        $language = array_merge(['language_code' => null, 'language_name' => null], $language);
+
+        return array_merge($identity, $client, $language, [
+            'is_page_view' => true,
+            'segment' => $this->segment((string) $activity->path),
+            'referer_host' => $this->refererHost($activity->referer),
+            'is_prefetch' => $prefetch,
+            'response_ms' => $activity->duration_ms,
+            'occurred_at' => $activity->started_at,
+        ]);
     }
 
     public function qualifies(ActivityRequest $activity): bool

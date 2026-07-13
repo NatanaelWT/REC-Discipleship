@@ -485,14 +485,17 @@ class DgMeetingReportRecapPageData
     {
         $rows = [];
         foreach ($photos as $photo) {
-            $path = sanitize_relative_upload_path($this->rowString($photo, 'path') ?: $this->rowString($photo, 'relative_path'));
-            if ($path === '') {
+            $originalPath = sanitize_relative_upload_path($this->rowString($photo, 'path') ?: $this->rowString($photo, 'relative_path'));
+            if ($originalPath === '') {
                 continue;
             }
 
+            $webPath = sanitize_relative_upload_path($this->rowString($photo, 'web_path'));
+
             $rows[] = [
-                'path' => $path,
-                'name' => trim($this->rowString($photo, 'name') ?: $this->rowString($photo, 'original_file_name')) ?: basename($path),
+                'path' => $webPath !== '' ? $webPath : $originalPath,
+                'original_path' => $originalPath,
+                'name' => trim($this->rowString($photo, 'name') ?: $this->rowString($photo, 'original_file_name')) ?: basename($originalPath),
             ];
         }
 

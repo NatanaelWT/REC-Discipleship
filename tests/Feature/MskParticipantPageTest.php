@@ -102,7 +102,12 @@ class MskParticipantPageTest extends TestCase
         ]);
 
         $this->actingAsRecUser();
-        $response = $this->get('/pemuridan/msk?batch_month=2026-06')
+        $this->get('/pemuridan/msk?batch_month=2026-06')
+            ->assertOk()
+            ->assertDontSee('msk-view-person-hero', false)
+            ->assertSee('data-msk-view-edit-link', false);
+
+        $response = $this->get('/pemuridan/msk/11/detail?batch_month=2026-06')
             ->assertOk()
             ->assertSee('msk-view-person-hero', false)
             ->assertSee('Profil peserta')
@@ -116,10 +121,9 @@ class MskParticipantPageTest extends TestCase
             ->assertSee('Riwayat Sebagai Anggota')
             ->assertSee('Riwayat Memimpin')
             ->assertSee('DG 1 (Peserta Modal)')
-            ->assertSee('Anggota Modal')
-            ->assertSee('data-msk-view-edit-link', false);
+            ->assertSee('Anggota Modal');
 
-        $content = $response->getContent();
+        $content = (string) $response->json('html');
         $this->assertLessThan(strpos($content, 'Kontak dan akses'), strpos($content, 'Profil peserta'));
         $this->assertLessThan(strpos($content, 'Foto dan keterangan'), strpos($content, 'Kontak dan akses'));
         $this->assertLessThan(strpos($content, 'MSK dan pemuridan aktif'), strpos($content, 'Foto dan keterangan'));
@@ -239,7 +243,7 @@ class MskParticipantPageTest extends TestCase
         $this->assertSame('', $histories['11']['member_items'][0]['note'] ?? '');
 
         $this->actingAsRecUser();
-        $content = $this->get('/pemuridan/msk?batch_month=2026-06')->assertOk()->getContent();
+        $content = (string) $this->get('/pemuridan/msk/11/detail?batch_month=2026-06')->assertOk()->json('html');
         $this->assertStringContainsString('DG 1 (Leader Duplikat)', $content);
         $this->assertStringNotContainsString('Data peserta diarsipkan', $content);
     }
@@ -289,7 +293,7 @@ class MskParticipantPageTest extends TestCase
         for ($i = 1; $i <= 120; $i++) {
             $rows[] = [
                 'branch_id' => 1,
-                'full_name' => sprintf('Peserta MSK %03d', $i),
+                'full_name' => $i === 51 ? 'Peserta MSK 050' : sprintf('Peserta MSK %03d', $i),
                 'batch_month' => '2026-06',
                 'journey_bridge_status' => 'belum',
                 'status' => 'active',
@@ -308,27 +312,55 @@ class MskParticipantPageTest extends TestCase
             ->assertOk()
             ->assertSee('Peserta MSK 001')
             ->assertSee('Peserta MSK 050')
-            ->assertDontSee('Peserta MSK 051')
+            ->assertSee('data-msk-view-open="50"', false)
+            ->assertDontSee('data-msk-view-open="51"', false)
             ->assertDontSee('Peserta MSK 120')
             ->assertSee('data-msk-list', false)
-            ->assertSee('data-next-page="2"', false)
+            ->assertSee('data-next-cursor="', false)
             ->assertSee('data-msk-search-form', false)
             ->assertSee('data-msk-search-input', false)
             ->assertSee('data-msk-search-row', false)
             ->assertDontSee('class="rec-pagination"', false)
             ->assertDontSee('type="submit">Cari</button>', false);
 
-        $pageTwo = $this->get('/pemuridan/msk/rows?batch_month=all&page=2');
+        preg_match('/data-next-cursor="([^"]+)"/', (string) $response->getContent(), $cursorMatch);
+        $this->assertNotEmpty($cursorMatch[1] ?? '');
+        DB::table('orang')->insert([
+            'branch_id' => 1,
+            'full_name' => 'A Peserta Baru Sebelum Cursor',
+            'batch_month' => '2026-06',
+            'journey_bridge_status' => 'belum',
+            'status' => 'active',
+            'session_numbers' => json_encode([]),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $paginationQueries = [];
+        DB::listen(static function ($query) use (&$paginationQueries): void {
+            $paginationQueries[] = strtolower((string) $query->sql);
+        });
+        $pageTwo = $this->get('/pemuridan/msk/rows?'.http_build_query([
+            'batch_month' => 'all',
+            'cursor' => $cursorMatch[1],
+        ]));
         $pageTwo->assertOk()
+            ->assertJsonStructure(['html', 'stats', 'has_more', 'next_cursor', 'empty'])
             ->assertJsonPath('has_more', true)
-            ->assertJsonPath('next_page', 3)
-            ->assertJsonPath('stats.total', 120)
-            ->assertJsonPath('stats.progress', 120);
-        $this->assertStringContainsString('Peserta MSK 051', (string) $pageTwo->json('html'));
+            ->assertJsonPath('empty', false)
+            ->assertJsonPath('stats.total', 121)
+            ->assertJsonPath('stats.progress', 121);
+        $this->assertNotEmpty($pageTwo->json('next_cursor'));
+        $this->assertArrayNotHasKey('next_page', $pageTwo->json());
+        $this->assertStringContainsString('data-msk-view-open="51"', (string) $pageTwo->json('html'));
+        $this->assertStringNotContainsString('data-msk-view-open="50"', (string) $pageTwo->json('html'));
+        $this->assertStringNotContainsString('A Peserta Baru Sebelum Cursor', (string) $pageTwo->json('html'));
         $this->assertStringContainsString('Peserta MSK 100', (string) $pageTwo->json('html'));
         $this->assertStringNotContainsString('Peserta MSK 101', (string) $pageTwo->json('html'));
-        $this->assertStringContainsString('data-msk-edit-template=', (string) $pageTwo->json('edit_templates_html'));
-        $this->assertStringContainsString('Peserta MSK 051', (string) $pageTwo->json('edit_templates_html'));
+        $this->assertStringNotContainsString(' offset ', ' '.implode(' ', $paginationQueries).' ');
+        $this->assertArrayNotHasKey('templates_html', $pageTwo->json());
+        $this->assertArrayNotHasKey('edit_templates_html', $pageTwo->json());
+        $this->get('/pemuridan/msk/rows?batch_month=all&page=2')->assertNotFound();
 
         $search = $this->get('/pemuridan/msk/rows?batch_month=all&q=MSK+120');
         $search->assertOk()
@@ -336,11 +368,10 @@ class MskParticipantPageTest extends TestCase
             ->assertJsonPath('stats.total', 1)
             ->assertJsonPath('stats.progress', 1);
         $this->assertStringContainsString('Peserta MSK 120', (string) $search->json('html'));
-        $this->assertStringContainsString('Peserta MSK 120', (string) $search->json('edit_templates_html'));
         $this->assertStringNotContainsString('Peserta MSK 001', (string) $search->json('html'));
     }
 
-    public function test_msk_rows_search_includes_profile_templates_for_returned_rows(): void
+    public function test_msk_rows_use_a_scoped_on_demand_profile_endpoint(): void
     {
         $this->createMskTables();
         $participantId = DB::table('orang')->insertGetId(array_merge(
@@ -362,8 +393,13 @@ class MskParticipantPageTest extends TestCase
 
         $this->assertStringContainsString('Nofida Lassa', (string) $response->json('html'));
         $this->assertStringContainsString('data-msk-view-open="'.$participantId.'"', (string) $response->json('html'));
-        $this->assertStringContainsString('data-msk-view-template="'.$participantId.'"', (string) $response->json('templates_html'));
-        $this->assertStringContainsString('Profil peserta', (string) $response->json('templates_html'));
+        $this->assertArrayNotHasKey('templates_html', $response->json());
+
+        $this->get('/pemuridan/msk/'.$participantId.'/detail?branch_id=all&batch_month=all')
+            ->assertOk()
+            ->assertJsonPath('title', 'Nofida Lassa')
+            ->assertJsonStructure(['title', 'html', 'edit_url'])
+            ->assertSee('Profil peserta');
     }
 
     public function test_developer_all_branch_view_query_opens_selected_msk_profile(): void
@@ -385,7 +421,8 @@ class MskParticipantPageTest extends TestCase
         $response->assertOk()
             ->assertDontSee('Data peserta kelas MSK yang ingin dilihat tidak ditemukan.')
             ->assertSee('data-msk-view-auto-open="'.$participantId.'"', false)
-            ->assertSee('data-msk-view-template="'.$participantId.'"', false)
+            ->assertSee('data-msk-detail-url-template=', false)
+            ->assertDontSee('data-msk-view-template=', false)
             ->assertSee('Nofida Lassa');
     }
 
@@ -406,8 +443,13 @@ class MskParticipantPageTest extends TestCase
         $response->assertOk()
             ->assertDontSee('Data peserta kelas MSK yang ingin diedit tidak ditemukan.')
             ->assertSee('data-msk-edit-auto-open="'.$participantId.'"', false)
-            ->assertSee('data-msk-edit-template="'.$participantId.'"', false)
+            ->assertDontSee('data-msk-edit-template=', false)
             ->assertSee('Marliana');
+
+        $this->get('/pemuridan/msk/'.$participantId.'/detail?mode=edit&batch_month=all')
+            ->assertOk()
+            ->assertJsonPath('title', 'Edit Peserta MSK: Marliana')
+            ->assertSee('data-msk-form', false);
     }
 
     public function test_batch_filter_lists_all_batches_not_only_the_active_batch(): void
@@ -624,6 +666,9 @@ class MskParticipantPageTest extends TestCase
 
     private function createMskTables(): void
     {
+        Schema::dropIfExists('dg_manual');
+        Schema::dropIfExists('keanggotaan_kelompok_dg');
+        Schema::dropIfExists('kelompok_dg');
         Schema::dropIfExists('orang');
         $this->createBranchesTable();
 
@@ -664,6 +709,8 @@ class MskParticipantPageTest extends TestCase
             $table->timestamps();
         });
 
+        $this->createEmptyDiscipleshipHistoryTables();
+
         DB::table('cabang')->insert([
             ['id' => 1, 'label' => 'Kutisari', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 2, 'label' => 'GM', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
@@ -698,6 +745,39 @@ class MskParticipantPageTest extends TestCase
             $table->date('started_on')->nullable();
             $table->date('ended_on')->nullable();
             $table->string('end_reason')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    private function createEmptyDiscipleshipHistoryTables(): void
+    {
+        Schema::create('kelompok_dg', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->string('status')->default('active');
+            $table->string('stage')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('keanggotaan_kelompok_dg', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->unsignedBigInteger('discipleship_group_id')->nullable();
+            $table->unsignedBigInteger('person_id');
+            $table->string('role');
+            $table->string('stage')->nullable();
+            $table->string('status')->default('active');
+            $table->date('started_on')->nullable();
+            $table->date('ended_on')->nullable();
+            $table->string('end_reason')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('dg_manual', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->unsignedBigInteger('person_id');
+            $table->string('stage');
+            $table->date('completed_on')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }

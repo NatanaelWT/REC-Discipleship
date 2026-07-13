@@ -24,6 +24,8 @@ class ActivityAuditTest extends TestCase
     {
         parent::setUp();
 
+        config(['activity.enabled' => true, 'activity.storage' => 'legacy']);
+
         $this->createCoreTables();
         $migration = require database_path('migrations/2026_06_21_000001_create_activity_audit_tables.php');
         $migration->up();

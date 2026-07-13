@@ -5,12 +5,13 @@ namespace App\Http\Controllers\Files;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SecureFiles\ShowSecureFileRequest;
 use App\Services\Activity\ActivityRecorder;
+use App\Services\SecureFiles\FileChecksumCache;
 use App\Services\SecureFiles\SecureFilePreviewData;
 use App\Services\SecureFiles\SecureFileResolver;
 use App\Services\SecureFiles\SecureFileStreamer;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class SecureFileController extends Controller
@@ -20,8 +21,9 @@ class SecureFileController extends Controller
         SecureFileResolver $resolver,
         SecureFilePreviewData $previewData,
         SecureFileStreamer $streamer,
+        FileChecksumCache $checksums,
         ActivityRecorder $activity,
-    ): Response|StreamedResponse|View {
+    ): BinaryFileResponse|Response|View {
         try {
             $file = $resolver->resolve($request);
             $activity->record(
@@ -36,7 +38,7 @@ class SecureFileController extends Controller
                     'name' => $file->downloadName,
                     'size_bytes' => $file->contentLength,
                     'mime_type' => $file->mimeType,
-                    'sha256' => is_file($file->fullPath) ? hash_file('sha256', $file->fullPath) : null,
+                    'sha256' => $checksums->sha256($file->fullPath),
                 ],
             );
 

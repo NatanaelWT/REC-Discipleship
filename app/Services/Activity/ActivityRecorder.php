@@ -6,6 +6,8 @@ use App\Models\ActivityEvent;
 use App\Models\ActivityRequest;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
+use Throwable;
 
 class ActivityRecorder
 {
@@ -39,12 +41,8 @@ class ActivityRecorder
         $cleanAfter = is_array($after) ? $this->sanitizer->sanitize($after) : null;
 
         try {
-            $activity = ActivityRequest::query()->find($requestId);
-            if (! $activity instanceof ActivityRequest) {
-                throw new \RuntimeException('Activity request tidak ditemukan untuk event audit.');
-            }
-
-            return $activity->appendEventEntry([
+            $entry = [
+                'id' => (string) Str::ulid(),
                 'request_id' => $requestId,
                 'category' => trim($category) ?: 'data',
                 'action' => trim($action) ?: 'changed',
@@ -57,8 +55,50 @@ class ActivityRecorder
                 'changed_values' => $this->changes($cleanBefore, $cleanAfter),
                 'metadata' => $metadata !== [] ? $this->sanitizer->sanitize($metadata) : null,
                 'occurred_at' => CarbonImmutable::now('UTC'),
-            ]);
-        } catch (\Throwable $exception) {
+            ];
+
+            if ($this->splitStorage()) {
+                $this->context->queueAuditEvent($entry);
+                $event = new ActivityEvent($entry);
+                $event->exists = false;
+
+                return $event;
+            }
+
+            $activity = ActivityRequest::query()->find($requestId);
+            if (! $activity instanceof ActivityRequest) {
+                throw new \RuntimeException('Activity request tidak ditemukan untuk event audit.');
+            }
+
+            unset($entry['id']);
+
+            return $activity->appendEventEntry($entry);
+        } catch (Throwable $exception) {
+            $this->context->markAuditFailure();
+            throw $exception;
+        }
+    }
+
+    /** Persist all events with one bulk insert inside the caller's transaction. */
+    public function flush(): int
+    {
+        $events = $this->context->auditEvents();
+        if (! $this->splitStorage() || $events === []) {
+            return 0;
+        }
+
+        try {
+            $rows = array_map(static function (array $event): array {
+                $model = new ActivityEvent;
+                $model->forceFill($event);
+
+                return $model->getAttributes();
+            }, $events);
+            ActivityEvent::query()->insert($rows);
+            $this->context->discardAuditEvents();
+
+            return count($rows);
+        } catch (Throwable $exception) {
             $this->context->markAuditFailure();
             throw $exception;
         }
@@ -149,5 +189,10 @@ class ActivityRecorder
         }
 
         return null;
+    }
+
+    private function splitStorage(): bool
+    {
+        return config('activity.storage', 'legacy') === 'split';
     }
 }

@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use App\Enums\UserAccessRole;
 use App\Models\User;
 use App\Services\Auth\SessionAuthenticator;
-use App\Support\RuntimeBootstrap;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,8 +31,6 @@ class HandleMaintenanceMode
      */
     public function handle(Request $request, Closure $next): Response
     {
-        RuntimeBootstrap::boot($request);
-
         if (! app_maintenance_mode_enabled()) {
             return $next($request);
         }

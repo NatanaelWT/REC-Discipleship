@@ -119,10 +119,30 @@ class Person extends Model
                 continue;
             }
 
-            $photos[] = [
+            $stored = [
                 'path' => $path,
                 'name' => trim((string) ($photo['name'] ?? $photo['original_name'] ?? '')) ?: 'Foto',
             ];
+            foreach (['web_path', 'thumbnail_path'] as $pathKey) {
+                $variantPath = sanitize_relative_upload_path((string) ($photo[$pathKey] ?? ''));
+                if ($variantPath !== '') {
+                    $stored[$pathKey] = $variantPath;
+                }
+            }
+            foreach (['sha256', 'variant_status'] as $key) {
+                $value = trim((string) ($photo[$key] ?? ''));
+                if ($value !== '') {
+                    $stored[$key] = $value;
+                }
+            }
+            foreach (['size', 'width', 'height'] as $key) {
+                $value = max(0, (int) ($photo[$key] ?? 0));
+                if ($value > 0) {
+                    $stored[$key] = $value;
+                }
+            }
+
+            $photos[] = $stored;
         }
 
         return $photos;

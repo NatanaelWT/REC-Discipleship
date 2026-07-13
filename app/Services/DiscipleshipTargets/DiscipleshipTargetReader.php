@@ -21,8 +21,8 @@ class DiscipleshipTargetReader
      */
     public function valuesForBranch(string $branchCode): array
     {
-        $branchCode = normalize_user_branch($branchCode);
-        $branch = Branch::query()->find(branch_id_from_slug($branchCode));
+        [, $branchId] = $this->branchReference($branchCode);
+        $branch = Branch::query()->find($branchId);
         if ($branch instanceof Branch) {
             return $this->normalizer->normalize($branch->only([
                 'camp_gap_participant_target',
@@ -52,8 +52,7 @@ class DiscipleshipTargetReader
     {
         $branchIdsByCode = [];
         foreach ($branchCodes as $branchCode) {
-            $branchCode = normalize_user_branch((string) $branchCode);
-            $branchId = branch_id_from_slug($branchCode);
+            [$branchCode, $branchId] = $this->branchReference((string) $branchCode);
             if ($branchCode !== '' && $branchId !== null) {
                 $branchIdsByCode[$branchCode] = $branchId;
             }
@@ -104,10 +103,10 @@ class DiscipleshipTargetReader
      */
     public function saveBranch(string $branchCode, array $values): Branch
     {
-        $branchCode = normalize_user_branch($branchCode);
+        [, $branchId] = $this->branchReference($branchCode);
         $values = $this->normalizer->normalize($values);
 
-        $branch = Branch::query()->findOrFail(branch_id_from_slug($branchCode));
+        $branch = Branch::query()->findOrFail($branchId);
         $branch->fill($values)->save();
         $this->invalidateCache();
 
@@ -121,6 +120,14 @@ class DiscipleshipTargetReader
 
     private function cacheStore(): string
     {
-        return app()->environment('testing') ? 'array' : 'file';
+        return (string) config('cache.discipleship_store', config('cache.default', 'file'));
+    }
+
+    /** @return array{0:string,1:?int} */
+    private function branchReference(string $branchCode): array
+    {
+        $branchCode = $this->branches->normalizeSlug($branchCode, true);
+
+        return [$branchCode, $branchCode !== '' ? $this->branches->idForSlug($branchCode, true) : null];
     }
 }

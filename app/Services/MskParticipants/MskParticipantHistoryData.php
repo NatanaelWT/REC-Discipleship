@@ -8,7 +8,6 @@ use App\Models\Person;
 use App\Support\DiscipleshipPersonProfile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class MskParticipantHistoryData
 {
@@ -33,13 +32,7 @@ class MskParticipantHistoryData
             }
         }
 
-        if (
-            $participantPersonIds === []
-            || $branchIds === []
-            || ! Schema::hasTable('orang')
-            || ! Schema::hasTable('kelompok_dg')
-            || ! Schema::hasTable('keanggotaan_kelompok_dg')
-        ) {
+        if ($participantPersonIds === [] || $branchIds === []) {
             return $histories;
         }
 
@@ -103,6 +96,78 @@ class MskParticipantHistoryData
         }
 
         return $histories;
+    }
+
+    /**
+     * Resolve one already-authorized participant without querying the person a
+     * second time. This keeps on-demand detail fragments within their query
+     * budget while preserving the same history shape as the batch reader.
+     *
+     * @param  array<string, mixed>  $participant
+     * @param  array<int, int>  $branchIds
+     * @return array<string, mixed>
+     */
+    public function forKnownParticipant(array $participant, array $branchIds, int $personBranchId): array
+    {
+        $personId = (int) ($participant['member_id'] ?? 0);
+        $branchIds = array_values(array_unique(array_filter(array_map('intval', $branchIds))));
+        if ($personId < 1 || $branchIds === []) {
+            return $this->emptyHistory($personId);
+        }
+
+        $allGroupLinks = DiscipleshipGroupPerson::query()
+            ->whereIn('branch_id', $branchIds)
+            ->whereIn('discipleship_group_id', function ($groups) use ($branchIds, $personId): void {
+                $groups->select('person_groups.discipleship_group_id')
+                    ->from('keanggotaan_kelompok_dg as person_groups')
+                    ->whereIn('person_groups.branch_id', $branchIds)
+                    ->where('person_groups.person_id', $personId)
+                    ->whereNotNull('person_groups.discipleship_group_id');
+            })
+            ->get([
+                'id', 'discipleship_group_id', 'person_id', 'role', 'stage', 'status',
+                'started_on', 'ended_on', 'end_reason', 'created_at', 'updated_at',
+            ]);
+        $targetLinks = $allGroupLinks
+            ->where('person_id', $personId)
+            ->values()
+            ->merge($this->manualLinks([$personId], $branchIds));
+        $groupIds = $targetLinks->pluck('discipleship_group_id')
+            ->filter()
+            ->map(static fn ($id): int => (int) $id)
+            ->unique()
+            ->all();
+        $groups = $groupIds === []
+            ? collect()
+            : DiscipleshipGroup::query()
+                ->whereIn('branch_id', $branchIds)
+                ->whereIn('id', $groupIds)
+                ->get(['id', 'stage'])
+                ->keyBy('id');
+        $relatedPersonIds = collect([$personId])
+            ->merge($allGroupLinks->pluck('person_id'))
+            ->filter()
+            ->map(static fn ($id): int => (int) $id)
+            ->unique()
+            ->all();
+        $names = array_map(
+            static fn (string $name): string => $name !== '' ? $name : '-',
+            DiscipleshipPersonProfile::namesByPersonIds($relatedPersonIds),
+        );
+        $externalContextBranchId = count($branchIds) === 1
+            && $personBranchId > 0
+            && $branchIds[0] !== $personBranchId
+                ? $branchIds[0]
+                : 0;
+
+        return $this->history(
+            $personId,
+            $targetLinks,
+            $groups,
+            $allGroupLinks,
+            $names,
+            $externalContextBranchId,
+        );
     }
 
     /** @return array<string, mixed> */
@@ -373,10 +438,6 @@ class MskParticipantHistoryData
     /** @param array<int, int> $personIds */
     private function manualLinks(array $personIds, array $branchIds): Collection
     {
-        if (! Schema::hasTable('dg_manual')) {
-            return collect();
-        }
-
         return DB::table('dg_manual')
             ->whereIn('branch_id', $branchIds)
             ->whereIn('person_id', $personIds)

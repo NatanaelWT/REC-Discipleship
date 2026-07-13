@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Services\Developer\DeveloperBranchService;
 use App\Services\Developer\DeveloperUserService;
 use App\Services\Routing\AppPageRouteMap;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -103,7 +102,6 @@ class DeveloperUserController extends Controller
 
     private function guard(Request $request): ?RedirectResponse
     {
-        RuntimeBootstrap::boot($request);
         if (! is_logged_in()) {
             return redirect()->route('auth.login');
         }

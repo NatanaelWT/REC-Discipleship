@@ -108,7 +108,7 @@ class DeveloperAccessTest extends TestCase
             ->assertDontSee('Cabang Aktif')
             ->assertDontSee('Pakai')
             ->assertDontSee('Mode Pusat')
-            ->assertSee('data-discipleship-branch-nav', false);
+            ->assertDontSee('data-discipleship-branch-nav', false);
 
         $this->post('/developer/branch', ['branch_id' => 2])->assertNotFound();
 
@@ -557,6 +557,9 @@ class DeveloperAccessTest extends TestCase
 
     private function createCoreTables(): void
     {
+        foreach (['jurnal_umpan_balik', 'jurnal_temu_dg', 'dg_manual', 'keanggotaan_kelompok_dg', 'kelompok_dg', 'orang'] as $table) {
+            Schema::dropIfExists($table);
+        }
         Schema::dropIfExists('aktivitas');
         Schema::dropIfExists('kunjungan_halaman');
         Schema::dropIfExists('peristiwa_aktivitas');
@@ -607,6 +610,14 @@ class DeveloperAccessTest extends TestCase
             $table->string('updated_by', 120)->nullable();
             $table->timestamps();
         });
+
+        foreach (['orang', 'kelompok_dg', 'keanggotaan_kelompok_dg', 'jurnal_temu_dg', 'jurnal_umpan_balik', 'dg_manual'] as $table) {
+            Schema::create($table, function (Blueprint $blueprint): void {
+                $blueprint->id();
+                $blueprint->unsignedBigInteger('branch_id')->index();
+                $blueprint->timestamps();
+            });
+        }
 
         foreach (['Kutisari', 'GM', 'Darmo'] as $label) {
             DB::table('cabang')->insert([

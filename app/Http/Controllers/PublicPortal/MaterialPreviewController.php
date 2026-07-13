@@ -11,11 +11,10 @@ use App\Services\PublicMaterials\PublicMaterialCatalog;
 use App\Services\PublicMaterials\PublicMaterialFileStreamer;
 use App\Services\PublicMaterials\PublicMaterialRouteResolver;
 use App\Services\PublicMaterials\PublicMaterialTextFormatter;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class MaterialPreviewController extends Controller
 {
@@ -45,9 +44,7 @@ class MaterialPreviewController extends Controller
         PublicMaterialFileStreamer $streamer,
         PublicMaterialTextFormatter $textFormatter,
         ActivityRecorder $activity,
-    ): RedirectResponse|Response|StreamedResponse|View {
-        RuntimeBootstrap::load();
-
+    ): BinaryFileResponse|RedirectResponse|Response|View {
         $menu = PublicMaterialMenuKey::fromKey($menu);
         if (! $menu instanceof PublicMaterialMenuKey) {
             return response('File tidak ditemukan.', 404);
@@ -67,7 +64,6 @@ class MaterialPreviewController extends Controller
             return response('File tidak ditemukan.', 404);
         }
 
-        $fullPath = public_material_resolve_path($path);
         $activity->record(
             'file',
             'material.previewed',
@@ -79,7 +75,7 @@ class MaterialPreviewController extends Controller
                 'name' => (string) $churchFile->original_file_name,
                 'size_bytes' => (int) $churchFile->size_bytes,
                 'mime_type' => (string) $churchFile->mime_type,
-                'sha256' => is_string($fullPath) && is_file($fullPath) ? hash_file('sha256', $fullPath) : null,
+                'sha256' => $this->storedChecksum($churchFile),
             ],
         );
 
@@ -148,5 +144,12 @@ class MaterialPreviewController extends Controller
         $title = trim((string) preg_replace('/\s+/', ' ', $title));
 
         return $title !== '' ? $title : 'Materi DG';
+    }
+
+    private function storedChecksum(PublicMaterialFile $file): ?string
+    {
+        $checksum = strtolower(trim((string) $file->sha256));
+
+        return preg_match('/\A[a-f0-9]{64}\z/', $checksum) === 1 ? $checksum : null;
     }
 }

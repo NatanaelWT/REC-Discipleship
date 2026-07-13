@@ -3,7 +3,6 @@
 namespace App\Http\Requests\PublicMaterials;
 
 use App\Models\PublicMaterialFile;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StreamPublicMaterialRequest extends FormRequest
@@ -15,8 +14,6 @@ class StreamPublicMaterialRequest extends FormRequest
 
     protected function prepareForValidation()
     {
-        RuntimeBootstrap::load();
-
         $routeMenu = $this->route('menu');
         $menuKey = trim((string) ($routeMenu ?? $this->query('menu', '')));
         $routeFile = $this->route('churchFile');

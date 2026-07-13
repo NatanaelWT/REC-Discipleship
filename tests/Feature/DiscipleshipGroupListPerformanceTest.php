@@ -76,18 +76,23 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
             ->assertSee('data-discipleship-groups-list', false)
             ->assertSee('data-discipleship-groups-search-form', false)
             ->assertSee('data-discipleship-groups-search-input', false)
-            ->assertSee('data-next-page="2"', false)
+            ->assertSee('data-next-cursor="', false)
             ->assertDontSee('discipleship-page-header__stats', false)
             ->assertDontSee('discipleship-page-header__stat', false)
             ->assertDontSee('data-groups-stat=', false)
             ->assertDontSee('>Cari</button>', false);
         $this->assertLessThanOrEqual(12, $queries);
 
-        $pageTwo = $this->get('/pemuridan/kelompok/rows?page=2');
+        preg_match('/data-next-cursor="([^"]+)"/', (string) $response->getContent(), $cursorMatch);
+        $this->assertNotEmpty($cursorMatch[1] ?? '');
+        $pageTwo = $this->get('/pemuridan/kelompok/rows?'.http_build_query(['cursor' => $cursorMatch[1]]));
         $pageTwo->assertOk()
+            ->assertJsonStructure(['html', 'stats', 'has_more', 'next_cursor', 'empty'])
             ->assertJsonPath('has_more', true)
-            ->assertJsonPath('next_page', 3)
+            ->assertJsonPath('empty', false)
             ->assertJsonPath('stats.total', 300);
+        $this->assertNotEmpty($pageTwo->json('next_cursor'));
+        $this->assertArrayNotHasKey('next_page', $pageTwo->json());
         $this->assertStringContainsString('Orang 0051', (string) $pageTwo->json('html'));
         $this->assertStringContainsString('Orang 0100', (string) $pageTwo->json('html'));
         $this->assertStringNotContainsString('Orang 0101', (string) $pageTwo->json('html'));

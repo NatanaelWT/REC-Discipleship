@@ -275,6 +275,12 @@ class DgMeetingReportRecapTest extends TestCase
             'meeting_photos' => [
                 UploadedFile::fake()->createWithContent('foto-pertemuan.png', $this->tinyPng()),
             ],
+            'meeting_photo_web_variants' => [
+                UploadedFile::fake()->createWithContent('foto-pertemuan.web.png', $this->tinyPng()),
+            ],
+            'meeting_photo_thumbnails' => [
+                UploadedFile::fake()->createWithContent('foto-pertemuan.thumb.png', $this->tinyPng()),
+            ],
         ]);
 
         $response->assertRedirect(route('public.dg.report', ['branch' => 'gm', 'submitted' => 1]));
@@ -288,8 +294,14 @@ class DgMeetingReportRecapTest extends TestCase
         $this->assertSame('foto-pertemuan.png', $photos[0]['name']);
         $this->assertStringStartsWith('uploads/dg_reports/dg_', $photos[0]['path']);
         $this->assertFileExists(rec_runtime_path($photos[0]['path']));
+        $this->assertSame('ready', $photos[0]['variant_status']);
+        $this->assertSame(hash('sha256', $this->tinyPng()), $photos[0]['sha256']);
+        $this->assertFileExists(rec_runtime_path($photos[0]['web_path']));
+        $this->assertFileExists(rec_runtime_path($photos[0]['thumbnail_path']));
 
         delete_relative_upload_file($photos[0]['path']);
+        delete_relative_upload_file($photos[0]['web_path']);
+        delete_relative_upload_file($photos[0]['thumbnail_path']);
     }
 
     public function test_public_dg_report_rejects_non_image_upload_without_creating_report(): void
@@ -497,6 +509,7 @@ class DgMeetingReportRecapTest extends TestCase
 
     private function createActivityTables(): void
     {
+        config(['activity.enabled' => true, 'activity.storage' => 'legacy']);
         Schema::dropIfExists('aktivitas');
         Schema::dropIfExists('peristiwa_aktivitas');
         Schema::dropIfExists('permintaan_aktivitas');

@@ -21,6 +21,7 @@ class SpiritualJourneyPageTest extends TestCase
     {
         $this->createMskTables();
         $this->seedParticipant();
+        $participantId = (int) DB::table('orang')->where('full_name', 'Peserta Journey')->value('id');
 
         $this->actingAsRecUser();
 
@@ -33,12 +34,16 @@ class SpiritualJourneyPageTest extends TestCase
         $response->assertDontSee('discipleship-page-header__stat', false);
         $response->assertSee('Lihat profil');
         $response->assertDontSee('Lihat riwayat pemuridan');
-        $response->assertSee('Profil peserta');
-        $response->assertSee('Kontak dan akses');
-        $response->assertSee('Foto dan keterangan');
-        $response->assertSee('MSK dan pemuridan aktif');
-        $response->assertSee('Riwayat pemuridan');
+        $response->assertDontSee('data-spiritual-journey-view-template=', false);
+        $response->assertSee('data-spiritual-detail-url-template=', false);
         $response->assertSee('data-spiritual-journey-view-title>Profil Peserta', false);
+
+        $this->get('/pemuridan/spiritual-journey/'.$participantId.'/detail')
+            ->assertOk()
+            ->assertJsonPath('title', 'Peserta Journey')
+            ->assertJsonStructure(['title', 'html'])
+            ->assertSee('Profil peserta')
+            ->assertSee('Riwayat pemuridan');
     }
 
     public function test_spiritual_journey_lazy_loads_rows_and_searches_server_side(): void
@@ -72,17 +77,23 @@ class SpiritualJourneyPageTest extends TestCase
         $response->assertDontSee('Peserta Journey 051');
         $response->assertDontSee('Peserta Journey 125');
         $response->assertSee('data-spiritual-journey-list', false);
-        $response->assertSee('data-next-page="2"', false);
+        $response->assertSee('data-next-cursor="', false);
         $response->assertSee('data-spiritual-journey-search-form', false);
         $response->assertSee('data-spiritual-journey-search-input', false);
         $response->assertSee('data-spiritual-journey-search-row', false);
         $response->assertDontSee('class="rec-pagination"', false);
         $response->assertDontSee('type="submit">Cari</button>', false);
 
-        $pageTwo = $this->get('/pemuridan/spiritual-journey/rows?page=2');
+        preg_match('/data-next-cursor="([^"]+)"/', (string) $response->getContent(), $cursorMatch);
+        $this->assertNotEmpty($cursorMatch[1] ?? '');
+        $pageTwo = $this->get('/pemuridan/spiritual-journey/rows?'.http_build_query(['cursor' => $cursorMatch[1]]));
         $pageTwo->assertOk()
+            ->assertJsonStructure(['html', 'stats', 'has_more', 'next_cursor', 'empty'])
             ->assertJsonPath('has_more', true)
-            ->assertJsonPath('next_page', 3);
+            ->assertJsonPath('empty', false);
+        $this->assertNotEmpty($pageTwo->json('next_cursor'));
+        $this->assertArrayNotHasKey('next_page', $pageTwo->json());
+        $this->assertArrayNotHasKey('templates_html', $pageTwo->json());
         $this->assertStringContainsString('Peserta Journey 051', (string) $pageTwo->json('html'));
         $this->assertStringContainsString('Peserta Journey 100', (string) $pageTwo->json('html'));
         $this->assertStringNotContainsString('Peserta Journey 101', (string) $pageTwo->json('html'));
@@ -286,7 +297,8 @@ class SpiritualJourneyPageTest extends TestCase
         ]);
 
         $this->actingAsRecUser();
-        $content = $this->get('/pemuridan/spiritual-journey')->assertOk()->getContent();
+        $this->get('/pemuridan/spiritual-journey')->assertOk();
+        $content = (string) $this->get('/pemuridan/spiritual-journey/11/detail')->assertOk()->json('html');
 
         $this->assertSame(1, substr_count($content, 'Leader kelompok: Leader Journey Duplikat'));
         $this->assertStringContainsString('DG 1 (Leader Journey Duplikat)', $content);
@@ -318,6 +330,8 @@ class SpiritualJourneyPageTest extends TestCase
 
     private function createMskTables(): void
     {
+        Schema::dropIfExists('dg_manual');
+        Schema::dropIfExists('kelompok_dg');
         Schema::dropIfExists('relasi_dg');
         Schema::dropIfExists('keanggotaan_kelompok_dg');
         Schema::dropIfExists('orang');
@@ -354,6 +368,26 @@ class SpiritualJourneyPageTest extends TestCase
             $table->date('started_on')->nullable();
             $table->date('ended_on')->nullable();
             $table->string('end_reason')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('kelompok_dg', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->string('status', 40)->default('active');
+            $table->string('stage')->nullable();
+            $table->unsignedBigInteger('parent_group_id')->nullable();
+            $table->text('notes')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('dg_manual', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->unsignedBigInteger('person_id');
+            $table->string('stage');
+            $table->date('completed_on')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
 

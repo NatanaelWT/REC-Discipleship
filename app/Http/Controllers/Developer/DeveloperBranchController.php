@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Developer;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Services\Developer\DeveloperBranchService;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -91,7 +90,6 @@ class DeveloperBranchController extends Controller
 
     private function guard(Request $request): ?RedirectResponse
     {
-        RuntimeBootstrap::boot($request);
         if (! is_logged_in()) {
             return redirect()->route('auth.login');
         }

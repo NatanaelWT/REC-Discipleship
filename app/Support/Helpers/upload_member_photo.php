@@ -25,5 +25,7 @@ function upload_member_photo(array $file, string &$errorCode): ?array
         'file_prefix' => 'peserta',
         'default_name' => 'Foto',
         'append_extension_to_default_name' => true,
+        'validate_image' => true,
+        'content_addressed' => true,
     ]);
 }

@@ -100,7 +100,7 @@
       <label class="msk-form-field is-wide"><span class="msk-form-field-label">Alamat</span><textarea name="address" rows="3" placeholder="Alamat domisili" data-msk-address>{{ $address }}</textarea></label>
       <label class="msk-form-field"><span class="msk-form-field-label">Email</span><input type="email" name="email" value="{{ $email }}" placeholder="email@contoh.com" data-msk-email></label>
       <label class="msk-form-field"><span class="msk-form-field-label">Nomor WhatsApp</span><input type="text" name="whatsapp" value="{{ $whatsapp }}" placeholder="08xxxxxxxxxx" data-msk-whatsapp></label>
-      <label class="msk-form-field is-upload is-wide"><span class="msk-form-field-label">Upload Foto Peserta</span><input type="file" name="participant_photos[]" accept=".jpg,.jpeg,.png,.webp" multiple><span class="msk-form-field-hint">JPG, PNG, atau WEBP. Bisa pilih lebih dari satu file.</span></label>
+      <label class="msk-form-field is-upload is-wide"><span class="msk-form-field-label">Upload Foto Peserta</span><input type="file" name="participant_photos[]" accept="image/jpeg,image/png,image/webp" data-client-image-variants data-web-variant-name="participant_photo_web_variants[]" data-thumbnail-name="participant_photo_thumbnails[]" multiple><span class="msk-form-field-hint">Original tetap disimpan; versi web hemat data dibuat di perangkat ini.</span></label>
       @if (count($photos) > 0)
         <div class="msk-form-meta-card is-wide">
           <div class="member-photo-list msk-photo-list">

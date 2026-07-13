@@ -22,15 +22,8 @@ class SecureFilePreviewData
             'bodyClass' => $file->isPdf() ? 'page-file-preview-standalone' : 'page-file-preview',
             'file' => $file,
             'previewTitle' => $this->previewTitle($file),
-            'rawUrl' => route('secure-file.show', [
-                'path' => $file->relativePath,
-                'raw' => '1',
-            ], false),
-            'downloadUrl' => route('secure-file.show', [
-                'path' => $file->relativePath,
-                'download' => '1',
-                'name' => $file->downloadName,
-            ], false),
+            'rawUrl' => secure_upload_url($file->relativePath, false, '', true),
+            'downloadUrl' => secure_upload_url($file->relativePath, true, $file->downloadName),
             'backUrl' => $this->backUrl($request),
             'backOnClick' => 'if (window.history.length > 1) { window.history.back(); return false; }',
         ];

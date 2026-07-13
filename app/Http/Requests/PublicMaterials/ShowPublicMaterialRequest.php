@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\PublicMaterials;
 
-use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ShowPublicMaterialRequest extends FormRequest
@@ -14,8 +13,6 @@ class ShowPublicMaterialRequest extends FormRequest
 
     protected function prepareForValidation()
     {
-        RuntimeBootstrap::load();
-
         $this->merge([
             'menu' => normalize_public_material_menu((string) ($this->route('menu') ?? $this->query('menu', ''))),
         ]);

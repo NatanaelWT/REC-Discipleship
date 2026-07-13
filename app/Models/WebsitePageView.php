@@ -9,8 +9,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WebsitePageView extends Model
 {
-    protected $table = 'aktivitas';
-
     protected $primaryKey = 'id';
 
     protected $keyType = 'string';
@@ -20,6 +18,13 @@ class WebsitePageView extends Model
     public $timestamps = false;
 
     protected $guarded = [];
+
+    public function getTable()
+    {
+        return config('activity.storage', 'legacy') === 'split'
+            ? 'request_activities'
+            : 'aktivitas';
+    }
 
     protected static function booted(): void
     {

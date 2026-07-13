@@ -31,6 +31,7 @@
       <form method="post" action="{{ $mskImportAction }}" enctype="multipart/form-data" class="msk-import-inline-form">
         @csrf
         <input type="hidden" name="action" value="import_pemuridan_excel">
+        <input type="hidden" name="idempotency_token" value="{{ (string) \Illuminate\Support\Str::ulid() }}">
         <input type="hidden" name="return_page" value="msk_classes">
         <input type="hidden" name="batch_month" value="{{ $batchMonthFilterParam }}">
         <label class="btn tiny ghost msk-import-trigger msk-transfer-button" aria-label="Import Data Kelas MSK" title="Import Data Kelas MSK">

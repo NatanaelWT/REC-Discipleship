@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Discipleship;
 
+use App\Exceptions\MskImportException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MskParticipants\DeactivateMskParticipantRequest;
 use App\Http\Requests\MskParticipants\ExportMskParticipantsRequest;
@@ -11,17 +12,19 @@ use App\Http\Requests\MskParticipants\ReactivateMskParticipantRequest;
 use App\Http\Requests\MskParticipants\StoreMskParticipantRequest;
 use App\Http\Requests\MskParticipants\UpdateMskParticipantRequest;
 use App\Http\Requests\MskParticipants\UpdateMskParticipantSessionsRequest;
+use App\Models\MskImportJob;
 use App\Models\Person;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
+use App\Services\MskParticipants\MskImportBatchProcessor;
+use App\Services\MskParticipants\MskImportCoordinator;
 use App\Services\MskParticipants\MskParticipantExportService;
-use App\Services\MskParticipants\MskParticipantImportService;
 use App\Services\MskParticipants\MskParticipantPageData;
 use App\Services\MskParticipants\MskParticipantWriter;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -32,8 +35,6 @@ class MskParticipantController extends Controller
         MskParticipantPageData $pageData,
         CurrentDiscipleshipScope $scope,
     ): RedirectResponse|Response|View {
-        RuntimeBootstrap::boot($request);
-
         $pageTitle = 'Kelas MSK';
         $data = [
             ...$pageData->forCurrentContext($request),
@@ -56,8 +57,6 @@ class MskParticipantController extends Controller
 
     public function rows(Request $request, MskParticipantPageData $pageData): JsonResponse
     {
-        RuntimeBootstrap::boot($request);
-
         $data = $pageData->paginatedRowsForCurrentContext($request);
         $participants = is_array($data['participantsFilteredByBatch'] ?? null)
             ? $data['participantsFilteredByBatch']
@@ -65,35 +64,57 @@ class MskParticipantController extends Controller
 
         return response()->json([
             'html' => view('discipleship.msk-participants.partials.rows', $data)->render(),
-            'templates_html' => view('discipleship.msk-participants.partials.view-templates', [
-                'participantsFilteredByBatch' => $participants,
-                'participantProfiles' => $data['participantProfiles'] ?? [],
-                'centralReadOnly' => (bool) ($data['centralReadOnly'] ?? false),
-                'batchMonthFilterParam' => (string) ($data['batchMonthFilterParam'] ?? ''),
-            ])->render(),
-            'edit_templates_html' => view('discipleship.msk-participants.partials.edit-templates', [
-                'participantsFilteredByBatch' => $participants,
-                'centralReadOnly' => (bool) ($data['centralReadOnly'] ?? false),
-                'batchMonthFilterParam' => (string) ($data['batchMonthFilterParam'] ?? ''),
-            ])->render(),
-            'has_more' => (bool) ($data['hasMoreMskRows'] ?? false),
-            'next_page' => $data['nextMskPage'] ?? null,
             'stats' => [
                 'filter' => (string) ($data['batchMonthFilterLabel'] ?? '-'),
                 'total' => (int) ($data['totalParticipantsFiltered'] ?? 0),
                 'complete' => (int) ($data['completedParticipantsFiltered'] ?? 0),
                 'progress' => (int) ($data['inProgressParticipantsFiltered'] ?? 0),
             ],
+            'has_more' => (bool) ($data['hasMoreMskRows'] ?? false),
+            'next_cursor' => $data['nextMskCursor'] ?? null,
+            'empty' => count($participants) === 0,
             'empty_message' => (string) ($data['mskEmptyMessage'] ?? 'Peserta tidak ditemukan.'),
         ]);
+    }
+
+    public function detail(Request $request, Person $participant, MskParticipantPageData $pageData): JsonResponse
+    {
+        $detail = $pageData->detailForCurrentContext($request, (int) $participant->getKey());
+        if ($detail === null) {
+            abort(404);
+        }
+
+        $row = is_array($detail['participant'] ?? null) ? $detail['participant'] : [];
+        $title = trim((string) ($row['full_name'] ?? 'Peserta MSK')) ?: 'Peserta MSK';
+        $mode = $request->query('mode') === 'edit' ? 'edit' : 'view';
+        if ($mode === 'edit') {
+            abort_if((bool) ($detail['centralReadOnly'] ?? false), 403);
+            $html = view('discipleship.msk-participants.partials.form', [
+                'participant' => $row,
+                'batchMonth' => (string) ($detail['batchMonthFilterParam'] ?? ''),
+                'closeActionAttr' => 'data-msk-edit-close',
+                'mskStoreAction' => route('discipleship.msk-classes.store'),
+            ])->render();
+            $title = 'Edit Peserta MSK: '.$title;
+        } else {
+            $html = view('discipleship.msk-participants.profile', [
+                'profile' => is_array($detail['profile'] ?? null) ? $detail['profile'] : [],
+            ])->render();
+        }
+
+        return response()->json([
+            'title' => $title,
+            'html' => $html,
+            'edit_url' => ! (bool) ($detail['centralReadOnly'] ?? false)
+                ? route('discipleship.msk-classes', ['edit' => $participant->getKey()])
+                : null,
+        ])->header('Cache-Control', 'private, no-store');
     }
 
     public function store(
         StoreMskParticipantRequest $request,
         MskParticipantWriter $writer,
     ): RedirectResponse {
-        RuntimeBootstrap::boot($request);
-
         return $this->saveParticipantFromRequest($request, $writer);
     }
 
@@ -102,7 +123,6 @@ class MskParticipantController extends Controller
         Person $participant,
         MskParticipantWriter $writer,
     ): RedirectResponse {
-        RuntimeBootstrap::boot($request);
         $request->merge(['id' => $participant->getKey()]);
 
         return $this->saveParticipantFromRequest($request, $writer);
@@ -113,8 +133,6 @@ class MskParticipantController extends Controller
         Person $participant,
         MskParticipantWriter $writer,
     ): RedirectResponse {
-        RuntimeBootstrap::boot($request);
-
         $result = $writer->updateSessions($participant, $request->payload()['session_numbers']);
         if ($result['error'] !== '') {
             return redirect()->route('discipleship.msk-classes', ['error' => 'invalid_msk_participant']);
@@ -133,7 +151,6 @@ class MskParticipantController extends Controller
         Person $participant,
         MskParticipantWriter $writer,
     ): RedirectResponse {
-        RuntimeBootstrap::boot($request);
         $batchMonthParam = $this->batchMonthFilterParam($request);
 
         $result = $writer->setStatus($participant, 'inactive');
@@ -149,7 +166,6 @@ class MskParticipantController extends Controller
         Person $participant,
         MskParticipantWriter $writer,
     ): RedirectResponse {
-        RuntimeBootstrap::boot($request);
         $batchMonthParam = $this->batchMonthFilterParam($request);
 
         $result = $writer->setStatus($participant, 'active');
@@ -160,19 +176,67 @@ class MskParticipantController extends Controller
         return redirect()->route('discipleship.msk-classes', ['reactivated' => 1] + $batchMonthParam);
     }
 
-    public function import(ImportMskParticipantsRequest $request, MskParticipantImportService $importer): RedirectResponse
+    public function import(ImportMskParticipantsRequest $request, MskImportCoordinator $imports): RedirectResponse|JsonResponse
     {
-        RuntimeBootstrap::boot($request);
+        try {
+            $job = $imports->start($request);
+        } catch (MskImportException $exception) {
+            if ($request->expectsJson()) {
+                return response()->json(['error' => $exception->errorCode, 'context' => $exception->context], 422);
+            }
 
-        $redirectParams = $importer->import($request);
+            return redirect()->route('discipleship.msk-classes', ['error' => $exception->errorCode]);
+        }
 
-        return redirect()->route('discipleship.msk-classes', $redirectParams);
+        $payload = $this->importJobPayload($job);
+        $request->session()->put('msk_import_job_id', (string) $job->getKey());
+        if ($request->expectsJson()) {
+            return response()->json($payload, $job->isTerminal() ? 200 : 202)->header('Cache-Control', 'private, no-store');
+        }
+
+        return redirect()->route('discipleship.msk-classes', ['import_job' => $job->getKey()]);
+    }
+
+    public function importStatus(
+        ImportMskParticipantsRequest $request,
+        MskImportJob $importJob,
+        MskImportBatchProcessor $processor,
+    ): JsonResponse {
+        $this->authorizeImportJob($importJob);
+
+        $status = $processor->status($importJob->fresh());
+        if ((bool) ($status['terminal'] ?? false)) {
+            $request->session()->forget('msk_import_job_id');
+        }
+
+        return response()->json([
+            ...$this->importJobPayload($importJob),
+            ...$status,
+        ])->header('Cache-Control', 'private, no-store');
+    }
+
+    public function importBatch(
+        ImportMskParticipantsRequest $request,
+        MskImportJob $importJob,
+        MskImportBatchProcessor $processor,
+    ): JsonResponse {
+        $this->authorizeImportJob($importJob);
+        $validated = $request->validate([
+            'batch_token' => ['required', 'string', 'max:100'],
+        ]);
+        $result = $processor->process($importJob, (string) $validated['batch_token']);
+        if ((bool) ($result['terminal'] ?? false)) {
+            $request->session()->forget('msk_import_job_id');
+        }
+
+        return response()->json([
+            ...$this->importJobPayload($importJob),
+            ...$result,
+        ])->header('Cache-Control', 'private, no-store');
     }
 
     public function export(ExportMskParticipantsRequest $request, MskParticipantExportService $exporter): BinaryFileResponse|RedirectResponse
     {
-        RuntimeBootstrap::boot($request);
-
         return $exporter->export($request);
     }
 
@@ -265,5 +329,22 @@ class MskParticipantController extends Controller
         return $scope->includesAllBranches()
             ? 'all'
             : $scope->selectedBranchId();
+    }
+
+    private function authorizeImportJob(MskImportJob $job): void
+    {
+        abort_unless((int) $job->user_id === (int) Auth::id()
+            && (int) $job->branch_id === (int) current_user_branch_id(), 404);
+    }
+
+    /** @return array{id:string,status:string,status_url:string,batch_url:string} */
+    private function importJobPayload(MskImportJob $job): array
+    {
+        return [
+            'id' => (string) $job->getKey(),
+            'status' => (string) $job->status,
+            'status_url' => route('discipleship.msk-classes.import-status', ['importJob' => $job->getKey()]),
+            'batch_url' => route('discipleship.msk-classes.import-batch', ['importJob' => $job->getKey()]),
+        ];
     }
 }

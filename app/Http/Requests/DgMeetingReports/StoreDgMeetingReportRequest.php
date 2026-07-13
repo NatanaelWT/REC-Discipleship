@@ -5,7 +5,6 @@ namespace App\Http\Requests\DgMeetingReports;
 use App\Models\DiscipleshipGroup;
 use App\Models\Person;
 use App\Services\DgMeetingReports\DgMeetingReportFormData;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -55,8 +54,6 @@ class StoreDgMeetingReportRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        RuntimeBootstrap::boot($this);
-
         $routeBranch = trim((string) $this->route('branch', ''));
         if (trim((string) $this->input('public_cabang', '')) === '' && $routeBranch !== '') {
             $this->merge(['public_cabang' => $routeBranch]);

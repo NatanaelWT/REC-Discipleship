@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class DiscipleshipPersonProfile
 {
@@ -20,11 +19,7 @@ class DiscipleshipPersonProfile
             default => $field,
         };
 
-        if (Schema::hasTable('orang') && Schema::hasColumn('orang', $column)) {
-            return "COALESCE(NULLIF({$peopleAlias}.{$column}, ''), '')";
-        }
-
-        return "''";
+        return "COALESCE(NULLIF({$peopleAlias}.{$column}, ''), '')";
     }
 
     /**
@@ -34,7 +29,7 @@ class DiscipleshipPersonProfile
     public static function namesByPersonIds(array $personIds): array
     {
         $personIds = array_values(array_filter(array_unique($personIds), static fn (int $id): bool => $id > 0));
-        if ($personIds === [] || ! Schema::hasTable('orang')) {
+        if ($personIds === []) {
             return [];
         }
 

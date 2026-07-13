@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\BootstrapRuntime;
 use App\Http\Middleware\HandleMaintenanceMode;
 use App\Http\Middleware\InvalidateDiscipleshipReadCache;
 use App\Http\Middleware\MeasureRequestPerformance;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(prepend: [BootstrapRuntime::class]);
         $middleware->append(MeasureRequestPerformance::class);
         $middleware->append(RejectLegacyPageQuery::class);
         $middleware->append(InvalidateDiscipleshipReadCache::class);

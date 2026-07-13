@@ -8,7 +8,10 @@ function upload_managed_files(array $fileInput, string &$errorCode, callable $si
         $singleError = '';
         $single = $singleUploader($item, $singleError);
         if ($singleError !== '') {
-            cleanup_uploaded_entries($uploaded, $cleanupPathKeys);
+            cleanup_uploaded_entries(array_values(array_filter(
+                $uploaded,
+                static fn (array $entry): bool => empty($entry['storage_reused']),
+            )), $cleanupPathKeys);
             $errorCode = $singleError;
             return [];
         }

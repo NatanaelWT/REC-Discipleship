@@ -2,16 +2,27 @@
 
 namespace App\Http\Requests\SecureFiles;
 
-use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 
 class ShowSecureFileRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        RuntimeBootstrap::boot($this);
+        $viewerId = Auth::id();
+        $viewer = $this->queryText('viewer');
+        if ($viewerId === null || $viewer === '') {
+            return false;
+        }
 
-        return true;
+        $expected = hash_hmac('sha256', implode('|', [
+            (string) $viewerId,
+            (string) Auth::user()?->username,
+            (string) Auth::user()?->access_scope,
+            (string) Auth::user()?->branch_id,
+        ]), (string) config('app.key'));
+
+        return hash_equals($expected, $viewer);
     }
 
     /**

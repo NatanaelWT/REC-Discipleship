@@ -8,12 +8,10 @@ use App\Models\DiscipleshipMeetingReport;
 use App\Services\Activity\ActivityRecorder;
 use App\Services\DgMeetingReports\DgMeetingReportFormData;
 use App\Services\DgMeetingReports\DgMeetingReportPhotoUploader;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use Throwable;
 
@@ -21,8 +19,6 @@ class DgMeetingReportController extends Controller
 {
     public function redirectToBranchReport(Request $request): RedirectResponse
     {
-        RuntimeBootstrap::boot($request);
-
         $branchRaw = trim((string) $request->query('cabang', $request->query('branch', '')));
         if ($branchRaw === '') {
             if (! is_logged_in()) {
@@ -52,8 +48,6 @@ class DgMeetingReportController extends Controller
         DgMeetingReportFormData $formData,
         string $branch,
     ): View|RedirectResponse {
-        RuntimeBootstrap::boot($request);
-
         if (! is_known_public_branch_code($branch)) {
             return redirect()->route('public.dg.branch', ['error' => 'invalid_branch']);
         }
@@ -123,28 +117,38 @@ class DgMeetingReportController extends Controller
                     'source' => 'public_form',
                 ];
 
-                if (Schema::hasColumn('jurnal_temu_dg', 'absences')) {
-                    $reportData['absences'] = array_map(static fn (int $memberId) => [
-                        'person_id' => $memberId,
-                        'person_name_snapshot' => $request->memberName($memberId),
-                    ], $request->absentMemberIds());
-                }
-                if (Schema::hasColumn('jurnal_temu_dg', 'meditation_sharers')) {
-                    $reportData['meditation_sharers'] = array_map(static fn (int $memberId) => [
-                        'person_id' => $memberId,
-                        'person_name_snapshot' => $request->memberName($memberId),
-                    ], $request->meditationSharerIds());
-                }
-                if (Schema::hasColumn('jurnal_temu_dg', 'photos')) {
-                    $reportData['photos'] = array_values(array_filter(array_map(static function (array $photo): array {
-                        $relativePath = sanitize_relative_upload_path((string) ($photo['path'] ?? ''));
+                $reportData['absences'] = array_map(static fn (int $memberId) => [
+                    'person_id' => $memberId,
+                    'person_name_snapshot' => $request->memberName($memberId),
+                ], $request->absentMemberIds());
+                $reportData['meditation_sharers'] = array_map(static fn (int $memberId) => [
+                    'person_id' => $memberId,
+                    'person_name_snapshot' => $request->memberName($memberId),
+                ], $request->meditationSharerIds());
+                $reportData['photos'] = array_values(array_filter(array_map(static function (array $photo): array {
+                    $relativePath = sanitize_relative_upload_path((string) ($photo['path'] ?? ''));
+                    if ($relativePath === '') {
+                        return [];
+                    }
 
-                        return $relativePath === '' ? [] : [
-                            'path' => $relativePath,
-                            'name' => trim((string) ($photo['name'] ?? '')) ?: null,
-                        ];
-                    }, $meetingPhotos)));
-                }
+                    $stored = [
+                        'path' => $relativePath,
+                        'name' => trim((string) ($photo['name'] ?? '')) ?: null,
+                        'sha256' => trim((string) ($photo['sha256'] ?? '')) ?: null,
+                        'size' => max(0, (int) ($photo['size'] ?? 0)) ?: null,
+                        'width' => max(0, (int) ($photo['width'] ?? 0)) ?: null,
+                        'height' => max(0, (int) ($photo['height'] ?? 0)) ?: null,
+                        'variant_status' => ($photo['variant_status'] ?? '') === 'ready' ? 'ready' : 'pending',
+                    ];
+                    foreach (['web_path', 'thumbnail_path'] as $pathKey) {
+                        $variantPath = sanitize_relative_upload_path((string) ($photo[$pathKey] ?? ''));
+                        if ($variantPath !== '') {
+                            $stored[$pathKey] = $variantPath;
+                        }
+                    }
+
+                    return array_filter($stored, static fn (mixed $value): bool => $value !== null && $value !== '');
+                }, $meetingPhotos)));
 
                 $report = DiscipleshipMeetingReport::query()->create($reportData);
 

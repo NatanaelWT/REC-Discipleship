@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Developer;
 
 use App\Http\Controllers\Controller;
 use App\Services\Analytics\WebsiteStatisticsService;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,7 +12,6 @@ class DeveloperStatisticsController extends Controller
 {
     public function index(Request $request, WebsiteStatisticsService $statistics): RedirectResponse|View
     {
-        RuntimeBootstrap::boot($request);
         if (! is_logged_in()) {
             return redirect()->route('auth.login');
         }

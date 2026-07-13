@@ -3,7 +3,9 @@
 namespace App\Services\MskParticipants;
 
 use App\Models\Person;
+use App\Support\StableNameCursor;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MskParticipantPageData
 {
@@ -24,6 +26,47 @@ class MskParticipantPageData
         return [
             'settings' => ['church_name' => app_church_name()],
             ...$this->paginatedRowsForCurrentContext($request),
+        ];
+    }
+
+    /** @return array{participant:array<string,mixed>,profile:array<string,mixed>,centralReadOnly:bool,batchMonthFilterParam:string}|null */
+    public function detailForCurrentContext(Request $request, int $participantId): ?array
+    {
+        if ($participantId < 1) {
+            return null;
+        }
+
+        $centralReadOnly = is_effective_central_discipleship_readonly();
+        $selectedBranch = $centralReadOnly
+            ? normalize_central_recap_branch(central_recap_selected_branch())
+            : normalize_user_branch(current_user_branch());
+        $branchIds = branch_ids_from_slugs($this->branchCodes($selectedBranch, $centralReadOnly));
+        $participant = Person::query()
+            ->select(Person::VIEW_COLUMNS)
+            ->whereIn('branch_id', $branchIds)
+            ->whereKey($participantId)
+            ->first();
+        if (! $participant instanceof Person) {
+            return null;
+        }
+
+        $row = $this->participantViewRow($participant);
+        $histories = $this->historyData->forParticipants([$row], $branchIds);
+        $profiles = $this->profileData->forParticipants([$row], $histories);
+        $id = (string) $participant->getKey();
+        $batchMonthInput = strtolower(trim((string) $request->query('batch_month', '')));
+        $batchMonth = $batchMonthInput === 'all'
+            ? 'all'
+            : import_normalize_month_strict($batchMonthInput);
+        if ($batchMonth === '') {
+            $batchMonth = import_normalize_month_strict((string) $participant->batch_month) ?: date('Y-m');
+        }
+
+        return [
+            'participant' => $row,
+            'profile' => is_array($profiles[$id] ?? null) ? $profiles[$id] : [],
+            'centralReadOnly' => $centralReadOnly,
+            'batchMonthFilterParam' => $batchMonth,
         ];
     }
 
@@ -85,24 +128,36 @@ class MskParticipantPageData
             });
         }
 
-        $totalParticipantsFiltered = (clone $filteredQuery)->count();
-        $completedParticipantsFiltered = (clone $filteredQuery)
-            ->get(['session_numbers'])
-            ->filter(static fn (Person $participant): bool => count(normalize_msk_session_numbers($participant->session_numbers ?? [])) === 12)
-            ->count();
+        $summary = (clone $filteredQuery)
+            ->reorder()
+            ->select([])
+            ->selectRaw('COUNT(*) AS total_count')
+            ->selectRaw('COALESCE(SUM(CASE WHEN '.$this->sessionCountExpression().' = 12 THEN 1 ELSE 0 END), 0) AS completed_count')
+            ->toBase()
+            ->first();
+        $totalParticipantsFiltered = (int) ($summary->total_count ?? 0);
+        $completedParticipantsFiltered = (int) ($summary->completed_count ?? 0);
 
-        $page = $this->page($request);
-        $perPage = $this->perPage($request);
-        $participants = (clone $filteredQuery)
-            ->orderBy('full_name')
+        $limit = $this->limit($request);
+        $cursor = StableNameCursor::decode($request->query('cursor'));
+        // full_name is normalized on write and is covered by the branch/batch/name/id index.
+        $nameExpression = 'full_name';
+        $participantsQuery = (clone $filteredQuery)
+            ->addSelect(DB::raw($nameExpression.' as cursor_name'))
+            ->orderByRaw($nameExpression)
             ->orderBy('id')
-            ->offset(($page - 1) * $perPage)
-            ->limit($perPage + 1)
+            ->limit($limit + 1);
+        StableNameCursor::apply($participantsQuery, $nameExpression, 'id', $cursor, nullableName: true);
+        $participants = $participantsQuery
             ->get();
-        $hasMore = $participants->count() > $perPage;
+        $hasMore = $participants->count() > $limit;
         if ($hasMore) {
-            $participants = $participants->slice(0, $perPage)->values();
+            $participants = $participants->slice(0, $limit)->values();
         }
+        $last = $participants->last();
+        $nextCursor = $hasMore && $last instanceof Person
+            ? StableNameCursor::encode($last->cursor_name !== null ? (string) $last->cursor_name : null, (int) $last->id)
+            : null;
         $pageParticipants = $participants
             ->map($this->participantViewRow(...))
             ->values()
@@ -151,8 +206,6 @@ class MskParticipantPageData
             }
         }
 
-        $participantHistories = $this->historyData->forParticipants($pageParticipants, $branchIds);
-
         return [
             'page' => 'msk_classes',
             'centralReadOnly' => $centralReadOnly,
@@ -180,13 +233,12 @@ class MskParticipantPageData
             'completedParticipantsFiltered' => $completedParticipantsFiltered,
             'inProgressParticipantsFiltered' => max(0, $totalParticipantsFiltered - $completedParticipantsFiltered),
             'totalParticipantsAll' => array_sum($batchMonthMap),
-            'mskPage' => $page,
-            'mskPerPage' => $perPage,
+            'mskLimit' => $limit,
             'hasMoreMskRows' => $hasMore,
-            'nextMskPage' => $hasMore ? $page + 1 : null,
+            'nextMskCursor' => $nextCursor,
             'mskEmptyMessage' => $this->emptyMessage($search, $batchMonthFilterParam),
-            'participantHistories' => $participantHistories,
-            'participantProfiles' => $this->profileData->forParticipants($pageParticipants, $participantHistories),
+            'participantHistories' => [],
+            'participantProfiles' => [],
         ];
     }
 
@@ -214,14 +266,16 @@ class MskParticipantPageData
         return $row;
     }
 
-    private function page(Request $request): int
+    private function sessionCountExpression(): string
     {
-        return max(1, (int) $request->query('page', 1));
+        return DB::connection()->getDriverName() === 'sqlite'
+            ? 'COALESCE(json_array_length(session_numbers), 0)'
+            : 'COALESCE(JSON_LENGTH(session_numbers), 0)';
     }
 
-    private function perPage(Request $request): int
+    private function limit(Request $request): int
     {
-        return max(1, min(self::MAX_PER_PAGE, (int) $request->query('per_page', self::DEFAULT_PER_PAGE)));
+        return max(1, min(self::MAX_PER_PAGE, (int) $request->query('limit', self::DEFAULT_PER_PAGE)));
     }
 
     private function emptyMessage(string $search, string $batchMonth): string

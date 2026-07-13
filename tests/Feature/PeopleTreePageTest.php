@@ -45,6 +45,10 @@ class PeopleTreePageTest extends TestCase
         $response->assertSee('Anggota Test');
         $response->assertDontSee('?page=people_tree', false);
         $response->assertSee('tree-v2-person-profile-modal', false);
+        $response->assertSee('data-tree-person-detail-url-template=', false);
+        $response->assertSee('data-tree-group-detail-url-template=', false);
+        $response->assertDontSee('data-tree-v2-person-profile-template=', false);
+        $response->assertDontSee('data-tree-v2-history-template=', false);
         $response->assertSee('tree-v2-history-actions', false);
         $response->assertSee('data-tree-v2-action-do="add_member"', false);
         $response->assertSee('data-tree-v2-action-do="upgrade_group"', false);
@@ -141,7 +145,14 @@ class PeopleTreePageTest extends TestCase
             ->assertSee('Yakub Tri Handoko (GM)')
             ->assertSee('Anggota Kutisari Lintas');
 
-        $profileHtml = $this->profileTemplateHtml($response->getContent(), '626');
+        $response->assertDontSee('data-phone=', false)
+            ->assertDontSee('data-notes=', false)
+            ->assertDontSee('data-tree-v2-person-profile-template=', false);
+
+        $profileResponse = $this->get('/pemuridan/pohon/orang/626/detail')
+            ->assertOk()
+            ->assertJsonStructure(['title', 'html', 'edit_url', 'edit']);
+        $profileHtml = (string) $profileResponse->json('html');
         $this->assertStringNotContainsString('MSK dan pemuridan aktif', $profileHtml);
         $this->assertStringNotContainsString('Riwayat Sebagai Anggota', $profileHtml);
         $this->assertStringNotContainsString('Belum DG', $profileHtml);
@@ -170,6 +181,12 @@ class PeopleTreePageTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $this->actingAsRecUser();
+        $this->get('/pemuridan/pohon')
+            ->assertOk()
+            ->assertSee('<option value="'.$mskOnlyId.'" data-person-id="">Peserta MSK Saja</option>', false)
+            ->assertDontSee('data-tree-v2-node-action="person" data-person-id="'.$mskOnlyId.'"', false);
 
         $store = app(PeopleTreeModelStore::class);
         $model = $store->modelForBranch('kutisari');
@@ -209,13 +226,17 @@ class PeopleTreePageTest extends TestCase
             ->assertSee('Yakub Tri Handoko (GM)')
             ->assertSee('Anggota Kutisari Lintas')
             ->assertSee('DG 1 (Yakub Tri Handoko (GM))')
-            ->assertSee('data-tree-v2-person-profile-template="626"', false)
+            ->assertDontSee('data-tree-v2-person-profile-template="626"', false)
             ->assertSee('data-tree-v2-node-action="person" data-person-id="626"', false)
             ->assertSee('tree-v2-node tree-v2-person is-male is-actionable', false)
-            ->assertSee('Riwayat Memimpin')
-            ->assertDontSee('Peserta ini belum terhubung ke data pemuridan.')
             ->assertDontSee('data-tree-v2-profile-action="edit_person"', false)
             ->assertDontSee('data-tree-v2-action-modal', false);
+
+        $detail = $this->get('/pemuridan/pohon/orang/626/detail?branch_id=1')
+            ->assertOk()
+            ->assertJsonPath('edit_url', null);
+        $this->assertStringContainsString('Riwayat Memimpin', (string) $detail->json('html'));
+        $this->assertStringNotContainsString('Peserta ini belum terhubung ke data pemuridan.', (string) $detail->json('html'));
     }
 
     public function test_central_all_branch_tree_renders_people_from_every_branch(): void
@@ -236,6 +257,142 @@ class PeopleTreePageTest extends TestCase
             ->assertOk()
             ->assertSee('Leader Test')
             ->assertSee('Anggota Test');
+    }
+
+    public function test_tree_detail_endpoints_are_authorized_and_scoped_to_visible_branch_graph(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $ownPersonId = (int) DB::table('orang')->where('full_name', 'Anggota Test')->value('id');
+        $ownGroupId = (int) DB::table('kelompok_dg')->where('branch_id', 1)->value('id');
+
+        $otherPersonId = DB::table('orang')->insertGetId([
+            'branch_id' => 2,
+            'full_name' => 'Orang Cabang GM',
+            'status' => 'active',
+            'session_numbers' => json_encode([]),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $otherGroupId = DB::table('kelompok_dg')->insertGetId([
+            'branch_id' => 2,
+            'status' => 'active',
+            'stage' => 'DG 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            'branch_id' => 2,
+            'discipleship_group_id' => $otherGroupId,
+            'person_id' => $otherPersonId,
+            'role' => 'leader',
+            'status' => 'active',
+            'started_on' => '2026-07-01',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/pohon/orang/'.$ownPersonId.'/detail')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonStructure(['title', 'html', 'edit_url', 'edit']);
+        $this->get('/pemuridan/pohon/kelompok/'.$ownGroupId.'/detail')
+            ->assertOk()
+            ->assertJsonStructure(['title', 'html', 'edit_url']);
+
+        $this->get('/pemuridan/pohon/orang/'.$otherPersonId.'/detail')->assertNotFound();
+        $this->get('/pemuridan/pohon/kelompok/'.$otherGroupId.'/detail')->assertNotFound();
+    }
+
+    public function test_tree_person_detail_query_count_is_bounded_for_one_visible_person(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $personId = (int) DB::table('orang')->where('full_name', 'Anggota Test')->value('id');
+        $this->actingAsRecUser();
+
+        $queries = [];
+        DB::listen(static function ($query) use (&$queries): void {
+            if (str_starts_with(strtolower(ltrim($query->sql)), 'select')) {
+                $queries[] = $query->sql;
+            }
+        });
+
+        $this->get('/pemuridan/pohon/orang/'.$personId.'/detail')->assertOk();
+
+        $this->assertLessThanOrEqual(6, count($queries), implode("\n", $queries));
+    }
+
+    public function test_tree_group_detail_query_count_is_bounded_for_one_visible_group(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $groupId = (int) DB::table('kelompok_dg')->where('branch_id', 1)->value('id');
+        $this->actingAsRecUser();
+
+        $queries = [];
+        DB::listen(static function ($query) use (&$queries): void {
+            if (str_starts_with(strtolower(ltrim($query->sql)), 'select')) {
+                $queries[] = $query->sql;
+            }
+        });
+
+        $this->get('/pemuridan/pohon/kelompok/'.$groupId.'/detail')->assertOk();
+
+        $this->assertLessThanOrEqual(6, count($queries), implode("\n", $queries));
+    }
+
+    public function test_tree_initial_graph_query_count_does_not_grow_per_person(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $groupId = (int) DB::table('kelompok_dg')->where('branch_id', 1)->value('id');
+        $now = now();
+        $memberships = [];
+        for ($index = 1; $index <= 100; $index++) {
+            $personId = DB::table('orang')->insertGetId([
+                'branch_id' => 1,
+                'full_name' => sprintf('Anggota Skala %03d', $index),
+                'status' => 'active',
+                'session_numbers' => json_encode([]),
+                'photos' => json_encode([]),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            $memberships[] = [
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $personId,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'active',
+                'started_on' => '2026-01-01',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+        DB::table('keanggotaan_kelompok_dg')->insert($memberships);
+        $this->actingAsRecUser();
+
+        $queries = [];
+        DB::listen(static function ($query) use (&$queries): void {
+            if (str_starts_with(strtolower(ltrim($query->sql)), 'select')) {
+                $queries[] = $query->sql;
+            }
+        });
+
+        $response = $this->get('/pemuridan/pohon')->assertOk();
+
+        $response->assertSee('Anggota Skala 100');
+        $this->assertLessThanOrEqual(10, count($queries), implode("\n", $queries));
+        $this->assertFalse(collect($queries)->contains(
+            static fn (string $sql): bool => str_contains(strtolower($sql), 'jurnal_temu_dg')
+                || str_contains(strtolower($sql), '"photos"')
+                || str_contains(strtolower($sql), '"birth_date"'),
+        ));
     }
 
     public function test_person_without_active_membership_stays_in_their_latest_group(): void
@@ -387,7 +544,11 @@ class PeopleTreePageTest extends TestCase
         $this->actingAsRecUser();
 
         $response = $this->get('/pemuridan/pohon')->assertOk();
-        $historyHtml = $this->groupHistoryTemplateHtml($response->getContent(), (string) $groupId);
+        $response->assertDontSee('data-tree-v2-history-template=', false);
+        $historyResponse = $this->get('/pemuridan/pohon/kelompok/'.$groupId.'/detail')
+            ->assertOk()
+            ->assertJsonStructure(['title', 'html', 'edit_url']);
+        $historyHtml = (string) $historyResponse->json('html');
 
         $this->assertSame(1, substr_count($historyHtml, '<strong>Leader Test</strong>'));
         $this->assertSame(1, substr_count($historyHtml, '<strong>Anggota Test</strong>'));
@@ -808,6 +969,7 @@ class PeopleTreePageTest extends TestCase
 
     private function createTables(): void
     {
+        Schema::dropIfExists('dg_manual');
         Schema::dropIfExists('keanggotaan_kelompok_dg');
         Schema::dropIfExists('relasi_dg');
         Schema::dropIfExists('kelompok_dg');
@@ -858,6 +1020,16 @@ class PeopleTreePageTest extends TestCase
             $table->date('started_on')->nullable();
             $table->date('ended_on')->nullable();
             $table->string('end_reason')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('dg_manual', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->unsignedBigInteger('person_id');
+            $table->string('stage');
+            $table->date('completed_on')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
 
@@ -942,24 +1114,6 @@ class PeopleTreePageTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-    }
-
-    private function profileTemplateHtml(string $content, string $personId): string
-    {
-        $pattern = '/<template[^>]*data-tree-v2-person-profile-template="'.preg_quote($personId, '/').'"[^>]*>(.*?)<\/template>/s';
-        $this->assertMatchesRegularExpression($pattern, $content);
-        preg_match($pattern, $content, $matches);
-
-        return (string) ($matches[1] ?? '');
-    }
-
-    private function groupHistoryTemplateHtml(string $content, string $groupId): string
-    {
-        $pattern = '/<template[^>]*data-tree-v2-history-template="'.preg_quote($groupId, '/').'"[^>]*>(.*?)<\/template>/s';
-        $this->assertMatchesRegularExpression($pattern, $content);
-        preg_match($pattern, $content, $matches);
-
-        return html_entity_decode((string) ($matches[1] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     private function seedCrossBranchLeaderGroup(): void

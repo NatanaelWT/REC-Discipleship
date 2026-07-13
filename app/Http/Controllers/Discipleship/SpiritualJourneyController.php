@@ -8,7 +8,6 @@ use App\Models\Person;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\SpiritualJourney\SpiritualJourneyBridgeStatusService;
 use App\Services\SpiritualJourney\SpiritualJourneyPageData;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,8 +21,6 @@ class SpiritualJourneyController extends Controller
         SpiritualJourneyPageData $pageData,
         CurrentDiscipleshipScope $scope,
     ): Response|View {
-        RuntimeBootstrap::boot($request);
-
         $pageTitle = 'Spiritual Journey';
         $data = [
             ...$pageData->forCurrentContext($request),
@@ -46,8 +43,6 @@ class SpiritualJourneyController extends Controller
 
     public function rows(Request $request, SpiritualJourneyPageData $pageData): JsonResponse
     {
-        RuntimeBootstrap::boot($request);
-
         $data = $pageData->paginatedRowsForCurrentContext($request);
         $stats = is_array($data['spiritualJourneyStats'] ?? null) ? $data['spiritualJourneyStats'] : [];
 
@@ -55,20 +50,35 @@ class SpiritualJourneyController extends Controller
             'html' => view('discipleship.spiritual-journey.partials.rows', [
                 'rows' => $data['spiritualJourneyRows'] ?? [],
             ])->render(),
-            'templates_html' => view('discipleship.spiritual-journey.partials.view-templates', [
-                'participantProfiles' => $data['participantProfiles'] ?? [],
-                'mskClasses' => $data['mskClasses'] ?? [],
-            ])->render(),
-            'has_more' => (bool) ($data['hasMoreSpiritualJourneyRows'] ?? false),
-            'next_page' => $data['nextSpiritualJourneyPage'] ?? null,
             'stats' => [
                 'dg1' => (int) ($stats['completed_dg1'] ?? 0),
                 'kgap' => (int) ($stats['following_kgap'] ?? 0),
                 'dg2' => (int) ($stats['completed_dg2'] ?? 0),
                 'dg3' => (int) ($stats['completed_dg3'] ?? 0),
             ],
+            'has_more' => (bool) ($data['hasMoreSpiritualJourneyRows'] ?? false),
+            'next_cursor' => $data['nextSpiritualJourneyCursor'] ?? null,
+            'empty' => count($data['spiritualJourneyRows'] ?? []) === 0,
             'empty_message' => (string) ($data['spiritualJourneyEmptyMessage'] ?? 'Peserta tidak ditemukan.'),
         ]);
+    }
+
+    public function detail(Request $request, Person $participant, SpiritualJourneyPageData $pageData): JsonResponse
+    {
+        $detail = $pageData->detailForCurrentContext($request, (int) $participant->getKey());
+        if ($detail === null) {
+            abort(404);
+        }
+
+        $row = is_array($detail['participant'] ?? null) ? $detail['participant'] : [];
+        $title = trim((string) ($row['full_name'] ?? 'Profil Peserta')) ?: 'Profil Peserta';
+
+        return response()->json([
+            'title' => $title,
+            'html' => view('discipleship.msk-participants.profile', [
+                'profile' => is_array($detail['profile'] ?? null) ? $detail['profile'] : [],
+            ])->render(),
+        ])->header('Cache-Control', 'private, no-store');
     }
 
     public function updateBridgeStatus(
@@ -76,8 +86,6 @@ class SpiritualJourneyController extends Controller
         Person $participant,
         SpiritualJourneyBridgeStatusService $service,
     ): RedirectResponse {
-        RuntimeBootstrap::boot($request);
-
         return $this->updateStatusAndRedirect($service, (int) $participant->getKey(), $request->status());
     }
 
@@ -85,8 +93,6 @@ class SpiritualJourneyController extends Controller
         UpdateSpiritualJourneyBridgeStatusRequest $request,
         SpiritualJourneyBridgeStatusService $service,
     ): RedirectResponse {
-        RuntimeBootstrap::boot($request);
-
         return $this->updateStatusAndRedirect($service, $request->participantId(), $request->status());
     }
 

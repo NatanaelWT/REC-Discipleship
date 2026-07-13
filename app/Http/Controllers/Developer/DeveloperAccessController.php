@@ -8,7 +8,6 @@ use App\Services\Activity\ActivityRecorder;
 use App\Services\Auth\CurrentUserContext;
 use App\Services\Auth\DeveloperAccessSession;
 use App\Services\Routing\AppPageRouteMap;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -20,8 +19,6 @@ class DeveloperAccessController extends Controller
         DeveloperAccessSession $access,
         ActivityRecorder $activity,
     ): RedirectResponse {
-        RuntimeBootstrap::boot($request);
-
         $error = $access->start($request, $user);
         if ($error !== null) {
             return redirect()->route('developer.users', [
@@ -48,8 +45,6 @@ class DeveloperAccessController extends Controller
         DeveloperAccessSession $access,
         ActivityRecorder $activity,
     ): RedirectResponse {
-        RuntimeBootstrap::boot($request);
-
         if (! $access->active()) {
             return redirect(AppPageRouteMap::pageUrl(app(CurrentUserContext::class)->homePage()));
         }

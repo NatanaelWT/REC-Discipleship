@@ -3,13 +3,12 @@
 namespace App\Services\SpiritualJourney;
 
 use App\Models\Person;
-use Illuminate\Support\Facades\Schema;
 
 class SpiritualJourneyBridgeStatusService
 {
     public function update(int $participantId, string $status): bool
     {
-        if ($participantId < 1 || ! Schema::hasTable('orang')) {
+        if ($participantId < 1) {
             return false;
         }
 

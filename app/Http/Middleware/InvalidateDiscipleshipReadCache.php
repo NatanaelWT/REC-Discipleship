@@ -7,6 +7,7 @@ use App\Services\Branches\BranchCatalog;
 use App\Services\Discipleship\DiscipleshipReadCache;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class InvalidateDiscipleshipReadCache
@@ -19,7 +20,7 @@ class InvalidateDiscipleshipReadCache
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
-        if ($request->isMethodSafe() || $response->getStatusCode() >= 500) {
+        if (! $this->shouldInvalidate($request, $response)) {
             return $response;
         }
 
@@ -28,14 +29,40 @@ class InvalidateDiscipleshipReadCache
             || str_starts_with($routeName, 'public.dg.')
             || str_starts_with($routeName, 'public.member-feedback.')) {
             $branchIds = $this->branchIds($request);
-            if ($branchIds === []) {
-                $this->cache->invalidate();
-            } else {
+            $invalidate = function () use ($branchIds): void {
+                if ($branchIds === []) {
+                    $this->cache->invalidate();
+
+                    return;
+                }
+
                 $this->cache->invalidateBranches($branchIds);
+            };
+
+            if (DB::transactionLevel() > 0) {
+                DB::afterCommit($invalidate);
+            } else {
+                $invalidate();
             }
         }
 
         return $response;
+    }
+
+    private function shouldInvalidate(Request $request, Response $response): bool
+    {
+        if ($request->isMethodSafe() || $response->getStatusCode() >= 400) {
+            return false;
+        }
+        if ($request->attributes->get('activity.validation_failed') === true
+            || $request->attributes->get('discipleship.no_mutation') === true) {
+            return false;
+        }
+
+        $location = trim((string) $response->headers->get('Location'));
+
+        return $location === ''
+            || preg_match('/(?:^|[?&])(error|material_error)=/', $location) !== 1;
     }
 
     /** @return array<int, int> */

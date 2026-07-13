@@ -5,7 +5,6 @@ namespace App\Http\Requests\SpiritualJourney;
 use App\Models\Person;
 use App\Services\Auth\CurrentUserContext;
 use App\Services\Routing\AppPageRouteMap;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -13,7 +12,6 @@ class UpdateSpiritualJourneyBridgeStatusRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        RuntimeBootstrap::boot($this);
         $context = app(CurrentUserContext::class);
 
         return $context->isLoggedIn()

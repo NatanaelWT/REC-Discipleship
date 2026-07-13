@@ -4,7 +4,6 @@ namespace App\Http\Requests\MskParticipants;
 
 use App\Services\Auth\CurrentUserContext;
 use App\Services\Routing\AppPageRouteMap;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -12,7 +11,6 @@ abstract class MskParticipantWriteRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        RuntimeBootstrap::boot($this);
         $context = app(CurrentUserContext::class);
 
         return $context->isLoggedIn()

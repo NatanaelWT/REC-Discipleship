@@ -17,6 +17,7 @@ class PublicMaterialFile extends Model
         'original_file_name',
         'size_bytes',
         'mime_type',
+        'sha256',
         'text_content',
         'text_extracted_at',
         'text_extraction_error',

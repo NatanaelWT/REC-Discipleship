@@ -6,11 +6,11 @@ use App\Enums\UserAccessRole;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityRequest;
 use App\Models\Branch;
-use App\Support\RuntimeBootstrap;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Throwable;
 
@@ -226,7 +226,6 @@ class DeveloperActivityController extends Controller
 
     private function guard(Request $request): ?RedirectResponse
     {
-        RuntimeBootstrap::boot($request);
         if (! is_logged_in()) {
             return redirect()->route('auth.login');
         }
@@ -269,24 +268,32 @@ class DeveloperActivityController extends Controller
 
         $category = $this->queryString($request, 'category');
         if ($category !== '') {
-            $query->where(static function (Builder $nested) use ($category): void {
-                $nested->where('category', $category)
-                    ->orWhereJsonContains('event_categories', $category);
+            $query->where(function (Builder $nested) use ($category): void {
+                $nested->where('category', $category);
+                if ($this->splitStorage()) {
+                    $this->orWhereEvent($nested, static fn ($event) => $event->where('category', $category));
+                } else {
+                    $nested->orWhereJsonContains('event_categories', $category);
+                }
             });
         }
 
         $action = $this->queryString($request, 'action');
         if ($action !== '') {
-            $query->where(static function (Builder $nested) use ($action): void {
-                $nested->where('action', $action)
-                    ->orWhereJsonContains('event_actions', $action);
+            $query->where(function (Builder $nested) use ($action): void {
+                $nested->where('action', $action);
+                if ($this->splitStorage()) {
+                    $this->orWhereEvent($nested, static fn ($event) => $event->where('action', $action));
+                } else {
+                    $nested->orWhereJsonContains('event_actions', $action);
+                }
             });
         }
 
         $subjectType = $this->queryString($request, 'subject_type');
         $subjectId = $this->queryString($request, 'subject_id');
         if ($subjectType !== '' || $subjectId !== '') {
-            $query->where(static function (Builder $nested) use ($subjectType, $subjectId): void {
+            $query->where(function (Builder $nested) use ($subjectType, $subjectId): void {
                 $nested->where(static function (Builder $requestSubject) use ($subjectType, $subjectId): void {
                     if ($subjectType !== '') {
                         $requestSubject->where('subject_type', $subjectType);
@@ -294,14 +301,26 @@ class DeveloperActivityController extends Controller
                     if ($subjectId !== '') {
                         $requestSubject->where('subject_id', $subjectId);
                     }
-                })->orWhere(static function (Builder $eventSubjects) use ($subjectType, $subjectId): void {
-                    if ($subjectType !== '') {
-                        $eventSubjects->whereJsonContains('event_subject_types', $subjectType);
-                    }
-                    if ($subjectId !== '') {
-                        $eventSubjects->whereJsonContains('event_subject_ids', $subjectId);
-                    }
                 });
+                if ($this->splitStorage()) {
+                    $this->orWhereEvent($nested, static function ($event) use ($subjectType, $subjectId): void {
+                        if ($subjectType !== '') {
+                            $event->where('subject_type', $subjectType);
+                        }
+                        if ($subjectId !== '') {
+                            $event->where('subject_id', $subjectId);
+                        }
+                    });
+                } else {
+                    $nested->orWhere(static function (Builder $eventSubjects) use ($subjectType, $subjectId): void {
+                        if ($subjectType !== '') {
+                            $eventSubjects->whereJsonContains('event_subject_types', $subjectType);
+                        }
+                        if ($subjectId !== '') {
+                            $eventSubjects->whereJsonContains('event_subject_ids', $subjectId);
+                        }
+                    });
+                }
             });
         }
 
@@ -316,35 +335,69 @@ class DeveloperActivityController extends Controller
 
         $search = $this->queryString($request, 'q');
         if ($search !== '') {
-            $query->where(static function (Builder $nested) use ($search): void {
+            $query->where(function (Builder $nested) use ($search): void {
                 $needle = '%'.addcslashes($search, '%_\\').'%';
                 $nested->where('username', 'like', $needle)
                     ->orWhere('route_name', 'like', $needle)
                     ->orWhere('action', 'like', $needle)
                     ->orWhere('path', 'like', $needle)
                     ->orWhere('subject_id', 'like', $needle)
-                    ->orWhere('ip_address', 'like', $needle)
-                    ->orWhere('event_text', 'like', $needle);
+                    ->orWhere('ip_address', 'like', $needle);
+                if ($this->splitStorage()) {
+                    $this->orWhereEvent($nested, static function ($event) use ($needle): void {
+                        $event->where('action', 'like', $needle)
+                            ->orWhere('subject_type', 'like', $needle)
+                            ->orWhere('subject_id', 'like', $needle)
+                            ->orWhere('subject_label', 'like', $needle)
+                            ->orWhere('description', 'like', $needle);
+                    });
+                } else {
+                    $nested->orWhere('event_text', 'like', $needle);
+                }
             });
         }
     }
 
     private function categoryOptions()
     {
-        return ActivityRequest::query()
+        $categories = ActivityRequest::query()
             ->whereNotNull('category')
             ->distinct()
-            ->pluck('category')
-            ->merge(
+            ->pluck('category');
+
+        if ($this->splitStorage()) {
+            $categories = $categories->merge(
+                DB::table('audit_events')->whereNotNull('category')->distinct()->pluck('category'),
+            );
+        } else {
+            $categories = $categories->merge(
                 ActivityRequest::query()
                     ->whereNotNull('event_categories')
                     ->get(['event_categories'])
                     ->flatMap(static fn (ActivityRequest $activity) => is_array($activity->event_categories) ? $activity->event_categories : []),
-            )
+            );
+        }
+
+        return $categories
             ->filter(static fn ($category): bool => trim((string) $category) !== '')
             ->unique()
             ->sort()
             ->values();
+    }
+
+    private function orWhereEvent(Builder $query, \Closure $callback): void
+    {
+        $query->orWhereExists(function ($event) use ($callback): void {
+            $event->selectRaw('1')
+                ->from('audit_events')
+                ->whereColumn('audit_events.request_id', 'request_activities.id');
+            $callback($event);
+        });
+    }
+
+    private function splitStorage(): bool
+    {
+        return config('activity.storage', 'legacy') === 'split';
     }
 
     private function filterDate(string $value, bool $endOfDay): ?CarbonImmutable

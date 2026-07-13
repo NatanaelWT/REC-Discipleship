@@ -12,7 +12,7 @@ use App\Services\PublicMaterials\PublicMaterialFileStreamer;
 use App\Services\PublicMaterials\PublicMaterialRouteResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class MaterialDownloadController extends Controller
 {
@@ -39,7 +39,7 @@ class MaterialDownloadController extends Controller
         PublicMaterialCatalog $catalog,
         PublicMaterialFileStreamer $streamer,
         ActivityRecorder $activity,
-    ): Response|StreamedResponse {
+    ): BinaryFileResponse|Response {
         $menu = PublicMaterialMenuKey::fromKey($menu);
         if (! $menu instanceof PublicMaterialMenuKey) {
             return response('File tidak ditemukan.', 404);
@@ -65,15 +65,18 @@ class MaterialDownloadController extends Controller
     /** @return array<string, mixed> */
     private function fileMetadata(PublicMaterialFile $file): array
     {
-        $path = function_exists('public_material_resolve_path')
-            ? public_material_resolve_path((string) $file->relative_path)
-            : null;
-
         return [
             'name' => (string) $file->original_file_name,
             'size_bytes' => (int) $file->size_bytes,
             'mime_type' => (string) $file->mime_type,
-            'sha256' => is_string($path) && is_file($path) ? hash_file('sha256', $path) : null,
+            'sha256' => $this->storedChecksum($file),
         ];
+    }
+
+    private function storedChecksum(PublicMaterialFile $file): ?string
+    {
+        $checksum = strtolower(trim((string) $file->sha256));
+
+        return preg_match('/\A[a-f0-9]{64}\z/', $checksum) === 1 ? $checksum : null;
     }
 }

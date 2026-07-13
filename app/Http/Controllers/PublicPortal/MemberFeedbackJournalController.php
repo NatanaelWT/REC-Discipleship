@@ -7,11 +7,9 @@ use App\Http\Requests\MemberFeedbackJournals\StoreMemberFeedbackJournalRequest;
 use App\Models\DiscipleshipFeedback;
 use App\Services\MemberFeedbackJournals\MemberFeedbackFormData;
 use App\Services\MemberFeedbackJournals\MemberFeedbackQuestionCatalog;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use Throwable;
 
@@ -19,8 +17,6 @@ class MemberFeedbackJournalController extends Controller
 {
     public function selectBranch(Request $request): View
     {
-        RuntimeBootstrap::boot($request);
-
         $feedbackSessionParam = normalize_public_member_feedback_session(
             $request->query('feedback_session', $request->query('session', '')),
         );
@@ -40,8 +36,6 @@ class MemberFeedbackJournalController extends Controller
         MemberFeedbackFormData $formData,
         MemberFeedbackQuestionCatalog $questionCatalog,
     ): View|RedirectResponse {
-        RuntimeBootstrap::boot($request);
-
         $old = is_array(session('public_member_feedback_old'))
             ? session('public_member_feedback_old')
             : [];
@@ -124,15 +118,6 @@ class MemberFeedbackJournalController extends Controller
                     'source' => 'public_form',
                 ];
 
-                if (Schema::hasColumn('jurnal_umpan_balik', 'ratings')) {
-                    $journalData['ratings'] = [];
-                }
-                if (Schema::hasColumn('jurnal_umpan_balik', 'notes')) {
-                    $journalData['notes'] = [];
-                }
-
-                $journal = DiscipleshipFeedback::query()->create($journalData);
-
                 $ratingMeta = [];
                 foreach ($questionCatalog->ratingQuestions() as $question) {
                     $ratingMeta[$question['key']] = $question;
@@ -158,16 +143,9 @@ class MemberFeedbackJournalController extends Controller
                     $notes[] = $noteRow;
                 }
 
-                $updateData = [];
-                if (Schema::hasColumn('jurnal_umpan_balik', 'ratings')) {
-                    $updateData['ratings'] = $ratings ?? [];
-                }
-                if (Schema::hasColumn('jurnal_umpan_balik', 'notes')) {
-                    $updateData['notes'] = $notes ?? [];
-                }
-                if ($updateData !== []) {
-                    $journal->forceFill($updateData)->save();
-                }
+                $journalData['ratings'] = $ratings;
+                $journalData['notes'] = $notes;
+                DiscipleshipFeedback::query()->create($journalData);
             });
         } catch (Throwable) {
             session()->put('public_member_feedback_error', 'Jurnal umpan balik gagal disimpan. Coba ulangi lagi.');

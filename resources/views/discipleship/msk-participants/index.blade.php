@@ -5,13 +5,28 @@ if ($page === 'msk_classes') {
     if (! $renderAsTabPanel) {
         page_header('Kelas MSK', $settings, $page, false, 'page-discipleship-table-scroll');
     } else {
-        echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-list-panel journey-workspace-panel msk-classes-panel" id="discipleship-tabpanel-msk" role="tabpanel" aria-labelledby="discipleship-tab-msk" tabindex="0" data-discipleship-tab-panel data-tab-key="msk" data-page-title="Kelas MSK" data-body-class="page-msk_classes">'."\n";
+        echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-list-panel journey-workspace-panel msk-classes-panel" id="discipleship-tabpanel-msk" role="tabpanel" aria-labelledby="discipleship-tab-msk" tabindex="0" data-discipleship-tab-panel data-tab-key="msk" data-page-title="Kelas MSK" data-body-class="page-msk_classes" data-msk-detail-url-template="'.h(route('discipleship.msk-classes.detail', ['participant' => '__id__'])).'">'."\n";
     }
     $centralReadOnly = is_effective_central_discipleship_readonly();
     $mskIndexAction = route('discipleship.msk-classes');
     $mskStoreAction = route('discipleship.msk-classes.store');
     $mskImportAction = route('discipleship.msk-classes.import');
     $mskExportAction = route('discipleship.msk-classes.export');
+    $importJobId = trim((string) request()->query('import_job', session('msk_import_job_id', '')));
+    if (! preg_match('/^[0-9A-HJKMNP-TV-Z]{26}$/i', $importJobId)) {
+        $importJobId = '';
+    }
+
+    if ($importJobId !== '') {
+        echo '<div class="alert info" data-msk-import-job'
+            .' data-status-url="'.h(route('discipleship.msk-classes.import-status', ['importJob' => $importJobId])).'"'
+            .' data-batch-url="'.h(route('discipleship.msk-classes.import-batch', ['importJob' => $importJobId])).'"'
+            .' data-csrf-token="'.h(csrf_token()).'" role="status">'
+            .'<strong>Import MSK sedang disiapkan.</strong> '
+            .'<span data-msk-import-message>Memeriksa status...</span> '
+            .'<progress data-msk-import-progress max="100" value="0"></progress>'
+            .'</div>';
+    }
 
     render_condition_alerts([
         ['when' => isset($_GET['saved']), 'tone' => 'success', 'message' => 'Data peserta kelas MSK berhasil disimpan.'],
@@ -172,7 +187,7 @@ if ($page === 'msk_classes') {
         );
         $contactFields[] = $mskField(
             'Upload Foto Peserta',
-            '<input type="file" name="participant_photos[]" accept=".jpg,.jpeg,.png,.webp" multiple><span class="msk-form-field-hint">JPG, PNG, atau WEBP. Bisa pilih lebih dari satu file.</span>',
+            '<input type="file" name="participant_photos[]" accept="image/jpeg,image/png,image/webp" data-client-image-variants data-web-variant-name="participant_photo_web_variants[]" data-thumbnail-name="participant_photo_thumbnails[]" multiple><span class="msk-form-field-hint">Original tetap disimpan; versi web hemat data dibuat di perangkat ini.</span>',
             'is-upload is-wide'
         );
         if (count($photos) > 0) {
@@ -553,10 +568,6 @@ if ($page === 'msk_classes') {
         }
         $mskModalTemplates[$viewParticipantId] = $templateData;
     };
-    foreach ($participantsSorted as $participant) {
-        $appendMskViewTemplate($participant);
-    }
-
     echo view('discipleship.partials.page-header', [
         'header' => [
             'tools' => [
@@ -583,23 +594,7 @@ if ($page === 'msk_classes') {
         ],
     ])->render();
 
-    if (! $centralReadOnly) {
-        foreach ($participantsFilteredByBatch as $participant) {
-            $participantId = trim((string) ($participant['id'] ?? ''));
-            $fullName = trim((string) ($participant['full_name'] ?? ''));
-            if ($fullName === '') {
-                $fullName = '-';
-            }
-            if ($participantId !== '') {
-                $mskEditModalTemplates[$participantId] = [
-                    'title' => 'Edit Peserta MSK: '.$fullName,
-                    'content' => $renderMskParticipantForm($participant, $batchMonthFilterParam, 'data-msk-edit-close'),
-                ];
-            }
-        }
-    }
-
-    echo '<section class="card table-card-plain" data-msk-list data-rows-url="'.h(route('discipleship.msk-classes.rows')).'" data-page="'.h((string) ($mskPage ?? 1)).'" data-per-page="'.h((string) ($mskPerPage ?? 50)).'" data-has-more="'.(! empty($hasMoreMskRows) ? '1' : '0').'" data-next-page="'.h((string) ($nextMskPage ?? '')).'">'."\n";
+    echo '<section class="card table-card-plain" data-msk-list data-rows-url="'.h(route('discipleship.msk-classes.rows')).'" data-limit="'.h((string) ($mskLimit ?? 50)).'" data-has-more="'.(! empty($hasMoreMskRows) ? '1' : '0').'" data-next-cursor="'.h((string) ($nextMskCursor ?? '')).'">'."\n";
     echo "  <div class=\"table-wrap\" data-msk-scroll>\n";
     echo "    <table class=\"table\" id=\"msk-table\">\n";
     echo "      <thead><tr><th>Nama Peserta</th><th>Bulan MSK</th><th>Progress Sesi</th><th>Status</th><th>WhatsApp</th><th class=\"actions-head\">Aksi</th></tr></thead>\n";
@@ -695,18 +690,6 @@ if ($page === 'msk_classes') {
     echo "  </div>\n";
     echo "</section>\n";
 
-    echo "<div class=\"is-hidden\" data-msk-view-templates>\n";
-    foreach ($mskModalTemplates as $templateId => $templateData) {
-        $templateTitle = trim((string) ($templateData['title'] ?? 'Detail Peserta MSK'));
-        if ($templateTitle === '') {
-            $templateTitle = 'Detail Peserta MSK';
-        }
-        $templateEditHref = (string) ($templateData['edit_href'] ?? '');
-        $templateContent = (string) ($templateData['content'] ?? '');
-        echo '<template data-msk-view-template="'.h($templateId).'" data-msk-view-template-title="'.h($templateTitle).'" data-msk-view-template-edit="'.h($templateEditHref).'">'.$templateContent."</template>\n";
-    }
-    echo "</div>\n";
-
     $mskViewFooterHtml = '';
     if (! $centralReadOnly) {
         $mskViewFooterHtml .= '<a class="btn tiny secondary is-hidden" href="#" data-msk-view-edit-link>Edit</a>';
@@ -741,18 +724,7 @@ if ($page === 'msk_classes') {
         ])->render();
     }
 
-    if (! $centralReadOnly && count($mskEditModalTemplates) > 0) {
-        echo "<div class=\"is-hidden\" data-msk-edit-templates>\n";
-        foreach ($mskEditModalTemplates as $templateId => $templateData) {
-            $templateTitle = trim((string) ($templateData['title'] ?? 'Edit Peserta MSK'));
-            if ($templateTitle === '') {
-                $templateTitle = 'Edit Peserta MSK';
-            }
-            $templateContent = (string) ($templateData['content'] ?? '');
-            echo '<template data-msk-edit-template="'.h($templateId).'" data-msk-edit-template-title="'.h($templateTitle).'">'.$templateContent."</template>\n";
-        }
-        echo "</div>\n";
-
+    if (! $centralReadOnly) {
         echo view('partials.modal', [
             'id' => 'msk-edit-modal',
             'size' => 'standard',

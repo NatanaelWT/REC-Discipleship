@@ -89,7 +89,43 @@ function page_header_active_group(string $currentPage): string
     return '';
 }
 
-function render_app_document_head(string $app): void
+/** @param array<int, string> $entries */
+function render_vite_entries(array $entries): bool
+{
+    if (! is_file(public_path('hot')) && ! is_file(public_path('build/manifest.json'))) {
+        return false;
+    }
+
+    echo (string) app(\Illuminate\Foundation\Vite::class)($entries);
+
+    return true;
+}
+
+function frontend_asset_domain(string $currentPage = '', string $bodyClass = ''): string
+{
+    $context = strtolower(trim($currentPage.' '.$bodyClass));
+    if (str_contains($context, 'developer') || str_contains($context, 'activities') || str_contains($context, 'analytics')) {
+        return 'developer';
+    }
+    if (str_contains($context, 'worship') || str_contains($context, 'penatalayan')) {
+        return 'worship';
+    }
+    if (
+        preg_match(
+            '/(?:discipleship|pemuridan|msk|spiritual|tree|dg_reports|member-feedback|member_feedback|difficult-questions|difficult_questions|groups_list|people_list|people_tree)/',
+            $context,
+        ) === 1
+    ) {
+        return 'discipleship';
+    }
+    if (preg_match('/(?:page-public|page-login|dg-public)/', $context) === 1) {
+        return 'public';
+    }
+
+    return 'core';
+}
+
+function render_app_document_head(string $app, string $currentPage = '', string $bodyClass = ''): void
 {
     echo "<!doctype html>\n";
     echo "<html lang=\"id\">\n";
@@ -100,11 +136,15 @@ function render_app_document_head(string $app): void
     $logoVersion = asset_version('assets/logo.png');
     echo '  <link rel="icon" type="image/png" href="/assets/logo.png'.$logoVersion."\">\n";
     echo '  <link rel="shortcut icon" type="image/png" href="/assets/logo.png'.$logoVersion."\">\n";
-    echo "  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n";
-    echo "  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n";
-    echo "  <link href=\"https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&display=swap\" rel=\"stylesheet\">\n";
-    $cssVersion = asset_version('assets/style.css');
-    echo '  <link rel="stylesheet" href="/assets/style.css'.$cssVersion."\">\n";
+    $domain = frontend_asset_domain($currentPage, $bodyClass);
+    $styleEntries = ['resources/css/generated/core.css'];
+    if ($domain !== 'core') {
+        $styleEntries[] = 'resources/css/generated/'.$domain.'.css';
+    }
+    if (! render_vite_entries($styleEntries)) {
+        $cssVersion = asset_version('assets/style.css');
+        echo '  <link rel="stylesheet" href="/assets/style.css'.$cssVersion."\">\n";
+    }
     echo "</head>\n";
 }
 
@@ -165,6 +205,7 @@ function render_pemuridan_import_feedback(): void
         'import_invalid_excel' => 'File Excel tidak valid atau rusak.',
         'import_missing_sheet' => 'Sheet wajib tidak ditemukan. Pastikan ada sheet "Kelas MSK".',
         'import_empty_sheet' => 'Sheet Kelas MSK kosong. Isi minimal 1 baris data.',
+        'import_in_progress' => 'Masih ada import MSK aktif untuk cabang ini. Buka kembali status import tersebut hingga selesai.',
     ];
     if (isset($errorMessages[$error])) {
         render_alert('danger', $errorMessages[$error]);
@@ -173,8 +214,10 @@ function render_pemuridan_import_feedback(): void
 
 function render_app_script_tag(): void
 {
-    $jsVersion = asset_version('assets/app.js');
-    echo '<script src="/assets/app.js'.$jsVersion."\"></script>\n";
+    if (! render_vite_entries(['resources/js/app.js'])) {
+        $jsVersion = asset_version('assets/app.js');
+        echo '<script src="/assets/app.js'.$jsVersion."\"></script>\n";
+    }
 }
 
 function render_sidebar_nav_link(string $label, string $href, bool $active, string $indent = '        ', string $icon = ''): void
@@ -365,6 +408,16 @@ function render_sidebar_navigation(string $currentPage, string $currentBranch, b
         return;
     }
 
+    // The central read-only branch selector belongs to the discipleship
+    // workspace. Rendering it on unrelated pages (for example Settings)
+    // exposes navigation that cannot be acted on and adds unnecessary scope
+    // queries to every page render.
+    if ($activeGroup !== 'pemuridan' && is_effective_central_discipleship_readonly()) {
+        render_sidebar_nav_link('Setting', route('settings'), $activeGroup === 'settings');
+
+        return;
+    }
+
     render_discipleship_sidebar_navigation($currentPage, $currentBranch, $activeGroup);
 
     if ($discipleshipOnlyAccess) {
@@ -414,9 +467,6 @@ function render_people_tree_v3_group_branch(
     }
     $groupId = trim((string) ($groupBranch['id'] ?? ''));
     $groupAssistantName = trim((string) ($groupBranch['assistant_name'] ?? ''));
-    $groupAssistantId = trim((string) ($groupBranch['assistant_id'] ?? ''));
-    $groupNotes = str_replace(["\r", "\n"], ' ', (string) ($groupBranch['notes'] ?? ''));
-    $groupParentId = trim((string) ($groupBranch['parent_group_id'] ?? ''));
     $groupMemberIds = $groupBranch['member_ids'] ?? [];
     if (! is_array($groupMemberIds)) {
         $groupMemberIds = [];
@@ -461,7 +511,6 @@ function render_people_tree_v3_group_branch(
     if ($canGroupAction || $canGroupViewHistory) {
         $groupNodeClass .= ' is-actionable';
     }
-    $groupMembersCsv = implode(',', array_map('strval', $groupMemberIds));
     $groupNodeAttrs = '';
     if ($canGroupAction) {
         $groupNodeAttrs .= ' data-tree-v2-node-action="group"';
@@ -469,13 +518,9 @@ function render_people_tree_v3_group_branch(
         $groupNodeAttrs .= ' data-name="'.h($groupName).'"';
         $groupNodeAttrs .= ' data-leader-id="'.h($leaderPersonId).'"';
         $groupNodeAttrs .= ' data-leader-name="'.h($leaderName).'"';
-        $groupNodeAttrs .= ' data-assistant-id="'.h($groupAssistantId).'"';
         $groupNodeAttrs .= ' data-progress="'.h($groupProgress).'"';
         $groupNodeAttrs .= ' data-status="'.h($groupStatus).'"';
-        $groupNodeAttrs .= ' data-notes="'.h($groupNotes).'"';
-        $groupNodeAttrs .= ' data-parent-group-id="'.h($groupParentId).'"';
         $groupNodeAttrs .= ' data-has-child-group="'.($hasChildGroup ? '1' : '0').'"';
-        $groupNodeAttrs .= ' data-members="'.h($groupMembersCsv).'"';
         $groupNodeAttrs .= ' data-is-virtual="'.($isVirtualGroup ? '1' : '0').'"';
         $groupNodeAttrs .= ' data-is-ungrouped="'.($isUngrouped ? '1' : '0').'"';
         $groupNodeAttrs .= ' tabindex="0" role="button" aria-label="Aksi untuk '.h($groupName).'"';
@@ -722,12 +767,7 @@ function render_people_tree_v3(
         }
     }
 
-    $leaderIds = get_parent_ids($person);
-    $leader1 = trim((string) ($leaderIds[0] ?? ''));
     $attrName = str_replace(["\r", "\n"], ' ', (string) ($person['name'] ?? ''));
-    $attrPhone = str_replace(["\r", "\n"], ' ', (string) ($person['phone'] ?? ''));
-    $attrNotes = str_replace(["\r", "\n"], ' ', (string) ($person['notes'] ?? ''));
-    $attrMemberId = trim((string) ($person['member_id'] ?? ''));
     $canPersonManage = $canManageTree;
     $canPersonInteract = $canPersonManage || ! $isRoot;
 
@@ -745,11 +785,7 @@ function render_people_tree_v3(
     if ($canPersonInteract) {
         $personNodeAttrs .= ' data-tree-v2-node-action="person"';
         $personNodeAttrs .= ' data-person-id="'.h($personId).'"';
-        $personNodeAttrs .= ' data-member-id="'.h($attrMemberId).'"';
         $personNodeAttrs .= ' data-name="'.h($attrName).'"';
-        $personNodeAttrs .= ' data-phone="'.h($attrPhone).'"';
-        $personNodeAttrs .= ' data-notes="'.h($attrNotes).'"';
-        $personNodeAttrs .= ' data-leader1-id="'.h($leader1).'"';
         $personNodeAttrs .= ' data-is-root="'.($isRoot ? '1' : '0').'"';
         $personNodeAttrs .= ' tabindex="0" role="button" aria-label="Aksi untuk '.h($personName).'"';
     }
@@ -1003,8 +1039,8 @@ function page_header_plain(string $title, array $settings, string $bodyClass = '
     $bodyClasses = ['app-page'];
     append_body_classes($bodyClasses, $bodyClass);
     $classAttr = body_class_attr($bodyClasses);
-    render_app_document_head($app);
-    echo '<body'.$classAttr.">\n";
+    render_app_document_head($app, '', $bodyClass);
+    echo '<body'.$classAttr.' data-frontend-domain="'.h(frontend_asset_domain('', $bodyClass))."\">\n";
     echo "<main class=\"container\">\n";
 }
 
@@ -1033,8 +1069,8 @@ function page_header(string $title, array $settings, string $currentPage, bool $
     append_body_classes($bodyClasses, $bodyClass);
     $classAttr = body_class_attr($bodyClasses);
     $activeGroup = page_header_active_group($currentPage);
-    render_app_document_head($app);
-    echo '<body'.$classAttr.">\n";
+    render_app_document_head($app, $currentPage, $bodyClass);
+    echo '<body'.$classAttr.' data-frontend-domain="'.h(frontend_asset_domain($currentPage, $bodyClass))."\">\n";
     echo "<div class=\"app-shell\">\n";
     echo "  <button class=\"sidebar-toggle\" type=\"button\" data-sidebar-toggle aria-controls=\"app-sidebar\" aria-expanded=\"false\">Menu</button>\n";
     echo "  <button class=\"sidebar-backdrop\" type=\"button\" data-sidebar-backdrop aria-label=\"Tutup menu\"></button>\n";

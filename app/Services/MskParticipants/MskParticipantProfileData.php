@@ -67,7 +67,7 @@ class MskParticipantProfileData
 
         $photos = [];
         foreach (extract_msk_participant_photos($participant) as $index => $photo) {
-            $path = sanitize_relative_upload_path((string) ($photo['path'] ?? ''));
+            $path = sanitize_relative_upload_path((string) ($photo['web_path'] ?? $photo['path'] ?? ''));
             $url = $path !== '' ? secure_upload_url($path) : '';
             if ($url !== '') {
                 $photos[] = ['label' => 'Foto '.($index + 1), 'url' => $url];

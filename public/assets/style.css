@@ -1233,6 +1233,15 @@ button.nav-item {
   justify-items: center;
 }
 
+.public-material-pdfjs-page-placeholder {
+  display: grid;
+  width: min(100%, 920px);
+  place-items: start center;
+  background: #e2e8f0;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.12);
+  contain: layout paint style;
+}
+
 .public-material-pdfjs-page {
   max-width: 100%;
   height: auto;
@@ -1523,8 +1532,7 @@ button.nav-item {
   background-color: #0b1220;
   background-image:
     linear-gradient(160deg, rgba(7, 13, 23, 0.72), rgba(7, 13, 23, 0.58)),
-    linear-gradient(0deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)),
-    url("public-bg-rec-kutisari.webp");
+    linear-gradient(0deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08));
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

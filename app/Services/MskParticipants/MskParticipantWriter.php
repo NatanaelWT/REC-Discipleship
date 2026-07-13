@@ -5,11 +5,15 @@ namespace App\Services\MskParticipants;
 use App\Http\Requests\MskParticipants\MskParticipantWriteRequest;
 use App\Models\Person;
 use App\Services\Activity\ActivityRecorder;
+use App\Services\Media\ClientImageVariantStore;
 use Illuminate\Support\Facades\DB;
 
 class MskParticipantWriter
 {
-    public function __construct(private readonly ActivityRecorder $activity) {}
+    public function __construct(
+        private readonly ActivityRecorder $activity,
+        private readonly ClientImageVariantStore $variantStore,
+    ) {}
 
     /**
      * @return array{
@@ -28,7 +32,7 @@ class MskParticipantWriter
         $existingViewRow = $existing?->toViewArray() ?? [];
         $existingLinkedPersonId = $existing instanceof Person ? (int) $existing->getKey() : 0;
 
-        $uploadResult = $this->uploadedPhotos();
+        $uploadResult = $this->uploadedPhotos($request);
         if ($uploadResult['error'] !== '') {
             return [
                 'batch_month' => (string) ($payload['batch_month'] ?? ''),
@@ -222,14 +226,13 @@ class MskParticipantWriter
                 continue;
             }
 
-            $photosByPath[$path] = [
-                'path' => $path,
-                'name' => trim((string) ($photo['name'] ?? '')) ?: 'Foto',
-            ];
+            $photosByPath[$path] = $photo;
         }
 
         foreach ($uploadedPhotos as $photo) {
-            $photosByPath[$photo['path']] = $photo;
+            $storedPhoto = $photo;
+            unset($storedPhoto['_created'], $storedPhoto['storage_reused']);
+            $photosByPath[$photo['path']] = $storedPhoto;
         }
 
         return array_values($photosByPath);
@@ -238,7 +241,7 @@ class MskParticipantWriter
     /**
      * @return array{photos: array<int, array{path: string, name: string}>, error: string}
      */
-    private function uploadedPhotos(): array
+    private function uploadedPhotos(MskParticipantWriteRequest $request): array
     {
         $uploadError = '';
         $uploadedPhotos = [];
@@ -256,6 +259,11 @@ class MskParticipantWriter
             $photos[] = [
                 'path' => $path,
                 'name' => trim((string) ($photo['name'] ?? '')) ?: 'Foto',
+                'sha256' => (string) ($photo['sha256'] ?? ''),
+                'size' => (int) ($photo['size'] ?? 0),
+                'width' => (int) ($photo['width'] ?? 0),
+                'height' => (int) ($photo['height'] ?? 0),
+                '_created' => empty($photo['storage_reused']),
             ];
         }
 
@@ -269,7 +277,16 @@ class MskParticipantWriter
             return ['photos' => [], 'error' => $error];
         }
 
-        return ['photos' => $photos, 'error' => ''];
+        return [
+            'photos' => $this->variantStore->attachFromRequest(
+                $photos,
+                $request,
+                'participant_photo_web_variants',
+                'participant_photo_thumbnails',
+                'uploads/peserta',
+            ),
+            'error' => '',
+        ];
     }
 
     /**
@@ -277,8 +294,11 @@ class MskParticipantWriter
      */
     private function deleteUploadedPhotos(array $photos): void
     {
+        $this->variantStore->cleanupCreatedDerivatives();
         foreach ($photos as $photo) {
-            delete_relative_upload_file((string) $photo['path']);
+            if (! empty($photo['_created'])) {
+                delete_relative_upload_file((string) $photo['path']);
+            }
         }
     }
 

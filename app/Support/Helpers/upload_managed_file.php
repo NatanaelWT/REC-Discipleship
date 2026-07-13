@@ -53,6 +53,28 @@ function upload_managed_file(array $file, string &$errorCode, array $options): ?
         return null;
     }
 
+    $imageMetadata = [];
+    if (! empty($options['validate_image'])) {
+        $dimensions = @getimagesize($tmpPath);
+        $width = is_array($dimensions) ? (int) ($dimensions[0] ?? 0) : 0;
+        $height = is_array($dimensions) ? (int) ($dimensions[1] ?? 0) : 0;
+        $maxSide = max(1, (int) config('media.original_max_side', 20000));
+        $maxPixels = max(1, (int) config('media.original_max_pixels', 100_000_000));
+        if ($width < 1 || $height < 1 || max($width, $height) > $maxSide || ($width * $height) > $maxPixels) {
+            $errorCode = (string) ($options['invalid_type_error'] ?? $uploadFailedError);
+
+            return null;
+        }
+        $imageMetadata = ['width' => $width, 'height' => $height];
+    }
+
+    $sha256 = @hash_file('sha256', $tmpPath);
+    if (! is_string($sha256) || $sha256 === '') {
+        $errorCode = $uploadFailedError;
+
+        return null;
+    }
+
     $relativeDirectory = trim(str_replace('\\', '/', (string) ($options['relative_dir'] ?? '')), '/');
     if ($relativeDirectory === '') {
         $errorCode = $uploadFailedError;
@@ -68,12 +90,41 @@ function upload_managed_file(array $file, string &$errorCode, array $options): ?
     }
 
     $prefix = sanitize_file_name_component((string) ($options['file_prefix'] ?? 'file'), 'file');
-    $filename = $prefix.'_'.bin2hex(random_bytes(12)).'.'.$extension;
+    $contentAddressed = ! empty($options['content_addressed']);
+    $filename = $contentAddressed
+        ? $prefix.'_'.strtolower($sha256).'.'.$extension
+        : $prefix.'_'.bin2hex(random_bytes(12)).'.'.$extension;
     $targetPath = $targetDirectory.'/'.$filename;
-    if (! move_uploaded_file($tmpPath, $targetPath)) {
-        $errorCode = $uploadFailedError;
+    $storageReused = $contentAddressed && is_file($targetPath);
+    if (! $storageReused) {
+        if ($contentAddressed) {
+            $temporaryPath = $targetDirectory.'/.'.$filename.'.'.bin2hex(random_bytes(6)).'.part';
+            if (! move_uploaded_file($tmpPath, $temporaryPath)) {
+                $errorCode = $uploadFailedError;
 
-        return null;
+                return null;
+            }
+            if (@link($temporaryPath, $targetPath)) {
+                @unlink($temporaryPath);
+            } elseif (is_file($targetPath)) {
+                @unlink($temporaryPath);
+                $storageReused = true;
+            } elseif (! @rename($temporaryPath, $targetPath)) {
+                if (is_file($targetPath)) {
+                    @unlink($temporaryPath);
+                    $storageReused = true;
+                } else {
+                    @unlink($temporaryPath);
+                    $errorCode = $uploadFailedError;
+
+                    return null;
+                }
+            }
+        } elseif (! move_uploaded_file($tmpPath, $targetPath)) {
+            $errorCode = $uploadFailedError;
+
+            return null;
+        }
     }
 
     $originalName = basename(str_replace('\\', '/', trim((string) ($file['name'] ?? ''))));
@@ -89,6 +140,10 @@ function upload_managed_file(array $file, string &$errorCode, array $options): ?
     $result = [
         'path' => $relativePath,
         'name' => function_exists('mb_substr') ? mb_substr($originalName, 0, 255) : substr($originalName, 0, 255),
+        'sha256' => strtolower($sha256),
+        'size' => $size,
+        'storage_reused' => $storageReused,
+        ...$imageMetadata,
     ];
 
     $resultBuilder = $options['build_result'] ?? null;

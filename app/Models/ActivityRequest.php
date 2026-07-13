@@ -12,13 +12,18 @@ class ActivityRequest extends Model
 {
     use HasUlids;
 
-    protected $table = 'aktivitas';
-
     public $incrementing = false;
 
     public $timestamps = false;
 
     protected $guarded = [];
+
+    public function getTable()
+    {
+        return config('activity.storage', 'legacy') === 'split'
+            ? 'request_activities'
+            : 'aktivitas';
+    }
 
     protected function casts(): array
     {
@@ -56,6 +61,15 @@ class ActivityRequest extends Model
     /** @param array<string, mixed> $entry */
     public function appendEventEntry(array $entry): ActivityEvent
     {
+        if (config('activity.storage', 'legacy') === 'split') {
+            $entry['request_id'] = (string) $this->getKey();
+            $event = ActivityEvent::query()->create($entry);
+            self::query()->whereKey($this->getKey())->increment('events_count');
+            $this->events_count = (int) ($this->events_count ?? 0) + 1;
+
+            return $event;
+        }
+
         $entries = $this->normalizedEventEntries();
         $entry['id'] = $entry['id'] ?? (count($entries) + 1);
         $entry['request_id'] = (string) $this->getKey();
@@ -74,6 +88,18 @@ class ActivityRequest extends Model
     /** @return Collection<int, ActivityEvent> */
     private function eventModels(): Collection
     {
+        if (config('activity.storage', 'legacy') === 'split') {
+            if (! $this->exists) {
+                return collect();
+            }
+
+            return ActivityEvent::query()
+                ->where('request_id', (string) $this->getKey())
+                ->orderBy('occurred_at')
+                ->orderBy('id')
+                ->get();
+        }
+
         return collect($this->normalizedEventEntries())
             ->map(function (array $entry): ActivityEvent {
                 $event = new ActivityEvent($entry);

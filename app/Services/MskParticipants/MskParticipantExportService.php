@@ -3,6 +3,7 @@
 namespace App\Services\MskParticipants;
 
 use App\Http\Requests\MskParticipants\ExportMskParticipantsRequest;
+use App\Models\Person;
 use App\Services\Activity\ActivityRecorder;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use Illuminate\Http\RedirectResponse;
@@ -11,7 +12,6 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 class MskParticipantExportService
 {
     public function __construct(
-        private readonly MskParticipantTableData $tableData,
         private readonly CurrentDiscipleshipScope $scope,
         private readonly ActivityRecorder $activity,
     ) {}
@@ -32,27 +32,25 @@ class MskParticipantExportService
                 $branchCodes[] = $branchCode;
             }
         }
-        $participantsToExport = $this->tableData->participantsForBranches($branchCodes);
-        usort($participantsToExport, static function ($a, $b): int {
-            return strcasecmp((string) ($a['full_name'] ?? ''), (string) ($b['full_name'] ?? ''));
-        });
-
-        if ($batchMonth !== '' && $batchMonth !== 'all') {
-            $participantsToExport = array_values(array_filter($participantsToExport, static function ($participant) use ($batchMonth): bool {
-                return import_normalize_month_strict((string) ($participant['msk_month'] ?? '')) === $batchMonth;
-            }));
-        }
-        if ($search !== '') {
-            $participantsToExport = array_values(array_filter($participantsToExport, static function ($participant) use ($search): bool {
-                $haystack = strtolower(trim(implode(' ', [
-                    (string) ($participant['full_name'] ?? ''),
-                    (string) ($participant['whatsapp'] ?? ''),
-                    (string) ($participant['email'] ?? ''),
-                ])));
-
-                return str_contains($haystack, $search);
-            }));
-        }
+        $query = Person::query()
+            ->select(Person::VIEW_COLUMNS)
+            ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+            ->when($batchMonth !== '' && $batchMonth !== 'all', static fn ($builder) => $builder->where('batch_month', $batchMonth))
+            ->when($search !== '', static function ($builder) use ($search): void {
+                $builder->where(static function ($filter) use ($search): void {
+                    $filter->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%'])
+                        ->orWhereRaw('LOWER(whatsapp) LIKE ?', ['%'.$search.'%'])
+                        ->orWhereRaw('LOWER(email) LIKE ?', ['%'.$search.'%']);
+                });
+            });
+        $participantCount = (clone $query)->count();
+        $participantsToExport = (static function () use ($query): \Generator {
+            foreach ($query->lazyById(500) as $participant) {
+                if ($participant instanceof Person) {
+                    yield $participant->toViewArray();
+                }
+            }
+        })();
 
         $exportError = '';
         $xlsxPath = create_msk_import_export_xlsx($participantsToExport, $exportError);
@@ -94,7 +92,7 @@ class MskParticipantExportService
             metadata: [
                 'batch_month' => $batchMonth,
                 'q' => $search,
-                'participant_count' => count($participantsToExport),
+                'participant_count' => $participantCount,
                 'name' => $downloadName,
                 'size_bytes' => is_file($xlsxPath) ? (int) filesize($xlsxPath) : 0,
                 'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

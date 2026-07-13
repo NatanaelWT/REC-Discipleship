@@ -202,7 +202,7 @@ class BranchCatalog
 
     private function cacheStore(): string
     {
-        return app()->environment('testing') ? 'array' : 'file';
+        return (string) config('cache.discipleship_store', config('cache.default', 'file'));
     }
 
 }

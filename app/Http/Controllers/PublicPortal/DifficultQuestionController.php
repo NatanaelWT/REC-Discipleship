@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\DifficultQuestions\StoreDifficultQuestionRequest;
 use App\Models\DifficultQuestion;
 use App\Services\DifficultQuestions\DifficultQuestionPasswordService;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -16,8 +15,6 @@ class DifficultQuestionController extends Controller
 {
     public function create(Request $request): View
     {
-        RuntimeBootstrap::boot($request);
-
         return view('public.difficult-questions.create', [
             'settings' => ['church_name' => app_church_name()],
             'old' => is_array(session('difficult_question_old')) ? session('difficult_question_old') : [],

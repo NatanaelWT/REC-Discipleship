@@ -8,7 +8,6 @@ use App\Models\DifficultQuestion;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DifficultQuestions\DifficultQuestionAdminPageData;
 use App\Services\DifficultQuestions\DifficultQuestionTextNormalizer;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -20,8 +19,6 @@ class DifficultQuestionController extends Controller
         DifficultQuestionAdminPageData $pageData,
         CurrentDiscipleshipScope $scope,
     ): View {
-        RuntimeBootstrap::boot($request);
-
         $pageTitle = 'Pertanyaan Sulit';
         $data = [
             ...$pageData->forRequest($request),
@@ -52,8 +49,6 @@ class DifficultQuestionController extends Controller
 
     public function answerFromForm(Request $request, DifficultQuestionTextNormalizer $normalizer): RedirectResponse
     {
-        RuntimeBootstrap::boot($request);
-
         if (! can_manage_difficult_questions()) {
             return redirect()->route('discipleship.difficult-questions', ['error' => 'access_denied']);
         }

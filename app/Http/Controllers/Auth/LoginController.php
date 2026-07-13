@@ -11,7 +11,6 @@ use App\Services\Auth\CurrentUserContext;
 use App\Services\Auth\LoginAttemptLimiter;
 use App\Services\Auth\SessionAuthenticator;
 use App\Services\Routing\AppPageRouteMap;
-use App\Support\RuntimeBootstrap;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,8 +21,6 @@ class LoginController extends Controller
 {
     public function show(Request $request, CurrentUserContext $context, SessionAuthenticator $sessions): RedirectResponse|View
     {
-        RuntimeBootstrap::boot($request);
-
         if (Auth::check() && ! $context->isLoggedIn()) {
             $sessions->logout($request);
 
@@ -44,8 +41,6 @@ class LoginController extends Controller
         SessionAuthenticator $sessions,
         ActivityRecorder $activity,
     ): RedirectResponse {
-        RuntimeBootstrap::boot($request);
-
         $ip = function_exists('client_ip_address') ? client_ip_address() : (string) ($request->ip() ?? 'unknown');
         $now = CarbonImmutable::now(config('app.timezone', 'Asia/Jakarta'));
         $waitSeconds = $limiter->waitSeconds($ip, $now);

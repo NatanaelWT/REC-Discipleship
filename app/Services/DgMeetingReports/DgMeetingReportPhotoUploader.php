@@ -2,10 +2,10 @@
 
 namespace App\Services\DgMeetingReports;
 
+use App\Services\Media\ClientImageVariantStore;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Throwable;
 
 class DgMeetingReportPhotoUploader
@@ -22,6 +22,11 @@ class DgMeetingReportPhotoUploader
         'image/x-png' => 'png',
         'image/webp' => 'webp',
     ];
+
+    /** @var array<string, true> */
+    private array $createdPaths = [];
+
+    public function __construct(private readonly ClientImageVariantStore $variantStore) {}
 
     /**
      * @return array{photos: array<int, array<string, string>>, error_message: string}
@@ -56,7 +61,16 @@ class DgMeetingReportPhotoUploader
             }
         }
 
-        return ['photos' => $photos, 'error_message' => ''];
+        return [
+            'photos' => $this->variantStore->attachFromRequest(
+                $photos,
+                $request,
+                'meeting_photo_web_variants',
+                'meeting_photo_thumbnails',
+                self::RELATIVE_DIRECTORY,
+            ),
+            'error_message' => '',
+        ];
     }
 
     /**
@@ -64,7 +78,11 @@ class DgMeetingReportPhotoUploader
      */
     public function cleanup(array $photos): void
     {
-        cleanup_uploaded_entries($photos);
+        $this->variantStore->cleanupCreatedDerivatives();
+        cleanup_uploaded_entries(array_values(array_filter(
+            $photos,
+            fn (array $photo): bool => isset($this->createdPaths[(string) ($photo['path'] ?? '')]),
+        )));
     }
 
     /**
@@ -94,31 +112,70 @@ class DgMeetingReportPhotoUploader
             return ['photo' => null, 'error_code' => 'invalid_dg_photo_type'];
         }
 
+        $dimensions = $realPath !== '' ? @getimagesize($realPath) : false;
+        $width = is_array($dimensions) ? (int) ($dimensions[0] ?? 0) : 0;
+        $height = is_array($dimensions) ? (int) ($dimensions[1] ?? 0) : 0;
+        $maxSide = max(1, (int) config('media.original_max_side', 20000));
+        $maxPixels = max(1, (int) config('media.original_max_pixels', 100_000_000));
+        if ($width < 1 || $height < 1 || max($width, $height) > $maxSide || ($width * $height) > $maxPixels) {
+            return ['photo' => null, 'error_code' => 'invalid_dg_photo_type'];
+        }
+
+        $sha256 = $realPath !== '' ? @hash_file('sha256', $realPath) : false;
+        if (! is_string($sha256) || $sha256 === '') {
+            return ['photo' => null, 'error_code' => 'dg_photo_upload_failed'];
+        }
+
         $targetDirectory = rec_runtime_path(self::RELATIVE_DIRECTORY);
         if (! is_dir($targetDirectory) && ! mkdir($targetDirectory, 0775, true) && ! is_dir($targetDirectory)) {
             return ['photo' => null, 'error_code' => 'dg_photo_upload_failed'];
         }
 
-        $filename = 'dg_'.strtolower((string) Str::ulid()).'.'.$extension;
+        $filename = 'dg_'.strtolower($sha256).'.'.$extension;
         $relativePath = self::RELATIVE_DIRECTORY.'/'.$filename;
 
-        try {
-            $file->move($targetDirectory, $filename);
-        } catch (Throwable $exception) {
-            delete_relative_upload_file($relativePath);
-            Log::warning('DG meeting photo could not be moved.', [
-                'mime_type' => $mimeType,
-                'size' => $size,
-                'exception' => $exception,
-            ]);
+        $targetPath = $targetDirectory.'/'.$filename;
+        if (! is_file($targetPath)) {
+            $temporaryName = '.'.$filename.'.'.bin2hex(random_bytes(6)).'.part';
+            $temporaryPath = $targetDirectory.'/'.$temporaryName;
+            try {
+                $file->move($targetDirectory, $temporaryName);
+                if (@link($temporaryPath, $targetPath)) {
+                    @unlink($temporaryPath);
+                    $this->createdPaths[$relativePath] = true;
+                } elseif (is_file($targetPath)) {
+                    @unlink($temporaryPath);
+                } elseif (@rename($temporaryPath, $targetPath)) {
+                    $this->createdPaths[$relativePath] = true;
+                } elseif (is_file($targetPath)) {
+                    @unlink($temporaryPath);
+                } else {
+                    @unlink($temporaryPath);
 
-            return ['photo' => null, 'error_code' => 'dg_photo_upload_failed'];
+                    return ['photo' => null, 'error_code' => 'dg_photo_upload_failed'];
+                }
+            } catch (Throwable $exception) {
+                if (isset($temporaryPath) && is_file($temporaryPath)) {
+                    @unlink($temporaryPath);
+                }
+                Log::warning('DG meeting photo could not be moved.', [
+                    'mime_type' => $mimeType,
+                    'size' => $size,
+                    'exception' => $exception,
+                ]);
+
+                return ['photo' => null, 'error_code' => 'dg_photo_upload_failed'];
+            }
         }
 
         return [
             'photo' => [
                 'path' => $relativePath,
                 'name' => $this->safeOriginalName($file, $extension),
+                'sha256' => strtolower($sha256),
+                'size' => $size,
+                'width' => $width,
+                'height' => $height,
             ],
             'error_code' => '',
         ];

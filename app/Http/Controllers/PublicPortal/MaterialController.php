@@ -8,8 +8,6 @@ use App\Http\Requests\PublicMaterials\ShowPublicMaterialRequest;
 use App\Models\PublicMaterialFile;
 use App\Services\Activity\ActivityRecorder;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
-use App\Services\PublicMaterials\PublicMaterialTextExtractor;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -32,8 +30,6 @@ class MaterialController extends Controller
         ShowPublicMaterialRequest $request,
         PublicMaterialCatalog $catalog,
     ): RedirectResponse|View {
-        RuntimeBootstrap::boot($request);
-
         $menu = $catalog->menu($request->materialMenuKey());
         if (! $menu instanceof PublicMaterialMenuKey) {
             return redirect()->route('home');
@@ -58,10 +54,7 @@ class MaterialController extends Controller
         Request $request,
         string $menu,
         ActivityRecorder $activity,
-        PublicMaterialTextExtractor $textExtractor,
     ): RedirectResponse {
-        RuntimeBootstrap::boot($request);
-
         if (! can_manage_public_materials()) {
             abort(403, 'Akses tidak diizinkan.');
         }
@@ -119,7 +112,7 @@ class MaterialController extends Controller
         );
         $downloadName = $this->downloadNameForTitle($title, $extension);
 
-        PublicMaterialFile::query()->create(array_merge([
+        PublicMaterialFile::query()->create([
             'menu' => $menu->value,
             'title' => $title,
             'category_name' => null,
@@ -128,15 +121,17 @@ class MaterialController extends Controller
             'original_file_name' => $downloadName,
             'size_bytes' => max(0, (int) @filesize($fullPath)),
             'mime_type' => detect_file_mime_type($fullPath),
-        ], $textExtractor->extractForStorage($menu, $fullPath)));
+            'sha256' => hash_file('sha256', $fullPath),
+            'text_content' => null,
+            'text_extracted_at' => null,
+            'text_extraction_error' => null,
+        ]);
 
         return $this->redirectToMaterialMenu($menu, ['material_status' => 'uploaded']);
     }
 
     public function rename(Request $request, string $menu, PublicMaterialFile $churchFile): RedirectResponse
     {
-        RuntimeBootstrap::boot($request);
-
         if (! can_manage_public_materials()) {
             abort(403, 'Akses tidak diizinkan.');
         }

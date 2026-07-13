@@ -12,9 +12,10 @@ use App\Http\Requests\DiscipleshipPeopleTree\ReactivatePeopleTreeGroupRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\SavePeopleTreeGroupRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\SavePeopleTreePersonRequest;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
+use App\Services\DiscipleshipPeopleTree\PeopleTreeDetailData;
 use App\Services\DiscipleshipPeopleTree\PeopleTreePageData;
 use App\Services\DiscipleshipPeopleTree\PeopleTreeWriter;
-use App\Support\RuntimeBootstrap;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -54,6 +55,26 @@ class PeopleTreeController extends Controller
     public function treeV2(Request $request): RedirectResponse
     {
         return redirect()->route('discipleship.tree', $request->query());
+    }
+
+    public function personDetail(int $person, PeopleTreeDetailData $detailData): JsonResponse
+    {
+        $detail = $detailData->person($person);
+        if ($detail === null) {
+            abort(404);
+        }
+
+        return response()->json($detail)->header('Cache-Control', 'private, no-store');
+    }
+
+    public function groupDetail(int $group, PeopleTreeDetailData $detailData): JsonResponse
+    {
+        $detail = $detailData->group($group);
+        if ($detail === null) {
+            abort(404);
+        }
+
+        return response()->json($detail)->header('Cache-Control', 'private, no-store');
     }
 
     public function handleFormAction(PeopleTreeActionRequest $request, PeopleTreeWriter $writer): RedirectResponse
@@ -138,8 +159,6 @@ class PeopleTreeController extends Controller
 
     private function guardPageAccess(Request $request): ?RedirectResponse
     {
-        RuntimeBootstrap::boot($request);
-
         return null;
     }
 

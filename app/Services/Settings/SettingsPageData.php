@@ -2,7 +2,6 @@
 
 namespace App\Services\Settings;
 
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\Request;
 
 class SettingsPageData
@@ -12,8 +11,6 @@ class SettingsPageData
      */
     public function forRequest(Request $request): array
     {
-        RuntimeBootstrap::boot($request);
-
         return [
             'settings' => ['church_name' => app_church_name()],
             'currentUsername' => current_username(),

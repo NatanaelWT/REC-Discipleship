@@ -86,24 +86,28 @@ class LoginAttemptLimiter
 
     private function prune(CarbonImmutable $now): void
     {
-        LoginAttempt::query()->get()->each(static function (LoginAttempt $attempt) use ($now): void {
-            $references = array_filter([
-                $attempt->window_started_at,
-                $attempt->locked_until_at,
-                $attempt->last_attempted_at,
-            ]);
+        $cutoff = $now->subSeconds(self::RETENTION_SECONDS);
 
-            if ($references === []) {
-                $attempt->delete();
-
-                return;
-            }
-
-            $latest = collect($references)->map(static fn ($date) => CarbonImmutable::parse($date))->max();
-            if ($latest instanceof CarbonImmutable && $now->diffInSeconds($latest, true) > self::RETENTION_SECONDS) {
-                $attempt->delete();
-            }
-        });
+        LoginAttempt::query()
+            ->where(static function ($query) use ($cutoff): void {
+                $query->where(static function ($empty): void {
+                    $empty->whereNull('window_started_at')
+                        ->whereNull('locked_until_at')
+                        ->whereNull('last_attempted_at');
+                })->orWhere(static function ($expired) use ($cutoff): void {
+                    $expired->where(static function ($query) use ($cutoff): void {
+                        $query->whereNull('window_started_at')
+                            ->orWhere('window_started_at', '<', $cutoff);
+                    })->where(static function ($query) use ($cutoff): void {
+                        $query->whereNull('locked_until_at')
+                            ->orWhere('locked_until_at', '<', $cutoff);
+                    })->where(static function ($query) use ($cutoff): void {
+                        $query->whereNull('last_attempted_at')
+                            ->orWhere('last_attempted_at', '<', $cutoff);
+                    });
+                });
+            })
+            ->delete();
     }
 
     private function key(string $ip): string

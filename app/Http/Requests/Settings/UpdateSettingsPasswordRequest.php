@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Settings;
 
 use App\Services\Auth\CurrentUserContext;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -12,8 +11,6 @@ class UpdateSettingsPasswordRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        RuntimeBootstrap::boot($this);
-
         return app(CurrentUserContext::class)->isLoggedIn();
     }
 

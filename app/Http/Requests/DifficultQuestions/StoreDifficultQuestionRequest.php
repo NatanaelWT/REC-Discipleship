@@ -3,7 +3,6 @@
 namespace App\Http\Requests\DifficultQuestions;
 
 use App\Services\DifficultQuestions\DifficultQuestionTextNormalizer;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -17,8 +16,6 @@ class StoreDifficultQuestionRequest extends FormRequest
 
     protected function prepareForValidation()
     {
-        RuntimeBootstrap::boot($this);
-
         $normalizer = app(DifficultQuestionTextNormalizer::class);
         $askerName = $normalizer->normalize((string) $this->input('asker_name', ''), 120);
         $askerWhatsapp = normalize_whatsapp_digits((string) $this->input('asker_whatsapp', ''));

@@ -35,10 +35,9 @@
     id="discipleship-people-list"
     data-discipleship-people-list
     data-rows-url="{{ route('discipleship.people-list.rows') }}"
-    data-page="{{ (int) ($peoplePage ?? 1) }}"
-    data-per-page="{{ (int) ($peoplePerPage ?? 50) }}"
+    data-limit="{{ (int) ($peopleLimit ?? 50) }}"
     data-has-more="{{ ! empty($hasMorePeopleRows) ? '1' : '0' }}"
-    data-next-page="{{ $nextPeoplePage ?? '' }}"
+    data-next-cursor="{{ $nextPeopleCursor ?? '' }}"
   >
     <div class="table-wrap" data-discipleship-people-scroll>
       <table class="table people-dashboard-table" id="people-dashboard-table">

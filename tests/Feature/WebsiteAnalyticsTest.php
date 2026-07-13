@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use Tests\TestCase;
 
 class WebsiteAnalyticsTest extends TestCase
@@ -23,6 +24,7 @@ class WebsiteAnalyticsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['activity.enabled' => true, 'activity.storage' => 'legacy']);
         $this->registerRoutes();
         $this->createTables();
     }
@@ -346,8 +348,11 @@ class WebsiteAnalyticsTest extends TestCase
         $response->assertSee('Lihat 2 pengunjung lainnya');
     }
 
+    #[RunInSeparateProcess]
     public function test_dashboard_query_count_stays_bounded_with_one_hundred_thousand_page_views(): void
     {
+        config(['analytics.cache_in_testing' => true]);
+        cache()->flush();
         $baseTime = CarbonImmutable::now('UTC')->startOfDay();
         for ($batch = 0; $batch < 100; $batch++) {
             $rows = [];
@@ -383,10 +388,95 @@ class WebsiteAnalyticsTest extends TestCase
         DB::listen(static function () use (&$queryCount): void {
             $queryCount++;
         });
+        if (function_exists('memory_reset_peak_usage')) {
+            memory_reset_peak_usage();
+        }
+        $coldStarted = hrtime(true);
         $dashboard = app(WebsiteStatisticsService::class)->dashboard(Request::create('/developer/statistics?range=30'));
+        $coldMs = (hrtime(true) - $coldStarted) / 1_000_000;
+        $peakBytes = memory_get_peak_usage(true);
+        $coldQueries = $queryCount;
+
+        $warmStarted = hrtime(true);
+        $warmDashboard = app(WebsiteStatisticsService::class)->dashboard(Request::create('/developer/statistics?range=30'));
+        $warmMs = (hrtime(true) - $warmStarted) / 1_000_000;
 
         $this->assertSame(100000, $dashboard['summary']['page_views']);
-        $this->assertLessThanOrEqual(30, $queryCount);
+        $this->assertSame(100000, $warmDashboard['summary']['page_views']);
+        $this->assertLessThanOrEqual(30, $coldQueries);
+        $this->assertSame($coldQueries, $queryCount, 'Warm analytics response should come from cache.');
+        $this->assertLessThanOrEqual(5000.0, $coldMs, 'Legacy raw analytics unexpectedly regressed: '.$coldMs.' ms.');
+        $this->assertLessThanOrEqual(500.0, $warmMs, 'Warm analytics exceeded 500 ms: '.$warmMs.' ms.');
+        $this->assertLessThanOrEqual(64 * 1024 * 1024, $peakBytes, 'Analytics peak PHP memory exceeded 64 MB.');
+    }
+
+    #[RunInSeparateProcess]
+    public function test_rollup_dashboard_for_one_hundred_thousand_views_meets_cold_warm_and_memory_budgets(): void
+    {
+        config([
+            'activity.storage' => 'split',
+            'analytics.cache_in_testing' => true,
+        ]);
+        $migration = require database_path('migrations/2026_07_13_100000_create_retained_activity_storage.php');
+        $migration->up();
+        cache()->flush();
+
+        $remaining = 100000;
+        $now = now('UTC');
+        $rows = [];
+        for ($daysAgo = 29; $daysAgo >= 1; $daysAgo--) {
+            $daysLeft = $daysAgo;
+            $count = $daysLeft === 1 ? $remaining : intdiv(100000, 29);
+            $remaining -= $count;
+            $date = CarbonImmutable::now('Asia/Jakarta')->subDays($daysAgo)->format('Y-m-d');
+            foreach (['summary', 'detail'] as $scope) {
+                $rows[] = [
+                    'activity_date' => $date,
+                    'dimension_hash' => hash('sha256', $scope.'|'.$date),
+                    'rollup_scope' => $scope,
+                    'segment' => $scope === 'detail' ? 'publik' : '',
+                    'route_name' => $scope === 'detail' ? 'performance.page' : '',
+                    'path' => $scope === 'detail' ? '/performance' : '',
+                    'language_code' => $scope === 'detail' ? 'id-ID' : '',
+                    'device_type' => $scope === 'detail' ? 'mobile' : '',
+                    'page_views' => $count,
+                    'human_page_views' => $count,
+                    'unique_visitors' => min(5000, $count),
+                    'human_unique_visitors' => min(5000, $count),
+                    'bot_views' => 0,
+                    'prefetch_views' => 0,
+                    'total_response_ms' => $count * 25.5,
+                    'average_response_ms' => 25.5,
+                    'human_total_response_ms' => $count * 25.5,
+                    'human_average_response_ms' => 25.5,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+        }
+        DB::table('website_daily_rollups')->insert($rows);
+
+        if (function_exists('memory_reset_peak_usage')) {
+            memory_reset_peak_usage();
+        }
+        $coldStarted = hrtime(true);
+        $dashboard = app(WebsiteStatisticsService::class)->dashboard(
+            Request::create('/developer/statistics', 'GET', ['range' => '30']),
+        );
+        $coldMs = (hrtime(true) - $coldStarted) / 1_000_000;
+        $peakBytes = memory_get_peak_usage(true);
+
+        $warmStarted = hrtime(true);
+        $warmDashboard = app(WebsiteStatisticsService::class)->dashboard(
+            Request::create('/developer/statistics', 'GET', ['range' => '30']),
+        );
+        $warmMs = (hrtime(true) - $warmStarted) / 1_000_000;
+
+        $this->assertSame(100000, $dashboard['summary']['page_views']);
+        $this->assertSame(100000, $warmDashboard['summary']['page_views']);
+        $this->assertLessThanOrEqual(1500.0, $coldMs, 'Cold rollup analytics exceeded 1.5 seconds.');
+        $this->assertLessThanOrEqual(500.0, $warmMs, 'Warm rollup analytics exceeded 500 ms.');
+        $this->assertLessThanOrEqual(64 * 1024 * 1024, $peakBytes, 'Rollup analytics exceeded 64 MB peak PHP memory.');
     }
 
     private function registerRoutes(): void

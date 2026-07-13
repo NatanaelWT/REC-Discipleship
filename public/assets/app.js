@@ -119,7 +119,7 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+  const bootLegacyApp = function () {
     const setupLiveJakartaTime = () => {
       const clockNodes = document.querySelectorAll('[data-live-jakarta-time]');
       if (clockNodes.length === 0) {
@@ -500,19 +500,22 @@
         dg3: panel.querySelector('[data-people-stat="dg3"]')
       };
       let hasMore = root.getAttribute('data-has-more') === '1';
-      let nextPage = parseInt(root.getAttribute('data-next-page') || '0', 10) || null;
-      const perPage = parseInt(root.getAttribute('data-per-page') || '50', 10) || 50;
+      let nextCursor = root.getAttribute('data-next-cursor') || null;
+      const limit = Math.min(100, Math.max(1, parseInt(root.getAttribute('data-limit') || '50', 10) || 50));
       let activeController = null;
       let requestSeq = 0;
       let isLoading = false;
       let searchTimer = null;
       let activeRequest = null;
       let pendingRequest = null;
+      let loadMoreObserver = null;
       let destroyed = false;
 
       const currentQuery = () => String(input.value || '').trim();
       const currentProgress = () => String(progressInput ? progressInput.value : 'all').trim() || 'all';
-      const isPanelHidden = () => destroyed || Boolean(panel && panel.hidden);
+      const isPanelHidden = () => destroyed || document.hidden || Boolean(
+        panel && (panel.hidden || panel.getAttribute('aria-hidden') === 'true')
+      );
 
       const updateStats = (stats) => {
         if (!stats || typeof stats !== 'object') {
@@ -582,13 +585,15 @@
         }
         url.searchParams.delete('page');
         url.searchParams.delete('per_page');
+        url.searchParams.delete('cursor');
+        url.searchParams.delete('limit');
         window.history.replaceState(window.history.state, '', url.toString());
         window.dispatchEvent(new CustomEvent('discipleship:panel-url-change', {
           detail: { tabKey: 'people', url: url.toString() }
         }));
       };
 
-      const buildRowsUrl = (page) => {
+      const buildRowsUrl = (cursor) => {
         const url = new URL(rowsUrl, window.location.origin);
         const branchInput = form.querySelector('input[name="branch_id"]');
         const query = currentQuery();
@@ -596,8 +601,10 @@
           url.searchParams.set('q', query);
         }
         url.searchParams.set('progress', currentProgress());
-        url.searchParams.set('page', String(page));
-        url.searchParams.set('per_page', String(perPage));
+        if (cursor) {
+          url.searchParams.set('cursor', cursor);
+        }
+        url.searchParams.set('limit', String(limit));
         url.searchParams.set('stats', '1');
         if (branchInput && String(branchInput.value || '').trim() !== '') {
           url.searchParams.set('branch_id', String(branchInput.value).trim());
@@ -612,20 +619,20 @@
         }
         insertRows(data && data.html);
         hasMore = Boolean(data && data.has_more);
-        nextPage = hasMore ? (parseInt(String(data.next_page || ''), 10) || null) : null;
+        nextCursor = hasMore ? (String(data && data.next_cursor || '').trim() || null) : null;
         root.setAttribute('data-has-more', hasMore ? '1' : '0');
-        root.setAttribute('data-next-page', nextPage ? String(nextPage) : '');
+        root.setAttribute('data-next-cursor', nextCursor || '');
         updateStats(data ? data.stats : null);
         setEmptyState(data ? data.empty_message : 'Peserta tidak ditemukan.');
         scheduleViewportTableHeights();
       };
 
-      const loadPage = (page, mode) => {
+      const loadCursor = (cursor, mode) => {
         if (isPanelHidden()) {
-          pendingRequest = { page, mode, syncUrl: false };
+          pendingRequest = { cursor, mode, syncUrl: false };
           return;
         }
-        if (mode === 'append' && (!hasMore || !nextPage || isLoading)) {
+        if (mode === 'append' && (!hasMore || !cursor || isLoading)) {
           return;
         }
         if (activeController) {
@@ -634,11 +641,11 @@
         activeController = new AbortController();
         const controller = activeController;
         const requestId = ++requestSeq;
-        activeRequest = { page, mode };
+        activeRequest = { cursor, mode };
         pendingRequest = null;
         isLoading = true;
         setLoading(true);
-        window.fetch(buildRowsUrl(page).toString(), {
+        window.fetch(buildRowsUrl(cursor).toString(), {
           headers: {
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
@@ -687,11 +694,11 @@
         searchTimer = window.setTimeout(() => {
           searchTimer = null;
           if (isPanelHidden()) {
-            pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+            pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
             return;
           }
           syncUrl();
-          loadPage(1, 'replace');
+          loadCursor(null, 'replace');
         }, 250);
       };
 
@@ -707,8 +714,8 @@
         if (isPanelHidden()) {
           return;
         }
-        if (hasMore && nextPage && !isLoading && nearBottom()) {
-          loadPage(nextPage, 'append');
+        if (hasMore && nextCursor && !isLoading && nearBottom()) {
+          loadCursor(nextCursor, 'append');
         }
       };
 
@@ -720,11 +727,11 @@
             searchTimer = null;
           }
           if (isPanelHidden()) {
-            pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+            pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
             return;
           }
           syncUrl();
-          loadPage(1, 'replace');
+          loadCursor(null, 'replace');
         });
       }
       form.addEventListener('submit', (event) => {
@@ -737,22 +744,39 @@
           searchTimer = null;
         }
         if (isPanelHidden()) {
-          pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+          pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
           return;
         }
         syncUrl();
-        loadPage(1, 'replace');
+        loadCursor(null, 'replace');
       });
-      if (scrollArea) {
-        scrollArea.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+      const sentinel = document.createElement('div');
+      sentinel.className = 'lazy-list-sentinel';
+      sentinel.setAttribute('aria-hidden', 'true');
+      sentinel.style.cssText = 'height:1px;width:100%;pointer-events:none';
+      (tableScrollArea || root).appendChild(sentinel);
+      if ('IntersectionObserver' in window) {
+        loadMoreObserver = new IntersectionObserver((entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            loadMoreIfNeeded();
+          }
+        }, {
+          root: scrollArea instanceof HTMLElement ? scrollArea : null,
+          rootMargin: '180px 0px'
+        });
+        loadMoreObserver.observe(sentinel);
+      } else {
+        if (scrollArea) {
+          scrollArea.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+        }
+        window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+        window.addEventListener('resize', loadMoreIfNeeded);
       }
-      window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
-      window.addEventListener('resize', loadMoreIfNeeded);
       const suspendPanel = () => {
         if (searchTimer !== null) {
           window.clearTimeout(searchTimer);
           searchTimer = null;
-          pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+          pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
         }
         if (activeController) {
           if (!pendingRequest && activeRequest) {
@@ -771,6 +795,13 @@
         suspendPanel();
         destroyed = true;
         pendingRequest = null;
+        if (loadMoreObserver) {
+          loadMoreObserver.disconnect();
+          loadMoreObserver = null;
+        }
+        if (scrollArea) {
+          scrollArea.removeEventListener('scroll', loadMoreIfNeeded);
+        }
         window.removeEventListener('scroll', loadMoreIfNeeded);
         window.removeEventListener('resize', loadMoreIfNeeded);
       });
@@ -784,7 +815,7 @@
           if (request.syncUrl) {
             syncUrl();
           }
-          loadPage(request.page, request.mode);
+          loadCursor(request.cursor, request.mode);
           return;
         }
         window.requestAnimationFrame(loadMoreIfNeeded);
@@ -827,19 +858,22 @@
         dg3: panel.querySelector('[data-groups-stat="dg3"]')
       };
       let hasMore = root.getAttribute('data-has-more') === '1';
-      let nextPage = parseInt(root.getAttribute('data-next-page') || '0', 10) || null;
-      const perPage = parseInt(root.getAttribute('data-per-page') || '50', 10) || 50;
+      let nextCursor = root.getAttribute('data-next-cursor') || null;
+      const limit = Math.min(100, Math.max(1, parseInt(root.getAttribute('data-limit') || '50', 10) || 50));
       let activeController = null;
       let requestSeq = 0;
       let isLoading = false;
       let searchTimer = null;
       let activeRequest = null;
       let pendingRequest = null;
+      let loadMoreObserver = null;
       let destroyed = false;
 
       const currentQuery = () => String(input.value || '').trim();
       const currentStatus = () => String(statusInput ? statusInput.value : 'all').trim() || 'all';
-      const isPanelHidden = () => destroyed || Boolean(panel && panel.hidden);
+      const isPanelHidden = () => destroyed || document.hidden || Boolean(
+        panel && (panel.hidden || panel.getAttribute('aria-hidden') === 'true')
+      );
 
       const updateStats = (stats) => {
         if (!stats || typeof stats !== 'object') {
@@ -909,13 +943,15 @@
         }
         url.searchParams.delete('page');
         url.searchParams.delete('per_page');
+        url.searchParams.delete('cursor');
+        url.searchParams.delete('limit');
         window.history.replaceState(window.history.state, '', url.toString());
         window.dispatchEvent(new CustomEvent('discipleship:panel-url-change', {
           detail: { tabKey: 'groups', url: url.toString() }
         }));
       };
 
-      const buildRowsUrl = (page) => {
+      const buildRowsUrl = (cursor) => {
         const url = new URL(rowsUrl, window.location.origin);
         const branchInput = form.querySelector('input[name="branch_id"]');
         const query = currentQuery();
@@ -923,8 +959,10 @@
           url.searchParams.set('q', query);
         }
         url.searchParams.set('status', currentStatus());
-        url.searchParams.set('page', String(page));
-        url.searchParams.set('per_page', String(perPage));
+        if (cursor) {
+          url.searchParams.set('cursor', cursor);
+        }
+        url.searchParams.set('limit', String(limit));
         if (branchInput && String(branchInput.value || '').trim() !== '') {
           url.searchParams.set('branch_id', String(branchInput.value).trim());
         }
@@ -938,20 +976,20 @@
         }
         insertRows(data && data.html);
         hasMore = Boolean(data && data.has_more);
-        nextPage = hasMore ? (parseInt(String(data.next_page || ''), 10) || null) : null;
+        nextCursor = hasMore ? (String(data && data.next_cursor || '').trim() || null) : null;
         root.setAttribute('data-has-more', hasMore ? '1' : '0');
-        root.setAttribute('data-next-page', nextPage ? String(nextPage) : '');
+        root.setAttribute('data-next-cursor', nextCursor || '');
         updateStats(data ? data.stats : null);
         setEmptyState(data ? data.empty_message : 'Kelompok tidak ditemukan.');
         scheduleViewportTableHeights();
       };
 
-      const loadPage = (page, mode) => {
+      const loadCursor = (cursor, mode) => {
         if (isPanelHidden()) {
-          pendingRequest = { page, mode, syncUrl: false };
+          pendingRequest = { cursor, mode, syncUrl: false };
           return;
         }
-        if (mode === 'append' && (!hasMore || !nextPage || isLoading)) {
+        if (mode === 'append' && (!hasMore || !cursor || isLoading)) {
           return;
         }
         if (activeController) {
@@ -960,11 +998,11 @@
         activeController = new AbortController();
         const controller = activeController;
         const requestId = ++requestSeq;
-        activeRequest = { page, mode };
+        activeRequest = { cursor, mode };
         pendingRequest = null;
         isLoading = true;
         setLoading(true);
-        window.fetch(buildRowsUrl(page).toString(), {
+        window.fetch(buildRowsUrl(cursor).toString(), {
           headers: {
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
@@ -1013,11 +1051,11 @@
         searchTimer = window.setTimeout(() => {
           searchTimer = null;
           if (isPanelHidden()) {
-            pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+            pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
             return;
           }
           syncUrl();
-          loadPage(1, 'replace');
+          loadCursor(null, 'replace');
         }, 250);
       };
 
@@ -1033,8 +1071,8 @@
         if (isPanelHidden()) {
           return;
         }
-        if (hasMore && nextPage && !isLoading && nearBottom()) {
-          loadPage(nextPage, 'append');
+        if (hasMore && nextCursor && !isLoading && nearBottom()) {
+          loadCursor(nextCursor, 'append');
         }
       };
 
@@ -1046,11 +1084,11 @@
             searchTimer = null;
           }
           if (isPanelHidden()) {
-            pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+            pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
             return;
           }
           syncUrl();
-          loadPage(1, 'replace');
+          loadCursor(null, 'replace');
         });
       }
       form.addEventListener('submit', (event) => {
@@ -1060,22 +1098,39 @@
           searchTimer = null;
         }
         if (isPanelHidden()) {
-          pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+          pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
           return;
         }
         syncUrl();
-        loadPage(1, 'replace');
+        loadCursor(null, 'replace');
       });
-      if (scrollArea) {
-        scrollArea.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+      const sentinel = document.createElement('div');
+      sentinel.className = 'lazy-list-sentinel';
+      sentinel.setAttribute('aria-hidden', 'true');
+      sentinel.style.cssText = 'height:1px;width:100%;pointer-events:none';
+      (tableScrollArea || root).appendChild(sentinel);
+      if ('IntersectionObserver' in window) {
+        loadMoreObserver = new IntersectionObserver((entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            loadMoreIfNeeded();
+          }
+        }, {
+          root: scrollArea instanceof HTMLElement ? scrollArea : null,
+          rootMargin: '180px 0px'
+        });
+        loadMoreObserver.observe(sentinel);
+      } else {
+        if (scrollArea) {
+          scrollArea.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+        }
+        window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+        window.addEventListener('resize', loadMoreIfNeeded);
       }
-      window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
-      window.addEventListener('resize', loadMoreIfNeeded);
       const suspendPanel = () => {
         if (searchTimer !== null) {
           window.clearTimeout(searchTimer);
           searchTimer = null;
-          pendingRequest = { page: 1, mode: 'replace', syncUrl: true };
+          pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
         }
         if (activeController) {
           if (!pendingRequest && activeRequest) {
@@ -1094,6 +1149,13 @@
         suspendPanel();
         destroyed = true;
         pendingRequest = null;
+        if (loadMoreObserver) {
+          loadMoreObserver.disconnect();
+          loadMoreObserver = null;
+        }
+        if (scrollArea) {
+          scrollArea.removeEventListener('scroll', loadMoreIfNeeded);
+        }
         window.removeEventListener('scroll', loadMoreIfNeeded);
         window.removeEventListener('resize', loadMoreIfNeeded);
       });
@@ -1107,7 +1169,7 @@
           if (request.syncUrl) {
             syncUrl();
           }
-          loadPage(request.page, request.mode);
+          loadCursor(request.cursor, request.mode);
           return;
         }
         window.requestAnimationFrame(loadMoreIfNeeded);
@@ -1366,12 +1428,21 @@
         progress: panel.querySelector('[data-msk-stat="progress"]')
       };
       let hasMore = root.getAttribute('data-has-more') === '1';
-      let nextPage = parseInt(root.getAttribute('data-next-page') || '0', 10) || null;
-      const perPage = parseInt(root.getAttribute('data-per-page') || '50', 10) || 50;
+      let nextCursor = root.getAttribute('data-next-cursor') || null;
+      const limit = Math.min(100, Math.max(1, parseInt(root.getAttribute('data-limit') || '50', 10) || 50));
       let activeController = null;
       let requestSeq = 0;
       let isLoading = false;
       let searchTimer = null;
+      let activeRequest = null;
+      let pendingRequest = null;
+      let loadMoreObserver = null;
+      let destroyed = false;
+
+      const isPanelHidden = () => Boolean(
+        document.hidden
+        || (panel instanceof HTMLElement && (panel.hidden || panel.getAttribute('aria-hidden') === 'true'))
+      );
 
       const currentQuery = () => String(input.value || '').trim();
       const currentBatch = () => {
@@ -1503,6 +1574,8 @@
         }
         url.searchParams.delete('page');
         url.searchParams.delete('per_page');
+        url.searchParams.delete('cursor');
+        url.searchParams.delete('limit');
         url.searchParams.delete('edit');
         url.searchParams.delete('view');
         window.history.replaceState(window.history.state, '', url.toString());
@@ -1511,7 +1584,7 @@
         }));
       };
 
-      const buildRowsUrl = (page) => {
+      const buildRowsUrl = (cursor) => {
         const url = new URL(rowsUrl, window.location.origin);
         const branchInput = form.querySelector('input[name="branch_id"]') || panel.querySelector('input[name="branch_id"]');
         const query = currentQuery();
@@ -1519,8 +1592,10 @@
           url.searchParams.set('q', query);
         }
         url.searchParams.set('batch_month', currentBatch());
-        url.searchParams.set('page', String(page));
-        url.searchParams.set('per_page', String(perPage));
+        if (cursor) {
+          url.searchParams.set('cursor', cursor);
+        }
+        url.searchParams.set('limit', String(limit));
         if (branchInput && String(branchInput.value || '').trim() !== '') {
           url.searchParams.set('branch_id', String(branchInput.value).trim());
         }
@@ -1537,31 +1612,38 @@
         insertTemplates(data && data.templates_html, mode);
         insertEditTemplates(data && data.edit_templates_html, mode);
         hasMore = Boolean(data && data.has_more);
-        nextPage = hasMore ? (parseInt(String(data.next_page || ''), 10) || null) : null;
+        nextCursor = hasMore ? (String(data && data.next_cursor || '').trim() || null) : null;
         root.setAttribute('data-has-more', hasMore ? '1' : '0');
-        root.setAttribute('data-next-page', nextPage ? String(nextPage) : '');
+        root.setAttribute('data-next-cursor', nextCursor || '');
         updateStats(data ? data.stats : null);
         setEmptyState(data ? data.empty_message : 'Peserta tidak ditemukan.');
         scheduleViewportTableHeights();
       };
 
-      const loadPage = (page, mode) => {
-        if (mode === 'append' && (!hasMore || !nextPage || isLoading)) {
+      const loadCursor = (cursor, mode) => {
+        if (isPanelHidden()) {
+          pendingRequest = { cursor, mode, syncUrl: false };
+          return;
+        }
+        if (mode === 'append' && (!hasMore || !cursor || isLoading)) {
           return;
         }
         if (activeController) {
           activeController.abort();
         }
         activeController = new AbortController();
+        const controller = activeController;
         const requestId = ++requestSeq;
+        activeRequest = { cursor, mode };
+        pendingRequest = null;
         isLoading = true;
         setLoading(true);
-        window.fetch(buildRowsUrl(page).toString(), {
+        window.fetch(buildRowsUrl(cursor).toString(), {
           headers: {
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
           },
-          signal: activeController.signal
+          signal: controller.signal
         })
           .then((response) => {
             if (!response.ok) {
@@ -1590,6 +1672,10 @@
               return;
             }
             isLoading = false;
+            activeRequest = null;
+            if (activeController === controller) {
+              activeController = null;
+            }
             setLoading(false);
           });
       };
@@ -1602,8 +1688,12 @@
           searchTimer = null;
           syncBatchHiddenInputs();
           syncSearchHiddenInputs();
+          if (isPanelHidden()) {
+            pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
+            return;
+          }
           syncUrl();
-          loadPage(1, 'replace');
+          loadCursor(null, 'replace');
         }, 250);
       };
 
@@ -1616,8 +1706,8 @@
       };
 
       const loadMoreIfNeeded = () => {
-        if (hasMore && nextPage && !isLoading && nearBottom()) {
-          loadPage(nextPage, 'append');
+        if (!isPanelHidden() && hasMore && nextCursor && !isLoading && nearBottom()) {
+          loadCursor(nextCursor, 'append');
         }
       };
 
@@ -1633,8 +1723,12 @@
           }
           syncBatchHiddenInputs();
           syncSearchHiddenInputs();
+          if (isPanelHidden()) {
+            pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
+            return;
+          }
           syncUrl();
-          loadPage(1, 'replace');
+          loadCursor(null, 'replace');
         });
       }
       form.addEventListener('submit', (event) => {
@@ -1645,14 +1739,96 @@
         }
         syncBatchHiddenInputs();
         syncSearchHiddenInputs();
+        if (isPanelHidden()) {
+          pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
+          return;
+        }
         syncUrl();
-        loadPage(1, 'replace');
+        loadCursor(null, 'replace');
       });
-      if (scrollArea) {
-        scrollArea.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+
+      const sentinel = document.createElement('div');
+      sentinel.className = 'lazy-list-sentinel';
+      sentinel.setAttribute('aria-hidden', 'true');
+      sentinel.style.cssText = 'height:1px;width:100%;pointer-events:none';
+      (tableScrollArea || root).appendChild(sentinel);
+      if ('IntersectionObserver' in window) {
+        loadMoreObserver = new IntersectionObserver((entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            loadMoreIfNeeded();
+          }
+        }, {
+          root: scrollArea instanceof HTMLElement ? scrollArea : null,
+          rootMargin: '180px 0px'
+        });
+        loadMoreObserver.observe(sentinel);
+      } else {
+        if (scrollArea) {
+          scrollArea.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+        }
+        window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+        window.addEventListener('resize', loadMoreIfNeeded);
       }
-      window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
-      window.addEventListener('resize', loadMoreIfNeeded);
+
+      const suspendPanel = () => {
+        if (searchTimer !== null) {
+          window.clearTimeout(searchTimer);
+          searchTimer = null;
+          pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
+        }
+        if (activeController) {
+          if (!pendingRequest && activeRequest) {
+            pendingRequest = { ...activeRequest, syncUrl: false };
+          }
+          requestSeq += 1;
+          activeController.abort();
+          activeController = null;
+          activeRequest = null;
+          isLoading = false;
+          setLoading(false);
+        }
+      };
+      const resumePanel = () => {
+        if (destroyed || isPanelHidden()) {
+          return;
+        }
+        if (pendingRequest) {
+          const request = pendingRequest;
+          pendingRequest = null;
+          if (request.syncUrl) {
+            syncUrl();
+          }
+          loadCursor(request.cursor, request.mode);
+          return;
+        }
+        window.requestAnimationFrame(loadMoreIfNeeded);
+      };
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          suspendPanel();
+        } else {
+          resumePanel();
+        }
+      };
+      panel.addEventListener('discipleship:panel-deactivate', suspendPanel);
+      panel.addEventListener('discipleship:panel-activate', resumePanel);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      panel.addEventListener('discipleship:panel-destroy', () => {
+        suspendPanel();
+        destroyed = true;
+        pendingRequest = null;
+        if (loadMoreObserver) {
+          loadMoreObserver.disconnect();
+          loadMoreObserver = null;
+        } else {
+          if (scrollArea) {
+            scrollArea.removeEventListener('scroll', loadMoreIfNeeded);
+          }
+          window.removeEventListener('scroll', loadMoreIfNeeded);
+          window.removeEventListener('resize', loadMoreIfNeeded);
+        }
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      });
       setEmptyState('Peserta tidak ditemukan.');
     };
 
@@ -1693,12 +1869,21 @@
         dg3: panel.querySelector('[data-spiritual-journey-stat="dg3"]')
       };
       let hasMore = root.getAttribute('data-has-more') === '1';
-      let nextPage = parseInt(root.getAttribute('data-next-page') || '0', 10) || null;
-      const perPage = parseInt(root.getAttribute('data-per-page') || '50', 10) || 50;
+      let nextCursor = root.getAttribute('data-next-cursor') || null;
+      const limit = Math.min(100, Math.max(1, parseInt(root.getAttribute('data-limit') || '50', 10) || 50));
       let activeController = null;
       let requestSeq = 0;
       let isLoading = false;
       let searchTimer = null;
+      let activeRequest = null;
+      let pendingRequest = null;
+      let loadMoreObserver = null;
+      let destroyed = false;
+
+      const isPanelHidden = () => Boolean(
+        document.hidden
+        || (panel instanceof HTMLElement && (panel.hidden || panel.getAttribute('aria-hidden') === 'true'))
+      );
 
       const currentQuery = () => String(input.value || '').trim();
       const currentFilter = () => String(filterInput ? filterInput.value : 'all').trim() || 'all';
@@ -1784,6 +1969,8 @@
         }
         url.searchParams.delete('page');
         url.searchParams.delete('per_page');
+        url.searchParams.delete('cursor');
+        url.searchParams.delete('limit');
         url.searchParams.delete('edit');
         url.searchParams.delete('view');
         window.history.replaceState(window.history.state, '', url.toString());
@@ -1792,7 +1979,7 @@
         }));
       };
 
-      const buildRowsUrl = (page) => {
+      const buildRowsUrl = (cursor) => {
         const url = new URL(rowsUrl, window.location.origin);
         const branchInput = form.querySelector('input[name="branch_id"]') || panel.querySelector('input[name="branch_id"]');
         const query = currentQuery();
@@ -1800,8 +1987,10 @@
           url.searchParams.set('q', query);
         }
         url.searchParams.set('journey_filter', currentFilter());
-        url.searchParams.set('page', String(page));
-        url.searchParams.set('per_page', String(perPage));
+        if (cursor) {
+          url.searchParams.set('cursor', cursor);
+        }
+        url.searchParams.set('limit', String(limit));
         if (branchInput && String(branchInput.value || '').trim() !== '') {
           url.searchParams.set('branch_id', String(branchInput.value).trim());
         }
@@ -1816,31 +2005,38 @@
         insertRows(data && data.html);
         insertTemplates(data && data.templates_html, mode);
         hasMore = Boolean(data && data.has_more);
-        nextPage = hasMore ? (parseInt(String(data.next_page || ''), 10) || null) : null;
+        nextCursor = hasMore ? (String(data && data.next_cursor || '').trim() || null) : null;
         root.setAttribute('data-has-more', hasMore ? '1' : '0');
-        root.setAttribute('data-next-page', nextPage ? String(nextPage) : '');
+        root.setAttribute('data-next-cursor', nextCursor || '');
         updateStats(data ? data.stats : null);
         setEmptyState(data ? data.empty_message : 'Peserta tidak ditemukan.');
         scheduleViewportTableHeights();
       };
 
-      const loadPage = (page, mode) => {
-        if (mode === 'append' && (!hasMore || !nextPage || isLoading)) {
+      const loadCursor = (cursor, mode) => {
+        if (isPanelHidden()) {
+          pendingRequest = { cursor, mode, syncUrl: false };
+          return;
+        }
+        if (mode === 'append' && (!hasMore || !cursor || isLoading)) {
           return;
         }
         if (activeController) {
           activeController.abort();
         }
         activeController = new AbortController();
+        const controller = activeController;
         const requestId = ++requestSeq;
+        activeRequest = { cursor, mode };
+        pendingRequest = null;
         isLoading = true;
         setLoading(true);
-        window.fetch(buildRowsUrl(page).toString(), {
+        window.fetch(buildRowsUrl(cursor).toString(), {
           headers: {
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
           },
-          signal: activeController.signal
+          signal: controller.signal
         })
           .then((response) => {
             if (!response.ok) {
@@ -1869,6 +2065,10 @@
               return;
             }
             isLoading = false;
+            activeRequest = null;
+            if (activeController === controller) {
+              activeController = null;
+            }
             setLoading(false);
           });
       };
@@ -1879,8 +2079,12 @@
         }
         searchTimer = window.setTimeout(() => {
           searchTimer = null;
+          if (isPanelHidden()) {
+            pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
+            return;
+          }
           syncUrl();
-          loadPage(1, 'replace');
+          loadCursor(null, 'replace');
         }, 250);
       };
 
@@ -1893,8 +2097,8 @@
       };
 
       const loadMoreIfNeeded = () => {
-        if (hasMore && nextPage && !isLoading && nearBottom()) {
-          loadPage(nextPage, 'append');
+        if (!isPanelHidden() && hasMore && nextCursor && !isLoading && nearBottom()) {
+          loadCursor(nextCursor, 'append');
         }
       };
 
@@ -1905,8 +2109,12 @@
             window.clearTimeout(searchTimer);
             searchTimer = null;
           }
+          if (isPanelHidden()) {
+            pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
+            return;
+          }
           syncUrl();
-          loadPage(1, 'replace');
+          loadCursor(null, 'replace');
         });
       }
       form.addEventListener('submit', (event) => {
@@ -1915,14 +2123,96 @@
           window.clearTimeout(searchTimer);
           searchTimer = null;
         }
+        if (isPanelHidden()) {
+          pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
+          return;
+        }
         syncUrl();
-        loadPage(1, 'replace');
+        loadCursor(null, 'replace');
       });
-      if (scrollArea) {
-        scrollArea.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+
+      const sentinel = document.createElement('div');
+      sentinel.className = 'lazy-list-sentinel';
+      sentinel.setAttribute('aria-hidden', 'true');
+      sentinel.style.cssText = 'height:1px;width:100%;pointer-events:none';
+      (tableScrollArea || root).appendChild(sentinel);
+      if ('IntersectionObserver' in window) {
+        loadMoreObserver = new IntersectionObserver((entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            loadMoreIfNeeded();
+          }
+        }, {
+          root: scrollArea instanceof HTMLElement ? scrollArea : null,
+          rootMargin: '180px 0px'
+        });
+        loadMoreObserver.observe(sentinel);
+      } else {
+        if (scrollArea) {
+          scrollArea.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+        }
+        window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
+        window.addEventListener('resize', loadMoreIfNeeded);
       }
-      window.addEventListener('scroll', loadMoreIfNeeded, { passive: true });
-      window.addEventListener('resize', loadMoreIfNeeded);
+
+      const suspendPanel = () => {
+        if (searchTimer !== null) {
+          window.clearTimeout(searchTimer);
+          searchTimer = null;
+          pendingRequest = { cursor: null, mode: 'replace', syncUrl: true };
+        }
+        if (activeController) {
+          if (!pendingRequest && activeRequest) {
+            pendingRequest = { ...activeRequest, syncUrl: false };
+          }
+          requestSeq += 1;
+          activeController.abort();
+          activeController = null;
+          activeRequest = null;
+          isLoading = false;
+          setLoading(false);
+        }
+      };
+      const resumePanel = () => {
+        if (destroyed || isPanelHidden()) {
+          return;
+        }
+        if (pendingRequest) {
+          const request = pendingRequest;
+          pendingRequest = null;
+          if (request.syncUrl) {
+            syncUrl();
+          }
+          loadCursor(request.cursor, request.mode);
+          return;
+        }
+        window.requestAnimationFrame(loadMoreIfNeeded);
+      };
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          suspendPanel();
+        } else {
+          resumePanel();
+        }
+      };
+      panel.addEventListener('discipleship:panel-deactivate', suspendPanel);
+      panel.addEventListener('discipleship:panel-activate', resumePanel);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      panel.addEventListener('discipleship:panel-destroy', () => {
+        suspendPanel();
+        destroyed = true;
+        pendingRequest = null;
+        if (loadMoreObserver) {
+          loadMoreObserver.disconnect();
+          loadMoreObserver = null;
+        } else {
+          if (scrollArea) {
+            scrollArea.removeEventListener('scroll', loadMoreIfNeeded);
+          }
+          window.removeEventListener('scroll', loadMoreIfNeeded);
+          window.removeEventListener('resize', loadMoreIfNeeded);
+        }
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      });
       setEmptyState('Peserta tidak ditemukan.');
     };
 
@@ -2372,37 +2662,90 @@
       const titleEl = treeV2HistoryModal.querySelector('[data-tree-v2-history-title]');
       const bodyEl = treeV2HistoryModal.querySelector('[data-tree-v2-history-body]');
       const closeButtons = treeV2HistoryModal.querySelectorAll('[data-tree-v2-history-close]');
-      const templateMap = new Map();
+      const detailUrlTemplate = scope.getAttribute('data-tree-group-detail-url-template') || '';
+      const detailCache = new Map();
+      let activeController = null;
+      let activeGroupKey = '';
+      let requestSequence = 0;
 
-      scope.querySelectorAll('template[data-tree-v2-history-template]').forEach((templateEl) => {
-        const groupKey = templateEl.getAttribute('data-tree-v2-history-template') || '';
-        if (groupKey) {
-          templateMap.set(groupKey, templateEl);
+      const detailUrl = (groupKey) => {
+        const raw = detailUrlTemplate.replace('__id__', encodeURIComponent(groupKey));
+        const url = new URL(raw, window.location.origin);
+        const current = new URL(window.location.href);
+        if (current.searchParams.has('branch_id')) {
+          url.searchParams.set('branch_id', current.searchParams.get('branch_id') || 'all');
         }
-      });
+        return url.toString();
+      };
+
+      const renderHistory = (data) => {
+        if (titleEl) {
+          titleEl.textContent = String(data && data.title || 'Riwayat Kelompok');
+        }
+        if (bodyEl) {
+          bodyEl.innerHTML = String(data && data.html || '<div class="journey-history-empty">Riwayat kelompok belum tersedia.</div>');
+        }
+      };
+
+      const loadHistory = (groupKey, force = false) => {
+        const key = String(groupKey || '').trim();
+        if (!key || !detailUrlTemplate) {
+          return;
+        }
+        activeGroupKey = key;
+        const cached = !force ? detailCache.get(key) : null;
+        if (cached) {
+          renderHistory(cached);
+          return;
+        }
+        if (bodyEl) {
+          bodyEl.innerHTML = '<div class="panel-note" role="status">Memuat riwayat kelompok...</div>';
+        }
+        if (titleEl) titleEl.textContent = 'Riwayat Kelompok';
+
+        if (activeController) activeController.abort();
+        activeController = new AbortController();
+        const controller = activeController;
+        const requestId = ++requestSequence;
+        window.fetch(detailUrl(key), {
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          signal: controller.signal
+        }).then((response) => {
+          if (!response.ok) throw new Error('detail request failed');
+          return response.json();
+        }).then((data) => {
+          detailCache.set(key, data);
+          if (requestId === requestSequence && activeGroupKey === key) {
+            renderHistory(data);
+          }
+        }).catch((error) => {
+          if (error && error.name === 'AbortError') return;
+          if (requestId === requestSequence && activeGroupKey === key && bodyEl) {
+            bodyEl.innerHTML = '<div class="panel-note">Riwayat gagal dimuat. <button class="btn tiny secondary" type="button" data-tree-history-retry>Coba lagi</button></div>';
+          }
+        }).finally(() => {
+          if (activeController === controller) activeController = null;
+        });
+      };
 
       const openTreeV2History = (groupKey) => {
         const key = String(groupKey || '').trim();
-        if (!key || !templateMap.has(key)) {
-          return;
-        }
-        const templateEl = templateMap.get(key);
-        const modalTitle = templateEl?.getAttribute('data-tree-v2-history-template-title') || 'Riwayat Kelompok';
-        const templateHtml = templateEl ? templateEl.innerHTML : '';
-
-        if (titleEl) {
-          titleEl.textContent = modalTitle;
-        }
-        if (bodyEl) {
-          bodyEl.innerHTML = templateHtml;
-        }
+        if (!key) return;
 
         treeV2HistoryModal.classList.add('is-open');
         treeV2HistoryModal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('modal-open');
+        loadHistory(key);
       };
 
       const closeTreeV2History = () => {
+        if (activeController) {
+          activeController.abort();
+          activeController = null;
+        }
         treeV2HistoryModal.classList.remove('is-open');
         treeV2HistoryModal.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('modal-open');
@@ -2415,6 +2758,14 @@
         }
         event.preventDefault();
         openTreeV2History(trigger.getAttribute('data-tree-v2-history-open') || '');
+      });
+
+      treeV2HistoryModal.addEventListener('click', function (event) {
+        const retry = event.target.closest('[data-tree-history-retry]');
+        if (retry && activeGroupKey) {
+          event.preventDefault();
+          loadHistory(activeGroupKey, true);
+        }
       });
 
       scope.addEventListener('keydown', function (event) {
@@ -2442,6 +2793,15 @@
           closeTreeV2History();
         }
       });
+
+      scope.addEventListener('discipleship:tree-mutated', function () {
+        detailCache.clear();
+      });
+      scope.addEventListener('discipleship:panel-destroy', function () {
+        detailCache.clear();
+        if (activeController) activeController.abort();
+        activeController = null;
+      }, { once: true });
     };
 
     const mskCreateModalCandidate = document.querySelector('[data-msk-create-modal]');
@@ -3244,7 +3604,10 @@
       const personProfileBodyEl = personProfileModal ? personProfileModal.querySelector('[data-tree-v2-person-profile-body]') : null;
       const personProfileCloseButtons = personProfileModal ? personProfileModal.querySelectorAll('[data-tree-v2-person-profile-close]') : [];
       const personProfileActionButtons = personProfileModal ? personProfileModal.querySelectorAll('[data-tree-v2-profile-action]') : [];
-      const personProfileTemplates = new Map();
+      const personDetailUrlTemplate = scope.getAttribute('data-tree-person-detail-url-template') || '';
+      const personDetailCache = new Map();
+      let personDetailController = null;
+      let personDetailSequence = 0;
       const addMemberProxy = scope.querySelector('[data-tree-v2-proxy="add-member"]');
       const editPersonProxy = scope.querySelector('[data-tree-v2-proxy="edit-person"]');
       const addGroupProxy = scope.querySelector('[data-tree-v2-proxy="add-group"]');
@@ -3263,13 +3626,6 @@
           buttonsByAction[action].push(button);
         }
       });
-      scope.querySelectorAll('template[data-tree-v2-person-profile-template]').forEach(templateEl => {
-        const personKey = templateEl.getAttribute('data-tree-v2-person-profile-template') || '';
-        if (personKey !== '') {
-          personProfileTemplates.set(personKey, templateEl);
-        }
-      });
-
       let activeNode = null;
       let activeNodeData = null;
 
@@ -3288,6 +3644,10 @@
       };
 
       const closeActionModal = (preserveContext = false) => {
+        if (personDetailController) {
+          personDetailController.abort();
+          personDetailController = null;
+        }
         if (treeV2ActionModal) {
           treeV2ActionModal.classList.remove('is-open');
           treeV2ActionModal.setAttribute('aria-hidden', 'true');
@@ -3374,36 +3734,84 @@
         };
       };
 
+      const personDetailUrl = (personId) => {
+        const raw = personDetailUrlTemplate.replace('__id__', encodeURIComponent(personId));
+        const url = new URL(raw, window.location.origin);
+        const current = new URL(window.location.href);
+        if (current.searchParams.has('branch_id')) {
+          url.searchParams.set('branch_id', current.searchParams.get('branch_id') || 'all');
+        }
+        return url.toString();
+      };
+
+      const applyPersonDetail = (personId, data) => {
+        if (!activeNodeData || String(activeNodeData.personId || '') !== personId) return;
+        const edit = data && typeof data.edit === 'object' ? data.edit : {};
+        activeNodeData.memberId = String(edit.member_id || activeNodeData.memberId || personId).trim();
+        activeNodeData.phone = String(edit.phone || '').trim();
+        activeNodeData.notes = String(edit.notes || '');
+        if (edit.name) activeNodeData.name = String(edit.name);
+
+        if (personProfileTitleEl) {
+          personProfileTitleEl.textContent = String(data && data.title || activeNodeData.name || 'Profil Orang');
+        }
+        personProfileBodyEl.innerHTML = String(data && data.html || '<div class="panel-note">Profil tidak tersedia.</div>');
+
+        const groupContext = currentPersonGroupContext();
+        setProfileActionVisible('add_group', personId !== '');
+        setProfileActionVisible('edit_person', personId !== '' && Boolean(data && data.edit_url));
+        setProfileActionVisible('delete_person', personId !== '' && Boolean(data && data.edit_url));
+        setProfileActionVisible('leave_group', personId !== '' && Boolean(data && data.edit_url) && groupContext.id !== '' && groupContext.status === 'active');
+      };
+
+      const loadPersonDetail = (personId, force = false) => {
+        const cached = !force ? personDetailCache.get(personId) : null;
+        if (cached) {
+          applyPersonDetail(personId, cached);
+          return;
+        }
+        if (!personDetailUrlTemplate) return;
+        if (personDetailController) personDetailController.abort();
+        personDetailController = new AbortController();
+        const controller = personDetailController;
+        const requestId = ++personDetailSequence;
+        window.fetch(personDetailUrl(personId), {
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          signal: controller.signal
+        }).then((response) => {
+          if (!response.ok) throw new Error('detail request failed');
+          return response.json();
+        }).then((data) => {
+          personDetailCache.set(personId, data);
+          if (requestId === personDetailSequence) applyPersonDetail(personId, data);
+        }).catch((error) => {
+          if (error && error.name === 'AbortError') return;
+          if (requestId === personDetailSequence && activeNodeData && String(activeNodeData.personId || '') === personId) {
+            personProfileBodyEl.innerHTML = '<div class="panel-note">Profil gagal dimuat. <button class="btn tiny secondary" type="button" data-tree-person-detail-retry>Coba lagi</button></div>';
+          }
+        }).finally(() => {
+          if (personDetailController === controller) personDetailController = null;
+        });
+      };
+
       const openPersonProfileModal = (node, nodeData) => {
         if (!personProfileModal || !personProfileBodyEl) return false;
         const personId = String(nodeData.personId || '').trim();
         if (!personId || nodeData.isRoot) return false;
-        let templateEl = personProfileTemplates.get(personId);
-        if (!templateEl) {
-          templateEl = scope.querySelector('template[data-tree-v2-person-profile-template="' + cssAttributeValue(personId) + '"]');
-          if (templateEl) {
-            personProfileTemplates.set(personId, templateEl);
-          }
-        }
-        if (!templateEl) return false;
 
         activeNode = node;
         activeNodeData = nodeData;
-
-        if (personProfileTitleEl) {
-          personProfileTitleEl.textContent = templateEl.getAttribute('data-tree-v2-person-profile-template-title') || nodeData.name || 'Profil Orang';
-        }
-        personProfileBodyEl.innerHTML = templateEl.innerHTML;
-
-        const groupContext = currentPersonGroupContext();
-        setProfileActionVisible('add_group', !nodeData.isRoot && personId !== '');
-        setProfileActionVisible('edit_person', !nodeData.isRoot && personId !== '');
-        setProfileActionVisible('delete_person', !nodeData.isRoot && personId !== '');
-        setProfileActionVisible('leave_group', !nodeData.isRoot && groupContext.id !== '' && groupContext.status === 'active');
+        if (personProfileTitleEl) personProfileTitleEl.textContent = nodeData.name || 'Profil Orang';
+        personProfileBodyEl.innerHTML = '<div class="panel-note" role="status">Memuat profil...</div>';
+        ['add_group', 'edit_person', 'leave_group', 'delete_person'].forEach((action) => setProfileActionVisible(action, false));
 
         personProfileModal.classList.add('is-open');
         personProfileModal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('modal-open');
+        loadPersonDetail(personId);
         return true;
       };
 
@@ -3513,6 +3921,13 @@
       }
       if (personProfileModal) {
         personProfileModal.addEventListener('click', function (event) {
+          const retry = event.target.closest('[data-tree-person-detail-retry]');
+          if (retry && activeNodeData && activeNodeData.personId) {
+            event.preventDefault();
+            personProfileBodyEl.innerHTML = '<div class="panel-note" role="status">Memuat profil...</div>';
+            loadPersonDetail(String(activeNodeData.personId), true);
+            return;
+          }
           if (event.target === personProfileModal) {
             closeActionModal();
           }
@@ -3667,6 +4082,15 @@
           }
         });
       });
+
+      scope.addEventListener('discipleship:tree-mutated', function () {
+        personDetailCache.clear();
+      });
+      scope.addEventListener('discipleship:panel-destroy', function () {
+        personDetailCache.clear();
+        if (personDetailController) personDetailController.abort();
+        personDetailController = null;
+      }, { once: true });
     };
 
     const setupFilePreviewModal = (scope = document) => {
@@ -4252,13 +4676,62 @@
       }
       panel.setAttribute('data-msk-panel-ready', '1');
 
-      const templateByAttribute = (attribute, value) => {
-        const key = String(value || '').trim();
-        if (!key) {
-          return null;
+      const detailUrlTemplate = panel.getAttribute('data-msk-detail-url-template') || '';
+      const detailCache = new Map();
+      let activeDetailController = null;
+      let openEditById = null;
+      const escapeDetailId = (value) => String(value || '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      })[character]);
+      const detailUrl = (participantId, mode) => {
+        const key = String(participantId || '').trim();
+        if (!key || !detailUrlTemplate) {
+          return '';
+        }
+        const url = new URL(detailUrlTemplate.replace('__id__', encodeURIComponent(key)), window.location.origin);
+        if (mode === 'edit') {
+          url.searchParams.set('mode', 'edit');
+        }
+        const branchInput = panel.querySelector('input[name="branch_id"]');
+        const batchInput = panel.querySelector('[data-msk-batch-input], input[name="batch_month"]');
+        if (branchInput && String(branchInput.value || '').trim()) {
+          url.searchParams.set('branch_id', String(branchInput.value).trim());
+        }
+        if (batchInput && String(batchInput.value || '').trim()) {
+          url.searchParams.set('batch_month', String(batchInput.value).trim());
         }
 
-        return panel.querySelector('template[' + attribute + '="' + cssAttributeValue(key) + '"]');
+        return url.toString();
+      };
+      const fetchDetail = async (participantId, mode) => {
+        const cacheKey = mode + ':' + String(participantId || '').trim();
+        if (detailCache.has(cacheKey)) {
+          return detailCache.get(cacheKey);
+        }
+        const url = detailUrl(participantId, mode);
+        if (!url) {
+          throw new Error('detail-url-unavailable');
+        }
+        if (activeDetailController) {
+          activeDetailController.abort();
+        }
+        const controller = new AbortController();
+        activeDetailController = controller;
+        const response = await window.fetch(url, {
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          signal: controller.signal
+        });
+        if (!response.ok) {
+          throw new Error('detail-request-failed');
+        }
+        const data = await response.json();
+        detailCache.set(cacheKey, data);
+        if (activeDetailController === controller) {
+          activeDetailController = null;
+        }
+
+        return data;
       };
       const openModal = (modal) => {
         if (!modal) {
@@ -4293,30 +4766,28 @@
         const titleEl = viewModal.querySelector('[data-msk-view-title]');
         const bodyEl = viewModal.querySelector('[data-msk-view-body]');
         const editLinkEl = viewModal.querySelector('[data-msk-view-edit-link]');
-        const openView = (participantId) => {
-          const templateEl = templateByAttribute('data-msk-view-template', participantId);
-          if (!templateEl) {
-            return false;
-          }
-          if (titleEl) {
-            titleEl.textContent = templateEl.getAttribute('data-msk-view-template-title') || 'Detail Peserta MSK';
-          }
-          if (bodyEl) {
-            bodyEl.innerHTML = templateEl.innerHTML;
-          }
-          const editHref = templateEl.getAttribute('data-msk-view-template-edit') || '';
-          if (editLinkEl) {
-            if (editHref) {
-              editLinkEl.setAttribute('href', editHref);
+        const openView = async (participantId) => {
+          const key = String(participantId || '').trim();
+          if (!key) { return; }
+          if (titleEl) { titleEl.textContent = 'Detail Peserta MSK'; }
+          if (bodyEl) { bodyEl.innerHTML = '<div class="panel-note">Memuat detail peserta...</div>'; }
+          if (editLinkEl) { editLinkEl.classList.add('is-hidden'); }
+          openModal(viewModal);
+          try {
+            const data = await fetchDetail(key, 'view');
+            if (titleEl) { titleEl.textContent = data.title || 'Detail Peserta MSK'; }
+            if (bodyEl) { bodyEl.innerHTML = String(data.html || ''); }
+            if (editLinkEl && data.edit_url) {
+              editLinkEl.setAttribute('href', data.edit_url);
+              editLinkEl.setAttribute('data-msk-edit-from-view', key);
               editLinkEl.classList.remove('is-hidden');
-            } else {
-              editLinkEl.removeAttribute('href');
-              editLinkEl.classList.add('is-hidden');
+            }
+          } catch (error) {
+            if (error && error.name === 'AbortError') { return; }
+            if (bodyEl) {
+              bodyEl.innerHTML = '<div class="panel-note">Detail gagal dimuat. <button class="btn tiny secondary" type="button" data-msk-detail-retry="view" data-participant-id="' + escapeDetailId(key) + '">Coba lagi</button></div>';
             }
           }
-          openModal(viewModal);
-
-          return true;
         };
 
         panel.addEventListener('click', (event) => {
@@ -4325,9 +4796,19 @@
             return;
           }
           event.preventDefault();
-          const opened = openView(trigger.getAttribute('data-msk-view-open') || '');
-          if (!opened && trigger.getAttribute('data-msk-view-href')) {
-            window.location.href = trigger.getAttribute('data-msk-view-href');
+          openView(trigger.getAttribute('data-msk-view-open') || '');
+        });
+        panel.addEventListener('click', (event) => {
+          const retry = event.target.closest('[data-msk-detail-retry="view"]');
+          if (retry) {
+            event.preventDefault();
+            openView(retry.getAttribute('data-participant-id') || '');
+          }
+          const editFromView = event.target.closest('[data-msk-edit-from-view]');
+          if (editFromView && openEditById) {
+            event.preventDefault();
+            closeModal(viewModal);
+            openEditById(editFromView.getAttribute('data-msk-edit-from-view') || '');
           }
         });
         viewModal.addEventListener('click', (event) => {
@@ -4346,28 +4827,30 @@
       if (editModal) {
         const titleEl = editModal.querySelector('[data-msk-edit-title]');
         const bodyEl = editModal.querySelector('[data-msk-edit-body]');
-        const openEdit = (participantId) => {
-          const templateEl = templateByAttribute('data-msk-edit-template', participantId);
-          if (!templateEl) {
-            return false;
-          }
-          if (titleEl) {
-            titleEl.textContent = templateEl.getAttribute('data-msk-edit-template-title') || 'Edit Peserta MSK';
-          }
-          if (bodyEl) {
-            bodyEl.innerHTML = templateEl.innerHTML;
-            initMskForms(bodyEl);
-          }
+        const openEdit = async (participantId) => {
+          const key = String(participantId || '').trim();
+          if (!key) { return; }
+          if (titleEl) { titleEl.textContent = 'Edit Peserta MSK'; }
+          if (bodyEl) { bodyEl.innerHTML = '<div class="panel-note">Memuat form edit...</div>'; }
           openModal(editModal);
           clearSelectionAlerts();
-
-          const firstInput = bodyEl ? bodyEl.querySelector('input, select, textarea') : null;
-          if (firstInput && typeof firstInput.focus === 'function') {
-            firstInput.focus();
+          try {
+            const data = await fetchDetail(key, 'edit');
+            if (titleEl) { titleEl.textContent = data.title || 'Edit Peserta MSK'; }
+            if (bodyEl) {
+              bodyEl.innerHTML = String(data.html || '');
+              initMskForms(bodyEl);
+              const firstInput = bodyEl.querySelector('input, select, textarea');
+              if (firstInput && typeof firstInput.focus === 'function') { firstInput.focus(); }
+            }
+          } catch (error) {
+            if (error && error.name === 'AbortError') { return; }
+            if (bodyEl) {
+              bodyEl.innerHTML = '<div class="panel-note">Form edit gagal dimuat. <button class="btn tiny secondary" type="button" data-msk-detail-retry="edit" data-participant-id="' + escapeDetailId(key) + '">Coba lagi</button></div>';
+            }
           }
-
-          return true;
         };
+        openEditById = openEdit;
 
         panel.addEventListener('click', (event) => {
           const trigger = event.target.closest('[data-msk-edit-open]');
@@ -4375,9 +4858,13 @@
             return;
           }
           event.preventDefault();
-          const opened = openEdit(trigger.getAttribute('data-msk-edit-open') || '');
-          if (!opened && trigger.getAttribute('data-msk-edit-href')) {
-            window.location.href = trigger.getAttribute('data-msk-edit-href');
+          openEdit(trigger.getAttribute('data-msk-edit-open') || '');
+        });
+        panel.addEventListener('click', (event) => {
+          const retry = event.target.closest('[data-msk-detail-retry="edit"]');
+          if (retry) {
+            event.preventDefault();
+            openEdit(retry.getAttribute('data-participant-id') || '');
           }
         });
         editModal.addEventListener('click', (event) => {
@@ -4429,6 +4916,13 @@
           }
         });
       });
+      panel.addEventListener('discipleship:panel-destroy', () => {
+        if (activeDetailController) {
+          activeDetailController.abort();
+          activeDetailController = null;
+        }
+        detailCache.clear();
+      }, { once: true });
     };
 
     const setupSpiritualJourneyPanelInteractions = (scope = document) => {
@@ -4446,30 +4940,55 @@
       }
       const titleEl = modal.querySelector('[data-spiritual-journey-view-title]');
       const bodyEl = modal.querySelector('[data-spiritual-journey-view-body]');
-      const templateByKey = (personKey) => {
+      const detailUrlTemplate = panel.getAttribute('data-spiritual-detail-url-template') || '';
+      const detailCache = new Map();
+      let activeController = null;
+      const escapeDetailId = (value) => String(value || '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      })[character]);
+      const detailUrl = (personKey) => {
         const key = String(personKey || '').trim();
-        if (!key) {
-          return null;
+        if (!key || !detailUrlTemplate) { return ''; }
+        const url = new URL(detailUrlTemplate.replace('__id__', encodeURIComponent(key)), window.location.origin);
+        const branchInput = panel.querySelector('input[name="branch_id"]');
+        if (branchInput && String(branchInput.value || '').trim()) {
+          url.searchParams.set('branch_id', String(branchInput.value).trim());
         }
 
-        return panel.querySelector('template[data-spiritual-journey-view-template="' + cssAttributeValue(key) + '"]');
+        return url.toString();
       };
-      const openView = (personKey) => {
-        const templateEl = templateByKey(personKey);
-        if (!templateEl) {
-          return false;
-        }
-        if (titleEl) {
-          titleEl.textContent = templateEl.getAttribute('data-spiritual-journey-view-template-title') || 'Profil Spiritual';
-        }
-        if (bodyEl) {
-          bodyEl.innerHTML = templateEl.innerHTML;
-        }
+      const openView = async (personKey) => {
+        const key = String(personKey || '').trim();
+        if (!key) { return; }
+        if (titleEl) { titleEl.textContent = 'Profil Spiritual'; }
+        if (bodyEl) { bodyEl.innerHTML = '<div class="panel-note">Memuat profil peserta...</div>'; }
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('modal-open');
-
-        return true;
+        try {
+          let data = detailCache.get(key);
+          if (!data) {
+            if (activeController) { activeController.abort(); }
+            const controller = new AbortController();
+            activeController = controller;
+            const response = await window.fetch(detailUrl(key), {
+              credentials: 'same-origin',
+              headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+              signal: controller.signal
+            });
+            if (!response.ok) { throw new Error('detail-request-failed'); }
+            data = await response.json();
+            detailCache.set(key, data);
+            if (activeController === controller) { activeController = null; }
+          }
+          if (titleEl) { titleEl.textContent = data.title || 'Profil Spiritual'; }
+          if (bodyEl) { bodyEl.innerHTML = String(data.html || ''); }
+        } catch (error) {
+          if (error && error.name === 'AbortError') { return; }
+          if (bodyEl) {
+            bodyEl.innerHTML = '<div class="panel-note">Profil gagal dimuat. <button class="btn tiny secondary" type="button" data-spiritual-detail-retry data-participant-id="' + escapeDetailId(key) + '">Coba lagi</button></div>';
+          }
+        }
       };
       const closeView = () => {
         modal.classList.remove('is-open');
@@ -4485,6 +5004,13 @@
         event.preventDefault();
         openView(trigger.getAttribute('data-spiritual-journey-view-open') || '');
       });
+      panel.addEventListener('click', (event) => {
+        const retry = event.target.closest('[data-spiritual-detail-retry]');
+        if (retry) {
+          event.preventDefault();
+          openView(retry.getAttribute('data-participant-id') || '');
+        }
+      });
       modal.addEventListener('click', (event) => {
         if (event.target === modal || event.target.closest('[data-spiritual-journey-view-close]')) {
           event.preventDefault();
@@ -4496,6 +5022,13 @@
           closeView();
         }
       });
+      panel.addEventListener('discipleship:panel-destroy', () => {
+        if (activeController) {
+          activeController.abort();
+          activeController = null;
+        }
+        detailCache.clear();
+      }, { once: true });
     };
 
     const executePanelScripts = (panel) => {
@@ -4740,6 +5273,8 @@
         const discardedParams = [
           'page',
           'per_page',
+          'cursor',
+          'limit',
           'rekap_cabang',
           'edit',
           'view',
@@ -5085,5 +5620,11 @@
     });
     setupFilePreviewModal(document);
 
-  });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootLegacyApp, { once: true });
+  } else {
+    bootLegacyApp();
+  }
 })();

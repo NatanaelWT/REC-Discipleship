@@ -29,10 +29,9 @@
     id="discipleship-groups-list"
     data-discipleship-groups-list
     data-rows-url="{{ route('discipleship.groups.rows') }}"
-    data-page="{{ (int) ($groupsPage ?? 1) }}"
-    data-per-page="{{ (int) ($groupsPerPage ?? 50) }}"
+    data-limit="{{ (int) ($groupsLimit ?? 50) }}"
     data-has-more="{{ ! empty($hasMoreGroupRows) ? '1' : '0' }}"
-    data-next-page="{{ $nextGroupPage ?? '' }}"
+    data-next-cursor="{{ $nextGroupCursor ?? '' }}"
   >
     <div class="table-wrap" data-discipleship-groups-scroll>
       <table class="table groups-dashboard-table" id="groups-dashboard-table">

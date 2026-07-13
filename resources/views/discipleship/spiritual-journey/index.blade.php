@@ -5,7 +5,7 @@ if ($page === 'spiritual_journey') {
     if (! $renderAsTabPanel) {
         page_header('Spiritual Journey', $settings, $page, false, 'page-discipleship-table-scroll');
     } else {
-        echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-list-panel journey-workspace-panel spiritual-journey-panel" id="discipleship-tabpanel-spiritual" role="tabpanel" aria-labelledby="discipleship-tab-spiritual" tabindex="0" data-discipleship-tab-panel data-tab-key="spiritual" data-page-title="Spiritual Journey" data-body-class="page-spiritual_journey">'."\n";
+        echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-list-panel journey-workspace-panel spiritual-journey-panel" id="discipleship-tabpanel-spiritual" role="tabpanel" aria-labelledby="discipleship-tab-spiritual" tabindex="0" data-discipleship-tab-panel data-tab-key="spiritual" data-page-title="Spiritual Journey" data-body-class="page-spiritual_journey" data-spiritual-detail-url-template="'.h(route('discipleship.spiritual-journey.detail', ['participant' => '__id__'])).'">'."\n";
     }
     $peopleByMemberId = [];
     $peopleByName = [];
@@ -661,13 +661,6 @@ if ($page === 'spiritual_journey') {
         if ($journeyViewKey === '') {
             $journeyViewKey = 'spiritual-journey-'.(string) (count($rows) + 1);
         }
-        $journeyProfile = is_array($participantProfiles[$journeyViewKey] ?? null) ? $participantProfiles[$journeyViewKey] : null;
-        if ($journeyProfile !== null) {
-            $journeyViewTemplates[$journeyViewKey] = [
-                'title' => $fullName,
-                'content' => view('discipleship.msk-participants.profile', ['profile' => $journeyProfile])->render(),
-            ];
-        }
         $rows[] = [
             'id' => (string) ($participant['id'] ?? ''),
             'name' => $fullName,
@@ -767,7 +760,7 @@ if ($page === 'spiritual_journey') {
     ])->render();
 
     $rows = is_array($spiritualJourneyRows ?? null) ? $spiritualJourneyRows : $rows;
-    echo '<section class="card table-card-plain" data-spiritual-journey-list data-rows-url="'.h(route('discipleship.spiritual-journey.rows')).'" data-page="'.h((string) ($spiritualJourneyPage ?? 1)).'" data-per-page="'.h((string) ($spiritualJourneyPerPage ?? 50)).'" data-has-more="'.(! empty($hasMoreSpiritualJourneyRows) ? '1' : '0').'" data-next-page="'.h((string) ($nextSpiritualJourneyPage ?? '')).'">'."\n";
+    echo '<section class="card table-card-plain" data-spiritual-journey-list data-rows-url="'.h(route('discipleship.spiritual-journey.rows')).'" data-limit="'.h((string) ($spiritualJourneyLimit ?? 50)).'" data-has-more="'.(! empty($hasMoreSpiritualJourneyRows) ? '1' : '0').'" data-next-cursor="'.h((string) ($nextSpiritualJourneyCursor ?? '')).'">'."\n";
     echo "  <div class=\"table-wrap\" data-spiritual-journey-scroll>\n";
     echo "    <table class=\"table journey-dashboard-table\" id=\"spiritual-journey-table\">\n";
     echo "      <colgroup>\n";
@@ -783,10 +776,6 @@ if ($page === 'spiritual_journey') {
     echo "    </table>\n";
     echo "  </div>\n";
     echo "</section>\n";
-
-    echo "<div class=\"is-hidden\" data-spiritual-journey-view-templates>\n";
-    echo view('discipleship.spiritual-journey.partials.view-templates', compact('participantProfiles', 'mskClasses'))->render();
-    echo "</div>\n";
 
     echo view('partials.modal', [
         'id' => 'spiritual-journey-view-modal',

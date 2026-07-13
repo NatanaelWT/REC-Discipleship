@@ -18,6 +18,13 @@ return [
     'default' => env('CACHE_STORE', 'file'),
 
     /*
+    | The read-heavy discipleship services share this store. Keeping it
+    | configurable avoids silently writing to a local disk when the default
+    | store is changed for a deployment.
+    */
+    'discipleship_store' => env('DISCIPLESHIP_CACHE_STORE', env('CACHE_STORE', 'file')),
+
+    /*
     |--------------------------------------------------------------------------
     | Cache Stores
     |--------------------------------------------------------------------------

@@ -7,7 +7,6 @@ use App\Services\Branches\BranchCatalog;
 use App\Services\Discipleship\DiscipleshipReadCache;
 use App\Services\DiscipleshipTargets\DiscipleshipTargetReader;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class DeveloperBranchService
@@ -297,10 +296,6 @@ class DeveloperBranchService
 
     private function countBranchRows(string $table, int $branchId): int
     {
-        if (! Schema::hasTable($table) || ! Schema::hasColumn($table, 'branch_id')) {
-            return 0;
-        }
-
         return (int) DB::table($table)->where('branch_id', $branchId)->count();
     }
 

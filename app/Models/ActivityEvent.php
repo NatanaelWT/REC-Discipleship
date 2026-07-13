@@ -3,15 +3,27 @@
 namespace App\Models;
 
 use App\Casts\UtcDateTimeCast;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 
 class ActivityEvent extends Model
 {
-    protected $table = 'aktivitas';
+    use HasUlids;
 
     public $timestamps = false;
 
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
     protected $guarded = [];
+
+    public function getTable()
+    {
+        return config('activity.storage', 'legacy') === 'split'
+            ? 'audit_events'
+            : 'aktivitas';
+    }
 
     protected function casts(): array
     {

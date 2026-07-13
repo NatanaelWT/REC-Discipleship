@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Discipleship;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DiscipleshipTargets\UpdateDiscipleshipTargetRequest;
 use App\Services\DiscipleshipTargets\DiscipleshipTargetReader;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,8 +13,6 @@ class TargetController extends Controller
 {
     public function index(Request $request, DiscipleshipTargetReader $targetReader): View
     {
-        RuntimeBootstrap::boot($request);
-
         $centralReadOnly = is_effective_central_discipleship_readonly();
         $selectedCentralBranch = $centralReadOnly ? central_recap_selected_branch() : '';
         $showAllBranches = $centralReadOnly && $selectedCentralBranch === 'all';

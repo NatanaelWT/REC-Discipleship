@@ -13,18 +13,10 @@ class RejectLegacyPageQuery
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->query->has('page') && ! $this->allowsPageQuery($request)) {
+        if ($request->query->has('page')) {
             abort(404);
         }
 
         return $next($request);
-    }
-
-    private function allowsPageQuery(Request $request): bool
-    {
-        return $request->is('pemuridan/anggota/rows')
-            || $request->is('pemuridan/kelompok/rows')
-            || $request->is('pemuridan/msk/rows')
-            || $request->is('pemuridan/spiritual-journey/rows');
     }
 }

@@ -4,6 +4,7 @@ namespace App\Services\Discipleship;
 
 use App\Services\Branches\BranchCatalog;
 use Closure;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
 
 class DiscipleshipReadCache
@@ -16,15 +17,18 @@ class DiscipleshipReadCache
 
     private int $misses = 0;
 
+    /** @var array<string, string> */
+    private array $versionMemo = [];
+
     public function __construct(private readonly BranchCatalog $branches) {}
 
     public function remember(string $segment, array $scope, Closure $callback): mixed
     {
         sort($scope);
         $store = Cache::store($this->cacheStore());
-        $versions = [(string) $store->get(self::GLOBAL_VERSION_KEY, '1')];
+        $versions = [$this->version($store, self::GLOBAL_VERSION_KEY)];
         foreach ($this->branchIds($scope) as $branchId) {
-            $versions[] = (string) $store->get(self::BRANCH_VERSION_PREFIX.$branchId, '1');
+            $versions[] = $this->version($store, self::BRANCH_VERSION_PREFIX.$branchId);
         }
         $key = 'rec.discipleship-read.v3.'.sha1(implode('|', $versions)).'.'.$segment.'.'.sha1(json_encode($scope) ?: '[]');
 
@@ -39,7 +43,9 @@ class DiscipleshipReadCache
 
     public function invalidate(): void
     {
-        Cache::store($this->cacheStore())->forever(self::GLOBAL_VERSION_KEY, (string) hrtime(true));
+        $version = (string) hrtime(true);
+        Cache::store($this->cacheStore())->forever(self::GLOBAL_VERSION_KEY, $version);
+        $this->versionMemo[self::GLOBAL_VERSION_KEY] = $version;
     }
 
     /** @param array<int, int|string> $branchIds */
@@ -47,7 +53,10 @@ class DiscipleshipReadCache
     {
         $store = Cache::store($this->cacheStore());
         foreach ($this->branchIds($branchIds) as $branchId) {
-            $store->forever(self::BRANCH_VERSION_PREFIX.$branchId, (string) hrtime(true));
+            $key = self::BRANCH_VERSION_PREFIX.$branchId;
+            $version = (string) hrtime(true);
+            $store->forever($key, $version);
+            $this->versionMemo[$key] = $version;
         }
     }
 
@@ -59,7 +68,16 @@ class DiscipleshipReadCache
 
     private function cacheStore(): string
     {
-        return app()->environment('testing') ? 'array' : 'file';
+        return (string) config('cache.discipleship_store', config('cache.default', 'file'));
+    }
+
+    private function version(Repository $store, string $key): string
+    {
+        if (! array_key_exists($key, $this->versionMemo)) {
+            $this->versionMemo[$key] = (string) $store->get($key, '1');
+        }
+
+        return $this->versionMemo[$key];
     }
 
     /** @return array<int, int> */

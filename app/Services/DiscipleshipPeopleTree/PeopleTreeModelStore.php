@@ -10,7 +10,6 @@ use App\Services\Branches\BranchCatalog;
 use App\Support\DiscipleshipPersonProfile;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class PeopleTreeModelStore
@@ -86,6 +85,87 @@ class PeopleTreeModelStore
         }
 
         return $this->modelForContext([$branchCode], false);
+    }
+
+    /**
+     * Build the history model for one authorized group. Related parent/child
+     * groups are included only to label transitions; their rosters are not
+     * hydrated.
+     *
+     * @param  array<int, int>  $branchIds
+     * @return array<string, mixed>|null
+     */
+    public function detailModelForGroup(int $groupId, array $branchIds): ?array
+    {
+        $branchIds = array_values(array_unique(array_filter(array_map('intval', $branchIds))));
+        if ($groupId < 1 || $branchIds === []) {
+            return null;
+        }
+
+        $target = DiscipleshipGroup::query()
+            ->whereIn('branch_id', $branchIds)
+            ->whereKey($groupId)
+            ->first(['id', 'branch_id', 'status', 'stage', 'parent_group_id', 'source_group_id', 'initiated_by_person_id', 'multiplied_at', 'notes', 'created_at', 'updated_at']);
+        if (! $target instanceof DiscipleshipGroup) {
+            return null;
+        }
+
+        $relatedGroups = DiscipleshipGroup::query()
+            ->select([
+                'id', 'branch_id', 'status', 'stage', 'parent_group_id',
+                'source_group_id', 'initiated_by_person_id', 'multiplied_at', 'notes', 'created_at', 'updated_at',
+            ])
+            ->whereIn('branch_id', $branchIds)
+            ->where(function ($query) use ($groupId, $target): void {
+                $query->whereKey($groupId)
+                    ->orWhere('source_group_id', $groupId)
+                    ->orWhere('parent_group_id', $groupId);
+                if ((int) $target->parent_group_id > 0) {
+                    $query->orWhereKey((int) $target->parent_group_id);
+                }
+            })
+            ->orderBy('id')
+            ->get()
+            ->map(fn (DiscipleshipGroup $group): array => $this->groupViewRow($group))
+            ->values()
+            ->all();
+
+        $groupPeople = DiscipleshipGroupPerson::query()
+            ->select([
+                'id', 'branch_id', 'discipleship_group_id', 'person_id', 'role', 'stage', 'status',
+                'started_on', 'ended_on', 'end_reason', 'created_at', 'updated_at',
+            ])
+            ->whereIn('branch_id', $branchIds)
+            ->where('discipleship_group_id', $groupId)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (DiscipleshipGroupPerson $row): array => $this->groupPersonViewRow($row))
+            ->values()
+            ->all();
+
+        $memberships = [];
+        $leaderships = [];
+        foreach ($groupPeople as $row) {
+            if (($row['role'] ?? '') === 'member') {
+                $memberships[] = $row;
+            } else {
+                $leaderships[] = $row;
+            }
+        }
+
+        $model = [
+            'discipleship_groups' => $relatedGroups,
+            'group_memberships' => $memberships,
+            'group_leaderships' => $leaderships,
+            'group_multiplications' => $this->multiplicationRows($relatedGroups),
+        ];
+        $model['discipleship_persons'] = $this->peopleRows($this->referencedPersonIds(
+            $relatedGroups,
+            $groupPeople,
+            $model['group_multiplications'],
+        ));
+
+        return dgv2_normalize_model($model);
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -194,6 +274,52 @@ class PeopleTreeModelStore
         }
     }
 
+    /**
+     * Return only the compact rows required by the tree's add-member picker.
+     * Full participant data (including photos and personal profile fields) is
+     * deliberately excluded from the initial tree payload.
+     *
+     * @param  array<int, string>  $branchCodes
+     * @return array<int, array<string, mixed>>
+     */
+    public function completedParticipantCandidatesForBranches(array $branchCodes): array
+    {
+        $branchIds = branch_ids_from_slugs($this->normalizeBranchCodes($branchCodes));
+        if ($branchIds === []) {
+            return [];
+        }
+
+        try {
+            $driver = DB::connection()->getDriverName();
+            $sessionCount = $driver === 'sqlite'
+                ? "json_array_length(COALESCE(session_numbers, '[]'))"
+                : 'JSON_LENGTH(COALESCE(session_numbers, JSON_ARRAY()))';
+
+            return Person::query()
+                ->select(['id', 'branch_id', 'full_name', 'whatsapp', 'gender', 'status', 'session_numbers'])
+                ->whereIn('branch_id', $branchIds)
+                ->where('status', 'active')
+                ->whereRaw($sessionCount.' >= 12')
+                ->orderBy('full_name')
+                ->orderBy('id')
+                ->get()
+                ->map(static fn (Person $participant): array => [
+                    'id' => (string) $participant->getKey(),
+                    'member_id' => (string) $participant->getKey(),
+                    'full_name' => trim((string) $participant->full_name),
+                    'whatsapp' => trim((string) $participant->whatsapp),
+                    'gender' => trim((string) $participant->gender),
+                    'status' => trim((string) ($participant->status ?? 'active')) ?: 'active',
+                    'session_numbers' => normalize_msk_session_numbers($participant->session_numbers ?? []),
+                ])
+                ->filter(static fn (array $participant): bool => msk_is_complete($participant))
+                ->values()
+                ->all();
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
     /** @return array<int, array<string, mixed>> */
     public function peopleForModel(array $model, array $members, array $mskClasses, bool $centralReadOnly): array
     {
@@ -263,7 +389,7 @@ class PeopleTreeModelStore
      * @param  array<int, string>  $branchCodes
      * @return array<int, array<string, mixed>>
      */
-    public function meetingReportsForBranches(array $branchCodes, bool $centralReadOnly): array
+    public function meetingReportsForBranches(array $branchCodes, bool $centralReadOnly, ?int $groupId = null): array
     {
         $branchCodes = $this->normalizeBranchCodes($branchCodes);
         if ($branchCodes === []) {
@@ -282,6 +408,7 @@ class PeopleTreeModelStore
                     'shared_meditation', 'relationally_contacted', 'source', 'created_at', 'updated_at',
                 ])
                 ->whereIn('branch_id', branch_ids_from_slugs($branchCodes))
+                ->when($groupId !== null && $groupId > 0, static fn ($query) => $query->where('discipleship_group_id', $groupId))
                 ->orderByDesc('meeting_date')
                 ->orderByDesc('created_at')
                 ->orderByDesc('id')
@@ -415,19 +542,7 @@ class PeopleTreeModelStore
             ->whereIn('branch_id', $branchIds)
             ->orderBy('id')
             ->get()
-            ->map(static fn (DiscipleshipGroup $group): array => [
-                'id' => (string) $group->getKey(),
-                'branch_code' => $group->branch_code,
-                'status' => trim((string) ($group->status ?? 'active')) ?: 'active',
-                'stage' => discipleship_group_stage_value($group),
-                'parent_group_id' => $group->parent_group_id !== null ? (string) $group->parent_group_id : '',
-                'source_group_id' => $group->source_group_id !== null ? (string) $group->source_group_id : '',
-                'initiated_by_person_id' => $group->initiated_by_person_id !== null ? (string) $group->initiated_by_person_id : '',
-                'multiplied_at' => optional($group->multiplied_at)->format('Y-m-d'),
-                'notes' => trim((string) $group->notes),
-                'created_at' => optional($group->created_at)->toIso8601String(),
-                'updated_at' => optional($group->updated_at)->toIso8601String(),
-            ])
+            ->map(fn (DiscipleshipGroup $group): array => $this->groupViewRow($group))
             ->values()
             ->all();
     }
@@ -443,33 +558,53 @@ class PeopleTreeModelStore
             ->whereIn('branch_id', $branchIds)
             ->orderBy('id')
             ->get()
-            ->map(static fn (DiscipleshipGroupPerson $row): array => [
-                'id' => (string) $row->getKey(),
-                'branch_code' => $row->branch_code,
-                'group_id' => (string) $row->discipleship_group_id,
-                'person_id' => $row->person_id !== null ? (string) $row->person_id : '',
-                'leader_person_id' => $row->person_id !== null ? (string) $row->person_id : '',
-                'role' => trim((string) $row->role),
-                'stage' => normalize_dg_progress_value((string) $row->stage),
-                'status' => trim((string) ($row->status ?? 'active')) ?: 'active',
-                'start_date' => optional($row->started_on)->format('Y-m-d'),
-                'end_date' => optional($row->ended_on)->format('Y-m-d'),
-                'reason_end' => trim((string) $row->end_reason),
-                'reason_change' => trim((string) $row->end_reason),
-                'created_at' => optional($row->created_at)->toIso8601String(),
-                'updated_at' => optional($row->updated_at)->toIso8601String(),
-            ])
+            ->map(fn (DiscipleshipGroupPerson $row): array => $this->groupPersonViewRow($row))
             ->values()
             ->all();
+    }
+
+    /** @return array<string, mixed> */
+    private function groupViewRow(DiscipleshipGroup $group): array
+    {
+        return [
+            'id' => (string) $group->getKey(),
+            'branch_code' => $group->branch_code,
+            'status' => trim((string) ($group->status ?? 'active')) ?: 'active',
+            'stage' => discipleship_group_stage_value($group),
+            'parent_group_id' => $group->parent_group_id !== null ? (string) $group->parent_group_id : '',
+            'source_group_id' => $group->source_group_id !== null ? (string) $group->source_group_id : '',
+            'initiated_by_person_id' => $group->initiated_by_person_id !== null ? (string) $group->initiated_by_person_id : '',
+            'multiplied_at' => optional($group->multiplied_at)->format('Y-m-d'),
+            'notes' => trim((string) $group->notes),
+            'created_at' => optional($group->created_at)->toIso8601String(),
+            'updated_at' => optional($group->updated_at)->toIso8601String(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function groupPersonViewRow(DiscipleshipGroupPerson $row): array
+    {
+        return [
+            'id' => (string) $row->getKey(),
+            'branch_code' => $row->branch_code,
+            'group_id' => (string) $row->discipleship_group_id,
+            'person_id' => $row->person_id !== null ? (string) $row->person_id : '',
+            'leader_person_id' => $row->person_id !== null ? (string) $row->person_id : '',
+            'role' => trim((string) $row->role),
+            'stage' => normalize_dg_progress_value((string) $row->stage),
+            'status' => trim((string) ($row->status ?? 'active')) ?: 'active',
+            'start_date' => optional($row->started_on)->format('Y-m-d'),
+            'end_date' => optional($row->ended_on)->format('Y-m-d'),
+            'reason_end' => trim((string) $row->end_reason),
+            'reason_change' => trim((string) $row->end_reason),
+            'created_at' => optional($row->created_at)->toIso8601String(),
+            'updated_at' => optional($row->updated_at)->toIso8601String(),
+        ];
     }
 
     /** @return array<int, array<string, mixed>> */
     private function manualJourneyRows(array $branchIds): array
     {
-        if (! Schema::hasTable('dg_manual')) {
-            return [];
-        }
-
         return DB::table('dg_manual as manual')
             ->join('orang as person', function ($join): void {
                 $join->on('person.id', '=', 'manual.person_id')

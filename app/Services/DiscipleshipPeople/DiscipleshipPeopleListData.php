@@ -6,11 +6,11 @@ use App\Models\DiscipleshipGroupPerson;
 use App\Models\Person;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Support\DiscipleshipPersonProfile;
+use App\Support\StableNameCursor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class DiscipleshipPeopleListData
 {
@@ -36,26 +36,32 @@ class DiscipleshipPeopleListData
     {
         $search = $this->search($request);
         $progress = $this->progressFilter($request);
-        $page = $this->page($request);
-        $perPage = $this->perPage($request);
+        $limit = $this->limit($request);
+        $cursor = StableNameCursor::decode($request->query('cursor'));
+        $nameExpression = StableNameCursor::normalizedExpression(DiscipleshipPersonProfile::expression('full_name'));
         $query = $this->filteredPeopleQuery($search, $progress)
             ->select([
                 'people.id',
                 'people.branch_id',
                 'people.status',
                 DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
+                DB::raw($nameExpression.' as cursor_name'),
             ])
-            ->orderByRaw(DiscipleshipPersonProfile::expression('full_name'))
+            ->orderByRaw($nameExpression)
             ->orderBy('people.id');
+        StableNameCursor::apply($query, $nameExpression, 'people.id', $cursor);
 
         $people = $query
-            ->offset(($page - 1) * $perPage)
-            ->limit($perPage + 1)
+            ->limit($limit + 1)
             ->get();
-        $hasMore = $people->count() > $perPage;
+        $hasMore = $people->count() > $limit;
         if ($hasMore) {
-            $people = $people->slice(0, $perPage)->values();
+            $people = $people->slice(0, $limit)->values();
         }
+        $last = $people->last();
+        $nextCursor = $hasMore && $last instanceof Person
+            ? StableNameCursor::encode((string) $last->cursor_name, (int) $last->id)
+            : null;
 
         $stats = $this->progressStats($search, $progress);
 
@@ -69,41 +75,50 @@ class DiscipleshipPeopleListData
             'peopleProgressFilterCounts' => $this->progressFilterCounts($search),
             'peopleSearch' => $search,
             'peopleProgressFilter' => $progress,
-            'peoplePage' => $page,
-            'peoplePerPage' => $perPage,
+            'peopleLimit' => $limit,
             'hasMorePeopleRows' => $hasMore,
-            'nextPeoplePage' => $hasMore ? $page + 1 : null,
+            'nextPeopleCursor' => $nextCursor,
             'peopleEmptyMessage' => $this->emptyMessage($search, $progress),
         ];
     }
 
-    /** @return array<string, mixed> */
-    public function allRowsForCurrentContext(Request $request): array
+    /**
+     * Stream export rows in bounded groups. The list renderer still receives a
+     * collection of at most 500 people, so its relationship lookups remain
+     * bulk queries without retaining the complete result set.
+     *
+     * @return \Generator<int, array<string, mixed>>
+     */
+    public function exportRowsForCurrentContext(Request $request): \Generator
     {
         $search = $this->search($request);
         $progress = $this->progressFilter($request);
-        $people = $this->filteredPeopleQuery($search, $progress)
+        $query = $this->filteredPeopleQuery($search, $progress)
             ->select([
                 'people.id',
                 'people.branch_id',
                 'people.status',
                 DB::raw(DiscipleshipPersonProfile::expression('full_name').' as full_name'),
-            ])
-            ->orderByRaw(DiscipleshipPersonProfile::expression('full_name'))
-            ->orderBy('people.id')
-            ->get();
-        $stats = $this->progressStats($search, $progress);
+            ]);
+
+        foreach ($query->lazyById(500, 'people.id', 'id')->chunk(500) as $people) {
+            $peopleChunk = $people instanceof Collection ? $people : collect($people);
+            foreach ($this->rows($peopleChunk) as $row) {
+                yield $row;
+            }
+        }
+    }
+
+    /** @return array{search:string,progress:string,total:int} */
+    public function exportContext(Request $request): array
+    {
+        $search = $this->search($request);
+        $progress = $this->progressFilter($request);
 
         return [
-            'people' => $this->rows($people)->all(),
-            'filteredPeopleRows' => $stats['total'],
-            'totalPeopleRows' => $stats['total'],
-            'peopleInDg1Count' => $stats['dg1'],
-            'peopleInDg2Count' => $stats['dg2'],
-            'peopleInDg3Count' => $stats['dg3'],
-            'peopleProgressFilterCounts' => $this->progressFilterCounts($search),
-            'peopleSearch' => $search,
-            'peopleProgressFilter' => $progress,
+            'search' => $search,
+            'progress' => $progress,
+            'total' => (int) $this->filteredPeopleQuery($search, $progress)->count('people.id'),
         ];
     }
 
@@ -123,14 +138,12 @@ class DiscipleshipPeopleListData
                         ->whereColumn('participant_history.branch_id', 'people.branch_id')
                         ->where('participant_history.role', 'member');
                 });
-                if (Schema::hasTable('dg_manual')) {
-                    $condition->orWhereExists(static function ($subquery): void {
-                        $subquery->selectRaw('1')
-                            ->from('dg_manual as manual_journey')
-                            ->whereColumn('manual_journey.person_id', 'people.id')
-                            ->whereColumn('manual_journey.branch_id', 'people.branch_id');
-                    });
-                }
+                $condition->orWhereExists(static function ($subquery): void {
+                    $subquery->selectRaw('1')
+                        ->from('dg_manual as manual_journey')
+                        ->whereColumn('manual_journey.person_id', 'people.id')
+                        ->whereColumn('manual_journey.branch_id', 'people.branch_id');
+                });
             });
 
         if ($search !== '') {
@@ -179,21 +192,19 @@ class DiscipleshipPeopleListData
                             }
                         });
                 });
-                if (Schema::hasTable('dg_manual')) {
-                    $stages = $rank === 1 ? ['DG 1', 'DG 2', 'DG 3'] : ($rank === 2 ? ['DG 2', 'DG 3'] : ['DG 3']);
-                    $completion->orWhereExists(static function ($subquery) use ($stages): void {
-                        $subquery->selectRaw('1')->from('dg_manual as manual_journey')
-                            ->whereColumn('manual_journey.person_id', 'people.id')
-                            ->whereColumn('manual_journey.branch_id', 'people.branch_id')
-                            ->whereIn('manual_journey.stage', $stages);
-                    });
-                }
+                $stages = $rank === 1 ? ['DG 1', 'DG 2', 'DG 3'] : ($rank === 2 ? ['DG 2', 'DG 3'] : ['DG 3']);
+                $completion->orWhereExists(static function ($subquery) use ($stages): void {
+                    $subquery->selectRaw('1')->from('dg_manual as manual_journey')
+                        ->whereColumn('manual_journey.person_id', 'people.id')
+                        ->whereColumn('manual_journey.branch_id', 'people.branch_id')
+                        ->whereIn('manual_journey.stage', $stages);
+                });
             });
         }
     }
 
     /**
-     * @param Collection<int, Person> $people
+     * @param  Collection<int, Person>  $people
      * @return Collection<int, array<string, mixed>>
      */
     private function rows(Collection $people): Collection
@@ -401,22 +412,20 @@ class DiscipleshipPeopleListData
                     ELSE 0
                 END AS stage_rank");
 
-        if (Schema::hasTable('dg_manual')) {
-            $manualRows = DB::query()
-                ->fromSub((clone $people), 'p')
-                ->join('dg_manual as manual_journey', function ($join): void {
-                    $join->on('manual_journey.person_id', '=', 'p.id')
-                        ->on('manual_journey.branch_id', '=', 'p.branch_id');
-                })
-                ->selectRaw("manual_journey.person_id,
-                    CASE manual_journey.stage
-                        WHEN 'DG 3' THEN 3
-                        WHEN 'DG 2' THEN 2
-                        WHEN 'DG 1' THEN 1
-                        ELSE 0
-                    END AS stage_rank");
-            $journeyRows->unionAll($manualRows);
-        }
+        $manualRows = DB::query()
+            ->fromSub((clone $people), 'p')
+            ->join('dg_manual as manual_journey', function ($join): void {
+                $join->on('manual_journey.person_id', '=', 'p.id')
+                    ->on('manual_journey.branch_id', '=', 'p.branch_id');
+            })
+            ->selectRaw("manual_journey.person_id,
+                CASE manual_journey.stage
+                    WHEN 'DG 3' THEN 3
+                    WHEN 'DG 2' THEN 2
+                    WHEN 'DG 1' THEN 1
+                    ELSE 0
+                END AS stage_rank");
+        $journeyRows->unionAll($manualRows);
 
         $participantStages = DB::query()
             ->fromSub($journeyRows, 'journey_rows')
@@ -425,10 +434,10 @@ class DiscipleshipPeopleListData
 
         $row = DB::query()
             ->fromSub($participantStages, 'participant_stages')
-            ->selectRaw("COUNT(*) AS total,
+            ->selectRaw('COUNT(*) AS total,
                 SUM(CASE WHEN last_stage_rank = 1 THEN 1 ELSE 0 END) AS dg1,
                 SUM(CASE WHEN last_stage_rank = 2 THEN 1 ELSE 0 END) AS dg2,
-                SUM(CASE WHEN last_stage_rank = 3 THEN 1 ELSE 0 END) AS dg3")
+                SUM(CASE WHEN last_stage_rank = 3 THEN 1 ELSE 0 END) AS dg3')
             ->first();
 
         return ['total' => (int) ($row->total ?? 0), 'dg1' => (int) ($row->dg1 ?? 0), 'dg2' => (int) ($row->dg2 ?? 0), 'dg3' => (int) ($row->dg3 ?? 0)];
@@ -442,13 +451,13 @@ class DiscipleshipPeopleListData
 
         $row = DB::query()
             ->fromSub($people, 'filtered_people')
-            ->selectRaw("COUNT(*) AS all_count,
-                SUM(CASE WHEN ".$this->activeStageExistsSql('DG 1')." THEN 1 ELSE 0 END) AS active_dg1,
-                SUM(CASE WHEN ".$this->completedStageExistsSql(1)." THEN 1 ELSE 0 END) AS complete_dg1,
-                SUM(CASE WHEN ".$this->activeStageExistsSql('DG 2')." THEN 1 ELSE 0 END) AS active_dg2,
-                SUM(CASE WHEN ".$this->completedStageExistsSql(2)." THEN 1 ELSE 0 END) AS complete_dg2,
-                SUM(CASE WHEN ".$this->activeStageExistsSql('DG 3')." THEN 1 ELSE 0 END) AS active_dg3,
-                SUM(CASE WHEN ".$this->completedStageExistsSql(3)." THEN 1 ELSE 0 END) AS complete_dg3")
+            ->selectRaw('COUNT(*) AS all_count,
+                SUM(CASE WHEN '.$this->activeStageExistsSql('DG 1').' THEN 1 ELSE 0 END) AS active_dg1,
+                SUM(CASE WHEN '.$this->completedStageExistsSql(1).' THEN 1 ELSE 0 END) AS complete_dg1,
+                SUM(CASE WHEN '.$this->activeStageExistsSql('DG 2').' THEN 1 ELSE 0 END) AS active_dg2,
+                SUM(CASE WHEN '.$this->completedStageExistsSql(2).' THEN 1 ELSE 0 END) AS complete_dg2,
+                SUM(CASE WHEN '.$this->activeStageExistsSql('DG 3').' THEN 1 ELSE 0 END) AS active_dg3,
+                SUM(CASE WHEN '.$this->completedStageExistsSql(3).' THEN 1 ELSE 0 END) AS complete_dg3')
             ->first();
 
         return [
@@ -496,26 +505,20 @@ class DiscipleshipPeopleListData
               AND ({$groupCondition})
         )";
 
-        if (Schema::hasTable('dg_manual')) {
-            $manualStages = $rank === 1 ? "'DG 1', 'DG 2', 'DG 3'" : ($rank === 2 ? "'DG 2', 'DG 3'" : "'DG 3'");
-            $sql .= " OR EXISTS (
-                SELECT 1
-                FROM dg_manual AS manual_count_journey
-                WHERE manual_count_journey.person_id = filtered_people.id
-                  AND manual_count_journey.branch_id = filtered_people.branch_id
-                  AND manual_count_journey.stage IN ({$manualStages})
-            )";
-        }
+        $manualStages = $rank === 1 ? "'DG 1', 'DG 2', 'DG 3'" : ($rank === 2 ? "'DG 2', 'DG 3'" : "'DG 3'");
+        $sql .= " OR EXISTS (
+            SELECT 1
+            FROM dg_manual AS manual_count_journey
+            WHERE manual_count_journey.person_id = filtered_people.id
+              AND manual_count_journey.branch_id = filtered_people.branch_id
+              AND manual_count_journey.stage IN ({$manualStages})
+        )";
 
         return '('.$sql.')';
     }
 
     private function manualGroupPeople(array $personIds)
     {
-        if (! Schema::hasTable('dg_manual')) {
-            return collect();
-        }
-
         return DB::table('dg_manual')
             ->whereIn('branch_id', $this->scope->branchIds())
             ->whereIn('person_id', $personIds)
@@ -551,14 +554,9 @@ class DiscipleshipPeopleListData
         return in_array($progress, $allowed, true) ? $progress : 'all';
     }
 
-    private function page(Request $request): int
+    private function limit(Request $request): int
     {
-        return max(1, (int) $request->query('page', 1));
-    }
-
-    private function perPage(Request $request): int
-    {
-        return max(1, min(self::MAX_PER_PAGE, (int) $request->query('per_page', self::DEFAULT_PER_PAGE)));
+        return max(1, min(self::MAX_PER_PAGE, (int) $request->query('limit', self::DEFAULT_PER_PAGE)));
     }
 
     private function emptyMessage(string $search, string $progress): string

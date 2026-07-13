@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\PublicMaterialMenuKey;
+use App\Services\Maintenance\PendingMaterialTextExtractionTask;
+use App\Services\Maintenance\PublicMaterialChecksumTask;
 use App\Services\PublicMaterials\PublicMaterialTextExtractor;
 use App\Support\RuntimeBootstrap;
 use Illuminate\Database\Schema\Blueprint;
@@ -87,9 +89,28 @@ class PublicMaterialManagementTest extends TestCase
         $this->assertNotNull($row);
         $this->assertSame(PublicMaterialMenuKey::MateriDg1->value, $row->menu);
         $this->assertSame('Materi Baru Pusat.pdf', $row->original_file_name);
+        $this->assertMatchesRegularExpression('/\A[a-f0-9]{64}\z/', (string) $row->sha256);
+        $this->assertNull($row->text_extracted_at);
+        $this->assertNull($row->text_content);
         $this->assertStringStartsWith($this->test_relative_folder(PublicMaterialMenuKey::MateriDg1).'/', (string) $row->relative_path);
         $this->assertFileExists(storage_path('app/public/'.(string) $row->relative_path));
         $this->assertFileDoesNotExist(rec_runtime_path((string) $row->relative_path));
+    }
+
+    public function test_manual_maintenance_backfills_a_stored_public_material_checksum(): void
+    {
+        $fileName = 'file_checksum_pending_20260713000000.pdf';
+        $contents = 'checksum once during maintenance';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, $contents);
+        $fileId = $this->insertMaterialFile('church_file_checksum_pending', 'Checksum Pending', $fileName);
+
+        $result = app(PublicMaterialChecksumTask::class)->run([], 5, microtime(true) + 5);
+
+        $this->assertSame(1, $result['summary']['checksummed']);
+        $this->assertSame(
+            hash('sha256', $contents),
+            DB::table('materi_publik')->where('id', $fileId)->value('sha256'),
+        );
     }
 
     public function test_public_material_preview_streams_file_from_public_storage(): void
@@ -103,6 +124,28 @@ class PublicMaterialManagementTest extends TestCase
 
         $response->assertOk();
         $this->assertStringStartsWith('application/pdf', (string) $response->headers->get('Content-Type'));
+    }
+
+    public function test_public_material_supports_range_head_and_conditional_requests(): void
+    {
+        $fileName = 'file_http_cache_20260713000000.pdf';
+        $contents = '0123456789abcdef';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, $contents);
+        $fileId = $this->insertMaterialFile('church_file_http_cache', 'HTTP Cache', $fileName);
+        $url = "/materi/materi_dg_1/{$fileId}/preview?raw=1";
+
+        $range = $this->withHeaders(['Range' => 'bytes=0-3'])->get($url);
+        $range->assertStatus(206);
+        $this->assertSame('bytes 0-3/16', $range->headers->get('Content-Range'));
+        $this->assertSame('4', $range->headers->get('Content-Length'));
+
+        $head = $this->call('HEAD', $url);
+        $head->assertOk();
+        $etag = $head->headers->get('ETag');
+        $this->assertNotEmpty($etag);
+
+        $this->withHeaders(['Range' => 'bytes=99-120'])->get($url)->assertStatus(416);
+        $this->withHeaders(['Range' => '', 'If-None-Match' => $etag])->get($url)->assertStatus(304);
     }
 
     public function test_dg1_pdf_preview_renders_stored_text_when_available(): void
@@ -334,6 +377,48 @@ class PublicMaterialManagementTest extends TestCase
         $this->assertNotNull(DB::table('materi_publik')->where('id', $fileId)->value('text_extracted_at'));
     }
 
+    public function test_manual_maintenance_extracts_one_pending_pdf_without_a_queue_worker(): void
+    {
+        $this->app->instance(
+            PublicMaterialTextExtractor::class,
+            new FakePublicMaterialTextExtractor('Teks dari maintenance.'),
+        );
+
+        $fileName = 'file_pending_20260713000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Pending material');
+        $fileId = $this->insertMaterialFile('church_file_pending', 'Pending File', $fileName);
+
+        $result = app(PendingMaterialTextExtractionTask::class)->run([], 5, microtime(true) + 5);
+
+        $this->assertTrue($result['complete']);
+        $this->assertSame(1, $result['summary']['extracted']);
+        $this->assertDatabaseHas('materi_publik', [
+            'id' => $fileId,
+            'text_content' => 'Teks dari maintenance.',
+            'text_extraction_error' => null,
+        ]);
+    }
+
+    public function test_manual_maintenance_marks_an_unexpected_pdf_extractor_failure_without_crashing_the_run(): void
+    {
+        $this->app->instance(PublicMaterialTextExtractor::class, new ThrowingPublicMaterialTextExtractor);
+
+        $fileName = 'file_throwing_20260713000000.pdf';
+        $this->putPublicMaterialFile(PublicMaterialMenuKey::MateriDg1, $fileName, 'Pending material');
+        $fileId = $this->insertMaterialFile('church_file_throwing', 'Throwing File', $fileName);
+
+        $result = app(PendingMaterialTextExtractionTask::class)->run([], 5, microtime(true) + 5);
+
+        $this->assertTrue($result['complete']);
+        $this->assertSame(1, $result['summary']['failed']);
+        $this->assertDatabaseHas('materi_publik', [
+            'id' => $fileId,
+            'text_content' => null,
+            'text_extraction_error' => 'Ekstraksi teks gagal; file tetap dapat diunduh.',
+        ]);
+        $this->assertNotNull(DB::table('materi_publik')->where('id', $fileId)->value('text_extracted_at'));
+    }
+
     public function test_developer_can_rename_public_material_file(): void
     {
         $this->loginAsMaterialManager();
@@ -395,6 +480,7 @@ class PublicMaterialManagementTest extends TestCase
             $table->string('original_file_name')->nullable();
             $table->unsignedBigInteger('size_bytes')->default(0);
             $table->string('mime_type', 180)->nullable();
+            $table->char('sha256', 64)->nullable();
             $table->longText('text_content')->nullable();
             $table->timestamp('text_extracted_at')->nullable();
             $table->text('text_extraction_error')->nullable();
@@ -495,5 +581,13 @@ class FakePublicMaterialTextExtractor extends PublicMaterialTextExtractor
             'text_extracted_at' => now(),
             'text_extraction_error' => null,
         ];
+    }
+}
+
+class ThrowingPublicMaterialTextExtractor extends PublicMaterialTextExtractor
+{
+    public function extractForStorage(PublicMaterialMenuKey $menu, string $fullPath): array
+    {
+        throw new \RuntimeException('Parser process crashed.');
     }
 }

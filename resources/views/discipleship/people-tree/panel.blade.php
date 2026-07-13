@@ -13,7 +13,9 @@
     $peopleTreeCompleteGroupUrl = (string) ($peopleTreeUrls['complete_group'] ?? '/pemuridan/pohon/kelompok/selesai');
     $peopleTreeReactivateGroupUrl = (string) ($peopleTreeUrls['reactivate_group'] ?? '/pemuridan/pohon/kelompok/aktifkan');
     $peopleTreeExportDotUrl = (string) ($peopleTreeUrls['export_dot'] ?? '/pemuridan/pohon/export-dot');
-    echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-tree-panel" id="discipleship-tabpanel-tree" role="tabpanel" aria-labelledby="discipleship-tab-tree" tabindex="0" data-discipleship-tab-panel data-tab-key="tree" data-page-title="Pohon Pemuridan">' . "\n";
+    $peopleTreePersonDetailUrl = (string) ($peopleTreeUrls['person_detail'] ?? '/pemuridan/pohon/orang/__id__/detail');
+    $peopleTreeGroupDetailUrl = (string) ($peopleTreeUrls['group_detail'] ?? '/pemuridan/pohon/kelompok/__id__/detail');
+    echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-tree-panel" id="discipleship-tabpanel-tree" role="tabpanel" aria-labelledby="discipleship-tab-tree" tabindex="0" data-discipleship-tab-panel data-tab-key="tree" data-page-title="Pohon Pemuridan" data-tree-person-detail-url-template="' . h($peopleTreePersonDetailUrl) . '" data-tree-group-detail-url-template="' . h($peopleTreeGroupDetailUrl) . '">' . "\n";
     $error = $_GET['error'] ?? '';
     if ($error === 'in_use') {
         echo "<div class=\"alert danger\">Orang masih memimpin kelompok aktif.</div>\n";
@@ -240,7 +242,6 @@
         }
         $childrenMap[$primaryParent][] = $personRow;
     }
-    $treeGroupHistoryViews = build_people_tree_group_history_views($discipleshipV2Model, $peopleById, $dgMeetingReports);
     $membershipsByGroupId = [];
     foreach (($discipleshipV2Model['group_memberships'] ?? []) as $membershipRecord) {
         if (!is_array($membershipRecord)) {
@@ -261,7 +262,6 @@
             $leadershipsByGroupId[$groupId][] = $leadershipRecord;
         }
     }
-    $treePersonProfiles = is_array($treePersonProfiles ?? null) ? $treePersonProfiles : [];
     $groupsByLeader = [];
     foreach ($treeGroups as $groupRow) {
         if (!is_array($groupRow)) {
@@ -332,18 +332,6 @@
     echo "  </div>\n";
     echo "</section>\n";
 
-    echo "<div class=\"is-hidden\" data-tree-v2-history-templates>\n";
-    foreach ($treeGroupHistoryViews as $historyGroupId => $historyView) {
-        $templateId = trim((string) $historyGroupId);
-        if ($templateId === '') {
-            continue;
-        }
-        $templateTitle = trim((string) ($historyView['title'] ?? 'Riwayat Kelompok'));
-        $templateContent = (string) ($historyView['content'] ?? '');
-        echo "<template data-tree-v2-history-template=\"" . h($templateId) . "\" data-tree-v2-history-template-title=\"" . h($templateTitle) . "\">" . $templateContent . "</template>\n";
-    }
-    echo "</div>\n";
-
     $treeGroupHistoryFooterHtml = '';
     if (!$centralReadOnly) {
         $treeGroupHistoryFooterHtml .= '<div class="tree-v2-profile-actions tree-v2-history-actions">';
@@ -364,21 +352,6 @@
         'bodyHtml' => '<div class="journey-history-empty">Riwayat kelompok belum tersedia.</div>',
         'footerHtml' => $treeGroupHistoryFooterHtml,
     ])->render();
-
-    echo "<div class=\"is-hidden\" data-tree-v2-person-profile-templates>\n";
-    foreach ($treePersonProfiles as $profilePersonId => $profile) {
-        $templateId = trim((string) $profilePersonId);
-        if ($templateId === '' || !is_array($profile)) {
-            continue;
-        }
-        $templateTitle = trim((string) ($profile['full_name'] ?? 'Profil Orang'));
-        if ($templateTitle === '') {
-            $templateTitle = 'Profil Orang';
-        }
-        $templateContent = view('discipleship.msk-participants.profile', ['profile' => $profile])->render();
-        echo "<template data-tree-v2-person-profile-template=\"" . h($templateId) . "\" data-tree-v2-person-profile-template-title=\"" . h($templateTitle) . "\">" . $templateContent . "</template>\n";
-    }
-    echo "</div>\n";
 
     $treePersonProfileFooterHtml = '';
     if (!$centralReadOnly) {

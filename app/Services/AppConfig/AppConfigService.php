@@ -6,7 +6,6 @@ use App\Models\AppConfig;
 use DateTimeZone;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class AppConfigService
@@ -68,10 +67,6 @@ class AppConfigService
      */
     public function update(array $input, string $updatedBy): ?string
     {
-        if (! self::configTableAvailable()) {
-            return 'config_table_missing';
-        }
-
         $churchName = $this->normalizeChurchName((string) ($input['church_name'] ?? ''));
         if ($churchName === '') {
             return 'church_name_required';
@@ -153,16 +148,7 @@ class AppConfigService
 
     private static function cacheStore(): string
     {
-        return app()->environment('testing') ? 'array' : 'file';
-    }
-
-    private static function configTableAvailable(): bool
-    {
-        try {
-            return Schema::hasTable('konfigurasi');
-        } catch (Throwable) {
-            return false;
-        }
+        return (string) config('cache.discipleship_store', config('cache.default', 'file'));
     }
 
     private static function normalizeStoredValue(string $key, string $value): string

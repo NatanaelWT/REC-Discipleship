@@ -4,7 +4,6 @@ namespace App\Http\Controllers\PublicPortal;
 
 use App\Http\Controllers\Controller;
 use App\Services\PublicPortal\PublicMenuCatalog;
-use App\Support\RuntimeBootstrap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,15 +14,11 @@ class HomeController extends Controller
         Request $request,
         PublicMenuCatalog $catalog,
     ): RedirectResponse|View {
-        RuntimeBootstrap::boot($request);
-
         return view('public.links.index', $this->homeViewData($catalog));
     }
 
     public function emptyMenu(Request $request, PublicMenuCatalog $catalog): View
     {
-        RuntimeBootstrap::boot($request);
-
         return view('public.links.empty', [
             'settings' => ['church_name' => app_church_name()],
             'menuLabel' => $catalog->emptyMenuLabel((string) $request->query('menu', '')),

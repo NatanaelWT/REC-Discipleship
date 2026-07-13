@@ -2,12 +2,12 @@
 
 namespace App\Services\SecureFiles;
 
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class SecureFileStreamer
 {
-    public function stream(SecureFile $file): StreamedResponse
+    public function stream(SecureFile $file): BinaryFileResponse
     {
         if (! is_readable($file->fullPath)) {
             throw new HttpException(500, 'Gagal membaca file.');
@@ -25,30 +25,17 @@ class SecureFileStreamer
             'Cache-Control' => 'private, no-store, no-cache, must-revalidate',
             'Pragma' => 'no-cache',
             'Expires' => '0',
-            'Content-Disposition' => ($file->download ? 'attachment' : 'inline')
-                . '; filename="' . $file->asciiDownloadName . '"; filename*=UTF-8\'\'' . rawurlencode($file->downloadName),
+            'Vary' => 'Accept-Encoding',
         ];
 
-        if ($file->contentLength > 0) {
-            $headers['Content-Length'] = (string) $file->contentLength;
-        }
+        $response = new BinaryFileResponse($file->fullPath, 200, $headers, false, null, false, true);
+        $response->setContentDisposition(
+            $file->download ? 'attachment' : 'inline',
+            $file->downloadName,
+            $file->asciiDownloadName,
+        );
+        $response->setEtag(sha1($file->contentLength.':'.(string) @filemtime($file->fullPath)), true);
 
-        return response()->stream(function () use ($file): void {
-            $handle = fopen($file->fullPath, 'rb');
-            if ($handle === false) {
-                return;
-            }
-
-            while (! feof($handle)) {
-                $chunk = fread($handle, 8192);
-                if ($chunk === false) {
-                    break;
-                }
-
-                echo $chunk;
-            }
-
-            fclose($handle);
-        }, 200, $headers);
+        return $response;
     }
 }

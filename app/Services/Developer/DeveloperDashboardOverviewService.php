@@ -12,7 +12,6 @@ use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use DateTimeZone;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -54,33 +53,29 @@ class DeveloperDashboardOverviewService
             'events' => 0,
         ];
 
-        if (Schema::hasTable('aktivitas')) {
-            try {
-                $from = CarbonImmutable::now('UTC')->subDay();
-                $base = ActivityRequest::query()->where('started_at', '>=', $from);
-                $raw['requests'] = (clone $base)->count();
-                $raw['errors'] = (clone $base)
-                    ->where(static function (Builder $query): void {
-                        $query->where('http_status', '>=', 500)
-                            ->orWhere('outcome', 'error');
-                    })
-                    ->count();
-                $raw['average_response_ms'] = round((float) ((clone $base)->avg('duration_ms') ?? 0), 1);
-            } catch (Throwable) {
-                $raw['requests'] = 0;
-                $raw['errors'] = 0;
-                $raw['average_response_ms'] = 0.0;
-            }
+        try {
+            $from = CarbonImmutable::now('UTC')->subDay();
+            $base = ActivityRequest::query()->where('started_at', '>=', $from);
+            $raw['requests'] = (clone $base)->count();
+            $raw['errors'] = (clone $base)
+                ->where(static function (Builder $query): void {
+                    $query->where('http_status', '>=', 500)
+                        ->orWhere('outcome', 'error');
+                })
+                ->count();
+            $raw['average_response_ms'] = round((float) ((clone $base)->avg('duration_ms') ?? 0), 1);
+        } catch (Throwable) {
+            $raw['requests'] = 0;
+            $raw['errors'] = 0;
+            $raw['average_response_ms'] = 0.0;
         }
 
-        if (Schema::hasTable('aktivitas')) {
-            try {
-                $raw['events'] = (int) ActivityRequest::query()
-                    ->where('started_at', '>=', CarbonImmutable::now('UTC')->subDay())
-                    ->sum('events_count');
-            } catch (Throwable) {
-                $raw['events'] = 0;
-            }
+        try {
+            $raw['events'] = (int) ActivityRequest::query()
+                ->where('started_at', '>=', CarbonImmutable::now('UTC')->subDay())
+                ->sum('events_count');
+        } catch (Throwable) {
+            $raw['events'] = 0;
         }
 
         return [
@@ -106,31 +101,29 @@ class DeveloperDashboardOverviewService
         ];
         $topPages = [];
 
-        if (Schema::hasTable('aktivitas')) {
-            try {
-                $from = CarbonImmutable::now('UTC')->subDays(7);
-                $human = $this->humanPageViews()->where('occurred_at', '>=', $from);
-                $summary = [
-                    'page_views' => (clone $human)->count(),
-                    'visitors' => (clone $human)->distinct()->count('visitor_hash'),
-                    'sessions' => $this->sessionMetrics->count(clone $human),
-                ];
-                $topPages = (clone $human)
-                    ->selectRaw("COALESCE(route_name, '') AS item_key, COALESCE(path, '') AS item_path, COUNT(*) AS aggregate_count")
-                    ->groupBy('route_name', 'path')
-                    ->orderByDesc('aggregate_count')
-                    ->limit(5)
-                    ->get()
-                    ->map(fn ($row): array => [
-                        'label' => trim((string) $row->item_key) ?: Str::limit(trim((string) $row->item_path), 80),
-                        'path' => trim((string) $row->item_path),
-                        'count' => (int) $row->aggregate_count,
-                    ])
-                    ->all();
-            } catch (Throwable) {
-                $summary = ['page_views' => 0, 'visitors' => 0, 'sessions' => 0];
-                $topPages = [];
-            }
+        try {
+            $from = CarbonImmutable::now('UTC')->subDays(7);
+            $human = $this->humanPageViews()->where('occurred_at', '>=', $from);
+            $summary = [
+                'page_views' => (clone $human)->count(),
+                'visitors' => (clone $human)->distinct()->count('visitor_hash'),
+                'sessions' => $this->sessionMetrics->count(clone $human),
+            ];
+            $topPages = (clone $human)
+                ->selectRaw("COALESCE(route_name, '') AS item_key, COALESCE(path, '') AS item_path, COUNT(*) AS aggregate_count")
+                ->groupBy('route_name', 'path')
+                ->orderByDesc('aggregate_count')
+                ->limit(5)
+                ->get()
+                ->map(fn ($row): array => [
+                    'label' => trim((string) $row->item_key) ?: Str::limit(trim((string) $row->item_path), 80),
+                    'path' => trim((string) $row->item_path),
+                    'count' => (int) $row->aggregate_count,
+                ])
+                ->all();
+        } catch (Throwable) {
+            $summary = ['page_views' => 0, 'visitors' => 0, 'sessions' => 0];
+            $topPages = [];
         }
 
         return [
@@ -156,10 +149,6 @@ class DeveloperDashboardOverviewService
     /** @return array<int, array<string, mixed>> */
     private function recentActivities(): array
     {
-        if (! Schema::hasTable('aktivitas')) {
-            return [];
-        }
-
         try {
             $query = ActivityRequest::query()
                 ->where(static function (Builder $roles): void {
@@ -183,10 +172,6 @@ class DeveloperDashboardOverviewService
     /** @return array<int, array<string, mixed>> */
     private function attentionItems(): array
     {
-        if (! Schema::hasTable('aktivitas')) {
-            return [];
-        }
-
         try {
             $query = ActivityRequest::query()
                 ->where(static function (Builder $builder): void {
