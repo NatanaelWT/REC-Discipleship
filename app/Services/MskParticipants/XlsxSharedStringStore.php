@@ -7,6 +7,8 @@ use XMLReader;
 
 final class XlsxSharedStringStore
 {
+    private const MAX_STRING_BYTES = 65535;
+
     /** @var resource|null */
     private $dataHandle = null;
 
@@ -17,8 +19,11 @@ final class XlsxSharedStringStore
 
     private ?string $indexPath = null;
 
-    public function build(string $xmlPath): void
+    private int $count = 0;
+
+    public function build(string $xmlPath, ?float $deadline = null): void
     {
+        $this->count = 0;
         $this->dataPath = tempnam(sys_get_temp_dir(), 'xlsx_strings_data_') ?: null;
         $this->indexPath = tempnam(sys_get_temp_dir(), 'xlsx_strings_idx_') ?: null;
         if ($this->dataPath === null || $this->indexPath === null) {
@@ -33,20 +38,37 @@ final class XlsxSharedStringStore
         $reader = import_xlsx_xml_reader($xmlPath);
         try {
             while ($reader->read()) {
+                if ($deadline !== null && microtime(true) >= $deadline) {
+                    throw new MskImportException('import_timeout');
+                }
                 if ($reader->nodeType !== XMLReader::ELEMENT || $reader->localName !== 'si') {
                     continue;
                 }
                 $value = import_xlsx_shared_string_text($reader);
+                if (strlen($value) > self::MAX_STRING_BYTES) {
+                    throw new MskImportException('import_cell_too_large', [
+                        'max_bytes' => self::MAX_STRING_BYTES,
+                    ]);
+                }
                 $offset = ftell($this->dataHandle);
                 if ($offset === false
                     || fwrite($this->dataHandle, $value) !== strlen($value)
                     || fwrite($this->indexHandle, pack('J', $offset).pack('N', strlen($value))) !== 12) {
                     throw new RuntimeException('Shared-string storage write failed.');
                 }
+                $this->count++;
             }
         } finally {
             $reader->close();
         }
+    }
+
+    public function has(int $index): bool
+    {
+        return $index >= 0
+            && $index < $this->count
+            && is_resource($this->dataHandle)
+            && is_resource($this->indexHandle);
     }
 
     public function get(int $index): string
@@ -87,6 +109,7 @@ final class XlsxSharedStringStore
             }
             $this->{$property} = null;
         }
+        $this->count = 0;
     }
 
     public function __destruct()

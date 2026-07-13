@@ -12,21 +12,6 @@ if ($page === 'msk_classes') {
     $mskStoreAction = route('discipleship.msk-classes.store');
     $mskImportAction = route('discipleship.msk-classes.import');
     $mskExportAction = route('discipleship.msk-classes.export');
-    $importJobId = trim((string) request()->query('import_job', session('msk_import_job_id', '')));
-    if (! preg_match('/^[0-9A-HJKMNP-TV-Z]{26}$/i', $importJobId)) {
-        $importJobId = '';
-    }
-
-    if ($importJobId !== '') {
-        echo '<div class="alert info" data-msk-import-job'
-            .' data-status-url="'.h(route('discipleship.msk-classes.import-status', ['importJob' => $importJobId])).'"'
-            .' data-batch-url="'.h(route('discipleship.msk-classes.import-batch', ['importJob' => $importJobId])).'"'
-            .' data-csrf-token="'.h(csrf_token()).'" role="status">'
-            .'<strong>Import MSK sedang disiapkan.</strong> '
-            .'<span data-msk-import-message>Memeriksa status...</span> '
-            .'<progress data-msk-import-progress max="100" value="0"></progress>'
-            .'</div>';
-    }
 
     render_condition_alerts([
         ['when' => isset($_GET['saved']), 'tone' => 'success', 'message' => 'Data peserta kelas MSK berhasil disimpan.'],

@@ -18,9 +18,6 @@ const setupImageVariants = (root = document) => {
 };
 
 const bootOptionalModules = () => {
-    if (document.querySelector('[data-msk-import-job]')) {
-        import('./modules/msk-import.js');
-    }
     if (document.querySelector('[data-client-image-variants]')) {
         setupImageVariants(document);
     }

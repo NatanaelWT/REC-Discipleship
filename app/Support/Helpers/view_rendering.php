@@ -182,22 +182,16 @@ function render_mapped_error_alert(string $errorCode, array $errorMessages, stri
 
 function render_pemuridan_import_feedback(): void
 {
-    if (isset($_GET['imported'])) {
+    $error = trim((string) ($_GET['error'] ?? ''));
+    if ($error === '' && isset($_GET['imported'])) {
         $importMskInserted = max(0, (int) ($_GET['import_msk_inserted'] ?? 0));
         $importMskUpdated = max(0, (int) ($_GET['import_msk_updated'] ?? 0));
-        $importErrorCount = max(0, (int) ($_GET['import_error_count'] ?? 0));
-        $importSummary = 'Import selesai. Kelas MSK: '.$importMskInserted.' tambah, '.$importMskUpdated.' update.';
-        if ($importErrorCount > 0) {
-            $importSummary .= ' Ada '.$importErrorCount.' baris gagal.';
-        }
+        $importMskUnchanged = max(0, (int) ($_GET['import_msk_unchanged'] ?? 0));
+        $importSummary = 'Import selesai. Kelas MSK: '.$importMskInserted.' ditambah, '
+            .$importMskUpdated.' diperbarui, '.$importMskUnchanged.' tidak berubah.';
         render_alert('success', $importSummary);
-        $importPreview = trim((string) ($_GET['import_error_preview'] ?? ''));
-        if ($importErrorCount > 0 && $importPreview !== '') {
-            render_alert('danger', 'Contoh error: '.$importPreview);
-        }
     }
 
-    $error = trim((string) ($_GET['error'] ?? ''));
     $errorMessages = [
         'import_missing_file' => 'Pilih file Excel (.xlsx) untuk import pemuridan.',
         'import_upload_failed' => 'Upload file import gagal. Coba ulangi lagi.',
@@ -205,12 +199,32 @@ function render_pemuridan_import_feedback(): void
         'import_file_too_large' => 'Ukuran file terlalu besar. Maksimal 10 MB.',
         'import_zip_unavailable' => 'Fitur import Excel belum tersedia di server (ekstensi ZipArchive belum aktif).',
         'import_invalid_excel' => 'File Excel tidak valid atau rusak.',
+        'import_archive_too_large' => 'Isi file Excel terlalu besar setelah dibuka. Kurangi ukuran data lalu coba kembali.',
         'import_missing_sheet' => 'Sheet wajib tidak ditemukan. Pastikan ada sheet "Kelas MSK".',
         'import_empty_sheet' => 'Sheet Kelas MSK kosong. Isi minimal 1 baris data.',
-        'import_in_progress' => 'Masih ada import MSK aktif untuk cabang ini. Buka kembali status import tersebut hingga selesai.',
+        'import_too_many_rows' => 'Jumlah baris import melebihi batas yang diizinkan.',
+        'import_too_many_columns' => 'Jumlah kolom Excel melebihi batas yang diizinkan.',
+        'import_cell_too_large' => 'Salah satu isi sel Excel terlalu besar untuk diproses.',
+        'import_stage_too_large' => 'Total data hasil import terlalu besar untuk diproses sekaligus. Kurangi isi alamat/catatan atau jumlah baris.',
+        'import_stage_failed' => 'File import tidak dapat disiapkan. Coba ulangi lagi.',
+        'import_validation_failed' => 'Import dibatalkan karena ada data yang tidak valid.',
+        'import_conflict' => 'Data peserta berubah saat import diproses. Muat ulang lalu coba kembali.',
+        'import_failed' => 'Import data kelas MSK gagal. Tidak ada perubahan yang disimpan.',
+        'import_lock_failed' => 'Import belum dapat dikunci dengan aman. Coba ulangi lagi.',
+        'import_timeout' => 'Import melewati batas waktu pemrosesan. Kurangi jumlah baris lalu coba kembali.',
+        'import_in_progress' => 'Import MSK lain untuk cabang ini masih berjalan. Tunggu hingga selesai lalu coba kembali.',
     ];
-    if (isset($errorMessages[$error])) {
-        render_alert('danger', $errorMessages[$error]);
+    if ($error !== '') {
+        $message = $errorMessages[$error] ?? 'Import data kelas MSK gagal. Tidak ada perubahan yang disimpan.';
+        $importErrorCount = max(0, (int) ($_GET['import_error_count'] ?? 0));
+        $importPreview = trim((string) ($_GET['import_error_preview'] ?? ''));
+        if ($importErrorCount > 0) {
+            $message .= ' Ditemukan '.$importErrorCount.' error.';
+        }
+        if ($importPreview !== '') {
+            $message .= ' '.$importPreview;
+        }
+        render_alert('danger', $message);
     }
 }
 

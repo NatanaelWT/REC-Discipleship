@@ -16,9 +16,29 @@ class MskImportRowNormalizer
         $whatsapp = trim(import_row_value($row, $headers, ['whatsapp', 'phone', 'nomor_wa', 'nomor_whatsapp']));
         $genderRaw = import_row_value($row, $headers, ['gender', 'jenis_kelamin']);
         $birthDateRaw = import_row_value($row, $headers, ['birth_date', 'tanggal_lahir']);
+        $birthPlace = trim(import_row_value($row, $headers, ['birth_place', 'tempat_lahir']));
+        $address = trim(import_row_value($row, $headers, ['address', 'alamat']));
         $emailRaw = import_row_value($row, $headers, ['email']);
         $monthRaw = import_row_value($row, $headers, ['msk_month', 'bulan_msk']);
         $sessionRaw = import_row_value($row, $headers, ['session_numbers', 'sessions', 'sesi']);
+        $notes = trim(import_row_value($row, $headers, ['notes', 'keterangan']));
+
+        foreach ([
+            'full_name' => [$fullName, 255],
+            'whatsapp' => [$whatsapp, 255],
+            'gender' => [$genderRaw, 32],
+            'birth_date' => [$birthDateRaw, 32],
+            'birth_place' => [$birthPlace, 255],
+            'email' => [$emailRaw, 255],
+            'msk_month' => [$monthRaw, 32],
+            'session_numbers' => [$sessionRaw, 255],
+            'address' => [$address, 65535],
+            'notes' => [$notes, 65535],
+        ] as $field => [$value, $limit]) {
+            if (mb_strlen((string) $value) > $limit) {
+                return $this->failure('field_too_long', $rowNumber, $field.' melebihi batas '.$limit.' karakter.');
+            }
+        }
 
         if ($fullName === '') {
             return $this->failure('missing_full_name', $rowNumber, 'full_name wajib diisi.');
@@ -73,13 +93,13 @@ class MskImportRowNormalizer
                 'full_name' => $fullName,
                 'gender' => $gender,
                 'birth_date' => $birthDate,
-                'birth_place' => trim(import_row_value($row, $headers, ['birth_place', 'tempat_lahir'])),
-                'address' => trim(import_row_value($row, $headers, ['address', 'alamat'])),
+                'birth_place' => $birthPlace,
+                'address' => $address,
                 'email' => $email,
                 'whatsapp' => $whatsapp,
                 'batch_month' => $month,
                 'session_numbers' => $sessionNumbers,
-                'notes' => trim(import_row_value($row, $headers, ['notes', 'keterangan'])),
+                'notes' => $notes,
             ],
             'error' => null,
         ];

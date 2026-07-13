@@ -5290,6 +5290,7 @@
           'imported',
           'import_msk_inserted',
           'import_msk_updated',
+          'import_msk_unchanged',
           'import_error_count',
           'import_error_preview'
         ];

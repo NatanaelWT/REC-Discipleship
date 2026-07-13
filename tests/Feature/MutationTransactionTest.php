@@ -103,7 +103,7 @@ class MutationTransactionTest extends TestCase
         Storage::disk('local')->assertMissing('mutation/exception.txt');
     }
 
-    public function test_known_read_only_post_routes_exclude_database_transaction_middleware(): void
+    public function test_routes_that_do_not_need_the_request_wide_transaction_explicitly_exclude_it(): void
     {
         foreach ([
             'auth.logout',
@@ -111,6 +111,7 @@ class MutationTransactionTest extends TestCase
             'developer.users.access',
             'public.difficult-question.lookup',
             'discipleship.tree.export-dot',
+            'discipleship.msk-classes.import',
             'discipleship.msk-classes.export',
         ] as $routeName) {
             $route = Route::getRoutes()->getByName($routeName);
@@ -118,7 +119,7 @@ class MutationTransactionTest extends TestCase
             $this->assertContains(
                 WrapUnsafeRequestInTransaction::class,
                 $route->excludedMiddleware(),
-                "Read-only route [{$routeName}] must explicitly exclude database transactions.",
+                "Route [{$routeName}] must explicitly exclude the request-wide database transaction.",
             );
         }
 
@@ -126,7 +127,6 @@ class MutationTransactionTest extends TestCase
             'auth.login.store',
             'settings.update',
             'materials.upload',
-            'discipleship.msk-classes.import-batch',
         ] as $routeName) {
             $route = Route::getRoutes()->getByName($routeName);
             $this->assertNotNull($route);

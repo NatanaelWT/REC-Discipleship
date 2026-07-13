@@ -12,19 +12,16 @@ use App\Http\Requests\MskParticipants\ReactivateMskParticipantRequest;
 use App\Http\Requests\MskParticipants\StoreMskParticipantRequest;
 use App\Http\Requests\MskParticipants\UpdateMskParticipantRequest;
 use App\Http\Requests\MskParticipants\UpdateMskParticipantSessionsRequest;
-use App\Models\MskImportJob;
 use App\Models\Person;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
-use App\Services\MskParticipants\MskImportBatchProcessor;
-use App\Services\MskParticipants\MskImportCoordinator;
 use App\Services\MskParticipants\MskParticipantExportService;
 use App\Services\MskParticipants\MskParticipantPageData;
 use App\Services\MskParticipants\MskParticipantWriter;
+use App\Services\MskParticipants\MskSynchronousImportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -176,63 +173,53 @@ class MskParticipantController extends Controller
         return redirect()->route('discipleship.msk-classes', ['reactivated' => 1] + $batchMonthParam);
     }
 
-    public function import(ImportMskParticipantsRequest $request, MskImportCoordinator $imports): RedirectResponse|JsonResponse
+    public function import(ImportMskParticipantsRequest $request, MskSynchronousImportService $imports): RedirectResponse|JsonResponse
     {
         try {
-            $job = $imports->start($request);
+            $result = $imports->run($request);
         } catch (MskImportException $exception) {
+            $request->attributes->set('discipleship.no_mutation', true);
             if ($request->expectsJson()) {
-                return response()->json(['error' => $exception->errorCode, 'context' => $exception->context], 422);
+                $errors = is_array($exception->context['errors'] ?? null)
+                    ? array_values($exception->context['errors'])
+                    : [];
+
+                return response()->json([
+                    'status' => 'failed',
+                    'error' => $exception->errorCode,
+                    'errors' => $errors,
+                    'context' => $exception->context,
+                ], $this->importErrorStatus($exception->errorCode))->header('Cache-Control', 'private, no-store');
             }
 
-            return redirect()->route('discipleship.msk-classes', ['error' => $exception->errorCode]);
+            $redirect = ['error' => $exception->errorCode];
+            $errors = is_array($exception->context['errors'] ?? null) ? $exception->context['errors'] : [];
+            if ($errors !== []) {
+                $first = is_array($errors[0] ?? null) ? $errors[0] : [];
+                $redirect['import_error_count'] = max(count($errors), (int) ($exception->context['error_count'] ?? 0));
+                $redirect['import_error_preview'] = $this->importErrorPreview($first);
+            }
+
+            return redirect()->route('discipleship.msk-classes', $redirect);
         }
 
-        $payload = $this->importJobPayload($job);
-        $request->session()->put('msk_import_job_id', (string) $job->getKey());
+        if ($result['no_op']) {
+            $request->attributes->set('discipleship.no_mutation', true);
+        }
         if ($request->expectsJson()) {
-            return response()->json($payload, $job->isTerminal() ? 200 : 202)->header('Cache-Control', 'private, no-store');
+            return response()->json([
+                'status' => 'completed',
+                ...$result,
+                'errors' => [],
+            ])->header('Cache-Control', 'private, no-store');
         }
 
-        return redirect()->route('discipleship.msk-classes', ['import_job' => $job->getKey()]);
-    }
-
-    public function importStatus(
-        ImportMskParticipantsRequest $request,
-        MskImportJob $importJob,
-        MskImportBatchProcessor $processor,
-    ): JsonResponse {
-        $this->authorizeImportJob($importJob);
-
-        $status = $processor->status($importJob->fresh());
-        if ((bool) ($status['terminal'] ?? false)) {
-            $request->session()->forget('msk_import_job_id');
-        }
-
-        return response()->json([
-            ...$this->importJobPayload($importJob),
-            ...$status,
-        ])->header('Cache-Control', 'private, no-store');
-    }
-
-    public function importBatch(
-        ImportMskParticipantsRequest $request,
-        MskImportJob $importJob,
-        MskImportBatchProcessor $processor,
-    ): JsonResponse {
-        $this->authorizeImportJob($importJob);
-        $validated = $request->validate([
-            'batch_token' => ['required', 'string', 'max:100'],
+        return redirect()->route('discipleship.msk-classes', [
+            'imported' => 1,
+            'import_msk_inserted' => $result['inserted'],
+            'import_msk_updated' => $result['updated'],
+            'import_msk_unchanged' => $result['unchanged'],
         ]);
-        $result = $processor->process($importJob, (string) $validated['batch_token']);
-        if ((bool) ($result['terminal'] ?? false)) {
-            $request->session()->forget('msk_import_job_id');
-        }
-
-        return response()->json([
-            ...$this->importJobPayload($importJob),
-            ...$result,
-        ])->header('Cache-Control', 'private, no-store');
     }
 
     public function export(ExportMskParticipantsRequest $request, MskParticipantExportService $exporter): BinaryFileResponse|RedirectResponse
@@ -331,20 +318,23 @@ class MskParticipantController extends Controller
             : $scope->selectedBranchId();
     }
 
-    private function authorizeImportJob(MskImportJob $job): void
+    /** @param array<string,mixed> $error */
+    private function importErrorPreview(array $error): string
     {
-        abort_unless((int) $job->user_id === (int) Auth::id()
-            && (int) $job->branch_id === (int) current_user_branch_id(), 404);
+        $row = max(0, (int) ($error['row'] ?? 0));
+        $message = trim((string) ($error['message'] ?? $error['code'] ?? 'Import gagal divalidasi.'));
+        $preview = $row > 0 ? 'Baris '.$row.': '.$message : $message;
+
+        return mb_substr($preview, 0, 240);
     }
 
-    /** @return array{id:string,status:string,status_url:string,batch_url:string} */
-    private function importJobPayload(MskImportJob $job): array
+    private function importErrorStatus(string $errorCode): int
     {
-        return [
-            'id' => (string) $job->getKey(),
-            'status' => (string) $job->status,
-            'status_url' => route('discipleship.msk-classes.import-status', ['importJob' => $job->getKey()]),
-            'batch_url' => route('discipleship.msk-classes.import-batch', ['importJob' => $job->getKey()]),
-        ];
+        return match ($errorCode) {
+            'import_in_progress' => 409,
+            'import_zip_unavailable', 'import_lock_failed', 'import_timeout' => 503,
+            'import_stage_failed', 'import_failed' => 500,
+            default => 422,
+        };
     }
 }

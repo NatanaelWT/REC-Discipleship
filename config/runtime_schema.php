@@ -18,9 +18,5 @@ return [
         'materi_publik' => ['id', 'menu', 'relative_path', 'sha256', 'text_extracted_at', 'text_extraction_error'],
         'konfigurasi' => ['id', 'key', 'value'],
         'percobaan_login' => ['id', 'attempt_key', 'failed_attempt_count', 'last_attempted_at'],
-        'msk_import_jobs' => ['id', 'user_id', 'branch_id', 'active_branch_id', 'status', 'staged_byte_cursor', 'processed_rows'],
-        'msk_import_source_keys' => ['id', 'job_id', 'row_number', 'match_type', 'match_key'],
-        'msk_import_existing_people' => ['id', 'job_id', 'person_id', 'identity_key', 'touched_at'],
-        'msk_import_batches' => ['id', 'job_id', 'batch_token', 'byte_cursor_before', 'byte_cursor_after', 'result'],
     ],
 ];

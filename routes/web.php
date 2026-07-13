@@ -141,9 +141,10 @@ Route::middleware('rec.maintenance')->group(function (): void {
         Route::get('/msk/rows', [DiscipleshipMskParticipantController::class, 'rows'])->middleware('rec.page:msk_classes')->name('msk-classes.rows');
         Route::get('/msk/{participant}/detail', [DiscipleshipMskParticipantController::class, 'detail'])->middleware('rec.page:msk_classes')->name('msk-classes.detail');
         Route::post('/msk/peserta', [DiscipleshipMskParticipantController::class, 'store'])->middleware('rec.page:msk_classes')->name('msk-classes.store');
-        Route::post('/msk/impor', [DiscipleshipMskParticipantController::class, 'import'])->middleware('rec.page:msk_classes')->name('msk-classes.import');
-        Route::get('/msk/impor/{importJob}/status', [DiscipleshipMskParticipantController::class, 'importStatus'])->middleware('rec.page:msk_classes')->name('msk-classes.import-status');
-        Route::post('/msk/impor/{importJob}/batch', [DiscipleshipMskParticipantController::class, 'importBatch'])->middleware('rec.page:msk_classes')->name('msk-classes.import-batch');
+        Route::post('/msk/impor', [DiscipleshipMskParticipantController::class, 'import'])
+            ->middleware('rec.page:msk_classes')
+            ->withoutMiddleware(WrapUnsafeRequestInTransaction::class)
+            ->name('msk-classes.import');
         Route::post('/msk/ekspor', [DiscipleshipMskParticipantController::class, 'export'])
             ->middleware('rec.page:msk_classes')
             ->withoutMiddleware(WrapUnsafeRequestInTransaction::class)
