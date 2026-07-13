@@ -369,12 +369,19 @@ class DeveloperAccessTest extends TestCase
         $this->get('/developer/users')
             ->assertRedirect('/pemuridan/dashboard?error=access_denied');
 
-        $this->get('/pengaturan')
+        $settingsResponse = $this->get('/pengaturan')
             ->assertOk()
             ->assertSee('Mode akses: developer sebagai branch_user')
             ->assertSee('Kembali ke Developer')
             ->assertSee('Mode akses developer · password dikunci')
             ->assertSee('disabled aria-disabled="true"', false);
+
+        $settingsHtml = $settingsResponse->getContent();
+        $this->assertStringNotContainsString('developer-access-banner', $settingsHtml);
+        $this->assertMatchesRegularExpression(
+            '/<aside[^>]*id="app-sidebar"[\s\S]*Mode akses: developer sebagai branch_user[\s\S]*Kembali ke Developer[\s\S]*<\/aside>/',
+            $settingsHtml
+        );
 
         $this->post('/pengaturan', [
             'current_password' => 'secret-dev',

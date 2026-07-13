@@ -154,6 +154,49 @@ h2 {
   gap: 8px;
 }
 
+.sidebar-access-section {
+  margin-top: 8px;
+}
+
+.sidebar-access-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(103, 232, 249, 0.22);
+  border-radius: 8px;
+  background: rgba(8, 145, 178, 0.12);
+}
+
+.sidebar-access-status {
+  color: #cffafe;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.sidebar-access-card form {
+  margin: 0;
+}
+
+.sidebar-access-return {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid rgba(103, 232, 249, 0.28);
+  border-radius: 8px;
+  background: rgba(240, 249, 255, 0.96);
+  color: #155e75;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.sidebar-access-return:hover {
+  background: #cffafe;
+}
+
 .nav-group {
   display: flex;
   flex-direction: column;

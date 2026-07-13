@@ -15,52 +15,6 @@
   font-weight: 800;
 }
 
-.developer-access-banner {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  padding: 10px 14px;
-  border: 1px solid rgba(14, 116, 144, .24);
-  border-radius: 12px;
-  background: #ecfeff;
-  color: #155e75;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.developer-access-banner form {
-  margin: 0;
-}
-
-.developer-access-banner button {
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid rgba(14, 116, 144, .28);
-  border-radius: 999px;
-  background: #fff;
-  color: #0e7490;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 850;
-}
-
-.developer-access-banner button:hover {
-  background: #cffafe;
-}
-
-@media (max-width: 640px) {
-  .developer-access-banner {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .developer-access-banner button {
-    width: 100%;
-  }
-}
-
 .developer-panel {
   display: grid;
   gap: 16px;
