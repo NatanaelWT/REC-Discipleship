@@ -4,11 +4,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * DEFERRED RELEASE-2 MIGRATION.
+ * RELEASE-2 DESTRUCTIVE MIGRATION.
  *
- * Laravel's default migration path does not recurse into this directory.
- * Promote this file to database/migrations only after the Release-1 seven-day
- * validation and paired snapshot in docs/activity-removal-release-2.md.
+ * This migration permanently removes every current and legacy tracking table.
+ * Its down migration deliberately cannot reconstruct deleted data; restoring a
+ * paired Release-2 snapshot is the only supported rollback.
  */
 return new class extends Migration
 {

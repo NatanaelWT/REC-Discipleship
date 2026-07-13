@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Middleware\BootstrapRuntime;
-use App\Http\Middleware\ExpireLegacyAnalyticsIdentity;
 use App\Http\Middleware\HandleMaintenanceMode;
 use App\Http\Middleware\InvalidateDiscipleshipReadCache;
 use App\Http\Middleware\MeasureRequestPerformance;
@@ -22,7 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(
             prepend: [BootstrapRuntime::class],
-            append: [ExpireLegacyAnalyticsIdentity::class, WrapUnsafeRequestInTransaction::class],
+            append: [WrapUnsafeRequestInTransaction::class],
         );
         $middleware->append(MeasureRequestPerformance::class);
         $middleware->append(RejectLegacyPageQuery::class);

@@ -1,21 +1,19 @@
 # Runbook Release 2: Penghapusan Data Activity, Analytics, dan Maintenance
 
-Dalam artefak Release 1, migration destruktif disimpan di `database/migrations/deferred`, sehingga tidak ikut dijalankan oleh `php artisan migrate` normal. Setelah Release 1 stabil sedikitnya tujuh hari penuh, file yang sama harus dipromosikan ke direktori migration normal ketika artefak Release 2 dibuat. Migration harus tetap berada di sana sesudah deployment agar instalasi baru dan `migrate:fresh` tidak membuat kembali tabel tracking dari migration historis.
+Source Release 2 sudah siap: migration destruktif berada di `database/migrations/2026_07_20_000001_drop_activity_analytics_and_maintenance_tables.php` dan shim identitas analytics Release 1 sudah dihapus. Migration tetap harus berada di direktori migration normal sesudah deployment agar instalasi baru dan `migrate:fresh` tidak membuat kembali tabel tracking dari migration historis.
 
-## Membuat artefak Release 2
+## Verifikasi artefak Release 2
 
-Lakukan perubahan berikut pada source Release 2 sebelum build, bukan langsung di server produksi:
+Sebelum deployment produksi:
 
-1. Pindahkan `database/migrations/deferred/2026_07_20_000001_drop_activity_analytics_and_maintenance_tables.php` ke `database/migrations/2026_07_20_000001_drop_activity_analytics_and_maintenance_tables.php`. Jangan mengganti basename migration.
-2. Hapus shim transisi `app/Http/Middleware/ExpireLegacyAnalyticsIdentity.php`, lalu hapus import dan registrasinya dari `bootstrap/app.php`. Shim hanya diperlukan selama Release 1 untuk membersihkan cookie/session lama.
-3. Jalankan seluruh test, termasuk skenario `migrate:fresh` pada database disposable, dan pastikan semua nama tabel tracking tetap tidak ada.
-4. Build artefak produksi dengan Composer authoritative dan frontend production build. Pastikan migration yang dipromosikan ikut artefak dan tidak ada direktori `deferred` yang kosong/tertinggal.
-
-Jangan mempromosikan migration atau menghapus shim sebelum gerbang tujuh hari Release 1 terpenuhi.
+1. Jalankan seluruh test, termasuk skenario `migrate:fresh` pada database disposable, dan pastikan semua nama tabel tracking tidak ada.
+2. Build artefak produksi dengan Composer authoritative dan frontend production build.
+3. Pastikan migration penghapusan ikut artefak dan `ExpireLegacyAnalyticsIdentity` tidak lagi berada dalam autoload maupun middleware web.
+4. Jangan menjalankan migration terhadap database aktif sebelum snapshot database dan storage yang berpasangan selesai dibuat serta diverifikasi.
 
 ## Gerbang sebelum eksekusi
 
-1. Catat jumlah row semua tabel activity/analytics saat Release 1 dipasang. Setelah tujuh hari, pastikan jumlah itu tidak berubah dan aplikasi tidak membuat header activity, cookie analytics, session identity, atau file baru di `storage/app/private/activity-spool`.
+1. Bandingkan jumlah row semua tabel activity/analytics saat Release 1 dipasang dengan kondisi sebelum Release 2. Pastikan jumlah itu tidak berubah selama interval validasi yang disetujui dan aplikasi tidak membuat header activity, cookie analytics, session identity, atau file baru di `storage/app/private/activity-spool`.
 2. Pastikan test suite, `php artisan rec:schema-health`, dan smoke test route produksi lulus pada build Release 2.
 3. Jadwalkan maintenance window dan pastikan operator tetap memiliki akses shell. Jangan menjalankan migration penghapusan saat traffic masih masuk.
 

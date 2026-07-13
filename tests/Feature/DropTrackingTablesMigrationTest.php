@@ -71,15 +71,10 @@ class DropTrackingTablesMigrationTest extends TestCase
         $this->migration()->down();
     }
 
-    public function test_release_two_migration_path_set_leaves_migrate_fresh_without_tracking_tables(): void
+    public function test_normal_migration_path_leaves_migrate_fresh_without_tracking_tables(): void
     {
-        $paths = ['database/migrations'];
-        if (is_dir(database_path('migrations/deferred'))) {
-            $paths[] = 'database/migrations/deferred';
-        }
-
         $exitCode = Artisan::call('migrate:fresh', [
-            '--path' => $paths,
+            '--path' => ['database/migrations'],
             '--force' => true,
         ]);
 
@@ -91,12 +86,8 @@ class DropTrackingTablesMigrationTest extends TestCase
 
     private function migration(): Migration
     {
-        $paths = [
-            database_path('migrations/2026_07_20_000001_drop_activity_analytics_and_maintenance_tables.php'),
-            database_path('migrations/deferred/2026_07_20_000001_drop_activity_analytics_and_maintenance_tables.php'),
-        ];
-        $path = collect($paths)->first(static fn (string $candidate): bool => is_file($candidate));
-        $this->assertIsString($path, 'Release 2 tracking-table migration is missing.');
+        $path = database_path('migrations/2026_07_20_000001_drop_activity_analytics_and_maintenance_tables.php');
+        $this->assertFileExists($path, 'Release 2 tracking-table migration is missing.');
 
         /** @var Migration $migration */
         $migration = require $path;
