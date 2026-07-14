@@ -356,9 +356,7 @@ function render_discipleship_branch_filter(array $scopes): void
         }
         echo '            <input type="hidden" name="'.h((string) $key).'" value="'.h((string) $value)."\">\n";
     }
-    echo "            <label for=\"discipleship-sidebar-branch-filter\">Cabang</label>\n";
-    echo "            <div class=\"discipleship-branch-filter-row\">\n";
-    echo "              <select id=\"discipleship-sidebar-branch-filter\" name=\"branch_id\" data-discipleship-branch-filter>\n";
+    echo "            <select id=\"discipleship-sidebar-branch-filter\" name=\"branch_id\" aria-label=\"Cabang\" data-discipleship-branch-filter>\n";
     foreach ($scopes as $scopeOption) {
         $scopeBranchId = array_key_exists('id', $scopeOption) && $scopeOption['id'] !== null
             ? (int) $scopeOption['id']
@@ -366,11 +364,9 @@ function render_discipleship_branch_filter(array $scopes): void
         $value = $scopeBranchId === null ? 'all' : (string) $scopeBranchId;
         $label = trim((string) ($scopeOption['label'] ?? 'Cabang'));
         $selected = ! empty($scopeOption['selected']) ? ' selected' : '';
-        echo '                <option value="'.h($value).'"'.$selected.'>'.h($label)."</option>\n";
+        echo '              <option value="'.h($value).'"'.$selected.'>'.h($label)."</option>\n";
     }
-    echo "              </select>\n";
-    echo "              <button type=\"submit\">Terapkan</button>\n";
-    echo "            </div>\n";
+    echo "            </select>\n";
     echo "          </form>\n";
 }
 
