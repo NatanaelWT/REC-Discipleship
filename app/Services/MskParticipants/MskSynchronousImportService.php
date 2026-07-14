@@ -5,6 +5,7 @@ namespace App\Services\MskParticipants;
 use App\Exceptions\MskImportException;
 use App\Http\Requests\MskParticipants\ImportMskParticipantsRequest;
 use App\Models\Person;
+use App\Support\PersonNameNormalizer;
 use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -437,7 +438,9 @@ final class MskSynchronousImportService
     private function importAttributes(array $row): array
     {
         return [
-            'full_name' => $this->nullableString($row['full_name'] ?? null),
+            'full_name' => PersonNameNormalizer::normalize(
+                isset($row['full_name']) ? (string) $row['full_name'] : null,
+            ),
             'gender' => $this->nullableString($row['gender'] ?? null),
             'birth_date' => $this->nullableString($row['birth_date'] ?? null),
             'birth_place' => $this->nullableString($row['birth_place'] ?? null),

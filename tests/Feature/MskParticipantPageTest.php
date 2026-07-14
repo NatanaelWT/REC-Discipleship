@@ -485,7 +485,7 @@ class MskParticipantPageTest extends TestCase
 
         $response = $this->post('/pemuridan/msk/peserta', [
             'action' => 'save_msk_participant',
-            'full_name' => 'Peserta MSK Baru',
+            'full_name' => '  PESERTA   msk BARU  ',
             'gender' => 'Laki-laki',
             'birth_date' => '2000-01-10',
             'birth_place' => 'Surabaya',
@@ -500,12 +500,12 @@ class MskParticipantPageTest extends TestCase
         $response->assertRedirect('/pemuridan/msk?batch_month=2026-06&saved=1');
         $this->assertDatabaseHas('orang', [
             'branch_id' => 1,
-            'full_name' => 'Peserta MSK Baru',
+            'full_name' => 'Peserta Msk Baru',
             'batch_month' => '2026-06',
         ]);
 
         $participantId = (int) DB::table('orang')
-            ->where('full_name', 'Peserta MSK Baru')
+            ->where('full_name', 'Peserta Msk Baru')
             ->value('id');
 
         $sessions = json_decode((string) DB::table('orang')->where('id', $participantId)->value('session_numbers'), true);

@@ -2,6 +2,8 @@
 
 namespace App\Services\MskParticipants;
 
+use App\Support\PersonNameNormalizer;
+
 class MskImportRowNormalizer
 {
     /**
@@ -12,7 +14,9 @@ class MskImportRowNormalizer
     public function normalize(array $row, array $headers, int $rowNumber): array
     {
         $participantId = trim(import_row_value($row, $headers, ['participant_id', 'id']));
-        $fullName = trim(import_row_value($row, $headers, ['full_name', 'nama']));
+        $fullName = PersonNameNormalizer::normalize(
+            import_row_value($row, $headers, ['full_name', 'nama']),
+        ) ?? '';
         $whatsapp = trim(import_row_value($row, $headers, ['whatsapp', 'phone', 'nomor_wa', 'nomor_whatsapp']));
         $genderRaw = import_row_value($row, $headers, ['gender', 'jenis_kelamin']);
         $birthDateRaw = import_row_value($row, $headers, ['birth_date', 'tanggal_lahir']);

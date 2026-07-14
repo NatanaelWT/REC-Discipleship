@@ -822,7 +822,7 @@ class PeopleTreePageTest extends TestCase
 
         $this->assertSame(
             1,
-            DB::table('orang')->where('full_name', 'Peserta Arsip MSK')->count(),
+            DB::table('orang')->where('full_name', 'Peserta Arsip Msk')->count(),
         );
         $this->assertDatabaseHas('orang', [
             'id' => $archivedPersonId,
@@ -843,8 +843,8 @@ class PeopleTreePageTest extends TestCase
 
         app(PeopleTreeModelStore::class)->replaceBranchModel('kutisari', [
             'discipleship_persons' => [
-                ['id' => 'new_person_leader', 'full_name' => 'Leader Baru', 'status' => 'active'],
-                ['id' => 'new_person_member', 'full_name' => 'Anggota Baru', 'status' => 'active'],
+                ['id' => 'new_person_leader', 'full_name' => '  LEADER   baru ', 'status' => 'active'],
+                ['id' => 'new_person_member', 'full_name' => 'anggota BARU', 'status' => 'active'],
             ],
             'discipleship_groups' => [
                 [

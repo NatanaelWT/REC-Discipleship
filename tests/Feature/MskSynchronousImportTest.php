@@ -83,7 +83,7 @@ class MskSynchronousImportTest extends TestCase
                 'session_numbers' => [1],
             ],
             [
-                'full_name' => 'Bob Baru',
+                'full_name' => '  bOB   BARU  ',
                 'whatsapp' => '0833',
                 'msk_month' => '2026-07',
                 'session_numbers' => [1],
