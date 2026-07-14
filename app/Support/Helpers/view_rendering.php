@@ -486,6 +486,7 @@ function render_sidebar_navigation(string $currentPage, string $currentBranch, b
     // exposes navigation that cannot be acted on and adds unnecessary scope
     // queries to every page render.
     if ($activeGroup !== 'pemuridan' && is_effective_central_discipleship_readonly()) {
+        render_sidebar_nav_link('Pemuridan', route('discipleship.dashboard', ['branch_id' => 'all']), false);
         render_sidebar_nav_link('Setting', route('settings'), $activeGroup === 'settings');
 
         return;
