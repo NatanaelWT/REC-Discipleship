@@ -208,6 +208,35 @@ async function assertMskModal(page) {
     await expect(modal).toHaveAttribute('aria-hidden', 'true');
 }
 
+async function journalTableLayout(page, panelSelector, cardSelector, wrapperSelector) {
+    return page.evaluate(({ panelSelector, cardSelector, wrapperSelector }) => {
+        const panel = document.querySelector(panelSelector);
+        const card = panel?.querySelector(cardSelector);
+        const wrapper = panel?.querySelector(wrapperSelector);
+        const header = wrapper?.querySelector('thead th');
+        if (!panel || !card || !wrapper || !header) return null;
+        const panelStyle = getComputedStyle(panel);
+        const cardStyle = getComputedStyle(card);
+        const wrapperStyle = getComputedStyle(wrapper);
+        const headerStyle = getComputedStyle(header);
+        return {
+            panelDisplay: panelStyle.display,
+            panelDirection: panelStyle.flexDirection,
+            panelOverflowX: panelStyle.overflowX,
+            panelOverflowY: panelStyle.overflowY,
+            cardDisplay: cardStyle.display,
+            cardDirection: cardStyle.flexDirection,
+            cardPadding: cardStyle.padding,
+            cardOverflow: cardStyle.overflow,
+            wrapperOverflowX: wrapperStyle.overflowX,
+            wrapperOverflowY: wrapperStyle.overflowY,
+            wrapperMaxHeight: wrapperStyle.maxHeight,
+            headerPosition: headerStyle.position,
+            headerTop: headerStyle.top,
+        };
+    }, { panelSelector, cardSelector, wrapperSelector });
+}
+
 for (const viewport of viewports) {
     test.describe(viewport.name, () => {
         test.use({ viewport: { width: viewport.width, height: viewport.height } });
@@ -302,6 +331,46 @@ for (const viewport of viewports) {
                 await assertWideTablesScrollable(page, name);
             }
             if (viewport.width <= 1024) await openMobileSidebar(page);
+        });
+
+        test('journal tables match after tab navigation and direct refresh', async ({ page }) => {
+            test.skip(!exhaustive);
+            await login(page, 'responsive_branch');
+            await goto(page, '/pemuridan/laporan-dg');
+
+            const meetingLayout = await journalTableLayout(
+                page,
+                '#discipleship-tabpanel-meeting',
+                '.dg-recap-section-card',
+                '[data-dg-recap-summary-scroll]',
+            );
+            expect(meetingLayout).not.toBeNull();
+
+            await page.locator('[data-discipleship-tab][data-tab-key="feedback"]').click();
+            const feedbackPanel = page.locator('#discipleship-tabpanel-feedback');
+            await expect(feedbackPanel).toBeVisible();
+            await expect(feedbackPanel.locator('#member-feedback-recap-group-table')).toBeVisible();
+            const feedbackFromTab = await journalTableLayout(
+                page,
+                '#discipleship-tabpanel-feedback',
+                '.member-feedback-recap-group-card',
+                '[data-member-feedback-summary-scroll]',
+            );
+
+            await goto(page, '/pemuridan/umpan-balik-anggota');
+            const feedbackDirect = await journalTableLayout(
+                page,
+                '#discipleship-tabpanel-feedback',
+                '.member-feedback-recap-group-card',
+                '[data-member-feedback-summary-scroll]',
+            );
+
+            expect(feedbackFromTab).toEqual(feedbackDirect);
+            expect(feedbackDirect).toEqual(meetingLayout);
+            await page.screenshot({
+                path: path.join('test-results', 'responsive-screenshots', `${viewport.name}-feedback-direct.png`),
+                fullPage: true,
+            });
         });
     });
 }

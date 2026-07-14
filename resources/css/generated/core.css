@@ -3750,6 +3750,8 @@ button,
   }
 }
 
+/* Journal tables use the same viewport whether loaded directly or as a tab fragment. */
+
 @media (max-width: 420px) {
   .app-page .app-main {
     padding-top: calc(54px + env(safe-area-inset-top));
