@@ -52,16 +52,10 @@
       ],
   ])
 
-  <section class="card member-feedback-recap-group-card">
-    <div class="member-feedback-recap-panel-head">
-      <div>
-        <span class="member-feedback-recap-kicker">Kelompok</span>
-        <h2>Pengisi Feedback per Kelompok</h2>
-      </div>
-      <span class="member-feedback-recap-muted">{{ (string) count($groupRows) }} kelompok aktif</span>
-    </div>
-    <div class="member-feedback-recap-group-table-wrap" data-table-horizontal-scroll>
+  <section class="card dg-recap-section-card member-feedback-recap-group-card">
+    <div class="table-wrap member-feedback-recap-group-table-wrap" data-member-feedback-summary-scroll data-table-horizontal-scroll>
       <table class="table member-feedback-recap-group-table" id="member-feedback-recap-group-table">
+        <caption class="table-caption-accessible">Pengisi Feedback per Kelompok - {{ (string) count($groupRows) }} kelompok aktif</caption>
         <thead>
           <tr>
             <th>Cabang</th>

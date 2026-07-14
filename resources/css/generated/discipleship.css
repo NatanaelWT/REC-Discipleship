@@ -7992,6 +7992,22 @@ button.member-feedback-recap-count-pill:focus-visible {
   }
 }
 
+.member-feedback-recap-group-card.dg-recap-section-card {
+  padding: 18px;
+}
+
+@media (max-width: 1180px) {
+  .member-feedback-recap-group-card.dg-recap-section-card {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 720px) {
+  .member-feedback-recap-group-card.dg-recap-section-card {
+    padding: 14px;
+  }
+}
+
 #people-dashboard-table,
 #groups-dashboard-table,
 #spiritual-journey-table,
@@ -8059,7 +8075,8 @@ button.member-feedback-recap-count-pill:focus-visible {
   #discipleship-tabpanel-people [data-discipleship-people-scroll],
   #discipleship-tabpanel-groups [data-discipleship-groups-scroll],
   #discipleship-tabpanel-spiritual [data-spiritual-journey-scroll],
-  #discipleship-tabpanel-meeting [data-dg-recap-summary-scroll] {
+  #discipleship-tabpanel-meeting [data-dg-recap-summary-scroll],
+  #discipleship-tabpanel-feedback [data-member-feedback-summary-scroll] {
     min-height: 0 !important;
     height: auto !important;
     max-height: min(62dvh, 620px) !important;
@@ -8070,7 +8087,8 @@ button.member-feedback-recap-count-pill:focus-visible {
   #discipleship-tabpanel-people [data-discipleship-people-scroll] thead th,
   #discipleship-tabpanel-groups [data-discipleship-groups-scroll] thead th,
   #discipleship-tabpanel-spiritual [data-spiritual-journey-scroll] thead th,
-  #discipleship-tabpanel-meeting [data-dg-recap-summary-scroll] thead th {
+  #discipleship-tabpanel-meeting [data-dg-recap-summary-scroll] thead th,
+  #discipleship-tabpanel-feedback [data-member-feedback-summary-scroll] thead th {
     position: sticky !important;
     top: 0 !important;
     z-index: 3 !important;

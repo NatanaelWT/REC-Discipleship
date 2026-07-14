@@ -243,6 +243,7 @@ for (const viewport of viewports) {
                     'discipleship-groups',
                     'spiritual-journey',
                     'meeting-reports',
+                    'member-feedback',
                 ].includes(name)) {
                     await page.screenshot({
                         path: path.join('test-results', 'responsive-screenshots', `${viewport.name}-${name}.png`),
