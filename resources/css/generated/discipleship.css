@@ -7675,3 +7675,247 @@ button.member-feedback-recap-count-pill:focus-visible {
     animation: none;
   }
 }
+
+.discipleship-workspace,
+.discipleship-workspace__tabbar,
+.discipleship-workspace__panels,
+.discipleship-tab-panel {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.discipleship-page-header__main > *,
+.discipleship-page-header__tools > *,
+.journey-progress-chip > * {
+  min-width: 0;
+}
+
+.journey-progress-label,
+.journey-progress-value,
+.discipleship-dashboard-data-stat-label,
+.discipleship-dashboard-data-stat-sub {
+  overflow-wrap: anywhere;
+}
+
+.member-feedback-recap-group-table-wrap,
+.dg-recap-group-report-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.member-feedback-recap-group-table-wrap > table,
+.dg-recap-group-report-table-wrap > table {
+  max-width: none;
+}
+
+.discipleship-workspace__tabbar {
+  display: flex;
+  align-items: stretch;
+}
+
+.discipleship-workspace__tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.discipleship-workspace__tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.discipleship-workspace__refresh {
+  flex: 0 0 auto;
+}
+
+.journey-progress-copy {
+  min-width: 0;
+}
+
+.journey-progress-label,
+.journey-progress-value {
+  white-space: normal;
+}
+
+@media (max-width: 1024px) {
+
+  .discipleship-page-header__main,
+  .discipleship-progress-overdue-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .discipleship-page-header__main {
+    width: 100%;
+  }
+
+  .discipleship-page-header__tools {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 720px) {
+  .page-discipleship-workspace .container,
+  .page-tree .container,
+  .page-tree-v2 .container {
+    padding-inline: 12px;
+  }
+
+  .discipleship-page-header,
+  .discipleship-dashboard-hero-card,
+  .discipleship-dashboard-progress-card {
+    max-width: 100%;
+  }
+
+  .discipleship-dashboard-section-head {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .discipleship-page-header__tools,
+  .msk-hero-controls,
+  .msk-batch-actions,
+  .member-feedback-recap-tools,
+  .member-feedback-recap-header-controls {
+    width: 100%;
+  }
+
+  .journey-history-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .discipleship-page-header__stats {
+    width: 100%;
+    max-width: none;
+  }
+
+  .discipleship-dashboard-hero-branch {
+    white-space: normal;
+  }
+
+  .discipleship-dashboard-hero-summary {
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .discipleship-dashboard-data-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .discipleship-dashboard-data-stats .discipleship-dashboard-data-stat:nth-child(5) {
+    grid-column: auto;
+  }
+
+  .discipleship-workspace__tabbar {
+    width: 100%;
+  }
+
+  .discipleship-workspace__tabs {
+    scroll-snap-type: x proximity;
+  }
+
+  .discipleship-workspace__tab {
+    scroll-snap-align: start;
+  }
+
+  .tree-v2-toolbar,
+  .discipleship-tree-panel .tree-v2-toolbar {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+
+  .page-discipleship-workspace .container,
+  .page-tree .container,
+  .page-tree-v2 .container {
+    padding-inline: 8px;
+  }
+
+  .discipleship-tab-panel,
+  .discipleship-workspace__panel {
+    padding: 8px;
+  }
+
+  .discipleship-dashboard-hero-card,
+  .discipleship-dashboard-progress-card,
+  .discipleship-page-header {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .discipleship-dashboard-section-head {
+    gap: 8px;
+  }
+
+  .journey-progress-grid,
+  .journey-progress-grid-standalone,
+  .journey-progress-grid-standalone.discipleship-dashboard-group-progress,
+  .discipleship-dashboard-data-stats,
+  .discipleship-page-header__stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .journey-progress-grid .journey-progress-chip:first-child,
+  .discipleship-dashboard-data-stats .discipleship-dashboard-data-stat:nth-child(5) {
+    grid-column: auto;
+  }
+
+  .journey-progress-chip {
+    width: 100%;
+    min-height: 82px;
+    padding: 10px 12px;
+  }
+
+  .journey-progress-ring {
+    width: 62px;
+    height: 62px;
+    min-width: 62px;
+    flex-basis: 62px;
+  }
+
+  .journey-progress-label {
+    font-size: 13px;
+  }
+
+  .journey-progress-value {
+    font-size: 12px;
+  }
+
+  .discipleship-dashboard-hero-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .discipleship-dashboard-hero-summary-copy,
+  .discipleship-dashboard-hero-summary-sub {
+    max-width: 100%;
+  }
+
+  .discipleship-page-header__stats {
+    grid-auto-rows: auto;
+  }
+
+  .discipleship-page-header__stat,
+  .discipleship-workspace .discipleship-tab-panel:not(.discipleship-tree-panel):not(.discipleship-dashboard-panel) .discipleship-page-header__stat {
+    height: auto;
+    min-height: 58px;
+    max-height: none;
+  }
+
+  .discipleship-tree-panel .tree-v2-search {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .discipleship-tree-panel .tree-v2-search button,
+  .discipleship-tree-panel .tree-v2-export-form,
+  .discipleship-tree-panel .tree-v2-export-dot {
+    width: 100%;
+  }
+}

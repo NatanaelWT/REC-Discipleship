@@ -6,11 +6,13 @@
         "build": "npm run assets:split && vite build && npm run assets:budget",
         "assets:budget": "node scripts/check-frontend-budget.mjs",
         "assets:split": "node scripts/split-frontend-assets.mjs",
-        "dev": "npm run assets:split && vite"
+        "dev": "npm run assets:split && vite",
+        "test:responsive": "node scripts/run-responsive-tests.mjs"
     },
     "devDependencies": {
         "@fontsource-variable/fraunces": "5.2.9",
         "@fontsource-variable/manrope": "5.2.8",
+        "@playwright/test": "^1.61.1",
         "concurrently": "^9.0.1",
         "laravel-vite-plugin": "^2.0.0",
         "postcss": "8.5.18",

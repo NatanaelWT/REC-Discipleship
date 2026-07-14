@@ -3555,3 +3555,212 @@ textarea:focus-visible {
 /* Keep the branch workspace stack compact and even inside the sidebar. */
 
 /* Final contract for list tabs: the tab panel itself scrolls, like dashboard. */
+
+/* Responsive layout contract shared by every page family. */
+
+html,
+body,
+.app-shell,
+.app-main,
+.container,
+.card,
+.card-row,
+.form-grid,
+.table-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-main,
+.container {
+  width: 100%;
+}
+
+.card-row,
+.actions,
+.form-actions,
+.modal-head,
+.modal-actions {
+  min-width: 0;
+}
+
+.card-row > *,
+.actions > *,
+.form-grid > *,
+.modal-head > * {
+  min-width: 0;
+}
+
+h1,
+h2,
+h3,
+p,
+label,
+.btn,
+.badge,
+.nav-item {
+  overflow-wrap: anywhere;
+}
+
+input,
+select,
+textarea,
+button,
+.btn {
+  max-width: 100%;
+}
+
+.table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-wrap > table {
+  max-width: none;
+}
+
+@media (max-width: 1024px) {
+  .app-page .app-shell {
+    min-height: 100dvh;
+  }
+
+  .app-page .sidebar-toggle {
+    position: fixed;
+    top: max(10px, env(safe-area-inset-top));
+    left: max(10px, env(safe-area-inset-left));
+    margin: 0;
+  }
+
+  .app-page .app-main {
+    padding-top: calc(58px + env(safe-area-inset-top));
+  }
+
+  .app-page .app-main > .container {
+    margin-top: 0;
+    padding-inline: clamp(14px, 2.4vw, 22px);
+  }
+
+  .dashboard-main-hero-layout,
+  .member-pie-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .modal {
+    padding:
+      max(12px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+  }
+
+  .modal-card,
+  .modal-card--wide,
+  .modal-card--media,
+  .modal-card--compact {
+    display: flex;
+    flex-direction: column;
+    width: min(var(--modal-card-width), 100%);
+    max-width: 100%;
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  .modal-head,
+  .modal-footer {
+    flex: 0 0 auto;
+  }
+
+  .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-page .app-main > .container {
+    padding-inline: 12px;
+  }
+
+  .card,
+  .settings-account-card,
+  .settings-target-card {
+    max-width: 100%;
+  }
+
+  .card-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .actions,
+  .form-actions {
+    width: 100%;
+  }
+
+  .form-grid,
+  .settings-account-grid,
+  .settings-target-grid,
+  .settings-target-branch-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions .btn,
+  .form-actions .btn,
+  .settings-account-actions .btn,
+  .settings-target-actions .btn {
+    min-width: 0;
+  }
+
+  .file-view-embed,
+  .file-view-image-wrap,
+  .page-file-preview-standalone iframe {
+    max-width: 100%;
+  }
+
+  .modal {
+    align-items: flex-end;
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+  }
+
+  .modal-card,
+  .modal-card--wide,
+  .modal-card--media,
+  .modal-card--compact {
+    width: 100%;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    border-radius: 18px;
+  }
+
+  .modal-head {
+    gap: 10px;
+  }
+
+  .modal-actions,
+  .modal-footer {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-page .app-main {
+    padding-top: calc(54px + env(safe-area-inset-top));
+  }
+
+  .app-page .app-main > .container {
+    padding-inline: 8px;
+  }
+
+  .modal-actions > *,
+  .modal-footer > * {
+    width: 100%;
+  }
+}

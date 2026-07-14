@@ -1512,3 +1512,36 @@
     width: 100%;
   }
 }
+
+@media (max-width: 1024px) {
+
+  .developer-dashboard-grid,
+  .developer-config-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+
+  .developer-section-card {
+    max-width: 100%;
+  }
+
+  .developer-section-head {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .developer-metric-grid,
+  .developer-form-grid,
+  .developer-user-edit-form,
+  .developer-password-form,
+  .developer-config-form,
+  .developer-create-user-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .developer-form-actions .btn {
+    min-width: 0;
+  }
+}

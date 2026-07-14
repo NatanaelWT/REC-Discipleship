@@ -3376,3 +3376,32 @@
     animation: none;
   }
 }
+
+@media (max-width: 720px) {
+
+  .public-material-head,
+  .public-feedback-head,
+  .public-answer-results-head {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .login-brand-grid,
+  .public-question-form,
+  .public-member-feedback-form,
+  .dg-public-report-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .page-public-material-preview iframe {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+
+  .public-branch-grid,
+  .page-dg-public .public-branch-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

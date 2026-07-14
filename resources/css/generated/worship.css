@@ -375,3 +375,34 @@
     width: 100%;
   }
 }
+
+.worship-steward-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.worship-steward-table-wrap > table {
+  max-width: none;
+}
+
+@media (max-width: 1024px) {
+
+  .worship-steward-hero-controls {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 720px) {
+
+  .worship-steward-hero-controls,
+  .worship-steward-action-bar {
+    width: 100%;
+  }
+
+  .worship-steward-action-bar .btn {
+    min-width: 0;
+  }
+}

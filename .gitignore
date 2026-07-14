@@ -8,6 +8,8 @@
 /public/build
 /public/hot
 /public/storage
+/test-results
+/playwright-report
 /storage/*.key
 /storage/pail
 .env
