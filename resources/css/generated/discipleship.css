@@ -6274,9 +6274,20 @@ button.member-feedback-recap-count-pill:focus-visible {
   min-height: 0;
 }
 
-.discipleship-workspace__tabs {
+.discipleship-workspace__tabbar {
   display: flex;
   flex: 0 0 auto;
+  align-items: flex-end;
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  background: rgba(226, 232, 240, 0.58);
+}
+
+.discipleship-workspace__tabs {
+  display: flex;
+  flex: 1 1 auto;
   align-items: flex-end;
   gap: 4px;
   min-width: 0;
@@ -6284,12 +6295,46 @@ button.member-feedback-recap-count-pill:focus-visible {
   padding: 6px 8px 0;
   overflow-x: auto;
   overflow-y: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.34);
-  border-bottom: 0;
-  border-radius: 16px 16px 0 0;
-  background: rgba(226, 232, 240, 0.58);
   scrollbar-width: thin;
   scrollbar-color: rgba(100, 116, 139, 0.44) transparent;
+}
+
+.discipleship-workspace__refresh {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin: 6px 8px 0 4px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  border-radius: 9px 9px 0 0;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.62);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.discipleship-workspace__refresh:hover {
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.discipleship-workspace__refresh:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.28);
+  outline-offset: -2px;
+}
+
+.discipleship-workspace__refresh:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.discipleship-workspace.is-loading .discipleship-workspace__refresh span {
+  animation: discipleship-refresh-spin 0.8s linear infinite;
 }
 
 .discipleship-workspace__tab {

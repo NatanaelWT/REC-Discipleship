@@ -3523,6 +3523,12 @@ textarea:focus-visible {
 
 /* Discipleship workspace */
 
+@keyframes discipleship-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 [data-discipleship-tab-retry] {
   justify-self: center;
 }

@@ -5101,6 +5101,7 @@
 
       const panelsHost = workspace.querySelector('[data-discipleship-panels]');
       const tabList = workspace.querySelector('[data-discipleship-tabs]');
+      const refreshButton = workspace.querySelector('[data-discipleship-tab-refresh]');
       const tabEls = Array.from(workspace.querySelectorAll('[data-discipleship-tab]'));
       const initialPanels = Array.from(workspace.querySelectorAll('[data-discipleship-tab-panel]'));
       if (!panelsHost || !tabList || tabEls.length === 0 || initialPanels.length !== 1) {
@@ -5238,6 +5239,10 @@
         panelsHost.classList.toggle('is-loading', isBusy);
         workspace.setAttribute('aria-busy', isBusy ? 'true' : 'false');
         panelsHost.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+        if (refreshButton) {
+          refreshButton.disabled = isBusy;
+          refreshButton.setAttribute('aria-disabled', isBusy ? 'true' : 'false');
+        }
         if (isBusy) {
           statusEl.classList.add('discipleship-workspace__loading');
           statusEl.classList.remove('discipleship-workspace__retry');
@@ -5619,6 +5624,17 @@
           forceReload: target.forceReload === true
         });
       });
+
+      if (refreshButton) {
+        refreshButton.addEventListener('click', () => {
+          const targetUrl = panelUrls.get(currentKey) || canonicalUrlForTab(currentKey) || window.location.href;
+          activateTab(currentKey, {
+            url: targetUrl,
+            push: false,
+            forceReload: true
+          });
+        });
+      }
 
       window.addEventListener('popstate', () => {
         const currentUrl = new URL(window.location.href);
