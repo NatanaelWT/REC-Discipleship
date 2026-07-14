@@ -1069,7 +1069,7 @@ if ($page === 'dg_reports_recap') {
     });
 
     echo "<section class=\"card dg-recap-section-card\">\n";
-    echo "  <div class=\"table-wrap\">\n";
+    echo "  <div class=\"table-wrap\" data-dg-recap-summary-scroll data-table-horizontal-scroll>\n";
     echo "    <table class=\"table dg-recap-table\" id=\"dg-recap-summary-table\">\n";
     echo "      <thead><tr><th>Pemimpin</th><th>Progress</th><th>Sesi Terakhir</th><th>Laporan</th><th>Laporan Terakhir</th></tr></thead>\n";
     echo "      <tbody>\n";

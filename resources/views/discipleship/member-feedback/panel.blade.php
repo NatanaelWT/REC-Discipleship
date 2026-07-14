@@ -60,7 +60,7 @@
       </div>
       <span class="member-feedback-recap-muted">{{ (string) count($groupRows) }} kelompok aktif</span>
     </div>
-    <div class="member-feedback-recap-group-table-wrap">
+    <div class="member-feedback-recap-group-table-wrap" data-table-horizontal-scroll>
       <table class="table member-feedback-recap-group-table" id="member-feedback-recap-group-table">
         <thead>
           <tr>

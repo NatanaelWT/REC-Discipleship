@@ -2216,6 +2216,52 @@
       setEmptyState('Peserta tidak ditemukan.');
     };
 
+    const setupHorizontalTableScroll = (scope = document) => {
+      const areas = scope.matches?.('[data-table-horizontal-scroll]')
+        ? [scope]
+        : Array.from(scope.querySelectorAll?.('[data-table-horizontal-scroll]') || []);
+
+      areas.forEach((area) => {
+        if (area.getAttribute('data-table-horizontal-scroll-ready') === '1') return;
+        area.setAttribute('data-table-horizontal-scroll-ready', '1');
+
+        let dragging = false;
+        let moved = false;
+        let startX = 0;
+        let startLeft = 0;
+
+        const finish = () => {
+          if (!dragging) return;
+          dragging = false;
+          area.classList.remove('is-dragging');
+          if (moved) {
+            area.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }, { capture: true, once: true });
+          }
+        };
+
+        area.addEventListener('mousedown', (event) => {
+          if (event.button !== 0 || event.target.closest('button, a, input, select, textarea, label')) return;
+          dragging = true;
+          moved = false;
+          startX = event.clientX;
+          startLeft = area.scrollLeft;
+          area.classList.add('is-dragging');
+        });
+        window.addEventListener('mousemove', (event) => {
+          if (!dragging) return;
+          const delta = event.clientX - startX;
+          if (Math.abs(delta) > 3) moved = true;
+          area.scrollLeft = startLeft - delta;
+        });
+        window.addEventListener('mouseup', finish);
+        area.addEventListener('mouseleave', finish);
+      });
+    };
+
+    setupHorizontalTableScroll();
     setupSpiritualJourneyList();
     setupDiscipleshipDashboard();
     setupDiscipleshipPeopleList();
@@ -5206,6 +5252,7 @@
           });
         }
         setupDiscipleshipDashboard(panel);
+        setupHorizontalTableScroll(panel);
         setupDiscipleshipPeopleList(panel);
         setupDiscipleshipGroupsList(panel);
         setupSpiritualJourneyList(panel);

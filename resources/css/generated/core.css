@@ -3803,3 +3803,15 @@ button,
     min-width: 680px;
   }
 }
+
+/* Dense discipleship tables use a shared, reachable scrolling viewport. */
+
+[data-table-horizontal-scroll] {
+  position: relative;
+  cursor: grab;
+}
+
+[data-table-horizontal-scroll].is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}

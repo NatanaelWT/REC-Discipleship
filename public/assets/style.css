@@ -16836,3 +16836,112 @@ button,
     min-width: 840px;
   }
 }
+
+/* Dense discipleship tables use a shared, reachable scrolling viewport. */
+[data-table-horizontal-scroll] {
+  position: relative;
+  cursor: grab;
+}
+
+[data-table-horizontal-scroll].is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+#people-dashboard-table,
+#groups-dashboard-table,
+#spiritual-journey-table,
+#dg-recap-summary-table {
+  table-layout: fixed;
+}
+
+#people-dashboard-table {
+  min-width: 860px;
+}
+
+#people-dashboard-table th:nth-child(1),
+#people-dashboard-table td:nth-child(1) { width: 260px; }
+
+#people-dashboard-table th:nth-child(2),
+#people-dashboard-table td:nth-child(2) { width: 190px; }
+
+#people-dashboard-table th:nth-child(3),
+#people-dashboard-table td:nth-child(3) { width: 410px; }
+
+#groups-dashboard-table {
+  min-width: 890px;
+}
+
+#groups-dashboard-table th:nth-child(1),
+#groups-dashboard-table td:nth-child(1) { width: 250px; }
+
+#groups-dashboard-table th:nth-child(2),
+#groups-dashboard-table td:nth-child(2) { width: 110px; }
+
+#groups-dashboard-table th:nth-child(3),
+#groups-dashboard-table td:nth-child(3) { width: 210px; }
+
+#groups-dashboard-table th:nth-child(4),
+#groups-dashboard-table td:nth-child(4) { width: 320px; }
+
+#spiritual-journey-table {
+  min-width: 820px;
+}
+
+#spiritual-journey-table .journey-col-name { width: 250px; }
+#spiritual-journey-table .journey-col-track { width: 570px; }
+
+#dg-recap-summary-table {
+  min-width: 800px;
+}
+
+#dg-recap-summary-table th:nth-child(1),
+#dg-recap-summary-table td:nth-child(1) { width: 240px; }
+
+#dg-recap-summary-table th:nth-child(2),
+#dg-recap-summary-table td:nth-child(2) { width: 120px; }
+
+#dg-recap-summary-table th:nth-child(3),
+#dg-recap-summary-table td:nth-child(3) { width: 180px; }
+
+#dg-recap-summary-table th:nth-child(4),
+#dg-recap-summary-table td:nth-child(4) { width: 100px; }
+
+#dg-recap-summary-table th:nth-child(5),
+#dg-recap-summary-table td:nth-child(5) { width: 160px; }
+
+@media (max-width: 720px) {
+  #discipleship-tabpanel-people [data-discipleship-people-scroll],
+  #discipleship-tabpanel-groups [data-discipleship-groups-scroll],
+  #discipleship-tabpanel-spiritual [data-spiritual-journey-scroll],
+  #discipleship-tabpanel-meeting [data-dg-recap-summary-scroll] {
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: min(62dvh, 620px) !important;
+    overflow: auto !important;
+    scrollbar-gutter: stable;
+  }
+
+  #discipleship-tabpanel-people [data-discipleship-people-scroll] thead th,
+  #discipleship-tabpanel-groups [data-discipleship-groups-scroll] thead th,
+  #discipleship-tabpanel-spiritual [data-spiritual-journey-scroll] thead th,
+  #discipleship-tabpanel-meeting [data-dg-recap-summary-scroll] thead th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 3 !important;
+    background: #eef3f8 !important;
+    box-shadow: inset 0 -1px 0 rgba(148, 163, 184, 0.52);
+  }
+
+  #people-dashboard-table th,
+  #people-dashboard-table td,
+  #groups-dashboard-table th,
+  #groups-dashboard-table td,
+  #spiritual-journey-table th,
+  #spiritual-journey-table td,
+  #dg-recap-summary-table th,
+  #dg-recap-summary-table td {
+    padding: 10px 12px;
+    vertical-align: middle;
+  }
+}

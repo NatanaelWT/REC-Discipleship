@@ -119,22 +119,56 @@ async function assertWideTablesScrollable(page, label) {
             return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
         };
         const results = [];
+        const auditedTableSelector = [
+            '#people-dashboard-table',
+            '#groups-dashboard-table',
+            '#spiritual-journey-table',
+            '#dg-recap-summary-table',
+            '.member-feedback-recap-group-table',
+        ].join(',');
 
         for (const table of document.querySelectorAll('table')) {
-            if (!visible(table) || table.querySelectorAll('thead th').length < 4) continue;
+            if (!visible(table)) continue;
+            if (!table.matches(auditedTableSelector) && table.querySelectorAll('thead th').length < 4) continue;
             const wrapper = table.closest(wrapperSelector);
             if (!wrapper) {
                 results.push(`${table.id || table.className}: missing scroll wrapper`);
+                continue;
+            }
+            if (table.matches(auditedTableSelector) && wrapper.getAttribute('data-table-horizontal-scroll-ready') !== '1') {
+                results.push(`${table.id || table.className}: drag scrolling was not initialized`);
                 continue;
             }
             if (wrapper.scrollWidth <= wrapper.clientWidth + 1) {
                 results.push(`${table.id || table.className}: no horizontal scroll range`);
                 continue;
             }
-            wrapper.scrollLeft = Math.min(48, wrapper.scrollWidth - wrapper.clientWidth);
+            const targetScrollLeft = Math.min(48, wrapper.scrollWidth - wrapper.clientWidth);
+            wrapper.scrollLeft = targetScrollLeft;
+            const immediateScrollLeft = wrapper.scrollLeft;
             await new Promise((resolve) => requestAnimationFrame(resolve));
-            if (wrapper.scrollLeft < 1) results.push(`${table.id || table.className}: scroll position did not change`);
+            if (wrapper.scrollLeft < 1) {
+                const style = getComputedStyle(wrapper);
+                results.push(`${table.id || table.className}: scroll position did not change (client=${wrapper.clientWidth}, scroll=${wrapper.scrollWidth}, immediate=${immediateScrollLeft}, overflow=${style.overflowX})`);
+            }
             wrapper.scrollLeft = 0;
+            if (wrapper.hasAttribute('data-table-horizontal-scroll')) {
+                const rect = wrapper.getBoundingClientRect();
+                wrapper.dispatchEvent(new MouseEvent('mousedown', {
+                    bubbles: true,
+                    button: 0,
+                    clientX: rect.left + Math.min(180, rect.width - 10),
+                    clientY: rect.top + 24,
+                }));
+                window.dispatchEvent(new MouseEvent('mousemove', {
+                    bubbles: true,
+                    clientX: rect.left + 20,
+                    clientY: rect.top + 24,
+                }));
+                window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+                if (wrapper.scrollLeft < 1) results.push(`${table.id || table.className}: mouse drag did not scroll`);
+                wrapper.scrollLeft = 0;
+            }
         }
 
         return results;
@@ -204,6 +238,17 @@ for (const viewport of viewports) {
                 expect(response?.status(), `${name} response`).toBeLessThan(400);
                 await assertResponsive(page, name);
                 await assertWideTablesScrollable(page, name);
+                if (viewport.width === 320 && [
+                    'discipleship-people',
+                    'discipleship-groups',
+                    'spiritual-journey',
+                    'meeting-reports',
+                ].includes(name)) {
+                    await page.screenshot({
+                        path: path.join('test-results', 'responsive-screenshots', `${viewport.name}-${name}.png`),
+                        fullPage: true,
+                    });
+                }
             }
             await assertMskModal(page);
             if (viewport.width <= 1024) await openMobileSidebar(page);

@@ -33,7 +33,7 @@
     data-has-more="{{ ! empty($hasMoreGroupRows) ? '1' : '0' }}"
     data-next-cursor="{{ $nextGroupCursor ?? '' }}"
   >
-    <div class="table-wrap" data-discipleship-groups-scroll>
+    <div class="table-wrap" data-discipleship-groups-scroll data-table-horizontal-scroll>
       <table class="table groups-dashboard-table" id="groups-dashboard-table">
         <thead><tr><th>Leader & Pendamping</th><th>Status</th><th>Progress</th><th>Anggota</th></tr></thead>
         <tbody data-discipleship-groups-list-body>

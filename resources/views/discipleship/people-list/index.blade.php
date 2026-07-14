@@ -39,7 +39,7 @@
     data-has-more="{{ ! empty($hasMorePeopleRows) ? '1' : '0' }}"
     data-next-cursor="{{ $nextPeopleCursor ?? '' }}"
   >
-    <div class="table-wrap" data-discipleship-people-scroll>
+    <div class="table-wrap" data-discipleship-people-scroll data-table-horizontal-scroll>
       <table class="table people-dashboard-table" id="people-dashboard-table">
         <thead><tr><th>Nama & Relasi</th><th>Peran</th><th>Progress DG</th></tr></thead>
         <tbody data-discipleship-people-list-body>

@@ -761,7 +761,7 @@ if ($page === 'spiritual_journey') {
 
     $rows = is_array($spiritualJourneyRows ?? null) ? $spiritualJourneyRows : $rows;
     echo '<section class="card table-card-plain" data-spiritual-journey-list data-rows-url="'.h(route('discipleship.spiritual-journey.rows')).'" data-limit="'.h((string) ($spiritualJourneyLimit ?? 50)).'" data-has-more="'.(! empty($hasMoreSpiritualJourneyRows) ? '1' : '0').'" data-next-cursor="'.h((string) ($nextSpiritualJourneyCursor ?? '')).'">'."\n";
-    echo "  <div class=\"table-wrap\" data-spiritual-journey-scroll>\n";
+    echo "  <div class=\"table-wrap\" data-spiritual-journey-scroll data-table-horizontal-scroll>\n";
     echo "    <table class=\"table journey-dashboard-table\" id=\"spiritual-journey-table\">\n";
     echo "      <colgroup>\n";
     echo "        <col class=\"journey-col-name\">\n";
