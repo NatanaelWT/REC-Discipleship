@@ -2960,6 +2960,24 @@
 
     initMskForms(document);
 
+    document.querySelectorAll('[data-discipleship-branch-filter]').forEach((select) => {
+      if (select.dataset.branchFilterReady === '1') {
+        return;
+      }
+      select.dataset.branchFilterReady = '1';
+      select.addEventListener('change', () => {
+        const form = select.closest('form');
+        if (!form) {
+          return;
+        }
+        if (typeof form.requestSubmit === 'function') {
+          form.requestSubmit();
+        } else {
+          form.submit();
+        }
+      });
+    });
+
     const appShell = document.querySelector('.app-shell');
     const sidebar = appShell ? appShell.querySelector('.sidebar') : null;
     const sidebarToggle = appShell ? appShell.querySelector('[data-sidebar-toggle]') : null;

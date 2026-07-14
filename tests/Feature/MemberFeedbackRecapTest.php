@@ -102,7 +102,8 @@ class MemberFeedbackRecapTest extends TestCase
 
         $this->get('/pemuridan/umpan-balik-anggota?rekap_cabang=all')
             ->assertOk()
-            ->assertSee('data-discipleship-branch-group="all" open', false)
+            ->assertSee('data-discipleship-branch-filter', false)
+            ->assertSee('<option value="all" selected>Semua Cabang</option>', false)
             ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('Pemimpin Kutisari')
             ->assertSee('Pemimpin GM');

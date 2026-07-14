@@ -347,10 +347,38 @@ function discipleship_sidebar_item_href(string $routeName, ?int $branchId): stri
     return route($routeName, $params);
 }
 
+function render_discipleship_branch_filter(array $scopes): void
+{
+    echo "          <form class=\"discipleship-branch-filter\" method=\"get\" action=\"".h(request()->url())."\">\n";
+    foreach (request()->query() as $key => $value) {
+        if ($key === 'branch_id' || $key === 'rekap_cabang' || is_array($value)) {
+            continue;
+        }
+        echo '            <input type="hidden" name="'.h((string) $key).'" value="'.h((string) $value)."\">\n";
+    }
+    echo "            <label for=\"discipleship-sidebar-branch-filter\">Cabang</label>\n";
+    echo "            <div class=\"discipleship-branch-filter-row\">\n";
+    echo "              <select id=\"discipleship-sidebar-branch-filter\" name=\"branch_id\" data-discipleship-branch-filter>\n";
+    foreach ($scopes as $scopeOption) {
+        $scopeBranchId = array_key_exists('id', $scopeOption) && $scopeOption['id'] !== null
+            ? (int) $scopeOption['id']
+            : null;
+        $value = $scopeBranchId === null ? 'all' : (string) $scopeBranchId;
+        $label = trim((string) ($scopeOption['label'] ?? 'Cabang'));
+        $selected = ! empty($scopeOption['selected']) ? ' selected' : '';
+        echo '                <option value="'.h($value).'"'.$selected.'>'.h($label)."</option>\n";
+    }
+    echo "              </select>\n";
+    echo "              <button type=\"submit\">Terapkan</button>\n";
+    echo "            </div>\n";
+    echo "          </form>\n";
+}
+
 function render_discipleship_sidebar_navigation(string $currentPage, string $currentBranch, string $activeGroup): void
 {
     $scopes = discipleship_sidebar_branch_scopes($currentBranch);
     $isPemuridanActive = $activeGroup === 'pemuridan';
+    $canSwitchBranch = count($scopes) > 1;
 
     $discipleshipNavItems = [
         ['label' => 'Dashboard', 'page' => 'discipleship_dashboard', 'active_pages' => ['people_tree', 'people_tree_v2', 'people_list', 'groups_list'], 'route' => 'discipleship.dashboard'],
@@ -360,6 +388,41 @@ function render_discipleship_sidebar_navigation(string $currentPage, string $cur
     ];
 
     echo "        <div class=\"discipleship-branch-nav\" data-discipleship-branch-nav>\n";
+    if ($canSwitchBranch) {
+        $selectedScope = null;
+        foreach ($scopes as $scopeOption) {
+            if (! empty($scopeOption['selected'])) {
+                $selectedScope = $scopeOption;
+                break;
+            }
+        }
+        $selectedScope ??= $scopes[0] ?? ['id' => null, 'label' => 'Semua Cabang', 'selected' => true];
+        $scopeBranchId = array_key_exists('id', $selectedScope) && is_int($selectedScope['id'])
+            ? $selectedScope['id']
+            : null;
+
+        render_discipleship_branch_filter($scopes);
+        echo "          <div class=\"nav-sub discipleship-branch-menu\">\n";
+        foreach ($discipleshipNavItems as $item) {
+            $page = trim((string) ($item['page'] ?? ''));
+            $extraActivePages = $item['active_pages'] ?? [];
+            if (! is_array($extraActivePages)) {
+                $extraActivePages = [];
+            }
+            $isActive = $isPemuridanActive && $page !== '' && ($page === $currentPage || in_array($currentPage, $extraActivePages, true));
+            render_sidebar_nav_link(
+                (string) ($item['label'] ?? ''),
+                discipleship_sidebar_item_href((string) ($item['route'] ?? ''), $scopeBranchId),
+                $isActive,
+                '            ',
+            );
+        }
+        echo "          </div>\n";
+        echo "        </div>\n";
+
+        return;
+    }
+
     foreach ($scopes as $scopeOption) {
         $scopeLabel = trim((string) ($scopeOption['label'] ?? 'Cabang'));
         $scopeSlug = trim((string) ($scopeOption['slug'] ?? ''));

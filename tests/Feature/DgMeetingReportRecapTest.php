@@ -121,7 +121,8 @@ class DgMeetingReportRecapTest extends TestCase
         $this->get('/pemuridan/laporan-dg?rekap_cabang=all')
             ->assertOk()
             ->assertSee('Materi Test')
-            ->assertSee('data-discipleship-branch-group="all" open', false)
+            ->assertSee('data-discipleship-branch-filter', false)
+            ->assertSee('<option value="all" selected>Semua Cabang</option>', false)
             ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('Semua Cabang');
 
