@@ -143,8 +143,7 @@ class DiscipleshipDashboardTest extends TestCase
         $this->get('/pemuridan/dashboard?branch_id='.$testingBranchId)
             ->assertOk()
             ->assertSee('is-developer-experiment-branch', false)
-            ->assertSee('data-discipleship-branch-filter', false)
-            ->assertSee('<option value="'.$testingBranchId.'" selected>Testing</option>', false)
+            ->assertSee('data-discipleship-branch-group="testing" open', false)
             ->assertDontSee('central-rekap-toolbar', false)
             ->assertDontSee('Peserta MSK Dashboard');
         $this->get('/pemuridan/dashboard/sections/incomplete-msk')

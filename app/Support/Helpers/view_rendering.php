@@ -351,7 +351,7 @@ function render_discipleship_branch_filter(array $scopes): void
 {
     echo "          <form class=\"discipleship-branch-filter\" method=\"get\" action=\"".h(request()->url())."\">\n";
     foreach (request()->query() as $key => $value) {
-        if ($key === 'branch_id' || $key === 'rekap_cabang' || is_array($value)) {
+        if ($key === 'branch_id' || is_array($value)) {
             continue;
         }
         echo '            <input type="hidden" name="'.h((string) $key).'" value="'.h((string) $value)."\">\n";

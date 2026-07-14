@@ -107,17 +107,15 @@ class PeopleTreePageTest extends TestCase
         $branchNav = '//*[@id="app-sidebar"]//*[@data-discipleship-branch-nav]';
 
         $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.')'));
-        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//form[contains(concat(" ", normalize-space(@class), " "), " discipleship-branch-filter ")])'));
-        $this->assertSame(0.0, $centralXpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group])'));
-        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//select[@name="branch_id"]/option[@value="all" and @selected])'));
-        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//select[@name="branch_id"]/option[normalize-space(.) = "Kutisari"])'));
-        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//select[@name="branch_id"]/option[normalize-space(.) = "GM"])'));
+        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="all" and @open]/summary[starts-with(normalize-space(.), "Semua Cabang")])'));
+        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="kutisari"]/summary[starts-with(normalize-space(.), "Kutisari")])'));
+        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="gm"]/summary[starts-with(normalize-space(.), "GM")])'));
         $this->assertSame(0.0, $centralXpath->evaluate('count(//*[contains(concat(" ", normalize-space(@class), " "), " central-rekap-toolbar ")])'));
 
-        $dashboardLink = $centralXpath->query($branchNav.'//a[normalize-space(.) = "Dashboard"]')?->item(0);
-        $this->assertNotNull($dashboardLink);
-        parse_str((string) parse_url($dashboardLink->getAttribute('href'), PHP_URL_QUERY), $dashboardQuery);
-        $this->assertSame('all', $dashboardQuery['branch_id'] ?? null);
+        $gmBranchLink = $centralXpath->query($branchNav.'//details[@data-discipleship-branch-group="gm"]//a[normalize-space(.) = "Dashboard"]')?->item(0);
+        $this->assertNotNull($gmBranchLink);
+        parse_str((string) parse_url($gmBranchLink->getAttribute('href'), PHP_URL_QUERY), $gmBranchQuery);
+        $this->assertSame('2', $gmBranchQuery['branch_id'] ?? null);
 
         $testingBranchId = (int) DB::table('cabang')->insertGetId([
             'label' => 'Testing',
@@ -131,8 +129,7 @@ class PeopleTreePageTest extends TestCase
         $developerContent = (string) $this->get('/pemuridan/pohon?branch_id='.$testingBranchId)->assertOk()->getContent();
         $developerXpath = $this->discipleshipMarkupXpath($developerContent);
 
-        $this->assertSame(1.0, $developerXpath->evaluate('count('.$branchNav.'//select[@name="branch_id"]/option[@value="'.$testingBranchId.'" and @selected])'));
-        $this->assertSame(1.0, $developerXpath->evaluate('count('.$branchNav.'//select[@name="branch_id"]/option[normalize-space(.) = "Semua Cabang"])'));
+        $this->assertSame(1.0, $developerXpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="all"]/summary[starts-with(normalize-space(.), "Semua Cabang")])'));
         $this->assertSame(0.0, $developerXpath->evaluate('count(//*[contains(concat(" ", normalize-space(@class), " "), " central-rekap-toolbar ")])'));
     }
 
