@@ -7919,3 +7919,75 @@ button.member-feedback-recap-count-pill:focus-visible {
     width: 100%;
   }
 }
+
+.member-feedback-recap-group-table-wrap,
+.member-feedback-recap-table-wrap,
+.dg-recap-group-report-table-wrap,
+.tree-group-journal-table-wrap {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto !important;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(71, 85, 105, 0.7) rgba(148, 163, 184, 0.18);
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.member-feedback-recap-group-table-wrap::-webkit-scrollbar,
+.member-feedback-recap-table-wrap::-webkit-scrollbar,
+.dg-recap-group-report-table-wrap::-webkit-scrollbar,
+.tree-group-journal-table-wrap::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.member-feedback-recap-group-table-wrap::-webkit-scrollbar-track,
+.member-feedback-recap-table-wrap::-webkit-scrollbar-track,
+.dg-recap-group-report-table-wrap::-webkit-scrollbar-track,
+.tree-group-journal-table-wrap::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.18);
+  border-radius: 999px;
+}
+
+.member-feedback-recap-group-table-wrap::-webkit-scrollbar-thumb,
+.member-feedback-recap-table-wrap::-webkit-scrollbar-thumb,
+.dg-recap-group-report-table-wrap::-webkit-scrollbar-thumb,
+.tree-group-journal-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.7);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.member-feedback-recap-group-table {
+  min-width: 840px;
+}
+
+#dg-recap-summary-table {
+  min-width: 760px;
+}
+
+@media (max-width: 720px) {
+
+  .discipleship-tab-panel .table-wrap > .table,
+  .discipleship-tab-panel .member-feedback-recap-group-table-wrap > .table,
+  .discipleship-tab-panel .member-feedback-recap-table-wrap > .table {
+    width: 100%;
+    min-width: 760px;
+  }
+
+  .discipleship-tab-panel .people-dashboard-table {
+    min-width: 860px;
+  }
+
+  .discipleship-tab-panel .groups-dashboard-table {
+    min-width: 960px;
+  }
+
+  .discipleship-tab-panel .member-feedback-recap-group-table {
+    min-width: 840px;
+  }
+}

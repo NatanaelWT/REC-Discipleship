@@ -65,6 +65,10 @@ async function assertResponsive(page, label) {
         const allowedSelector = [
             '.table-wrap',
             '.worship-steward-table-wrap',
+            '.member-feedback-recap-group-table-wrap',
+            '.member-feedback-recap-table-wrap',
+            '.dg-recap-group-report-table-wrap',
+            '.tree-group-journal-table-wrap',
             '.discipleship-workspace__tabs',
             '.tree-v2-scroll',
             '.tree-scroll',
@@ -95,6 +99,48 @@ async function assertResponsive(page, label) {
 
     expect(result.documentOverflow, `${label} has document overflow`).toBeLessThanOrEqual(2);
     expect(result.offenders, `${label} has elements outside the viewport`).toEqual([]);
+}
+
+async function assertWideTablesScrollable(page, label) {
+    if ((page.viewportSize()?.width ?? 9999) > 720) return;
+
+    const failures = await page.evaluate(async () => {
+        const wrapperSelector = [
+            '.table-wrap',
+            '.worship-steward-table-wrap',
+            '.member-feedback-recap-group-table-wrap',
+            '.member-feedback-recap-table-wrap',
+            '.dg-recap-group-report-table-wrap',
+            '.tree-group-journal-table-wrap',
+        ].join(',');
+        const visible = (element) => {
+            const style = getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+        };
+        const results = [];
+
+        for (const table of document.querySelectorAll('table')) {
+            if (!visible(table) || table.querySelectorAll('thead th').length < 4) continue;
+            const wrapper = table.closest(wrapperSelector);
+            if (!wrapper) {
+                results.push(`${table.id || table.className}: missing scroll wrapper`);
+                continue;
+            }
+            if (wrapper.scrollWidth <= wrapper.clientWidth + 1) {
+                results.push(`${table.id || table.className}: no horizontal scroll range`);
+                continue;
+            }
+            wrapper.scrollLeft = Math.min(48, wrapper.scrollWidth - wrapper.clientWidth);
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+            if (wrapper.scrollLeft < 1) results.push(`${table.id || table.className}: scroll position did not change`);
+            wrapper.scrollLeft = 0;
+        }
+
+        return results;
+    });
+
+    expect(failures, `${label} has a wide table without usable horizontal scrolling`).toEqual([]);
 }
 
 async function openMobileSidebar(page) {
@@ -139,6 +185,7 @@ for (const viewport of viewports) {
                 const response = await goto(page, url);
                 expect(response?.status(), `${name} response`).toBeLessThan(400);
                 await assertResponsive(page, name);
+                await assertWideTablesScrollable(page, name);
             }
             await goto(page, '/');
             await page.screenshot({
@@ -156,6 +203,7 @@ for (const viewport of viewports) {
                 const response = await goto(page, url);
                 expect(response?.status(), `${name} response`).toBeLessThan(400);
                 await assertResponsive(page, name);
+                await assertWideTablesScrollable(page, name);
             }
             await assertMskModal(page);
             if (viewport.width <= 1024) await openMobileSidebar(page);
@@ -175,6 +223,7 @@ for (const viewport of viewports) {
                 const response = await goto(page, url);
                 expect(response?.status(), `${name} response`).toBeLessThan(400);
                 await assertResponsive(page, name);
+                await assertWideTablesScrollable(page, name);
             }
         });
 
@@ -189,6 +238,7 @@ for (const viewport of viewports) {
                 const response = await goto(page, url);
                 expect(response?.status(), `${name} response`).toBeLessThan(400);
                 await assertResponsive(page, name);
+                await assertWideTablesScrollable(page, name);
             }
             if (viewport.width <= 1024) await openMobileSidebar(page);
         });
@@ -203,6 +253,7 @@ for (const viewport of viewports) {
                 const response = await goto(page, url);
                 expect(response?.status(), `${name} response`).toBeLessThan(400);
                 await assertResponsive(page, name);
+                await assertWideTablesScrollable(page, name);
             }
             if (viewport.width <= 1024) await openMobileSidebar(page);
         });
