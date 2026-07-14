@@ -2966,15 +2966,45 @@
       }
       select.dataset.branchFilterReady = '1';
       select.addEventListener('change', () => {
-        const form = select.closest('form');
-        if (!form) {
+        let nextUrl;
+        try {
+          nextUrl = new URL(window.location.href);
+        } catch (_error) {
           return;
         }
-        if (typeof form.requestSubmit === 'function') {
-          form.requestSubmit();
+
+        [
+          'page',
+          'per_page',
+          'cursor',
+          'limit',
+          'rekap_cabang',
+          'edit',
+          'view',
+          'error',
+          'conflict',
+          'left_group',
+          'person_archived',
+          'group_completed',
+          'group_reactivated',
+          'edit_msk_sessions',
+          'msk_session_saved',
+          'converted',
+          'imported',
+          'import_msk_inserted',
+          'import_msk_updated',
+          'import_msk_unchanged',
+          'import_error_count',
+          'import_error_preview'
+        ].forEach((param) => nextUrl.searchParams.delete(param));
+
+        const branchId = String(select.value || '').trim();
+        if (branchId !== '') {
+          nextUrl.searchParams.set('branch_id', branchId);
         } else {
-          form.submit();
+          nextUrl.searchParams.delete('branch_id');
         }
+        window.location.assign(nextUrl.toString());
       });
     });
 
