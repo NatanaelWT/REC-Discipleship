@@ -16662,6 +16662,15 @@ button,
   overflow: hidden !important;
 }
 
+#discipleship-tabpanel-meeting[hidden],
+#discipleship-tabpanel-feedback[hidden],
+#discipleship-tabpanel-meeting.is-hidden,
+#discipleship-tabpanel-feedback.is-hidden,
+#discipleship-tabpanel-meeting[aria-hidden="true"],
+#discipleship-tabpanel-feedback[aria-hidden="true"] {
+  display: none !important;
+}
+
 #discipleship-tabpanel-meeting > .discipleship-page-header,
 #discipleship-tabpanel-feedback > .discipleship-page-header {
   flex: 0 0 auto;

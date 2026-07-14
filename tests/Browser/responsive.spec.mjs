@@ -349,6 +349,8 @@ for (const viewport of viewports) {
             await page.locator('[data-discipleship-tab][data-tab-key="feedback"]').click();
             const feedbackPanel = page.locator('#discipleship-tabpanel-feedback');
             await expect(feedbackPanel).toBeVisible();
+            await expect(page.locator('#discipleship-tabpanel-meeting')).toBeHidden();
+            await expect(page.locator('[data-discipleship-panels] > [data-discipleship-tab-panel]:visible')).toHaveCount(1);
             await expect(feedbackPanel.locator('#member-feedback-recap-group-table')).toBeVisible();
             const feedbackFromTab = await journalTableLayout(
                 page,
@@ -371,6 +373,11 @@ for (const viewport of viewports) {
                 path: path.join('test-results', 'responsive-screenshots', `${viewport.name}-feedback-direct.png`),
                 fullPage: true,
             });
+
+            await page.locator('[data-discipleship-tab][data-tab-key="meeting"]').click();
+            await expect(page.locator('#discipleship-tabpanel-meeting')).toBeVisible();
+            await expect(page.locator('#discipleship-tabpanel-feedback')).toBeHidden();
+            await expect(page.locator('[data-discipleship-panels] > [data-discipleship-tab-panel]:visible')).toHaveCount(1);
         });
     });
 }
