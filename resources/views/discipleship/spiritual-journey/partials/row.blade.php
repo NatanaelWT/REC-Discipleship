@@ -48,7 +48,7 @@
         ? route('discipleship.spiritual-journey.bridge-status', ['participant' => $journeyParticipantId])
         : route('discipleship.spiritual-journey.bridge-status-form');
     $mskDone = $mskPercent >= 100;
-    $mskBadgeClass = $mskDone ? 'journey-track-badge is-msk is-msk-done' : 'journey-track-badge is-msk is-msk-progress';
+    $mskStepClass = $mskDone ? 'is-msk-done' : 'is-msk-progress';
 @endphp
 
 <tr data-spiritual-journey-search-row data-search-text="{{ trim((string) ($row['search_text'] ?? $journeyName)) }}">
@@ -61,7 +61,13 @@
   </td>
   <td>
     <div class="journey-inline-track" title="Tahap DG dan MSK peserta">
-      <span class="{{ $mskBadgeClass }}">MSK {{ $mskProgressLabel }}</span>
+      <span class="people-progress-step journey-msk-step is-msk {{ $mskStepClass }}" aria-label="{{ 'MSK: '.$mskProgressLabel }}">
+        <span class="people-progress-step-marker" aria-hidden="true"></span>
+        <span class="people-progress-step-copy">
+          <strong>MSK</strong>
+          <small>{{ $mskProgressLabel }}</small>
+        </span>
+      </span>
       @foreach ($dgSteps as $dgStepIndex => $dgStep)
         @php
             $dgStepLabel = trim((string) ($dgStep['label'] ?? 'DG '.($dgStepIndex + 1)));
@@ -87,18 +93,22 @@
           </span>
         </span>
         @if ($dgStepIndex === 0)
-          <span class="journey-track-bridge">
+          <div class="people-progress-step journey-track-bridge journey-bridge-step {{ $bridgeStateClass }}">
+            <span class="people-progress-step-marker" aria-hidden="true"></span>
             <form method="post" action="{{ $bridgeFormAction }}" class="journey-bridge-form">
               @csrf
               <input type="hidden" name="action" value="save_journey_bridge_status">
               <input type="hidden" name="id" value="{{ $journeyParticipantId }}">
-              <select name="journey_bridge_status" class="journey-bridge-select {{ $bridgeStateClass }}" aria-label="{{ 'Status RG atau KGAP untuk '.$journeyName }}" @disabled(is_effective_central_discipleship_readonly()) @if (! is_effective_central_discipleship_readonly()) onchange="this.form.submit()" @endif>
-                @foreach ($bridgeOptions as $bridgeValue => $bridgeLabel)
-                  <option value="{{ $bridgeValue }}" @selected($journeyBridgeStatus === $bridgeValue)>{{ $bridgeLabel }}</option>
-                @endforeach
-              </select>
+              <label class="journey-bridge-copy">
+                <strong>RG / KGAP</strong>
+                <select name="journey_bridge_status" class="journey-bridge-select {{ $bridgeStateClass }}" aria-label="{{ 'Status RG atau KGAP untuk '.$journeyName }}" @disabled(is_effective_central_discipleship_readonly()) @if (! is_effective_central_discipleship_readonly()) onchange="this.form.submit()" @endif>
+                  @foreach ($bridgeOptions as $bridgeValue => $bridgeLabel)
+                    <option value="{{ $bridgeValue }}" @selected($journeyBridgeStatus === $bridgeValue)>{{ $bridgeLabel }}</option>
+                  @endforeach
+                </select>
+              </label>
             </form>
-          </span>
+          </div>
         @endif
       @endforeach
     </div>

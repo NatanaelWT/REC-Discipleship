@@ -62,7 +62,10 @@ class SpiritualJourneyPageTest extends TestCase
         $this->assertSame(1, substr_count($content, 'people-progress-step journey-dg-step is-pending'));
         $this->assertSame(2, substr_count($content, '<small>Selesai</small>'));
         $this->assertSame(1, substr_count($content, '<small>Belum</small>'));
-        $this->assertStringContainsString('journey-track-badge is-msk', $content);
+        $this->assertStringContainsString('people-progress-step journey-msk-step is-msk is-msk-progress', $content);
+        $this->assertStringContainsString('<strong>MSK</strong>', $content);
+        $this->assertStringContainsString('people-progress-step journey-track-bridge journey-bridge-step is-bridge-none', $content);
+        $this->assertStringContainsString('<strong>RG / KGAP</strong>', $content);
         $this->assertStringContainsString('journey-bridge-select is-bridge-none', $content);
         $this->assertStringNotContainsString('journey-track-badge is-muted">DG 1</span>', $content);
 
@@ -203,6 +206,8 @@ class SpiritualJourneyPageTest extends TestCase
         $this->assertArrayNotHasKey('next_page', $pageTwo->json());
         $this->assertArrayNotHasKey('templates_html', $pageTwo->json());
         $this->assertStringContainsString('Peserta Journey 051', (string) $pageTwo->json('html'));
+        $this->assertStringContainsString('people-progress-step journey-msk-step', (string) $pageTwo->json('html'));
+        $this->assertStringContainsString('people-progress-step journey-track-bridge journey-bridge-step', (string) $pageTwo->json('html'));
         $this->assertStringContainsString('Peserta Journey 100', (string) $pageTwo->json('html'));
         $this->assertStringNotContainsString('Peserta Journey 101', (string) $pageTwo->json('html'));
 
@@ -434,6 +439,10 @@ class SpiritualJourneyPageTest extends TestCase
             'id' => $participantId,
             'journey_bridge_status' => 'sudah_kgap',
         ]);
+        $this->get('/pemuridan/spiritual-journey')
+            ->assertOk()
+            ->assertSee('journey-bridge-step is-bridge-kgap', false)
+            ->assertSee('journey-bridge-select is-bridge-kgap', false);
     }
 
     private function createMskTables(): void

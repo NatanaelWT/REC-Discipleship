@@ -11845,49 +11845,111 @@ button.member-feedback-recap-count-pill:focus-visible {
   max-width: 100%;
 }
 
+.journey-msk-step,
 .journey-dg-step {
   flex: 0 0 108px;
   min-width: 108px;
   text-align: left;
 }
 
-.journey-track-bridge,
-.journey-bridge-form {
-  display: inline-flex;
-  align-items: center;
+.journey-msk-step.is-msk-progress {
+  border-color: #bae6fd;
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+.journey-msk-step.is-msk-progress .people-progress-step-marker {
+  border-color: #0ea5e9;
+  background: #fff;
+  box-shadow: inset 0 0 0 2px #0ea5e9;
+}
+
+.journey-msk-step.is-msk-done {
+  border-color: #7dd3fc;
+  background: #e0f2fe;
+  color: #0b5ed7;
+}
+
+.journey-msk-step.is-msk-done .people-progress-step-marker {
+  border-color: #0284c7;
+  background: #0284c7;
+  box-shadow: inset 0 0 0 2px #e0f2fe;
+}
+
+.journey-track-bridge {
+  flex: 0 0 140px;
+  min-width: 140px;
+  text-align: left;
 }
 
 .journey-bridge-form {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
 }
 
-.journey-bridge-select {
-  min-height: 32px;
-  padding: 6px 20px 6px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(255, 255, 255, 0.92);
-  color: #475569;
+.journey-bridge-copy {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+.journey-bridge-copy strong {
+  color: inherit;
   font-size: 12px;
-  font-weight: 700;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  line-height: 1.2;
+}
+
+.journey-bridge-select {
+  width: 100%;
+  min-width: 0;
+  height: 14px;
+  padding: 0 16px 0 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background-color: transparent;
+  color: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
 }
 
 .journey-bridge-select:disabled {
-  opacity: 0.72;
+  opacity: 0.78;
   cursor: default;
 }
 
-.journey-bridge-select.is-bridge-rg {
-  background: color-mix(in srgb, var(--discipleship-dg1) 18%, white);
-  color: #b45309;
-  border-color: color-mix(in srgb, var(--discipleship-dg1) 26%, #e2e8f0);
+.journey-bridge-step:focus-within {
+  outline: 2px solid rgba(37, 99, 235, 0.2);
+  outline-offset: 1px;
 }
 
-.journey-bridge-select.is-bridge-kgap {
-  background: color-mix(in srgb, var(--discipleship-kgap) 18%, white);
+.journey-bridge-step.is-bridge-rg {
+  background: color-mix(in srgb, var(--discipleship-dg1) 12%, white);
+  color: #b45309;
+  border-color: color-mix(in srgb, var(--discipleship-dg1) 36%, #e2e8f0);
+}
+
+.journey-bridge-step.is-bridge-rg .people-progress-step-marker {
+  border-color: var(--discipleship-dg1);
+  background: var(--discipleship-dg1);
+}
+
+.journey-bridge-step.is-bridge-kgap {
+  background: color-mix(in srgb, var(--discipleship-kgap) 12%, white);
   color: #0f5132;
-  border-color: color-mix(in srgb, var(--discipleship-kgap) 26%, #e2e8f0);
+  border-color: color-mix(in srgb, var(--discipleship-kgap) 36%, #e2e8f0);
+}
+
+.journey-bridge-step.is-bridge-kgap .people-progress-step-marker {
+  border-color: var(--discipleship-kgap);
+  background: var(--discipleship-kgap);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--discipleship-kgap) 12%, white);
 }
 
 .journey-track-badge {
@@ -12515,11 +12577,6 @@ button.member-feedback-recap-count-pill:focus-visible {
 
   .journey-track-cell {
     min-width: 160px;
-  }
-
-  .journey-bridge-select {
-    width: 100%;
-    min-width: 132px;
   }
 
 }

@@ -145,7 +145,11 @@ async function dgStatesByName(page, rowSelector, nameSelector, stepSelector) {
 async function assertSpiritualJourneyDgPresentation(page) {
     const firstRow = page.locator('[data-spiritual-journey-search-row]').first();
     await expect(firstRow).toBeVisible();
-    await expect(firstRow.locator('.journey-track-badge.is-msk')).toHaveCount(1);
+    await expect(firstRow.locator('.journey-msk-step')).toHaveCount(1);
+    await expect(firstRow.locator('.journey-msk-step strong')).toHaveText('MSK');
+    await expect(firstRow.locator('.journey-msk-step small')).not.toHaveText('');
+    await expect(firstRow.locator('.journey-bridge-step')).toHaveCount(1);
+    await expect(firstRow.locator('.journey-bridge-step strong')).toHaveText('RG / KGAP');
     await expect(firstRow.locator('.journey-bridge-select')).toHaveCount(1);
 
     const dgSteps = firstRow.locator('.journey-dg-step');
@@ -155,22 +159,27 @@ async function assertSpiritualJourneyDgPresentation(page) {
     expect(dgStates).toHaveLength(3);
     dgStates.forEach((state) => expect(['Selesai', 'Sedang', 'Terhenti', 'Belum']).toContain(state));
     await expect(firstRow.locator([
+        '.journey-inline-track > .journey-track-badge.is-msk',
         '.journey-inline-track > .journey-track-badge.is-dg1',
         '.journey-inline-track > .journey-track-badge.is-dg2',
         '.journey-inline-track > .journey-track-badge.is-dg3',
     ].join(','))).toHaveCount(0);
 
-    const geometry = await dgSteps.first().evaluate((step) => {
-        const style = getComputedStyle(step);
+    const stageCards = firstRow.locator('.journey-msk-step, .journey-dg-step, .journey-bridge-step');
+    await expect(stageCards).toHaveCount(5);
+    const geometries = await stageCards.evaluateAll((cards) => cards.map((card) => {
+        const style = getComputedStyle(card);
         return {
             minHeight: style.minHeight,
             borderRadius: style.borderRadius,
-            width: step.getBoundingClientRect().width,
+            width: card.getBoundingClientRect().width,
         };
+    }));
+    geometries.forEach((geometry) => {
+        expect(geometry.minHeight).toBe('42px');
+        expect(geometry.borderRadius).toBe('7px');
+        expect(geometry.width).toBeGreaterThanOrEqual(108);
     });
-    expect(geometry.minHeight).toBe('42px');
-    expect(geometry.borderRadius).toBe('7px');
-    expect(geometry.width).toBeGreaterThanOrEqual(108);
 
     return dgStatesByName(
         page,
