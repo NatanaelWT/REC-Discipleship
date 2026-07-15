@@ -101,6 +101,33 @@ async function assertResponsive(page, label) {
     expect(result.offenders, `${label} has elements outside the viewport`).toEqual([]);
 }
 
+async function assertRefreshButtonJoinsWorkspace(page, label) {
+    const result = await page.evaluate(() => {
+        const tabbar = document.querySelector('.discipleship-workspace__tabbar');
+        const refresh = tabbar?.querySelector('[data-discipleship-tab-refresh]');
+        const panels = document.querySelector('[data-discipleship-panels]');
+        if (!tabbar || !refresh || !panels) return null;
+
+        const tabbarRect = tabbar.getBoundingClientRect();
+        const refreshRect = refresh.getBoundingClientRect();
+        const panelsRect = panels.getBoundingClientRect();
+        const refreshStyle = getComputedStyle(refresh);
+
+        return {
+            refreshBottomDelta: Math.abs(refreshRect.bottom - tabbarRect.bottom),
+            panelsTopDelta: Math.abs(panelsRect.top - tabbarRect.bottom),
+            borderBottomWidth: refreshStyle.borderBottomWidth,
+            refreshHeight: refreshRect.height,
+        };
+    });
+
+    expect(result, `${label} refresh button`).not.toBeNull();
+    expect(result.refreshBottomDelta, `${label} refresh bottom alignment`).toBeLessThanOrEqual(1);
+    expect(result.panelsTopDelta, `${label} tabbar and panel alignment`).toBeLessThanOrEqual(1);
+    expect(result.borderBottomWidth, `${label} refresh bottom seam`).toBe('0px');
+    expect(result.refreshHeight, `${label} refresh height`).toBe(38);
+}
+
 async function assertWideTablesScrollable(page, label) {
     if ((page.viewportSize()?.width ?? 9999) > 720) return;
 
@@ -333,6 +360,9 @@ for (const viewport of viewports) {
                 expect(response?.status(), `${name} response`).toBeLessThan(400);
                 await assertResponsive(page, name);
                 await assertWideTablesScrollable(page, name);
+                if (await page.locator('[data-discipleship-tab-refresh]').count()) {
+                    await assertRefreshButtonJoinsWorkspace(page, name);
+                }
                 if (viewport.width === 320 && [
                     'discipleship-people',
                     'discipleship-groups',
