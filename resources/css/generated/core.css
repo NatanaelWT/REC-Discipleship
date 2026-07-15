@@ -3750,7 +3750,7 @@ button,
   }
 }
 
-/* Journal tables use the same viewport whether loaded directly or as a tab fragment. */
+/* Feedback journals keep the same viewport when loaded directly or as a tab fragment. */
 
 @media (max-width: 420px) {
   .app-page .app-main {

@@ -208,17 +208,22 @@ async function assertMskModal(page) {
     await expect(modal).toHaveAttribute('aria-hidden', 'true');
 }
 
-async function journalTableLayout(page, panelSelector, cardSelector, wrapperSelector) {
+async function tableLayout(page, panelSelector, cardSelector, wrapperSelector) {
     return page.evaluate(({ panelSelector, cardSelector, wrapperSelector }) => {
         const panel = document.querySelector(panelSelector);
         const card = panel?.querySelector(cardSelector);
         const wrapper = panel?.querySelector(wrapperSelector);
+        const table = wrapper?.querySelector('table');
         const header = wrapper?.querySelector('thead th');
-        if (!panel || !card || !wrapper || !header) return null;
+        if (!panel || !card || !wrapper || !table || !header) return null;
         const panelStyle = getComputedStyle(panel);
         const cardStyle = getComputedStyle(card);
         const wrapperStyle = getComputedStyle(wrapper);
+        const tableStyle = getComputedStyle(table);
         const headerStyle = getComputedStyle(header);
+        const panelRect = panel.getBoundingClientRect();
+        const cardRect = card.getBoundingClientRect();
+        const wrapperRect = wrapper.getBoundingClientRect();
         return {
             panelDisplay: panelStyle.display,
             panelDirection: panelStyle.flexDirection,
@@ -227,10 +232,16 @@ async function journalTableLayout(page, panelSelector, cardSelector, wrapperSele
             cardDisplay: cardStyle.display,
             cardDirection: cardStyle.flexDirection,
             cardPadding: cardStyle.padding,
+            cardMarginBottom: cardStyle.marginBottom,
             cardOverflow: cardStyle.overflow,
+            cardInsetLeft: Math.round(cardRect.left - panelRect.left),
+            cardWidth: Math.round(cardRect.width),
+            wrapperInsetLeft: Math.round(wrapperRect.left - cardRect.left),
+            wrapperWidth: Math.round(wrapperRect.width),
             wrapperOverflowX: wrapperStyle.overflowX,
             wrapperOverflowY: wrapperStyle.overflowY,
             wrapperMaxHeight: wrapperStyle.maxHeight,
+            tableMinWidth: tableStyle.minWidth,
             headerPosition: headerStyle.position,
             headerTop: headerStyle.top,
         };
@@ -333,12 +344,12 @@ for (const viewport of viewports) {
             if (viewport.width <= 1024) await openMobileSidebar(page);
         });
 
-        test('journal tables match after tab navigation and direct refresh', async ({ page }) => {
+        test('meeting journal matches Spiritual Journey and feedback stays stable', async ({ page }) => {
             test.skip(!exhaustive);
             await login(page, 'responsive_branch');
             await goto(page, '/pemuridan/laporan-dg');
 
-            const meetingLayout = await journalTableLayout(
+            const meetingLayout = await tableLayout(
                 page,
                 '#discipleship-tabpanel-meeting',
                 '.dg-recap-section-card',
@@ -346,13 +357,24 @@ for (const viewport of viewports) {
             );
             expect(meetingLayout).not.toBeNull();
 
+            await goto(page, '/pemuridan/spiritual-journey');
+            const spiritualJourneyLayout = await tableLayout(
+                page,
+                '#discipleship-tabpanel-spiritual',
+                '.table-card-plain',
+                '[data-spiritual-journey-scroll]',
+            );
+            expect(spiritualJourneyLayout).toEqual(meetingLayout);
+
+            await goto(page, '/pemuridan/laporan-dg');
+
             await page.locator('[data-discipleship-tab][data-tab-key="feedback"]').click();
             const feedbackPanel = page.locator('#discipleship-tabpanel-feedback');
             await expect(feedbackPanel).toBeVisible();
             await expect(page.locator('#discipleship-tabpanel-meeting')).toBeHidden();
             await expect(page.locator('[data-discipleship-panels] > [data-discipleship-tab-panel]:visible')).toHaveCount(1);
             await expect(feedbackPanel.locator('#member-feedback-recap-group-table')).toBeVisible();
-            const feedbackFromTab = await journalTableLayout(
+            const feedbackFromTab = await tableLayout(
                 page,
                 '#discipleship-tabpanel-feedback',
                 '.member-feedback-recap-group-card',
@@ -360,7 +382,7 @@ for (const viewport of viewports) {
             );
 
             await goto(page, '/pemuridan/umpan-balik-anggota');
-            const feedbackDirect = await journalTableLayout(
+            const feedbackDirect = await tableLayout(
                 page,
                 '#discipleship-tabpanel-feedback',
                 '.member-feedback-recap-group-card',
@@ -368,7 +390,6 @@ for (const viewport of viewports) {
             );
 
             expect(feedbackFromTab).toEqual(feedbackDirect);
-            expect(feedbackDirect).toEqual(meetingLayout);
             await page.screenshot({
                 path: path.join('test-results', 'responsive-screenshots', `${viewport.name}-feedback-direct.png`),
                 fullPage: true,

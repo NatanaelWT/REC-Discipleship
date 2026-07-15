@@ -7560,7 +7560,8 @@ textarea:focus-visible {
   overflow: auto;
 }
 
-.page-spiritual_journey .table-card-plain {
+.page-spiritual_journey .table-card-plain,
+.page-dg_reports_recap .dg-recap-section-card.table-card-plain {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -16651,8 +16652,7 @@ button,
   }
 }
 
-/* Journal tables use the same viewport whether loaded directly or as a tab fragment. */
-#discipleship-tabpanel-meeting,
+/* Feedback journals keep the same viewport when loaded directly or as a tab fragment. */
 #discipleship-tabpanel-feedback {
   display: flex !important;
   flex-direction: column;
@@ -16662,21 +16662,16 @@ button,
   overflow: hidden !important;
 }
 
-#discipleship-tabpanel-meeting[hidden],
 #discipleship-tabpanel-feedback[hidden],
-#discipleship-tabpanel-meeting.is-hidden,
 #discipleship-tabpanel-feedback.is-hidden,
-#discipleship-tabpanel-meeting[aria-hidden="true"],
 #discipleship-tabpanel-feedback[aria-hidden="true"] {
   display: none !important;
 }
 
-#discipleship-tabpanel-meeting > .discipleship-page-header,
 #discipleship-tabpanel-feedback > .discipleship-page-header {
   flex: 0 0 auto;
 }
 
-#discipleship-tabpanel-meeting > .dg-recap-section-card,
 #discipleship-tabpanel-feedback > .member-feedback-recap-group-card {
   display: flex !important;
   flex: 1 1 auto !important;
@@ -16689,7 +16684,6 @@ button,
   overflow: hidden !important;
 }
 
-#discipleship-tabpanel-meeting [data-dg-recap-summary-scroll],
 #discipleship-tabpanel-feedback [data-member-feedback-summary-scroll] {
   flex: 1 1 auto;
   width: 100%;
@@ -16700,7 +16694,6 @@ button,
   scrollbar-gutter: stable;
 }
 
-#discipleship-tabpanel-meeting [data-dg-recap-summary-scroll] thead th,
 #discipleship-tabpanel-feedback [data-member-feedback-summary-scroll] thead th {
   position: sticky !important;
   top: 0 !important;
@@ -16710,27 +16703,37 @@ button,
 }
 
 @media (max-width: 1180px) {
-  #discipleship-tabpanel-meeting > .dg-recap-section-card,
   #discipleship-tabpanel-feedback > .member-feedback-recap-group-card {
     padding: 16px;
   }
 }
 
 @media (max-width: 720px) {
-  #discipleship-tabpanel-meeting,
   #discipleship-tabpanel-feedback {
     max-height: calc(100dvh - 70px) !important;
   }
 
-  #discipleship-tabpanel-meeting > .dg-recap-section-card,
   #discipleship-tabpanel-feedback > .member-feedback-recap-group-card {
     flex: 0 1 auto !important;
     padding: 14px;
   }
 
-  #discipleship-tabpanel-meeting [data-dg-recap-summary-scroll],
   #discipleship-tabpanel-feedback [data-member-feedback-summary-scroll] {
     max-height: min(62dvh, 620px) !important;
+  }
+}
+
+#discipleship-tabpanel-meeting > .dg-recap-section-card.table-card-plain {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+  overflow: visible;
+}
+
+@media (max-width: 720px) {
+  #discipleship-tabpanel-meeting > .dg-recap-section-card.table-card-plain {
+    margin-bottom: 32px;
+    padding: 0 8px 8px;
   }
 }
 
@@ -16890,10 +16893,6 @@ button,
   min-width: 840px;
 }
 
-#dg-recap-summary-table {
-  min-width: 760px;
-}
-
 @media (max-width: 720px) {
   .table-card-plain .table-wrap > .table {
     width: 100%;
@@ -17003,11 +17002,12 @@ button,
 #spiritual-journey-table .journey-col-track { width: 570px; }
 
 #dg-recap-summary-table {
-  min-width: 800px;
+  min-width: 820px;
+  margin: 0 auto;
 }
 
 #dg-recap-summary-table th:nth-child(1),
-#dg-recap-summary-table td:nth-child(1) { width: 240px; }
+#dg-recap-summary-table td:nth-child(1) { width: 250px; }
 
 #dg-recap-summary-table th:nth-child(2),
 #dg-recap-summary-table td:nth-child(2) { width: 120px; }
@@ -17019,7 +17019,7 @@ button,
 #dg-recap-summary-table td:nth-child(4) { width: 100px; }
 
 #dg-recap-summary-table th:nth-child(5),
-#dg-recap-summary-table td:nth-child(5) { width: 160px; }
+#dg-recap-summary-table td:nth-child(5) { width: 170px; }
 
 @media (max-width: 720px) {
   #discipleship-tabpanel-people [data-discipleship-people-scroll],

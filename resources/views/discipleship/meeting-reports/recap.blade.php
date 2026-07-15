@@ -5,7 +5,7 @@ if ($page === 'dg_reports_recap') {
     if (! $renderAsTabPanel) {
         page_header('Rekap Jurnal Temu DG', $settings, $page, false, 'page-discipleship-table-scroll');
     } else {
-        echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-journal-panel dg-meeting-recap-panel" id="discipleship-tabpanel-meeting" role="tabpanel" aria-labelledby="discipleship-tab-meeting" tabindex="0" data-discipleship-tab-panel data-tab-key="meeting" data-page-title="Jurnal Temu DG" data-body-class="page-dg_reports_recap">'."\n";
+        echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-list-panel dg-meeting-recap-panel" id="discipleship-tabpanel-meeting" role="tabpanel" aria-labelledby="discipleship-tab-meeting" tabindex="0" data-discipleship-tab-panel data-tab-key="meeting" data-page-title="Jurnal Temu DG" data-body-class="page-dg_reports_recap">'."\n";
     }
     $peopleById = index_by_id($people);
     $normalizeProgressLabel = function (string $value): string {
@@ -1068,7 +1068,7 @@ if ($page === 'dg_reports_recap') {
         return strcasecmp((string) ($a['leader_name'] ?? ''), (string) ($b['leader_name'] ?? ''));
     });
 
-    echo "<section class=\"card dg-recap-section-card\">\n";
+    echo "<section class=\"card table-card-plain dg-recap-section-card\">\n";
     echo "  <div class=\"table-wrap\" data-dg-recap-summary-scroll data-table-horizontal-scroll>\n";
     echo "    <table class=\"table dg-recap-table\" id=\"dg-recap-summary-table\">\n";
     echo "      <thead><tr><th>Pemimpin</th><th>Progress</th><th>Sesi Terakhir</th><th>Laporan</th><th>Laporan Terakhir</th></tr></thead>\n";
