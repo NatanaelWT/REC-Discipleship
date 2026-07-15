@@ -483,7 +483,7 @@
       const progressInput = form.querySelector('[data-discipleship-people-progress-input]');
       const tableScrollArea = root.querySelector('[data-discipleship-people-scroll]');
       const scrollArea = panel && panel.closest('[data-discipleship-workspace]')
-        ? panel
+        ? null
         : tableScrollArea;
       const body = root.querySelector('[data-discipleship-people-list-body]');
       const emptyRow = root.querySelector('[data-discipleship-people-search-empty]');
@@ -664,6 +664,7 @@
               return;
             }
             applyResult(data, mode);
+            window.requestAnimationFrame(loadMoreIfNeeded);
           })
           .catch((error) => {
             if (error && error.name === 'AbortError') {
@@ -841,7 +842,7 @@
       const statusInput = form.querySelector('[data-discipleship-groups-status-input]');
       const tableScrollArea = root.querySelector('[data-discipleship-groups-scroll]');
       const scrollArea = panel && panel.closest('[data-discipleship-workspace]')
-        ? panel
+        ? null
         : tableScrollArea;
       const body = root.querySelector('[data-discipleship-groups-list-body]');
       const emptyRow = root.querySelector('[data-discipleship-groups-empty]');
@@ -1021,6 +1022,7 @@
               return;
             }
             applyResult(data, mode);
+            window.requestAnimationFrame(loadMoreIfNeeded);
           })
           .catch((error) => {
             if (error && error.name === 'AbortError') {
@@ -1409,7 +1411,7 @@
       const batchInput = panel.querySelector('[data-msk-batch-input]');
       const tableScrollArea = root.querySelector('[data-msk-scroll]');
       const scrollArea = panel && panel.closest('[data-discipleship-workspace]')
-        ? panel
+        ? null
         : tableScrollArea;
       const body = root.querySelector('[data-msk-list-body]');
       const emptyRow = root.querySelector('[data-msk-search-empty]');
@@ -1657,6 +1659,7 @@
               return;
             }
             applyResult(data, mode);
+            window.requestAnimationFrame(loadMoreIfNeeded);
           })
           .catch((error) => {
             if (error && error.name === 'AbortError') {
@@ -1851,7 +1854,7 @@
       const filterInput = form.querySelector('[data-spiritual-journey-filter-input]');
       const tableScrollArea = root.querySelector('[data-spiritual-journey-scroll]');
       const scrollArea = panel && panel.closest('[data-discipleship-workspace]')
-        ? panel
+        ? null
         : tableScrollArea;
       const body = root.querySelector('[data-spiritual-journey-list-body]');
       const emptyRow = root.querySelector('[data-spiritual-journey-search-empty]');
@@ -2050,6 +2053,7 @@
               return;
             }
             applyResult(data, mode);
+            window.requestAnimationFrame(loadMoreIfNeeded);
           })
           .catch((error) => {
             if (error && error.name === 'AbortError') {

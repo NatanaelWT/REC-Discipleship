@@ -248,6 +248,61 @@ async function tableLayout(page, panelSelector, cardSelector, wrapperSelector) {
     }, { panelSelector, cardSelector, wrapperSelector });
 }
 
+async function assertWorkspaceUsesDocumentScroll(page, label, panelSelector) {
+    const result = await page.evaluate((selector) => {
+        const panel = document.querySelector(selector);
+        const panelsHost = panel?.closest('[data-discipleship-panels]');
+        const scrollRoot = document.scrollingElement;
+        if (!panel || !panelsHost || !scrollRoot) return null;
+
+        const nestedSelectors = [
+            '[data-discipleship-people-scroll]',
+            '[data-discipleship-groups-scroll]',
+            '[data-msk-scroll]',
+            '[data-spiritual-journey-scroll]',
+            '[data-dg-recap-summary-scroll]',
+            '[data-member-feedback-summary-scroll]',
+            '.tree-v2-scroll',
+            '.discipleship-overdue-list',
+        ].join(',');
+        const nestedVerticalScrollers = Array.from(panel.querySelectorAll(nestedSelectors))
+            .filter((element) => {
+                const style = getComputedStyle(element);
+                const rect = element.getBoundingClientRect();
+                return style.display !== 'none'
+                    && rect.height > 0
+                    && element.scrollHeight > element.clientHeight + 1;
+            })
+            .map((element) => element.getAttribute('data-discipleship-people-scroll') !== null
+                ? 'people-table'
+                : element.getAttribute('data-discipleship-groups-scroll') !== null
+                    ? 'groups-table'
+                    : element.className || element.tagName.toLowerCase());
+
+        const panelStyle = getComputedStyle(panel);
+        const hostStyle = getComputedStyle(panelsHost);
+        return {
+            panelOverflowY: panelStyle.overflowY,
+            panelMaxHeight: panelStyle.maxHeight,
+            panelScrollRange: panel.scrollHeight - panel.clientHeight,
+            hostOverflowY: hostStyle.overflowY,
+            hostScrollRange: panelsHost.scrollHeight - panelsHost.clientHeight,
+            documentScrollRange: scrollRoot.scrollHeight - scrollRoot.clientHeight,
+            nestedVerticalScrollers,
+        };
+    }, panelSelector);
+
+    expect(result, `${label} workspace state`).not.toBeNull();
+    expect(result.panelOverflowY, `${label} panel overflow`).toBe('visible');
+    expect(result.panelMaxHeight, `${label} panel max height`).toBe('none');
+    expect(result.panelScrollRange, `${label} panel vertical scroll range`).toBeLessThanOrEqual(1);
+    expect(result.hostOverflowY, `${label} panels host overflow`).toBe('visible');
+    expect(result.hostScrollRange, `${label} panels host vertical scroll range`).toBeLessThanOrEqual(1);
+    expect(result.nestedVerticalScrollers, `${label} nested vertical scrollers`).toEqual([]);
+
+    return result.documentScrollRange;
+}
+
 for (const viewport of viewports) {
     test.describe(viewport.name, () => {
         test.use({ viewport: { width: viewport.width, height: viewport.height } });
@@ -298,6 +353,88 @@ for (const viewport of viewports) {
                 path: path.join('test-results', 'responsive-screenshots', `${viewport.name}-dashboard.png`),
                 fullPage: true,
             });
+        });
+
+        test('discipleship tabs use document scrolling', async ({ page }) => {
+            test.skip(!exhaustive);
+            await login(page, 'responsive_branch');
+
+            for (const workspace of [
+                {
+                    url: '/pemuridan/dashboard',
+                    tabs: [
+                        ['dashboard', '#discipleship-tabpanel-dashboard'],
+                        ['people', '#discipleship-tabpanel-people'],
+                        ['groups', '#discipleship-tabpanel-groups'],
+                        ['tree', '#discipleship-tabpanel-tree'],
+                    ],
+                },
+                {
+                    url: '/pemuridan/spiritual-journey',
+                    tabs: [
+                        ['spiritual', '#discipleship-tabpanel-spiritual'],
+                        ['msk', '#discipleship-tabpanel-msk'],
+                    ],
+                },
+                {
+                    url: '/pemuridan/laporan-dg',
+                    tabs: [
+                        ['meeting', '#discipleship-tabpanel-meeting'],
+                        ['feedback', '#discipleship-tabpanel-feedback'],
+                    ],
+                },
+            ]) {
+                await goto(page, workspace.url);
+
+                for (const [index, [key, panelSelector]] of workspace.tabs.entries()) {
+                    if (index > 0) {
+                        await page.locator(`[data-discipleship-tab][data-tab-key="${key}"]`).click();
+                    }
+                    await expect(page.locator(panelSelector)).toBeVisible();
+                    await expect(page.locator('[data-discipleship-panels] > [data-discipleship-tab-panel]:visible')).toHaveCount(1);
+                    await page.evaluate(() => window.scrollTo(0, 0));
+                    const documentScrollRange = await assertWorkspaceUsesDocumentScroll(page, key, panelSelector);
+                    if (key === 'dashboard') {
+                        expect(documentScrollRange, 'dashboard document scroll range').toBeGreaterThan(0);
+                        await page.evaluate(() => window.scrollTo(0, document.scrollingElement.scrollHeight));
+                        expect(await page.evaluate(() => window.scrollY), 'dashboard window scroll position').toBeGreaterThan(0);
+                        await page.evaluate(() => window.scrollTo(0, 0));
+                    }
+                }
+            }
+
+            for (const [label, url, listSelector, rowSelector] of [
+                [
+                    'people',
+                    '/pemuridan/anggota?limit=2',
+                    '[data-discipleship-people-list]',
+                    '[data-discipleship-people-search-row]',
+                ],
+                [
+                    'spiritual',
+                    '/pemuridan/spiritual-journey?limit=2',
+                    '[data-spiritual-journey-list]',
+                    '[data-spiritual-journey-search-row]',
+                ],
+                [
+                    'msk',
+                    '/pemuridan/msk?limit=2',
+                    '[data-msk-list]',
+                    '[data-msk-search-row]',
+                ],
+            ]) {
+                await goto(page, url);
+                const list = page.locator(listSelector);
+                await expect(list, `${label} lazy list`).toHaveAttribute('data-limit', '2');
+                await expect.poll(async () => {
+                    await page.evaluate(() => window.scrollTo(0, document.scrollingElement.scrollHeight));
+                    return list.getAttribute('data-has-more');
+                }, { message: `${label} cursor completed by document scroll` }).toBe('0');
+                expect(
+                    await page.locator(rowSelector).count(),
+                    `${label} loaded more than the initial row limit`,
+                ).toBeGreaterThan(2);
+            }
         });
 
         test('developer and worship pages stay within the viewport', async ({ page }) => {
