@@ -379,7 +379,7 @@ function render_discipleship_sidebar_navigation(string $currentPage, string $cur
     $discipleshipNavItems = [
         ['label' => 'Dashboard', 'page' => 'discipleship_dashboard', 'active_pages' => ['people_tree', 'people_tree_v2', 'people_list', 'groups_list'], 'route' => 'discipleship.dashboard'],
         ['label' => 'Journey & MSK', 'page' => 'spiritual_journey', 'active_pages' => ['msk_classes'], 'route' => 'discipleship.spiritual-journey'],
-        ['label' => 'Jurnal & Pertanyaan', 'page' => 'dg_reports_recap', 'active_pages' => ['member_feedback_recap', 'difficult_questions_admin'], 'route' => 'discipleship.reports-recap'],
+        ['label' => 'Jurnal & Form', 'page' => 'dg_reports_recap', 'active_pages' => ['member_feedback_recap', 'difficult_questions_admin'], 'route' => 'discipleship.reports-recap'],
         ['label' => 'Target DG & MSK', 'page' => 'discipleship_targets', 'route' => 'discipleship.targets'],
     ];
 
