@@ -40,7 +40,33 @@ class MemberFeedbackRecapTest extends TestCase
         $response->assertSee('data-member-feedback-group-modal', false);
         $response->assertSee('data-member-feedback-detail-open', false);
         $response->assertSee('data-member-feedback-detail-modal', false);
+        $response->assertSee('discipleship-list-panel member-feedback-recap-panel', false);
+        $response->assertSee('card table-card-plain dg-recap-section-card member-feedback-recap-group-card', false);
         $response->assertDontSee('Daftar Jurnal Umpan Balik Anggota');
+    }
+
+    public function test_fragment_and_full_page_use_the_same_feedback_summary_table(): void
+    {
+        $this->createTables();
+        $ids = $this->seedFeedbackFixture();
+        $this->seedFeedback($ids, respondentName: 'Anggota Fragment');
+
+        $this->actingAsRecUser();
+
+        $fullPage = $this->get('/pemuridan/umpan-balik-anggota')->assertOk();
+        $fragment = $this->withHeader('X-Discipleship-Fragment', 'tab')
+            ->get('/pemuridan/umpan-balik-anggota')
+            ->assertOk();
+
+        $fullPage->assertSee('data-discipleship-workspace', false);
+        $fragment->assertDontSee('data-discipleship-workspace', false);
+        $fragment->assertSee('id="discipleship-tabpanel-feedback"', false);
+        $fragment->assertSee('id="member-feedback-recap-group-table"', false);
+
+        $this->assertSame(
+            $this->elementHtmlById($fullPage->getContent(), 'member-feedback-recap-group-table'),
+            $this->elementHtmlById($fragment->getContent(), 'member-feedback-recap-group-table'),
+        );
     }
 
     public function test_feedback_detail_modal_template_contains_full_feedback_contents(): void
@@ -176,6 +202,23 @@ class MemberFeedbackRecapTest extends TestCase
         $this->get('/pemuridan/umpan-balik-anggota')
             ->assertOk()
             ->assertSee('Feedback baru setelah cache kosong.');
+    }
+
+    private function elementHtmlById(string $html, string $id): string
+    {
+        $document = new \DOMDocument();
+        $previousErrorMode = libxml_use_internal_errors(true);
+
+        try {
+            $document->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NONET);
+            $element = $document->getElementById($id);
+            $this->assertNotNull($element, 'Elemen #'.$id.' tidak ditemukan.');
+
+            return (string) $document->saveHTML($element);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previousErrorMode);
+        }
     }
 
     private function createTables(): void

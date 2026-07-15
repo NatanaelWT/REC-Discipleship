@@ -344,7 +344,7 @@ for (const viewport of viewports) {
             if (viewport.width <= 1024) await openMobileSidebar(page);
         });
 
-        test('meeting journal matches Spiritual Journey and feedback stays stable', async ({ page }) => {
+        test('journal tables match across AJAX, refresh, and direct navigation', async ({ page }) => {
             test.skip(!exhaustive);
             await login(page, 'responsive_branch');
             await goto(page, '/pemuridan/laporan-dg');
@@ -368,7 +368,12 @@ for (const viewport of viewports) {
 
             await goto(page, '/pemuridan/laporan-dg');
 
+            const feedbackFragmentResponse = page.waitForResponse((response) => (
+                new URL(response.url()).pathname.endsWith('/pemuridan/umpan-balik-anggota')
+                && response.request().headers()['x-discipleship-fragment'] === 'tab'
+            ));
             await page.locator('[data-discipleship-tab][data-tab-key="feedback"]').click();
+            expect((await feedbackFragmentResponse).status()).toBe(200);
             const feedbackPanel = page.locator('#discipleship-tabpanel-feedback');
             await expect(feedbackPanel).toBeVisible();
             await expect(page.locator('#discipleship-tabpanel-meeting')).toBeHidden();
@@ -380,6 +385,30 @@ for (const viewport of viewports) {
                 '.member-feedback-recap-group-card',
                 '[data-member-feedback-summary-scroll]',
             );
+            expect(feedbackFromTab).toEqual(meetingLayout);
+            const feedbackTable = feedbackPanel.locator('#member-feedback-recap-group-table');
+            const feedbackMarkupFromTab = await feedbackTable.evaluate((table) => table.outerHTML);
+            const staleFeedbackTable = await feedbackTable.elementHandle();
+
+            const feedbackRefreshResponse = page.waitForResponse((response) => (
+                new URL(response.url()).pathname.endsWith('/pemuridan/umpan-balik-anggota')
+                && response.request().headers()['x-discipleship-fragment'] === 'tab'
+            ));
+            await page.locator('[data-discipleship-tab-refresh]').click();
+            expect((await feedbackRefreshResponse).status()).toBe(200);
+            await expect(feedbackPanel).toBeVisible();
+            expect(await staleFeedbackTable.evaluate((table) => table.isConnected)).toBe(false);
+            const feedbackAfterRefresh = await tableLayout(
+                page,
+                '#discipleship-tabpanel-feedback',
+                '.member-feedback-recap-group-card',
+                '[data-member-feedback-summary-scroll]',
+            );
+            const feedbackMarkupAfterRefresh = await feedbackPanel
+                .locator('#member-feedback-recap-group-table')
+                .evaluate((table) => table.outerHTML);
+            expect(feedbackAfterRefresh).toEqual(meetingLayout);
+            expect(feedbackMarkupAfterRefresh).toBe(feedbackMarkupFromTab);
 
             await goto(page, '/pemuridan/umpan-balik-anggota');
             const feedbackDirect = await tableLayout(
@@ -388,8 +417,12 @@ for (const viewport of viewports) {
                 '.member-feedback-recap-group-card',
                 '[data-member-feedback-summary-scroll]',
             );
+            const feedbackMarkupDirect = await page
+                .locator('#discipleship-tabpanel-feedback #member-feedback-recap-group-table')
+                .evaluate((table) => table.outerHTML);
 
-            expect(feedbackFromTab).toEqual(feedbackDirect);
+            expect(feedbackDirect).toEqual(meetingLayout);
+            expect(feedbackMarkupDirect).toBe(feedbackMarkupFromTab);
             await page.screenshot({
                 path: path.join('test-results', 'responsive-screenshots', `${viewport.name}-feedback-direct.png`),
                 fullPage: true,

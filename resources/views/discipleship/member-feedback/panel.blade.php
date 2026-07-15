@@ -1,5 +1,5 @@
 <section
-  class="discipleship-tab-panel discipleship-workspace__panel discipleship-journal-panel member-feedback-recap-panel"
+  class="discipleship-tab-panel discipleship-workspace__panel discipleship-list-panel member-feedback-recap-panel"
   id="discipleship-tabpanel-feedback"
   role="tabpanel"
   aria-labelledby="discipleship-tab-feedback"
@@ -52,7 +52,7 @@
       ],
   ])
 
-  <section class="card dg-recap-section-card member-feedback-recap-group-card">
+  <section class="card table-card-plain dg-recap-section-card member-feedback-recap-group-card">
     <div class="table-wrap member-feedback-recap-group-table-wrap" data-member-feedback-summary-scroll data-table-horizontal-scroll>
       <table class="table member-feedback-recap-group-table" id="member-feedback-recap-group-table">
         <caption class="table-caption-accessible">Pengisi Feedback per Kelompok - {{ (string) count($groupRows) }} kelompok aktif</caption>

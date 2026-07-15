@@ -7831,85 +7831,27 @@ button.member-feedback-recap-count-pill:focus-visible {
   }
 }
 
-#discipleship-tabpanel-feedback {
-  display: flex !important;
+#discipleship-tabpanel-meeting > .dg-recap-section-card.table-card-plain,
+#discipleship-tabpanel-feedback > .member-feedback-recap-group-card.table-card-plain {
+  display: flex;
   flex-direction: column;
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: calc(100dvh - 82px) !important;
-  overflow: hidden !important;
-}
-
-#discipleship-tabpanel-feedback[hidden],
-#discipleship-tabpanel-feedback.is-hidden,
-#discipleship-tabpanel-feedback[aria-hidden="true"] {
-  display: none !important;
-}
-
-#discipleship-tabpanel-feedback > .discipleship-page-header {
-  flex: 0 0 auto;
-}
-
-#discipleship-tabpanel-feedback > .member-feedback-recap-group-card {
-  display: flex !important;
-  flex: 1 1 auto !important;
-  flex-direction: column;
-  width: 100%;
-  min-height: 0 !important;
-  height: auto !important;
-  margin-bottom: 0 !important;
-  padding: 18px;
-  overflow: hidden !important;
+  margin-bottom: 20px;
+  padding: 0;
+  overflow: visible;
 }
 
 #discipleship-tabpanel-feedback [data-member-feedback-summary-scroll] {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   width: 100%;
   min-height: 0 !important;
   height: auto !important;
   max-height: none !important;
-  overflow: auto !important;
-  scrollbar-gutter: stable;
-}
-
-#discipleship-tabpanel-feedback [data-member-feedback-summary-scroll] thead th {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 3 !important;
-  background: #eef3f8 !important;
-  box-shadow: inset 0 -1px 0 rgba(148, 163, 184, 0.52);
-}
-
-@media (max-width: 1180px) {
-  #discipleship-tabpanel-feedback > .member-feedback-recap-group-card {
-    padding: 16px;
-  }
+  overflow: visible !important;
 }
 
 @media (max-width: 720px) {
-  #discipleship-tabpanel-feedback {
-    max-height: calc(100dvh - 70px) !important;
-  }
-
-  #discipleship-tabpanel-feedback > .member-feedback-recap-group-card {
-    flex: 0 1 auto !important;
-    padding: 14px;
-  }
-
-  #discipleship-tabpanel-feedback [data-member-feedback-summary-scroll] {
-    max-height: min(62dvh, 620px) !important;
-  }
-}
-
-#discipleship-tabpanel-meeting > .dg-recap-section-card.table-card-plain {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 20px;
-  overflow: visible;
-}
-
-@media (max-width: 720px) {
-  #discipleship-tabpanel-meeting > .dg-recap-section-card.table-card-plain {
+  #discipleship-tabpanel-meeting > .dg-recap-section-card.table-card-plain,
+  #discipleship-tabpanel-feedback > .member-feedback-recap-group-card.table-card-plain {
     margin-bottom: 32px;
     padding: 0 8px 8px;
   }
@@ -8047,8 +7989,9 @@ button.member-feedback-recap-count-pill:focus-visible {
   background-clip: padding-box;
 }
 
-.member-feedback-recap-group-table {
-  min-width: 840px;
+#member-feedback-recap-group-table {
+  min-width: 820px;
+  margin: 0 auto;
 }
 
 @media (max-width: 720px) {
@@ -8068,9 +8011,6 @@ button.member-feedback-recap-count-pill:focus-visible {
     min-width: 960px;
   }
 
-  .discipleship-tab-panel .member-feedback-recap-group-table {
-    min-width: 840px;
-  }
 }
 
 .member-feedback-recap-group-card.dg-recap-section-card {

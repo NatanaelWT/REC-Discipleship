@@ -3750,8 +3750,6 @@ button,
   }
 }
 
-/* Feedback journals keep the same viewport when loaded directly or as a tab fragment. */
-
 @media (max-width: 420px) {
   .app-page .app-main {
     padding-top: calc(54px + env(safe-area-inset-top));
@@ -3804,6 +3802,7 @@ button,
     width: 100%;
     min-width: 680px;
   }
+
 }
 
 /* Dense discipleship tables use a shared, reachable scrolling viewport. */
