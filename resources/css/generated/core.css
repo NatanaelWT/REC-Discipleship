@@ -2698,6 +2698,10 @@ textarea:focus-visible {
   color: #0f172a;
 }
 
+.group-members-main {
+  font-weight: 400;
+}
+
 .group-name-main {
   display: flex;
   align-items: center;

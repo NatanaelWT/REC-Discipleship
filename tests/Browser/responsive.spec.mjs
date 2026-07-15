@@ -518,6 +518,10 @@ for (const viewport of viewports) {
                     );
                     expect(Object.keys(peopleDgStates).length).toBeGreaterThan(0);
                 }
+                if (name === 'discipleship-groups') {
+                    const memberNames = page.locator('.group-members-main');
+                    await expect(memberNames.first()).toHaveCSS('font-weight', '400');
+                }
                 if (name === 'spiritual-journey') {
                     const journeyDgStates = await assertSpiritualJourneyDgPresentation(page);
                     Object.entries(peopleDgStates).forEach(([personName, states]) => {
