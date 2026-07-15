@@ -11,9 +11,11 @@
     $hasCompletedDg1 = ! empty($row['completed_dg1']);
     $hasCompletedDg2 = ! empty($row['completed_dg2']);
     $hasCompletedDg3 = ! empty($row['completed_dg3']);
-    $dg1Class = $hasCompletedDg1 ? 'is-dg1' : 'is-muted';
-    $dg2Class = $hasCompletedDg2 ? 'is-dg2' : 'is-muted';
-    $dg3Class = $hasCompletedDg3 ? 'is-dg3' : 'is-muted';
+    $dgSteps = [
+        ['label' => 'DG 1', 'is_complete' => $hasCompletedDg1],
+        ['label' => 'DG 2', 'is_complete' => $hasCompletedDg2],
+        ['label' => 'DG 3', 'is_complete' => $hasCompletedDg3],
+    ];
     $bridgeOptions = [
         'belum' => 'Belum',
         'sudah_rg' => 'Sudah RG',
@@ -44,21 +46,33 @@
   <td>
     <div class="journey-inline-track" title="Tahap DG dan MSK peserta">
       <span class="{{ $mskBadgeClass }}">MSK {{ $mskProgressLabel }}</span>
-      <span class="journey-track-badge {{ $dg1Class }}">DG 1</span>
-      <span class="journey-track-bridge">
-        <form method="post" action="{{ $bridgeFormAction }}" class="journey-bridge-form">
-          @csrf
-          <input type="hidden" name="action" value="save_journey_bridge_status">
-          <input type="hidden" name="id" value="{{ $journeyParticipantId }}">
-          <select name="journey_bridge_status" class="journey-bridge-select {{ $bridgeStateClass }}" aria-label="{{ 'Status RG atau KGAP untuk '.$journeyName }}" @disabled(is_effective_central_discipleship_readonly()) @if (! is_effective_central_discipleship_readonly()) onchange="this.form.submit()" @endif>
-            @foreach ($bridgeOptions as $bridgeValue => $bridgeLabel)
-              <option value="{{ $bridgeValue }}" @selected($journeyBridgeStatus === $bridgeValue)>{{ $bridgeLabel }}</option>
-            @endforeach
-          </select>
-        </form>
-      </span>
-      <span class="journey-track-badge {{ $dg2Class }}">DG 2</span>
-      <span class="journey-track-badge {{ $dg3Class }}">DG 3</span>
+      @foreach ($dgSteps as $dgStepIndex => $dgStep)
+        @php
+            $dgStepState = $dgStep['is_complete'] ? 'is-complete' : 'is-pending';
+            $dgStepStateLabel = $dgStep['is_complete'] ? 'Selesai' : 'Belum';
+        @endphp
+        <span class="people-progress-step journey-dg-step {{ $dgStepState }}" aria-label="{{ $dgStep['label'].': '.$dgStepStateLabel }}">
+          <span class="people-progress-step-marker" aria-hidden="true"></span>
+          <span class="people-progress-step-copy">
+            <strong>{{ $dgStep['label'] }}</strong>
+            <small>{{ $dgStepStateLabel }}</small>
+          </span>
+        </span>
+        @if ($dgStepIndex === 0)
+          <span class="journey-track-bridge">
+            <form method="post" action="{{ $bridgeFormAction }}" class="journey-bridge-form">
+              @csrf
+              <input type="hidden" name="action" value="save_journey_bridge_status">
+              <input type="hidden" name="id" value="{{ $journeyParticipantId }}">
+              <select name="journey_bridge_status" class="journey-bridge-select {{ $bridgeStateClass }}" aria-label="{{ 'Status RG atau KGAP untuk '.$journeyName }}" @disabled(is_effective_central_discipleship_readonly()) @if (! is_effective_central_discipleship_readonly()) onchange="this.form.submit()" @endif>
+                @foreach ($bridgeOptions as $bridgeValue => $bridgeLabel)
+                  <option value="{{ $bridgeValue }}" @selected($journeyBridgeStatus === $bridgeValue)>{{ $bridgeLabel }}</option>
+                @endforeach
+              </select>
+            </form>
+          </span>
+        @endif
+      @endforeach
     </div>
   </td>
 </tr>

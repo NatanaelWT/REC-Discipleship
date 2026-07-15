@@ -128,6 +128,37 @@ async function assertRefreshButtonJoinsWorkspace(page, label) {
     expect(result.refreshHeight, `${label} refresh height`).toBe(38);
 }
 
+async function assertSpiritualJourneyDgPresentation(page) {
+    const firstRow = page.locator('[data-spiritual-journey-search-row]').first();
+    await expect(firstRow).toBeVisible();
+    await expect(firstRow.locator('.journey-track-badge.is-msk')).toHaveCount(1);
+    await expect(firstRow.locator('.journey-bridge-select')).toHaveCount(1);
+
+    const dgSteps = firstRow.locator('.journey-dg-step');
+    await expect(dgSteps).toHaveCount(3);
+    expect(await dgSteps.locator('strong').allTextContents()).toEqual(['DG 1', 'DG 2', 'DG 3']);
+    const dgStates = await dgSteps.locator('small').allTextContents();
+    expect(dgStates).toHaveLength(3);
+    dgStates.forEach((state) => expect(['Selesai', 'Belum']).toContain(state));
+    await expect(firstRow.locator([
+        '.journey-inline-track > .journey-track-badge.is-dg1',
+        '.journey-inline-track > .journey-track-badge.is-dg2',
+        '.journey-inline-track > .journey-track-badge.is-dg3',
+    ].join(','))).toHaveCount(0);
+
+    const geometry = await dgSteps.first().evaluate((step) => {
+        const style = getComputedStyle(step);
+        return {
+            minHeight: style.minHeight,
+            borderRadius: style.borderRadius,
+            width: step.getBoundingClientRect().width,
+        };
+    });
+    expect(geometry.minHeight).toBe('42px');
+    expect(geometry.borderRadius).toBe('7px');
+    expect(geometry.width).toBeGreaterThanOrEqual(108);
+}
+
 async function assertWideTablesScrollable(page, label) {
     if ((page.viewportSize()?.width ?? 9999) > 720) return;
 
@@ -363,6 +394,9 @@ for (const viewport of viewports) {
                 if (await page.locator('[data-discipleship-tab-refresh]').count()) {
                     await assertRefreshButtonJoinsWorkspace(page, name);
                 }
+                if (name === 'spiritual-journey') {
+                    await assertSpiritualJourneyDgPresentation(page);
+                }
                 if (viewport.width === 320 && [
                     'discipleship-people',
                     'discipleship-groups',
@@ -370,6 +404,22 @@ for (const viewport of viewports) {
                     'meeting-reports',
                     'member-feedback',
                 ].includes(name)) {
+                    await page.screenshot({
+                        path: path.join('test-results', 'responsive-screenshots', `${viewport.name}-${name}.png`),
+                        fullPage: true,
+                    });
+                }
+                if (name === 'spiritual-journey' && viewport.width === 320) {
+                    const journeyTable = page.locator('[data-spiritual-journey-scroll]');
+                    await journeyTable.evaluate((element) => {
+                        element.scrollLeft = element.scrollWidth;
+                    });
+                    await page.screenshot({
+                        path: path.join('test-results', 'responsive-screenshots', `${viewport.name}-${name}-track.png`),
+                        fullPage: true,
+                    });
+                }
+                if (name === 'spiritual-journey' && viewport.width === 1440) {
                     await page.screenshot({
                         path: path.join('test-results', 'responsive-screenshots', `${viewport.name}-${name}.png`),
                         fullPage: true,

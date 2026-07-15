@@ -22,6 +22,26 @@ class SpiritualJourneyPageTest extends TestCase
         $this->createMskTables();
         $this->seedParticipant();
         $participantId = (int) DB::table('orang')->where('full_name', 'Peserta Journey')->value('id');
+        $groupId = DB::table('kelompok_dg')->insertGetId([
+            'branch_id' => 1,
+            'status' => 'completed',
+            'stage' => 'DG 2',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            'branch_id' => 1,
+            'discipleship_group_id' => $groupId,
+            'person_id' => $participantId,
+            'role' => 'member',
+            'stage' => 'DG 2',
+            'status' => 'completed',
+            'started_on' => now()->subMonths(3)->toDateString(),
+            'ended_on' => now()->subMonth()->toDateString(),
+            'end_reason' => 'group_completed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $this->actingAsRecUser();
 
@@ -37,6 +57,14 @@ class SpiritualJourneyPageTest extends TestCase
         $response->assertDontSee('data-spiritual-journey-view-template=', false);
         $response->assertSee('data-spiritual-detail-url-template=', false);
         $response->assertSee('data-spiritual-journey-view-title>Profil Peserta', false);
+        $content = (string) $response->getContent();
+        $this->assertSame(2, substr_count($content, 'people-progress-step journey-dg-step is-complete'));
+        $this->assertSame(1, substr_count($content, 'people-progress-step journey-dg-step is-pending'));
+        $this->assertSame(2, substr_count($content, '<small>Selesai</small>'));
+        $this->assertSame(1, substr_count($content, '<small>Belum</small>'));
+        $this->assertStringContainsString('journey-track-badge is-msk', $content);
+        $this->assertStringContainsString('journey-bridge-select is-bridge-none', $content);
+        $this->assertStringNotContainsString('journey-track-badge is-muted">DG 1</span>', $content);
 
         $this->get('/pemuridan/spiritual-journey/'.$participantId.'/detail')
             ->assertOk()

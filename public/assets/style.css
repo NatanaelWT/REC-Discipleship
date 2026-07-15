@@ -11845,6 +11845,12 @@ button.member-feedback-recap-count-pill:focus-visible {
   max-width: 100%;
 }
 
+.journey-dg-step {
+  flex: 0 0 108px;
+  min-width: 108px;
+  text-align: left;
+}
+
 .journey-track-bridge,
 .journey-bridge-form {
   display: inline-flex;
