@@ -7845,6 +7845,18 @@ button.member-feedback-recap-count-pill:focus-visible {
 
 @media (max-width: 1024px) {
 
+  .app-page:not(.page-discipleship-workspace) .app-main {
+    padding-top: calc(58px + env(safe-area-inset-top));
+  }
+
+  .page-discipleship-workspace .app-main {
+    padding-top: 0;
+  }
+
+  .page-discipleship-workspace .discipleship-workspace__tabbar {
+    padding-left: 48px;
+  }
+
   .discipleship-page-header__main,
   .discipleship-progress-overdue-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -8037,6 +8049,9 @@ body.page-discipleship-workspace:not(.modal-open) {
 }
 
 @media (max-width: 420px) {
+  .app-page:not(.page-discipleship-workspace) .app-main {
+    padding-top: calc(54px + env(safe-area-inset-top));
+  }
 
   .page-discipleship-workspace .container,
   .page-tree .container,

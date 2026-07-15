@@ -279,6 +279,50 @@ async function openMobileSidebar(page) {
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 }
 
+async function assertMobileMenuOverlaysWorkspace(page) {
+    if ((page.viewportSize()?.width ?? 9999) > 1024) return;
+
+    const toggle = page.locator('[data-sidebar-toggle]');
+    const tabbar = page.locator('.discipleship-workspace__tabbar');
+    const firstTab = tabbar.locator('.discipleship-workspace__tab').first();
+    await expect(toggle).toBeVisible();
+    await expect(toggle.locator('.icon')).toHaveCount(1);
+    await expect(toggle).toHaveAttribute('aria-label', 'Buka menu navigasi');
+    await expect(tabbar).toBeVisible();
+    await expect(firstTab).toBeVisible();
+
+    const layout = await page.evaluate(() => {
+        const toggle = document.querySelector('[data-sidebar-toggle]');
+        const main = document.querySelector('.app-main');
+        const tabbar = document.querySelector('.discipleship-workspace__tabbar');
+        const firstTab = tabbar?.querySelector('.discipleship-workspace__tab');
+        if (!toggle || !main || !tabbar || !firstTab) return null;
+        const toggleStyle = getComputedStyle(toggle);
+        const mainStyle = getComputedStyle(main);
+        const toggleRect = toggle.getBoundingClientRect();
+        const tabbarRect = tabbar.getBoundingClientRect();
+        const firstTabRect = firstTab.getBoundingClientRect();
+
+        return {
+            position: toggleStyle.position,
+            width: Math.round(toggleRect.width),
+            height: Math.round(toggleRect.height),
+            mainPaddingTop: mainStyle.paddingTop,
+            overlapsTabbarVertically: toggleRect.top < tabbarRect.bottom && toggleRect.bottom > tabbarRect.top,
+            clearsFirstTab: toggleRect.right + 4 <= firstTabRect.left,
+        };
+    });
+
+    expect(layout).toEqual({
+        position: 'fixed',
+        width: 42,
+        height: 42,
+        mainPaddingTop: '0px',
+        overlapsTabbarVertically: true,
+        clearsFirstTab: true,
+    });
+}
+
 async function assertMskModal(page) {
     await goto(page, '/pemuridan/msk');
     await page.locator('[data-msk-create-open]').click();
@@ -480,10 +524,12 @@ for (const viewport of viewports) {
                         expect(journeyDgStates[personName], `${personName} DG states`).toEqual(states);
                     });
                 }
+                if (name === 'msk') await assertMobileMenuOverlaysWorkspace(page);
                 if (viewport.width === 320 && [
                     'discipleship-people',
                     'discipleship-groups',
                     'spiritual-journey',
+                    'msk',
                     'meeting-reports',
                     'member-feedback',
                 ].includes(name)) {

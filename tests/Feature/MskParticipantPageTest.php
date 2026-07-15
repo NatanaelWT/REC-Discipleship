@@ -43,6 +43,9 @@ class MskParticipantPageTest extends TestCase
         $response->assertDontSee('discipleship-page-header__stat', false);
         $response->assertSee('msk-batch-actions', false);
         $response->assertSee('msk-transfer-button', false);
+        $response->assertSee('aria-label="Buka menu navigasi"', false);
+        $response->assertSee(icon_svg('menu'), false);
+        $response->assertDontSee('>Menu</button>', false);
         $response->assertSee(icon_svg('upload'), false);
         $response->assertSee(icon_svg('download'), false);
 

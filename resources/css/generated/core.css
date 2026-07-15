@@ -3631,11 +3631,41 @@ button,
     position: fixed;
     top: max(10px, env(safe-area-inset-top));
     left: max(10px, env(safe-area-inset-left));
+    width: 42px;
+    height: 42px;
     margin: 0;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    border-radius: 10px;
+    background: #0f766e;
+    color: #ffffff;
+    box-shadow:
+      0 10px 24px rgba(15, 23, 42, 0.2),
+      0 0 0 1px rgba(15, 118, 110, 0.14);
+    transition: transform 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
   }
 
-  .app-page .app-main {
-    padding-top: calc(58px + env(safe-area-inset-top));
+  .app-page .sidebar-toggle .icon {
+    display: block;
+    width: 21px;
+    height: 21px;
+  }
+
+  .app-page .sidebar-toggle:hover {
+    background: #115e59;
+    transform: translateY(-1px);
+    box-shadow:
+      0 13px 28px rgba(15, 23, 42, 0.24),
+      0 0 0 1px rgba(15, 118, 110, 0.18);
+  }
+
+  .app-page .sidebar-toggle:focus-visible {
+    outline: 3px solid rgba(245, 158, 11, 0.42);
+    outline-offset: 2px;
+  }
+
+  .app-page .sidebar-toggle:active {
+    transform: translateY(0);
   }
 
   .app-page .app-main > .container {
@@ -3751,9 +3781,6 @@ button,
 }
 
 @media (max-width: 420px) {
-  .app-page .app-main {
-    padding-top: calc(54px + env(safe-area-inset-top));
-  }
 
   .app-page .app-main > .container {
     padding-inline: 8px;

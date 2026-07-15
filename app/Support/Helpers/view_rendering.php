@@ -29,6 +29,9 @@ function body_class_attr(array $bodyClasses): string
 
 function icon_svg(string $name): string
 {
+    if ($name === 'menu') {
+        return '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    }
     if ($name === 'edit') {
         return '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     }
@@ -1146,7 +1149,7 @@ function page_header(string $title, array $settings, string $currentPage, bool $
     render_app_document_head($app, $currentPage, $bodyClass);
     echo '<body'.$classAttr.' data-frontend-domain="'.h(frontend_asset_domain($currentPage, $bodyClass))."\">\n";
     echo "<div class=\"app-shell\">\n";
-    echo "  <button class=\"sidebar-toggle\" type=\"button\" data-sidebar-toggle aria-controls=\"app-sidebar\" aria-expanded=\"false\">Menu</button>\n";
+    echo '  <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-controls="app-sidebar" aria-expanded="false" aria-label="Buka menu navigasi" title="Menu">'.icon_svg('menu')."</button>\n";
     echo "  <button class=\"sidebar-backdrop\" type=\"button\" data-sidebar-backdrop aria-label=\"Tutup menu\"></button>\n";
     echo "  <aside class=\"sidebar\" id=\"app-sidebar\">\n";
     echo "    <div class=\"sidebar-brand\">\n";
