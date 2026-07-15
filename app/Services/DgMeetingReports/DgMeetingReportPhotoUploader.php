@@ -10,7 +10,7 @@ use Throwable;
 
 class DgMeetingReportPhotoUploader
 {
-    private const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    private const DEFAULT_MAX_FILE_SIZE = 20 * 1024 * 1024;
 
     private const RELATIVE_DIRECTORY = 'uploads/dg_reports';
 
@@ -90,15 +90,22 @@ class DgMeetingReportPhotoUploader
      */
     private function uploadFile(UploadedFile $file): array
     {
-        if (in_array($file->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
-            return ['photo' => null, 'error_code' => 'dg_photo_too_large'];
+        $uploadError = $file->getError();
+        if (in_array($uploadError, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+            return ['photo' => null, 'error_code' => 'dg_photo_exceeds_server_limit'];
+        }
+        if ($uploadError === UPLOAD_ERR_PARTIAL) {
+            return ['photo' => null, 'error_code' => 'dg_photo_partial_upload'];
+        }
+        if (in_array($uploadError, [UPLOAD_ERR_NO_TMP_DIR, UPLOAD_ERR_CANT_WRITE, UPLOAD_ERR_EXTENSION], true)) {
+            return ['photo' => null, 'error_code' => 'dg_photo_server_write_failed'];
         }
         if (! $file->isValid()) {
             return ['photo' => null, 'error_code' => 'dg_photo_upload_failed'];
         }
 
         $size = (int) ($file->getSize() ?: 0);
-        if ($size < 1 || $size > self::MAX_FILE_SIZE) {
+        if ($size < 1 || $size > $this->maxFileSize()) {
             return ['photo' => null, 'error_code' => 'dg_photo_too_large'];
         }
 
@@ -192,11 +199,26 @@ class DgMeetingReportPhotoUploader
         return function_exists('mb_substr') ? mb_substr($name, 0, 255) : substr($name, 0, 255);
     }
 
+    private function maxFileSize(): int
+    {
+        return max(1, (int) config('media.dg_meeting_report_max_bytes', self::DEFAULT_MAX_FILE_SIZE));
+    }
+
+    private function maxFileSizeLabel(): string
+    {
+        $megabytes = (int) ceil($this->maxFileSize() / 1024 / 1024);
+
+        return $megabytes.' MB';
+    }
+
     private function messageForErrorCode(string $errorCode): string
     {
         return match ($errorCode) {
             'invalid_dg_photo_type' => 'Format foto pertemuan tidak didukung. Gunakan JPG/PNG/WEBP.',
-            'dg_photo_too_large' => 'Ukuran foto pertemuan terlalu besar. Maksimal 5 MB per file.',
+            'dg_photo_too_large' => 'Ukuran foto pertemuan terlalu besar. Maksimal '.$this->maxFileSizeLabel().' per file.',
+            'dg_photo_exceeds_server_limit' => 'Ukuran foto melebihi batas upload server. Coba pilih foto yang lebih kecil.',
+            'dg_photo_partial_upload' => 'Upload foto terputus sebelum selesai. Coba ulangi lagi dengan koneksi yang stabil.',
+            'dg_photo_server_write_failed' => 'Server tidak bisa menyimpan file upload sementara. Hubungi admin.',
             default => 'Upload foto pertemuan gagal. Coba ulangi lagi.',
         };
     }

@@ -345,16 +345,51 @@ class DgMeetingReportRecapTest extends TestCase
             'material_topic' => 'Sesi 9',
             'sharing_openness' => '10',
             'meeting_photos' => [
-                UploadedFile::fake()->create('terlalu-besar.jpg', 5121, 'image/jpeg'),
+                UploadedFile::fake()->create('terlalu-besar.jpg', 20481, 'image/jpeg'),
             ],
         ]);
 
         $response->assertRedirect(route('public.dg.report', ['branch' => 'gm']));
         $response->assertSessionHas(
             'public_dg_report_error',
-            'Ukuran foto pertemuan terlalu besar. Maksimal 5 MB per file.',
+            'Ukuran foto pertemuan terlalu besar. Maksimal 20 MB per file.',
         );
         $this->assertSame(0, DB::table('jurnal_temu_dg')->count());
+    }
+
+    public function test_public_dg_report_accepts_original_photo_larger_than_five_mb(): void
+    {
+        config(['media.dg_meeting_report_max_bytes' => 8 * 1024 * 1024]);
+        $this->createTables();
+        $ids = $this->seedGmReportFormData();
+
+        $png = $this->tinyPng();
+        $response = $this->post('/publik/jurnal-dg/gm/laporan', [
+            'public_cabang' => 'gm',
+            'leader_id' => (string) $ids['leader_id'],
+            'group_id' => (string) $ids['group_id'],
+            'meeting_date' => '2026-06-18',
+            'material_topic' => 'Sesi 9',
+            'sharing_openness' => '10',
+            'meeting_photos' => [
+                UploadedFile::fake()->createWithContent(
+                    'foto-hp-besar.png',
+                    $png.str_repeat("\0", (5 * 1024 * 1024) + 1),
+                ),
+            ],
+        ]);
+
+        $response->assertRedirect(route('public.dg.report', ['branch' => 'gm', 'submitted' => 1]));
+        $response->assertSessionMissing('public_dg_report_error');
+
+        $report = DB::table('jurnal_temu_dg')->orderByDesc('id')->first();
+        $this->assertNotNull($report);
+        $photos = json_decode((string) $report->photos, true);
+        $this->assertIsArray($photos);
+        $this->assertCount(1, $photos);
+        $this->assertSame('foto-hp-besar.png', $photos[0]['name']);
+
+        delete_relative_upload_file($photos[0]['path']);
     }
 
     public function test_public_dg_report_cleans_up_previous_files_when_one_of_multiple_uploads_is_invalid(): void
