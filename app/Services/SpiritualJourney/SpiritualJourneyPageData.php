@@ -6,6 +6,7 @@ use App\Models\DiscipleshipGroup;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\Person;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
+use App\Services\Discipleship\DgProgressStateResolver;
 use App\Services\DiscipleshipTargets\DiscipleshipTargetReader;
 use App\Services\MskParticipants\MskParticipantHistoryData;
 use App\Services\MskParticipants\MskParticipantProfileData;
@@ -24,6 +25,7 @@ class SpiritualJourneyPageData
     public function __construct(
         private readonly DiscipleshipTargetReader $targetReader,
         private readonly CurrentDiscipleshipScope $scope,
+        private readonly DgProgressStateResolver $progressStateResolver,
         private readonly MskParticipantHistoryData $historyData,
         private readonly MskParticipantProfileData $profileData,
     ) {}
@@ -214,7 +216,10 @@ class SpiritualJourneyPageData
 
     private function journeyRows(array $participantRows, $groupPeople): array
     {
-        $completion = $this->completionMaps($groupPeople);
+        $emptyProgress = $this->progressStateResolver->resolve(collect());
+        $progressByPerson = $groupPeople
+            ->groupBy(static fn (DiscipleshipGroupPerson $row): int => (int) $row->person_id)
+            ->map(fn ($links): array => $this->progressStateResolver->resolve($links));
         $rows = [];
         foreach ($participantRows as $participant) {
             if (! is_array($participant)) {
@@ -230,7 +235,17 @@ class SpiritualJourneyPageData
             if ($journeyViewKey === '') {
                 $journeyViewKey = 'spiritual-journey-'.(string) (count($rows) + 1);
             }
-            $personId = (string) ((int) ($participant['id'] ?? 0));
+            $personId = (int) ($participant['id'] ?? 0);
+            $progress = $personId > 0 ? $progressByPerson->get($personId, $emptyProgress) : $emptyProgress;
+            $progressSteps = is_array($progress['steps'] ?? null) ? $progress['steps'] : [];
+            $progressStepCollection = collect($progressSteps);
+            $progressStepsByLabel = $progressStepCollection->keyBy('label');
+            $currentStep = $progressStepCollection->first(
+                static fn (array $step): bool => ($step['state'] ?? '') === 'is-current'
+            );
+            $dg1Step = (array) $progressStepsByLabel->get('DG 1', []);
+            $dg2Step = (array) $progressStepsByLabel->get('DG 2', []);
+            $dg3Step = (array) $progressStepsByLabel->get('DG 3', []);
             $rows[] = [
                 'id' => (string) ($participant['id'] ?? ''),
                 'name' => $fullName,
@@ -239,52 +254,18 @@ class SpiritualJourneyPageData
                 'session_count' => $sessionCount,
                 'msk_percent' => (int) round(($sessionCount / 12) * 100),
                 'session_label' => $sessionCount > 0 ? 'Sesi '.implode(', ', array_map('strval', $sessionNumbers)) : 'Belum ada sesi',
-                'active_dg_progress' => '',
-                'completed_dg1' => $personId !== '0' && ! empty($completion['dg1'][$personId]),
-                'completed_dg2' => $personId !== '0' && ! empty($completion['dg2'][$personId]),
-                'completed_dg3' => $personId !== '0' && ! empty($completion['dg3'][$personId]),
+                'active_dg_progress' => is_array($currentStep) ? (string) ($currentStep['label'] ?? '') : '',
+                'completed_dg1' => ! empty($dg1Step['is_complete']),
+                'completed_dg2' => ! empty($dg2Step['is_complete']),
+                'completed_dg3' => ! empty($dg3Step['is_complete']),
+                'progress_steps' => $progressSteps,
+                'progress_summary' => (string) ($progress['summary'] ?? 'Belum memulai DG'),
                 'journey_bridge_status' => normalize_journey_bridge_status((string) ($participant['journey_bridge_status'] ?? 'belum')),
                 'journey_view_key' => $journeyViewKey,
             ];
         }
 
         return $rows;
-    }
-
-    /** @return array{dg1:array<string,bool>,dg2:array<string,bool>,dg3:array<string,bool>} */
-    private function completionMaps($groupPeople): array
-    {
-        $dg1 = [];
-        $dg2 = [];
-        $dg3 = [];
-        foreach ($groupPeople as $membershipRecord) {
-            $personId = (string) ((int) ($membershipRecord->person_id ?? 0));
-            if ($personId === '0') {
-                continue;
-            }
-            $stage = normalize_dg_progress_value((string) ($membershipRecord->stage ?? ''));
-            if ($stage === '') {
-                continue;
-            }
-            $stageRank = match ($stage) {
-                'DG 3' => 3,
-                'DG 2' => 2,
-                'DG 1' => 1,
-                default => 0,
-            };
-            $reasonEnd = trim((string) ($membershipRecord->end_reason ?? ''));
-            if ($stageRank >= 2 || ($stage === 'DG 1' && in_array($reasonEnd, ['continued_to_child_group', 'group_completed', 'stage_transition', 'manual_completion'], true))) {
-                $dg1[$personId] = true;
-            }
-            if ($stageRank >= 3 || ($stage === 'DG 2' && in_array($reasonEnd, ['continued_to_child_group', 'group_completed', 'stage_transition', 'manual_completion'], true))) {
-                $dg2[$personId] = true;
-            }
-            if ($stage === 'DG 3' && in_array($reasonEnd, ['group_completed', 'continued_to_child_group', 'stage_transition', 'manual_completion'], true)) {
-                $dg3[$personId] = true;
-            }
-        }
-
-        return ['dg1' => $dg1, 'dg2' => $dg2, 'dg3' => $dg3];
     }
 
     private function applyJourneyFilter(Builder $query, string &$journeyFilter): void

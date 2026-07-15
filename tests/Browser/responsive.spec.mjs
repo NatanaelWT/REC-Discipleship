@@ -128,6 +128,20 @@ async function assertRefreshButtonJoinsWorkspace(page, label) {
     expect(result.refreshHeight, `${label} refresh height`).toBe(38);
 }
 
+async function dgStatesByName(page, rowSelector, nameSelector, stepSelector) {
+    return page.locator(rowSelector).evaluateAll((rows, selectors) => {
+        const statesByName = {};
+        rows.forEach((row) => {
+            const name = String(row.querySelector(selectors.nameSelector)?.textContent || '').trim();
+            const states = Array.from(row.querySelectorAll(selectors.stepSelector))
+                .map((step) => String(step.textContent || '').trim());
+            if (name !== '' && states.length === 3) statesByName[name] = states;
+        });
+
+        return statesByName;
+    }, { nameSelector, stepSelector });
+}
+
 async function assertSpiritualJourneyDgPresentation(page) {
     const firstRow = page.locator('[data-spiritual-journey-search-row]').first();
     await expect(firstRow).toBeVisible();
@@ -139,7 +153,7 @@ async function assertSpiritualJourneyDgPresentation(page) {
     expect(await dgSteps.locator('strong').allTextContents()).toEqual(['DG 1', 'DG 2', 'DG 3']);
     const dgStates = await dgSteps.locator('small').allTextContents();
     expect(dgStates).toHaveLength(3);
-    dgStates.forEach((state) => expect(['Selesai', 'Belum']).toContain(state));
+    dgStates.forEach((state) => expect(['Selesai', 'Sedang', 'Terhenti', 'Belum']).toContain(state));
     await expect(firstRow.locator([
         '.journey-inline-track > .journey-track-badge.is-dg1',
         '.journey-inline-track > .journey-track-badge.is-dg2',
@@ -157,6 +171,13 @@ async function assertSpiritualJourneyDgPresentation(page) {
     expect(geometry.minHeight).toBe('42px');
     expect(geometry.borderRadius).toBe('7px');
     expect(geometry.width).toBeGreaterThanOrEqual(108);
+
+    return dgStatesByName(
+        page,
+        '[data-spiritual-journey-search-row]',
+        '.journey-name-main',
+        '.journey-dg-step small',
+    );
 }
 
 async function assertWideTablesScrollable(page, label) {
@@ -386,6 +407,7 @@ for (const viewport of viewports) {
             const pages = exhaustive
                 ? internalPages
                 : internalPages.filter(([name]) => ['discipleship-dashboard', 'discipleship-tree', 'msk'].includes(name));
+            let peopleDgStates = {};
             for (const [name, url] of pages) {
                 const response = await goto(page, url);
                 expect(response?.status(), `${name} response`).toBeLessThan(400);
@@ -394,8 +416,20 @@ for (const viewport of viewports) {
                 if (await page.locator('[data-discipleship-tab-refresh]').count()) {
                     await assertRefreshButtonJoinsWorkspace(page, name);
                 }
+                if (name === 'discipleship-people') {
+                    peopleDgStates = await dgStatesByName(
+                        page,
+                        '[data-discipleship-people-search-row]',
+                        '.people-name-main',
+                        '.people-progress-step small',
+                    );
+                    expect(Object.keys(peopleDgStates).length).toBeGreaterThan(0);
+                }
                 if (name === 'spiritual-journey') {
-                    await assertSpiritualJourneyDgPresentation(page);
+                    const journeyDgStates = await assertSpiritualJourneyDgPresentation(page);
+                    Object.entries(peopleDgStates).forEach(([personName, states]) => {
+                        expect(journeyDgStates[personName], `${personName} DG states`).toEqual(states);
+                    });
                 }
                 if (viewport.width === 320 && [
                     'discipleship-people',

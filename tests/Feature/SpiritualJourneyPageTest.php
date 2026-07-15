@@ -74,6 +74,86 @@ class SpiritualJourneyPageTest extends TestCase
             ->assertSee('Riwayat pemuridan');
     }
 
+    public function test_spiritual_journey_uses_the_same_current_and_stopped_dg_states_as_people_list(): void
+    {
+        $this->createMskTables();
+        $activePersonId = $this->seedParticipant();
+        DB::table('orang')->where('id', $activePersonId)->update(['full_name' => 'Peserta DG Sedang']);
+        $stoppedPersonId = DB::table('orang')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Peserta DG Terhenti',
+            'batch_month' => '2026-06',
+            'completed_at' => null,
+            'journey_bridge_status' => 'belum',
+            'status' => 'active',
+            'session_numbers' => json_encode([1, 2]),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 1,
+                'person_id' => $activePersonId,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'closed',
+                'started_on' => '2026-01-01',
+                'ended_on' => '2026-03-01',
+                'end_reason' => 'continued_to_child_group',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 2,
+                'person_id' => $activePersonId,
+                'role' => 'member',
+                'stage' => 'DG 2',
+                'status' => 'active',
+                'started_on' => '2026-03-02',
+                'ended_on' => null,
+                'end_reason' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => 3,
+                'person_id' => $stoppedPersonId,
+                'role' => 'member',
+                'stage' => 'DG 1',
+                'status' => 'closed',
+                'started_on' => '2026-01-01',
+                'ended_on' => '2026-02-01',
+                'end_reason' => 'person_archived',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+        $this->actingAsRecUser();
+
+        $spiritualActive = $this->get('/pemuridan/spiritual-journey?q=Peserta+DG+Sedang')->assertOk();
+        $spiritualActiveRows = $this->get('/pemuridan/spiritual-journey/rows?q=Peserta+DG+Sedang')->assertOk();
+        $peopleActive = $this->get('/pemuridan/anggota?q=Peserta+DG+Sedang')->assertOk();
+        $this->assertSame(['Selesai', 'Sedang', 'Belum'], $this->progressStateLabels((string) $spiritualActive->getContent()));
+        $this->assertSame(['Selesai', 'Sedang', 'Belum'], $this->progressStateLabels((string) $spiritualActiveRows->json('html')));
+        $this->assertSame(['Selesai', 'Sedang', 'Belum'], $this->progressStateLabels((string) $peopleActive->getContent()));
+        $spiritualActive->assertSee('people-progress-step journey-dg-step is-current', false);
+        $peopleActive->assertSee('people-progress-step is-current', false);
+
+        $spiritualStopped = $this->get('/pemuridan/spiritual-journey?q=Peserta+DG+Terhenti')->assertOk();
+        $spiritualStoppedRows = $this->get('/pemuridan/spiritual-journey/rows?q=Peserta+DG+Terhenti')->assertOk();
+        $peopleStopped = $this->get('/pemuridan/anggota?q=Peserta+DG+Terhenti')->assertOk();
+        $this->assertSame(['Terhenti', 'Belum', 'Belum'], $this->progressStateLabels((string) $spiritualStopped->getContent()));
+        $this->assertSame(['Terhenti', 'Belum', 'Belum'], $this->progressStateLabels((string) $spiritualStoppedRows->json('html')));
+        $this->assertSame(['Terhenti', 'Belum', 'Belum'], $this->progressStateLabels((string) $peopleStopped->getContent()));
+        $spiritualStopped->assertSee('people-progress-step journey-dg-step is-stopped', false);
+        $peopleStopped->assertSee('people-progress-step is-stopped', false);
+    }
+
     public function test_spiritual_journey_lazy_loads_rows_and_searches_server_side(): void
     {
         $this->createMskTables();
@@ -495,6 +575,14 @@ class SpiritualJourneyPageTest extends TestCase
         ]);
 
         return $participantId;
+    }
+
+    /** @return array<int, string> */
+    private function progressStateLabels(string $content): array
+    {
+        preg_match_all('/<small>(Selesai|Sedang|Terhenti|Belum)<\/small>/', $content, $matches);
+
+        return $matches[1] ?? [];
     }
 }
 

@@ -5,6 +5,7 @@ namespace App\Services\DiscipleshipPeople;
 use App\Models\DiscipleshipGroupPerson;
 use App\Models\Person;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
+use App\Services\Discipleship\DgProgressStateResolver;
 use App\Support\DiscipleshipPersonProfile;
 use App\Support\StableNameCursor;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,7 +19,10 @@ class DiscipleshipPeopleListData
 
     private const MAX_PER_PAGE = 100;
 
-    public function __construct(private readonly CurrentDiscipleshipScope $scope) {}
+    public function __construct(
+        private readonly CurrentDiscipleshipScope $scope,
+        private readonly DgProgressStateResolver $progressStateResolver,
+    ) {}
 
     /** @return array<string, mixed> */
     public function forCurrentContext(Request $request): array
@@ -226,7 +230,7 @@ class DiscipleshipPeopleListData
             $links = $groupPeople->where('person_id', $personId);
             $isLeader = $links->contains(static fn (DiscipleshipGroupPerson $row): bool => $row->role !== 'member' && $row->status === 'active' && $row->ended_on === null);
             $activeGroups = $this->activeGroupSummaries($links, $allGroupLinks, $names);
-            $progress = $this->progress($links);
+            $progress = $this->progressStateResolver->resolve($links);
             $tokens = $progress['filters'];
             $lastStage = $this->lastStage($links);
             $branchLabel = $branchOptions[(int) $person->branch_id]['label'] ?? 'Tanpa cabang';
@@ -303,81 +307,6 @@ class DiscipleshipPeopleListData
             ->unique()
             ->values()
             ->all();
-    }
-
-    /**
-     * @return array{
-     *     filters: array<int, string>,
-     *     steps: array<int, array{label:string,state:string,state_label:string}>,
-     *     summary: string
-     * }
-     */
-    private function progress($links): array
-    {
-        $filters = [];
-        $steps = [];
-        $currentStage = '';
-        $highestCompletedStage = '';
-        foreach ([1 => 'DG 1', 2 => 'DG 2', 3 => 'DG 3'] as $rank => $stage) {
-            $active = $links->contains(static fn (DiscipleshipGroupPerson $row): bool => $row->role === 'member' && $row->stage === $stage && $row->status === 'active' && $row->ended_on === null);
-            $completed = $this->completedStage($links, $rank);
-            $recorded = $links->contains(static fn (DiscipleshipGroupPerson $row): bool => $row->role === 'member' && $row->stage === $stage);
-
-            $state = 'is-pending';
-            $stateLabel = 'Belum';
-            if ($completed) {
-                $state = 'is-complete';
-                $stateLabel = 'Selesai';
-                $highestCompletedStage = $stage;
-                $filters[] = 'complete_dg'.$rank;
-            }
-            if ($active) {
-                $state = 'is-current';
-                $stateLabel = 'Sedang';
-                $currentStage = $stage;
-                $filters[] = 'active_dg'.$rank;
-            } elseif (! $completed && $recorded) {
-                $state = 'is-stopped';
-                $stateLabel = 'Terhenti';
-            }
-
-            $steps[] = [
-                'label' => $stage,
-                'state' => $state,
-                'state_label' => $stateLabel,
-            ];
-        }
-
-        $summary = 'Belum memulai DG';
-        if ($currentStage !== '') {
-            $summary = 'Sedang menjalani '.$currentStage;
-        } elseif ($highestCompletedStage !== '') {
-            $summary = 'Terakhir menyelesaikan '.$highestCompletedStage;
-        } elseif ($links->contains(static fn (DiscipleshipGroupPerson $row): bool => $row->role === 'member')) {
-            $summary = 'Progres DG terhenti';
-        }
-
-        return [
-            'filters' => array_values(array_unique($filters)),
-            'steps' => $steps,
-            'summary' => $summary,
-        ];
-    }
-
-    private function completedStage($links, int $rank): bool
-    {
-        $reasons = ['continued_to_child_group', 'group_completed', 'stage_transition', 'manual_completion'];
-
-        return $links->contains(static function (DiscipleshipGroupPerson $row) use ($rank, $reasons): bool {
-            $stageRank = match ($row->stage) {
-                'DG 1' => 1, 'DG 2' => 2, 'DG 3' => 3, default => 0
-            };
-            if ($stageRank > $rank) {
-                return true;
-            }
-
-            return $stageRank === $rank && in_array($row->end_reason, $reasons, true);
-        });
     }
 
     private function lastStage($links): string

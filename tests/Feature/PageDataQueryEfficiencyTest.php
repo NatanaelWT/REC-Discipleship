@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Services\Auth\CurrentUserContext;
 use App\Services\Branches\BranchCatalog;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
+use App\Services\Discipleship\DgProgressStateResolver;
 use App\Services\DiscipleshipTargets\DiscipleshipTargetReader;
 use App\Services\MskParticipants\MskParticipantHistoryData;
 use App\Services\MskParticipants\MskParticipantPageData;
@@ -61,7 +62,13 @@ class PageDataQueryEfficiencyTest extends TestCase
         $profiles->shouldNotReceive('forParticipants');
         $targets = Mockery::mock(DiscipleshipTargetReader::class);
         $targets->shouldReceive('formValuesForBranches')->once()->andReturn([]);
-        $service = new SpiritualJourneyPageData($targets, $scope, $history, $profiles);
+        $service = new SpiritualJourneyPageData(
+            $targets,
+            $scope,
+            new DgProgressStateResolver,
+            $history,
+            $profiles,
+        );
         $queries = $this->captureQueries(fn (): array => $service->paginatedRowsForCurrentContext($request));
 
         $this->assertSame(1000, $queries['result']['spiritualJourneyStats']['total']);

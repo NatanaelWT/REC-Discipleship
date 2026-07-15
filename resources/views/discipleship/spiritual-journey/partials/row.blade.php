@@ -11,11 +11,27 @@
     $hasCompletedDg1 = ! empty($row['completed_dg1']);
     $hasCompletedDg2 = ! empty($row['completed_dg2']);
     $hasCompletedDg3 = ! empty($row['completed_dg3']);
-    $dgSteps = [
-        ['label' => 'DG 1', 'is_complete' => $hasCompletedDg1],
-        ['label' => 'DG 2', 'is_complete' => $hasCompletedDg2],
-        ['label' => 'DG 3', 'is_complete' => $hasCompletedDg3],
+    $fallbackDgSteps = [
+        [
+            'label' => 'DG 1',
+            'state' => $hasCompletedDg1 ? 'is-complete' : 'is-pending',
+            'state_label' => $hasCompletedDg1 ? 'Selesai' : 'Belum',
+        ],
+        [
+            'label' => 'DG 2',
+            'state' => $hasCompletedDg2 ? 'is-complete' : 'is-pending',
+            'state_label' => $hasCompletedDg2 ? 'Selesai' : 'Belum',
+        ],
+        [
+            'label' => 'DG 3',
+            'state' => $hasCompletedDg3 ? 'is-complete' : 'is-pending',
+            'state_label' => $hasCompletedDg3 ? 'Selesai' : 'Belum',
+        ],
     ];
+    $dgSteps = is_array($row['progress_steps'] ?? null) && count($row['progress_steps']) === 3
+        ? array_values($row['progress_steps'])
+        : $fallbackDgSteps;
+    $allowedDgStepStates = ['is-complete', 'is-current', 'is-stopped', 'is-pending'];
     $bridgeOptions = [
         'belum' => 'Belum',
         'sudah_rg' => 'Sudah RG',
@@ -48,13 +64,25 @@
       <span class="{{ $mskBadgeClass }}">MSK {{ $mskProgressLabel }}</span>
       @foreach ($dgSteps as $dgStepIndex => $dgStep)
         @php
-            $dgStepState = $dgStep['is_complete'] ? 'is-complete' : 'is-pending';
-            $dgStepStateLabel = $dgStep['is_complete'] ? 'Selesai' : 'Belum';
+            $dgStepLabel = trim((string) ($dgStep['label'] ?? 'DG '.($dgStepIndex + 1)));
+            $dgStepState = trim((string) ($dgStep['state'] ?? 'is-pending'));
+            if (! in_array($dgStepState, $allowedDgStepStates, true)) {
+                $dgStepState = 'is-pending';
+            }
+            $dgStepStateLabel = trim((string) ($dgStep['state_label'] ?? ''));
+            if ($dgStepStateLabel === '') {
+                $dgStepStateLabel = match ($dgStepState) {
+                    'is-complete' => 'Selesai',
+                    'is-current' => 'Sedang',
+                    'is-stopped' => 'Terhenti',
+                    default => 'Belum',
+                };
+            }
         @endphp
-        <span class="people-progress-step journey-dg-step {{ $dgStepState }}" aria-label="{{ $dgStep['label'].': '.$dgStepStateLabel }}">
+        <span class="people-progress-step journey-dg-step {{ $dgStepState }}" aria-label="{{ $dgStepLabel.': '.$dgStepStateLabel }}">
           <span class="people-progress-step-marker" aria-hidden="true"></span>
           <span class="people-progress-step-copy">
-            <strong>{{ $dgStep['label'] }}</strong>
+            <strong>{{ $dgStepLabel }}</strong>
             <small>{{ $dgStepStateLabel }}</small>
           </span>
         </span>
