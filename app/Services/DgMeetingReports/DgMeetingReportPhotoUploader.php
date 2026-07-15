@@ -6,12 +6,11 @@ use App\Services\Media\ClientImageVariantStore;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class DgMeetingReportPhotoUploader
 {
-    private const DEFAULT_MAX_FILE_SIZE = 20 * 1024 * 1024;
-
     private const RELATIVE_DIRECTORY = 'uploads/dg_reports';
 
     private const ALLOWED_MIME_TYPES = [
@@ -101,15 +100,23 @@ class DgMeetingReportPhotoUploader
             return ['photo' => null, 'error_code' => 'dg_photo_server_write_failed'];
         }
         if (! $file->isValid()) {
+            $this->logUploadFailure($file, 'invalid_upload', ['upload_error' => $uploadError]);
+
             return ['photo' => null, 'error_code' => 'dg_photo_upload_failed'];
         }
 
         $size = (int) ($file->getSize() ?: 0);
-        if ($size < 1 || $size > $this->maxFileSize()) {
-            return ['photo' => null, 'error_code' => 'dg_photo_too_large'];
+        if ($size < 1) {
+            return ['photo' => null, 'error_code' => 'dg_photo_empty'];
         }
 
         $realPath = (string) ($file->getRealPath() ?: '');
+        if ($realPath === '' || ! is_file($realPath) || ! is_readable($realPath)) {
+            $this->logUploadFailure($file, 'temporary_file_unreadable');
+
+            return ['photo' => null, 'error_code' => 'dg_photo_upload_failed'];
+        }
+
         $mimeType = $realPath !== '' ? detect_file_mime_type($realPath) : '';
         if ($mimeType === 'application/octet-stream') {
             $mimeType = strtolower(trim((string) $file->getMimeType()));
@@ -130,55 +137,46 @@ class DgMeetingReportPhotoUploader
 
         $sha256 = $realPath !== '' ? @hash_file('sha256', $realPath) : false;
         if (! is_string($sha256) || $sha256 === '') {
+            $this->logUploadFailure($file, 'checksum_failed', ['mime_type' => $mimeType]);
+
             return ['photo' => null, 'error_code' => 'dg_photo_upload_failed'];
         }
 
         $targetDirectory = rec_runtime_path(self::RELATIVE_DIRECTORY);
         if (! is_dir($targetDirectory) && ! mkdir($targetDirectory, 0775, true) && ! is_dir($targetDirectory)) {
-            return ['photo' => null, 'error_code' => 'dg_photo_upload_failed'];
+            $this->logUploadFailure($file, 'directory_creation_failed', ['target_directory' => $targetDirectory]);
+
+            return ['photo' => null, 'error_code' => 'dg_photo_storage_unavailable'];
         }
 
-        $filename = 'dg_'.strtolower($sha256).'.'.$extension;
+        if (! is_writable($targetDirectory)) {
+            $this->logUploadFailure($file, 'directory_not_writable', ['target_directory' => $targetDirectory]);
+
+            return ['photo' => null, 'error_code' => 'dg_photo_storage_unavailable'];
+        }
+
+        $filename = 'dg_'.strtolower((string) Str::ulid()).'.'.$extension;
         $relativePath = self::RELATIVE_DIRECTORY.'/'.$filename;
+        $originalName = $this->safeOriginalName($file, $extension);
 
-        $targetPath = $targetDirectory.'/'.$filename;
-        if (! is_file($targetPath)) {
-            $temporaryName = '.'.$filename.'.'.bin2hex(random_bytes(6)).'.part';
-            $temporaryPath = $targetDirectory.'/'.$temporaryName;
-            try {
-                $file->move($targetDirectory, $temporaryName);
-                if (@link($temporaryPath, $targetPath)) {
-                    @unlink($temporaryPath);
-                    $this->createdPaths[$relativePath] = true;
-                } elseif (is_file($targetPath)) {
-                    @unlink($temporaryPath);
-                } elseif (@rename($temporaryPath, $targetPath)) {
-                    $this->createdPaths[$relativePath] = true;
-                } elseif (is_file($targetPath)) {
-                    @unlink($temporaryPath);
-                } else {
-                    @unlink($temporaryPath);
+        try {
+            $file->move($targetDirectory, $filename);
+            $this->createdPaths[$relativePath] = true;
+        } catch (Throwable $exception) {
+            delete_relative_upload_file($relativePath);
+            $this->logUploadFailure($file, 'move_failed', [
+                'mime_type' => $mimeType,
+                'target_directory' => $targetDirectory,
+                'exception' => $exception,
+            ]);
 
-                    return ['photo' => null, 'error_code' => 'dg_photo_upload_failed'];
-                }
-            } catch (Throwable $exception) {
-                if (isset($temporaryPath) && is_file($temporaryPath)) {
-                    @unlink($temporaryPath);
-                }
-                Log::warning('DG meeting photo could not be moved.', [
-                    'mime_type' => $mimeType,
-                    'size' => $size,
-                    'exception' => $exception,
-                ]);
-
-                return ['photo' => null, 'error_code' => 'dg_photo_upload_failed'];
-            }
+            return ['photo' => null, 'error_code' => 'dg_photo_storage_unavailable'];
         }
 
         return [
             'photo' => [
                 'path' => $relativePath,
-                'name' => $this->safeOriginalName($file, $extension),
+                'name' => $originalName,
                 'sha256' => strtolower($sha256),
                 'size' => $size,
                 'width' => $width,
@@ -199,27 +197,32 @@ class DgMeetingReportPhotoUploader
         return function_exists('mb_substr') ? mb_substr($name, 0, 255) : substr($name, 0, 255);
     }
 
-    private function maxFileSize(): int
-    {
-        return max(1, (int) config('media.dg_meeting_report_max_bytes', self::DEFAULT_MAX_FILE_SIZE));
-    }
-
-    private function maxFileSizeLabel(): string
-    {
-        $megabytes = (int) ceil($this->maxFileSize() / 1024 / 1024);
-
-        return $megabytes.' MB';
-    }
-
     private function messageForErrorCode(string $errorCode): string
     {
         return match ($errorCode) {
             'invalid_dg_photo_type' => 'Format foto pertemuan tidak didukung. Gunakan JPG/PNG/WEBP.',
-            'dg_photo_too_large' => 'Ukuran foto pertemuan terlalu besar. Maksimal '.$this->maxFileSizeLabel().' per file.',
-            'dg_photo_exceeds_server_limit' => 'Ukuran foto melebihi batas upload server. Coba pilih foto yang lebih kecil.',
+            'dg_photo_empty' => 'File foto pertemuan kosong. Pilih ulang foto lalu kirim lagi.',
+            'dg_photo_exceeds_server_limit' => 'Upload foto dihentikan oleh konfigurasi server sebelum file diterima.',
             'dg_photo_partial_upload' => 'Upload foto terputus sebelum selesai. Coba ulangi lagi dengan koneksi yang stabil.',
             'dg_photo_server_write_failed' => 'Server tidak bisa menyimpan file upload sementara. Hubungi admin.',
-            default => 'Upload foto pertemuan gagal. Coba ulangi lagi.',
+            'dg_photo_storage_unavailable' => 'Server tidak bisa menyimpan foto pertemuan saat ini. Hubungi admin.',
+            default => 'File foto tidak dapat dibaca. Pilih ulang foto lalu kirim lagi.',
         };
+    }
+
+    /** @param  array<string, mixed>  $context */
+    private function logUploadFailure(UploadedFile $file, string $stage, array $context = []): void
+    {
+        try {
+            $size = (int) ($file->getSize() ?: 0);
+        } catch (Throwable) {
+            $size = 0;
+        }
+
+        Log::warning('DG meeting photo upload failed.', [
+            'stage' => $stage,
+            'size' => $size,
+            ...$context,
+        ]);
     }
 }
