@@ -143,8 +143,22 @@ async function dgStatesByName(page, rowSelector, nameSelector, stepSelector) {
 }
 
 async function assertSpiritualJourneyDgPresentation(page) {
+    await expect(page.locator('[data-discipleship-tab-panel][data-tab-key="spiritual"]')).toHaveAttribute(
+        'data-spiritual-journey-panel-ready',
+        '1',
+    );
     const firstRow = page.locator('[data-spiritual-journey-search-row]').first();
     await expect(firstRow).toBeVisible();
+    const nameTrigger = firstRow.locator('.journey-name-trigger');
+    await expect(nameTrigger).toHaveCount(1);
+    await expect(nameTrigger).not.toHaveText('');
+    await expect(nameTrigger).toHaveAttribute('data-spiritual-journey-view-open', /.+/);
+    await expect(firstRow.locator('.journey-name-sub, .journey-history-trigger')).toHaveCount(0);
+    await nameTrigger.click();
+    const profileModal = page.locator('[data-spiritual-journey-view-modal]');
+    await expect(profileModal).toHaveAttribute('aria-hidden', 'false');
+    await profileModal.locator('[data-spiritual-journey-view-close]').first().click();
+    await expect(profileModal).toHaveAttribute('aria-hidden', 'true');
     await expect(firstRow.locator('.journey-msk-step')).toHaveCount(1);
     await expect(firstRow.locator('.journey-msk-step strong')).toHaveText('MSK');
     await expect(firstRow.locator('.journey-msk-step small')).not.toHaveText('');
@@ -255,6 +269,10 @@ async function assertWideTablesScrollable(page, label) {
                 }));
                 window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
                 if (wrapper.scrollLeft < 1) results.push(`${table.id || table.className}: mouse drag did not scroll`);
+                const clickAfterDrag = new MouseEvent('click', { bubbles: true, cancelable: true });
+                if (wrapper.dispatchEvent(clickAfterDrag)) {
+                    results.push(`${table.id || table.className}: click after mouse drag was not suppressed`);
+                }
                 wrapper.scrollLeft = 0;
             }
         }

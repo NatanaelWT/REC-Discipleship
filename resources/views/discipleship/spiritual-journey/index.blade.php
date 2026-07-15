@@ -786,7 +786,7 @@ if ($page === 'spiritual_journey') {
         'titleAttrs' => ['data-spiritual-journey-view-title' => true],
         'closeAttrs' => ['data-spiritual-journey-view-close' => true],
         'bodyAttrs' => ['data-spiritual-journey-view-body' => true],
-        'bodyHtml' => '<div class="panel-note">Klik Lihat profil pada tabel untuk membuka profil peserta.</div>',
+        'bodyHtml' => '<div class="panel-note">Profil peserta belum dipilih.</div>',
         'footerHtml' => '<button class="btn ghost" type="button" data-spiritual-journey-view-close>Tutup</button>',
     ])->render();
     if ($renderAsTabPanel) {

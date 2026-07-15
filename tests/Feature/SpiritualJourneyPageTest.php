@@ -52,7 +52,10 @@ class SpiritualJourneyPageTest extends TestCase
         $response->assertSee('Peserta Journey');
         $response->assertDontSee('discipleship-page-header__stats', false);
         $response->assertDontSee('discipleship-page-header__stat', false);
-        $response->assertSee('Lihat profil');
+        $response->assertDontSee('Peserta kelas MSK');
+        $response->assertDontSee('Lihat profil');
+        $response->assertSee('class="journey-name-main journey-name-trigger"', false);
+        $response->assertSee('aria-label="Buka profil Peserta Journey"', false);
         $response->assertDontSee('Lihat riwayat pemuridan');
         $response->assertDontSee('data-spiritual-journey-view-template=', false);
         $response->assertSee('data-spiritual-detail-url-template=', false);
@@ -206,6 +209,9 @@ class SpiritualJourneyPageTest extends TestCase
         $this->assertArrayNotHasKey('next_page', $pageTwo->json());
         $this->assertArrayNotHasKey('templates_html', $pageTwo->json());
         $this->assertStringContainsString('Peserta Journey 051', (string) $pageTwo->json('html'));
+        $this->assertStringContainsString('journey-name-main journey-name-trigger', (string) $pageTwo->json('html'));
+        $this->assertStringNotContainsString('Peserta kelas MSK', (string) $pageTwo->json('html'));
+        $this->assertStringNotContainsString('journey-history-trigger', (string) $pageTwo->json('html'));
         $this->assertStringContainsString('people-progress-step journey-msk-step', (string) $pageTwo->json('html'));
         $this->assertStringContainsString('people-progress-step journey-track-bridge journey-bridge-step', (string) $pageTwo->json('html'));
         $this->assertStringContainsString('Peserta Journey 100', (string) $pageTwo->json('html'));

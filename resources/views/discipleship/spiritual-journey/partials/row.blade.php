@@ -54,9 +54,7 @@
 <tr data-spiritual-journey-search-row data-search-text="{{ trim((string) ($row['search_text'] ?? $journeyName)) }}">
   <td>
     <div class="journey-name-cell">
-      <div class="journey-name-main">{{ $journeyName }}</div>
-      <div class="journey-name-sub">Peserta kelas MSK</div>
-      <button class="note-link member-inline-trigger journey-history-trigger" type="button" data-spiritual-journey-view-open="{{ $journeyViewKey }}" aria-label="{{ 'Lihat profil '.$journeyName }}">Lihat profil</button>
+      <button class="journey-name-main journey-name-trigger" type="button" data-spiritual-journey-view-open="{{ $journeyViewKey }}" aria-label="{{ 'Buka profil '.$journeyName }}" title="{{ 'Buka profil '.$journeyName }}">{{ $journeyName }}</button>
     </div>
   </td>
   <td>
