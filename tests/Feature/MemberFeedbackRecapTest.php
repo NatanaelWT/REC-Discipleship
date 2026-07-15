@@ -40,6 +40,8 @@ class MemberFeedbackRecapTest extends TestCase
         $response->assertSee('data-member-feedback-group-modal', false);
         $response->assertSee('data-member-feedback-detail-open', false);
         $response->assertSee('data-member-feedback-detail-modal', false);
+        $response->assertSee('class="member-feedback-recap-latest"', false);
+        $response->assertSee('<time datetime="', false);
         $response->assertSee('discipleship-list-panel member-feedback-recap-panel', false);
         $response->assertSee('card table-card-plain dg-recap-section-card member-feedback-recap-group-card', false);
         $response->assertDontSee('Daftar Jurnal Umpan Balik Anggota');

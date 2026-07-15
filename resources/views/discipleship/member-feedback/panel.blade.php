@@ -107,7 +107,16 @@
                   <span class="member-feedback-recap-count-pill is-empty">0 orang</span>
                 @endif
               </td>
-              <td>{{ (string) ($group['latest_submitted_at'] ?? '') !== '' ? format_datetime_id((string) ($group['latest_submitted_at'] ?? '')) : '-' }}</td>
+              @php
+                  $latestSubmittedAt = trim((string) ($group['latest_submitted_at'] ?? ''));
+              @endphp
+              <td class="member-feedback-recap-latest">
+                @if ($latestSubmittedAt !== '')
+                  <time datetime="{{ str_replace(' ', 'T', $latestSubmittedAt) }}">{{ format_datetime_id($latestSubmittedAt) }}</time>
+                @else
+                  -
+                @endif
+              </td>
             </tr>
           @empty
             <tr><td colspan="7">Belum ada kelompok aktif pada scope ini.</td></tr>

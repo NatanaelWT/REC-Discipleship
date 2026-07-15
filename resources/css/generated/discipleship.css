@@ -4096,21 +4096,24 @@ button.note-link.dg-recap-photo-trigger {
 }
 
 .member-feedback-recap-group-table th:nth-child(2) {
-  width: 12%;
+  width: 11%;
 }
 
 .member-feedback-recap-group-table th:nth-child(3) {
-  width: 29%;
+  width: 27%;
 }
 
-.member-feedback-recap-group-table th:nth-child(4),
+.member-feedback-recap-group-table th:nth-child(4) {
+  width: 14%;
+}
+
 .member-feedback-recap-group-table th:nth-child(5),
 .member-feedback-recap-group-table th:nth-child(6) {
-  width: 13%;
+  width: 11%;
 }
 
 .member-feedback-recap-group-table th:nth-child(7) {
-  width: 11%;
+  width: 16%;
 }
 
 .member-feedback-recap-group-table td {
@@ -7814,6 +7817,17 @@ button.member-feedback-recap-count-pill:focus-visible {
 .discipleship-workspace__tab {
   flex: 0 0 auto;
   white-space: nowrap;
+}
+
+.member-feedback-recap-group-table td.member-feedback-recap-latest {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.member-feedback-recap-latest time {
+  display: block;
+  max-width: 100%;
 }
 
 .discipleship-workspace__refresh {

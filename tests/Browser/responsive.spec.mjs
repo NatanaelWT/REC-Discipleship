@@ -336,6 +336,46 @@ async function tableLayout(page, panelSelector, cardSelector, wrapperSelector) {
     }, { panelSelector, cardSelector, wrapperSelector });
 }
 
+async function assertFeedbackLatestColumnContained(page) {
+    const latestCell = page.locator('#member-feedback-recap-group-table tbody tr').first()
+        .locator('td.member-feedback-recap-latest');
+    await expect(latestCell).toBeVisible();
+    await latestCell.evaluate((cell) => {
+        const time = document.createElement('time');
+        time.dateTime = '2026-07-11T19:27:00';
+        time.textContent = '11-07-2026 19:27';
+        cell.replaceChildren(time);
+    });
+
+    const layout = await latestCell.evaluate((cell) => {
+        const table = cell.closest('table');
+        const time = cell.querySelector('time');
+        if (!table || !time) return null;
+        const cellStyle = getComputedStyle(cell);
+        const cellRect = cell.getBoundingClientRect();
+        const tableRect = table.getBoundingClientRect();
+        const range = document.createRange();
+        range.selectNodeContents(time);
+        const textRects = Array.from(range.getClientRects());
+        const contentLeft = cellRect.left + Number.parseFloat(cellStyle.paddingLeft || '0');
+        const contentRight = cellRect.right - Number.parseFloat(cellStyle.paddingRight || '0');
+
+        return {
+            whiteSpace: cellStyle.whiteSpace,
+            cellInsideTable: cellRect.right <= tableRect.right + 1,
+            textInsideCell: textRects.every((rect) => (
+                rect.left >= contentLeft - 1 && rect.right <= contentRight + 1
+            )),
+        };
+    });
+
+    expect(layout).toEqual({
+        whiteSpace: 'normal',
+        cellInsideTable: true,
+        textInsideCell: true,
+    });
+}
+
 async function assertWorkspaceUsesDocumentScroll(page, label, panelSelector) {
     const result = await page.evaluate((selector) => {
         const panel = document.querySelector(selector);
@@ -683,6 +723,7 @@ for (const viewport of viewports) {
 
             expect(feedbackDirect).toEqual(meetingLayout);
             expect(feedbackMarkupDirect).toBe(feedbackMarkupFromTab);
+            await assertFeedbackLatestColumnContained(page);
             await page.screenshot({
                 path: path.join('test-results', 'responsive-screenshots', `${viewport.name}-feedback-direct.png`),
                 fullPage: true,
