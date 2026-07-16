@@ -11631,6 +11631,15 @@ button.member-feedback-recap-count-pill:focus-visible {
   width: 100%;
 }
 
+.discipleship-page-header__search form,
+.discipleship-page-header__search .search {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+
 .discipleship-page-header__tools .msk-hero-controls {
   flex: 0 1 auto;
 }
