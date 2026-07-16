@@ -2,7 +2,10 @@
     $participant = is_array($participant ?? null) ? $participant : [];
     $batchMonth = (string) ($batchMonth ?? '');
     $closeActionAttr = (string) ($closeActionAttr ?? '');
-    $mskStoreAction = (string) ($mskStoreAction ?? route('discipleship.msk-classes.store'));
+    $branchRouteParams = current_user_branch_id() !== null
+        ? ['branch_id' => current_user_branch_id()]
+        : [];
+    $mskStoreAction = (string) ($mskStoreAction ?? route('discipleship.msk-classes.store', $branchRouteParams));
 
     $participantId = trim((string) ($participant['id'] ?? ''));
     $fullName = trim((string) ($participant['full_name'] ?? ''));
@@ -150,7 +153,7 @@
   <div class="{{ $formActionsClass }}">
     <button class="btn" type="submit">Simpan Peserta MSK</button>
     @if ($closeActionAttr === '')
-      <a class="btn ghost" href="{{ route('discipleship.msk-classes', ['batch_month' => $batchMonth]) }}">Batal</a>
+      <a class="btn ghost" href="{{ route('discipleship.msk-classes', ['batch_month' => $batchMonth] + $branchRouteParams) }}">Batal</a>
     @endif
   </div>
 </form>

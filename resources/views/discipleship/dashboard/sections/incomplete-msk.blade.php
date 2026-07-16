@@ -33,7 +33,7 @@
       </div>
       @if (! $centralReadOnly)
         <template data-msk-edit-template="{{ $participant['id'] }}" data-msk-edit-template-title="Edit Sesi MSK: {{ $participant['name'] }}">
-          <form method="post" action="{{ route('discipleship.dashboard.msk-sessions') }}" class="form-grid">
+          <form method="post" action="{{ route('discipleship.dashboard.msk-sessions', current_user_branch_id() !== null ? ['branch_id' => current_user_branch_id()] : []) }}" class="form-grid">
             @csrf
             <div class="panel-note" style="grid-column:1/-1;">Peserta: <strong>{{ $participant['name'] }}</strong><br>Batch Mulai MSK: {{ $monthLabel }}<br>Progress Saat Ini: {{ $participant['session_count'] }}/12 sesi</div>
             <fieldset class="dg-checklist msk-session-checklist" style="grid-column:1/-1;"><legend>Edit Checklist 12 Sesi MSK</legend><div class="msk-session-grid">

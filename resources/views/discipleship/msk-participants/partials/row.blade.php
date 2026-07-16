@@ -59,7 +59,11 @@
       @php
           $toggleAction = $participantStatus === 'inactive' ? 'reactivate_msk_participant' : 'delete_msk_participant';
           $toggleRouteName = $participantStatus === 'inactive' ? 'discipleship.msk-classes.reactivate' : 'discipleship.msk-classes.deactivate';
-          $toggleRoute = route($toggleRouteName, ['participant' => $participantId]);
+          $toggleRouteParams = ['participant' => $participantId];
+          if (current_user_branch_id() !== null) {
+              $toggleRouteParams['branch_id'] = current_user_branch_id();
+          }
+          $toggleRoute = route($toggleRouteName, $toggleRouteParams);
           $toggleLabel = $participantStatus === 'inactive' ? 'Aktifkan' : 'Nonaktifkan';
           $toggleConfirm = $participantStatus === 'inactive'
               ? 'Aktifkan kembali data peserta MSK ini?'

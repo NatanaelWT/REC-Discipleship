@@ -107,15 +107,10 @@ class PeopleTreePageTest extends TestCase
         $branchNav = '//*[@id="app-sidebar"]//*[@data-discipleship-branch-nav]';
 
         $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.')'));
-        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="all" and @open]/summary[starts-with(normalize-space(.), "Semua Cabang")])'));
-        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="kutisari"]/summary[starts-with(normalize-space(.), "Kutisari")])'));
-        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="gm"]/summary[starts-with(normalize-space(.), "GM")])'));
+        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//select[@data-discipleship-branch-filter]/option[@value="all" and @selected and normalize-space(.) = "Semua Cabang"])'));
+        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//select[@data-discipleship-branch-filter]/option[@value="1" and normalize-space(.) = "Kutisari"])'));
+        $this->assertSame(1.0, $centralXpath->evaluate('count('.$branchNav.'//select[@data-discipleship-branch-filter]/option[@value="2" and normalize-space(.) = "GM"])'));
         $this->assertSame(0.0, $centralXpath->evaluate('count(//*[contains(concat(" ", normalize-space(@class), " "), " central-rekap-toolbar ")])'));
-
-        $gmBranchLink = $centralXpath->query($branchNav.'//details[@data-discipleship-branch-group="gm"]//a[normalize-space(.) = "Dashboard"]')?->item(0);
-        $this->assertNotNull($gmBranchLink);
-        parse_str((string) parse_url($gmBranchLink->getAttribute('href'), PHP_URL_QUERY), $gmBranchQuery);
-        $this->assertSame('2', $gmBranchQuery['branch_id'] ?? null);
 
         $testingBranchId = (int) DB::table('cabang')->insertGetId([
             'label' => 'Testing',
@@ -129,7 +124,7 @@ class PeopleTreePageTest extends TestCase
         $developerContent = (string) $this->get('/pemuridan/pohon?branch_id='.$testingBranchId)->assertOk()->getContent();
         $developerXpath = $this->discipleshipMarkupXpath($developerContent);
 
-        $this->assertSame(1.0, $developerXpath->evaluate('count('.$branchNav.'//details[@data-discipleship-branch-group="all"]/summary[starts-with(normalize-space(.), "Semua Cabang")])'));
+        $this->assertSame(1.0, $developerXpath->evaluate('count('.$branchNav.'//select[@data-discipleship-branch-filter]/option[@value="all" and normalize-space(.) = "Semua Cabang"])'));
         $this->assertSame(0.0, $developerXpath->evaluate('count(//*[contains(concat(" ", normalize-space(@class), " "), " central-rekap-toolbar ")])'));
     }
 
@@ -787,6 +782,37 @@ class PeopleTreePageTest extends TestCase
             ->assertSee('Peserta Cache Baru');
     }
 
+    public function test_developer_can_add_person_to_selected_active_branch(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $this->actingAsRecUser('developer', null, 'developer');
+
+        $this->get('/pemuridan/pohon?branch_id=2')
+            ->assertOk()
+            ->assertSee('<option value="2" selected>GM</option>', false)
+            ->assertSee('/pemuridan/pohon/orang?branch_id=2', false);
+
+        // Simulate a different tab changing the current session selection.
+        $this->get('/pemuridan/pohon?branch_id=1')->assertOk();
+
+        $this->post('/pemuridan/pohon/orang?branch_id=2', [
+            'leader_id' => 'virtual_injil',
+            'group_id' => '',
+            'full_name' => 'Peserta Developer Cabang Dua',
+            'return_page' => 'people_tree',
+        ])->assertRedirect('/pemuridan/pohon?saved=1');
+
+        $this->assertDatabaseHas('orang', [
+            'branch_id' => 2,
+            'full_name' => 'Peserta Developer Cabang Dua',
+        ]);
+        $this->assertDatabaseMissing('orang', [
+            'branch_id' => 1,
+            'full_name' => 'Peserta Developer Cabang Dua',
+        ]);
+    }
+
     public function test_adding_archived_msk_participant_reactivates_existing_person_instead_of_duplicating(): void
     {
         $this->createTables();
@@ -1167,5 +1193,3 @@ class PeopleTreePageTest extends TestCase
         ]);
     }
 }
-
-

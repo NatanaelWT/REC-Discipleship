@@ -65,7 +65,7 @@ class CurrentUserContext
     public function branchId(): ?int
     {
         if ($this->isDeveloper()) {
-            return $this->developerExperimentBranchId();
+            return $this->developerSelectedBranchId();
         }
 
         if (! $this->isDiscipleshipBranch()) {
@@ -118,15 +118,20 @@ class CurrentUserContext
     public function isDiscipleshipPreviewReadonly(): bool
     {
         if ($this->isDeveloper()) {
-            return ! $this->isDeveloperExperimentBranch();
+            // The aggregate all-branch view has no unambiguous write target.
+            // Once a developer selects a branch, production and experiment
+            // branches are both fully editable.
+            return $this->developerSelectedBranchId() === null;
         }
 
-        return $this->isDiscipleshipCentral() || $this->isDeveloper();
+        return $this->isDiscipleshipCentral();
     }
 
     public function isDeveloperExperimentBranch(): bool
     {
-        return $this->isDeveloper() && $this->developerExperimentBranchId() !== null;
+        $branchId = $this->developerSelectedBranchId();
+
+        return $branchId !== null && $this->branches->isInactiveId($branchId);
     }
 
     public function isDeveloperTestingBranch(): bool
@@ -182,11 +187,11 @@ class CurrentUserContext
         }
 
         if ($this->isDeveloper()) {
-            if (is_worship_action($action)) {
+            if (is_worship_action($action) || $action === 'save_difficult_question_answer') {
                 return true;
             }
 
-            if ($this->isDeveloperExperimentBranch() && isset($this->developerExperimentActionMap()[$action])) {
+            if ($this->developerSelectedBranchId() !== null) {
                 return true;
             }
 
@@ -261,7 +266,7 @@ class CurrentUserContext
         return [];
     }
 
-    private function developerExperimentBranchId(): ?int
+    private function developerSelectedBranchId(): ?int
     {
         if (! $this->isDeveloper()) {
             return null;
@@ -272,10 +277,19 @@ class CurrentUserContext
         if ($request->query->has('branch_id')) {
             $input = trim((string) $request->query('branch_id', ''));
             if ($input === '' || strtolower($input) === 'all') {
+                if ($request->hasSession()) {
+                    $request->session()->put('central_rekap_branch_id', 'all');
+                }
+
                 return null;
             }
 
             $candidate = filter_var($input, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        } elseif (! $request->isMethodSafe()) {
+            // Developer writes must carry an explicit branch in the action URL.
+            // This prevents a form opened in one browser tab from using a branch
+            // selection that was changed later in another tab.
+            return null;
         } else {
             $stored = session('central_rekap_branch_id', 'all');
             $candidate = is_numeric($stored)
@@ -287,21 +301,14 @@ class CurrentUserContext
             return null;
         }
 
-        return $this->branches->isActiveId($candidate, true) && $this->branches->isInactiveId($candidate)
-            ? (int) $candidate
-            : null;
-    }
-
-    /**
-     * @return array<string, true>
-     */
-    private function developerExperimentActionMap(): array
-    {
-        $actions = discipleship_action_map();
-        foreach (['save_discipleship_targets', 'export_pohon_pemuridan_dot'] as $action) {
-            $actions[$action] = true;
+        if (! $this->branches->isActiveId($candidate, true)) {
+            return null;
         }
 
-        return $actions;
+        if ($request->query->has('branch_id') && $request->hasSession()) {
+            $request->session()->put('central_rekap_branch_id', (int) $candidate);
+        }
+
+        return (int) $candidate;
     }
 }

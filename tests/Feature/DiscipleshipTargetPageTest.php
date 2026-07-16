@@ -33,7 +33,7 @@ class DiscipleshipTargetPageTest extends TestCase
         $this->get('/pemuridan/target?branch_id=2')
             ->assertOk()
             ->assertSee('data-discipleship-branch-nav', false)
-            ->assertSee('data-discipleship-branch-group="gm" open', false)
+            ->assertSee('<option value="2" selected>GM</option>', false)
             ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('Cabang GM')
             ->assertSee('class="card settings-target-card"', false)
@@ -52,7 +52,7 @@ class DiscipleshipTargetPageTest extends TestCase
 
         $this->get('/pemuridan/target?branch_id=all')
             ->assertOk()
-            ->assertSee('data-discipleship-branch-group="all" open', false)
+            ->assertSee('<option value="all" selected>Semua Cabang</option>', false)
             ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('data-target-section="msk_completed"', false)
             ->assertSee('data-target-section="dg1_people"', false)
@@ -82,7 +82,7 @@ class DiscipleshipTargetPageTest extends TestCase
 
         $this->get('/pemuridan/target?branch_id=all')
             ->assertOk()
-            ->assertSee('data-discipleship-branch-group="all" open', false)
+            ->assertSee('<option value="all" selected>Semua Cabang</option>', false)
             ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('data-target-section="msk_completed"', false)
             ->assertSee('data-branch-code="gm"', false)
@@ -101,13 +101,13 @@ class DiscipleshipTargetPageTest extends TestCase
         $this->get('/pemuridan/target?branch_id='.$testingBranchId)
             ->assertOk()
             ->assertSee('is-developer-experiment-branch', false)
-            ->assertSee('data-discipleship-branch-group="testing" open', false)
+            ->assertSee('<option value="'.$testingBranchId.'" selected>Testing</option>', false)
             ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('Cabang Testing')
             ->assertSee('name="target_msk_completed"', false)
             ->assertSee('Simpan Target');
 
-        $this->post('/pemuridan/target', [
+        $this->post('/pemuridan/target?branch_id='.$testingBranchId, [
             'action' => 'save_discipleship_targets',
             'target_dg_total_people' => 991,
             'target_msk_completed' => 992,
@@ -126,7 +126,37 @@ class DiscipleshipTargetPageTest extends TestCase
             ->assertDontSee('data-branch-code="testing"', false);
     }
 
-    public function test_central_and_developer_cannot_update_branch_targets(): void
+    public function test_developer_can_update_active_branch_targets_without_polluting_other_branches(): void
+    {
+        $this->createBranchTable();
+        $this->seedTargets();
+        $this->actingAsRecUser('developer', null, 'developer');
+
+        $this->get('/pemuridan/target?branch_id=2')
+            ->assertOk()
+            ->assertSee('<option value="2" selected>GM</option>', false)
+            ->assertSee('Cabang GM')
+            ->assertSee('name="target_msk_completed"', false)
+            ->assertSee('Simpan Target');
+
+        // Simulate another tab changing the session selection. The mutation URL
+        // must keep targeting the branch rendered into the original form.
+        $this->get('/pemuridan/target?branch_id=1')->assertOk();
+
+        $this->post('/pemuridan/target?branch_id=2', [
+            'action' => 'save_discipleship_targets',
+            'target_dg_total_people' => 891,
+            'target_msk_completed' => 892,
+            'target_dg1_people' => 893,
+            'target_dg2_people' => 894,
+            'target_dg3_people' => 895,
+        ])->assertRedirect('/pemuridan/target?saved=1');
+
+        $this->assertSame(891, (int) DB::table('cabang')->where('id', 2)->value('camp_gap_participant_target'));
+        $this->assertSame(111, (int) DB::table('cabang')->where('id', 1)->value('camp_gap_participant_target'));
+    }
+
+    public function test_central_and_developer_all_branch_summary_cannot_update_branch_targets(): void
     {
         $this->createBranchTable();
         $this->seedTargets();

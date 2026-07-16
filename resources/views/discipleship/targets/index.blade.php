@@ -170,7 +170,7 @@
       @if ($centralReadOnly)
         <div class="settings-target-form" aria-label="Target DG dan MSK Cabang {{ $activeBranchLabel }}">
       @else
-        <form method="post" action="{{ route('discipleship.targets.update') }}" class="settings-target-form">
+        <form method="post" action="{{ route('discipleship.targets.update', current_user_branch_id() !== null ? ['branch_id' => current_user_branch_id()] : []) }}" class="settings-target-form">
           @csrf
           <input type="hidden" name="action" value="save_discipleship_targets">
       @endif

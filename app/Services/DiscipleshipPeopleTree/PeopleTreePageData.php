@@ -53,16 +53,19 @@ class PeopleTreePageData
             ];
         });
         $data['settings'] = ['church_name' => app_church_name()];
+        $branchRouteParams = current_user_branch_id() !== null
+            ? ['branch_id' => current_user_branch_id()]
+            : [];
         $data['peopleTreeUrls'] = [
-            'save_person' => route('discipleship.tree.people.save'),
-            'delete_person' => route('discipleship.tree.people.delete'),
-            'save_group' => route('discipleship.tree.groups.save'),
-            'leave_person_group' => route('discipleship.tree.groups.leave'),
-            'complete_group' => route('discipleship.tree.groups.complete'),
-            'reactivate_group' => route('discipleship.tree.groups.reactivate'),
-            'export_dot' => route('discipleship.tree.export-dot'),
-            'person_detail' => route('discipleship.tree.people.detail', ['person' => '__id__']),
-            'group_detail' => route('discipleship.tree.groups.detail', ['group' => '__id__']),
+            'save_person' => route('discipleship.tree.people.save', $branchRouteParams),
+            'delete_person' => route('discipleship.tree.people.delete', $branchRouteParams),
+            'save_group' => route('discipleship.tree.groups.save', $branchRouteParams),
+            'leave_person_group' => route('discipleship.tree.groups.leave', $branchRouteParams),
+            'complete_group' => route('discipleship.tree.groups.complete', $branchRouteParams),
+            'reactivate_group' => route('discipleship.tree.groups.reactivate', $branchRouteParams),
+            'export_dot' => route('discipleship.tree.export-dot', $branchRouteParams),
+            'person_detail' => route('discipleship.tree.people.detail', ['person' => '__id__'] + $branchRouteParams),
+            'group_detail' => route('discipleship.tree.groups.detail', ['group' => '__id__'] + $branchRouteParams),
         ];
 
         return $data;

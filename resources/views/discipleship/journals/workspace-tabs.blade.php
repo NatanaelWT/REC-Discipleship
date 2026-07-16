@@ -14,7 +14,7 @@
             'body_class' => 'page-member-feedback-recap',
         ],
     ];
-    if (can_manage_difficult_questions()) {
+    if (branch_can_access_page(current_user_branch(), 'difficult_questions_admin')) {
         $journalTabs[] = [
             'key' => 'questions',
             'label' => 'Pertanyaan Sulit',

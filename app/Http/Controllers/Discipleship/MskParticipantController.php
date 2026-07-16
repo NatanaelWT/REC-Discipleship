@@ -90,7 +90,7 @@ class MskParticipantController extends Controller
                 'participant' => $row,
                 'batchMonth' => (string) ($detail['batchMonthFilterParam'] ?? ''),
                 'closeActionAttr' => 'data-msk-edit-close',
-                'mskStoreAction' => route('discipleship.msk-classes.store'),
+                'mskStoreAction' => route('discipleship.msk-classes.store', $this->currentBranchRouteParams()),
             ])->render();
             $title = 'Edit Peserta MSK: '.$title;
         } else {
@@ -103,7 +103,7 @@ class MskParticipantController extends Controller
             'title' => $title,
             'html' => $html,
             'edit_url' => ! (bool) ($detail['centralReadOnly'] ?? false)
-                ? route('discipleship.msk-classes', ['edit' => $participant->getKey()])
+                ? route('discipleship.msk-classes', ['edit' => $participant->getKey()] + $this->currentBranchRouteParams())
                 : null,
         ])->header('Cache-Control', 'private, no-store');
     }
@@ -316,6 +316,14 @@ class MskParticipantController extends Controller
         return $scope->includesAllBranches()
             ? 'all'
             : $scope->selectedBranchId();
+    }
+
+    /** @return array<string, int> */
+    private function currentBranchRouteParams(): array
+    {
+        $branchId = current_user_branch_id();
+
+        return $branchId !== null ? ['branch_id' => $branchId] : [];
     }
 
     /** @param array<string,mixed> $error */

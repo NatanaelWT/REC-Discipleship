@@ -287,31 +287,31 @@ class SpiritualJourneyPageTest extends TestCase
         ]);
 
         DB::table('orang')->where('id', $dgWithoutKgapPersonId)->update([
-                'batch_month' => '2026-06',
-                'completed_at' => null,
-                'journey_bridge_status' => 'sudah_rg',
-                'status' => 'active',
-                'session_numbers' => json_encode([1, 2]),
-                'photos' => json_encode([]),
-                'updated_at' => now(),
+            'batch_month' => '2026-06',
+            'completed_at' => null,
+            'journey_bridge_status' => 'sudah_rg',
+            'status' => 'active',
+            'session_numbers' => json_encode([1, 2]),
+            'photos' => json_encode([]),
+            'updated_at' => now(),
         ]);
         DB::table('orang')->where('id', $dgWithKgapPersonId)->update([
-                'batch_month' => '2026-06',
-                'completed_at' => null,
-                'journey_bridge_status' => 'sudah_kgap',
-                'status' => 'active',
-                'session_numbers' => json_encode([1, 2]),
-                'photos' => json_encode([]),
-                'updated_at' => now(),
+            'batch_month' => '2026-06',
+            'completed_at' => null,
+            'journey_bridge_status' => 'sudah_kgap',
+            'status' => 'active',
+            'session_numbers' => json_encode([1, 2]),
+            'photos' => json_encode([]),
+            'updated_at' => now(),
         ]);
         DB::table('orang')->where('id', $withoutDgPersonId)->update([
-                'batch_month' => '2026-06',
-                'completed_at' => null,
-                'journey_bridge_status' => 'belum',
-                'status' => 'active',
-                'session_numbers' => json_encode([1]),
-                'photos' => json_encode([]),
-                'updated_at' => now(),
+            'batch_month' => '2026-06',
+            'completed_at' => null,
+            'journey_bridge_status' => 'belum',
+            'status' => 'active',
+            'session_numbers' => json_encode([1]),
+            'photos' => json_encode([]),
+            'updated_at' => now(),
         ]);
         DB::table('orang')->insert([
             [
@@ -449,6 +449,65 @@ class SpiritualJourneyPageTest extends TestCase
             ->assertOk()
             ->assertSee('journey-bridge-step is-bridge-kgap', false)
             ->assertSee('journey-bridge-select is-bridge-kgap', false);
+    }
+
+    public function test_developer_can_update_bridge_status_in_selected_active_branch(): void
+    {
+        $this->createMskTables();
+        $otherBranchParticipantId = $this->seedParticipant();
+        $selectedBranchParticipantId = DB::table('orang')->insertGetId([
+            'branch_id' => 2,
+            'full_name' => 'Peserta Journey Developer',
+            'batch_month' => '2026-07',
+            'completed_at' => null,
+            'journey_bridge_status' => 'belum',
+            'status' => 'active',
+            'session_numbers' => json_encode([1, 2, 3]),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAsRecUser('developer', null, 'developer');
+
+        $this->get('/pemuridan/spiritual-journey?branch_id=2')
+            ->assertOk()
+            ->assertSee('<option value="2" selected>GM</option>', false)
+            ->assertSee('Peserta Journey Developer')
+            ->assertSee('/pemuridan/spiritual-journey/'.$selectedBranchParticipantId.'/bridge-status?branch_id=2', false);
+
+        // A second tab may change the session, but the original form retains
+        // its explicit selected-branch target.
+        $this->get('/pemuridan/spiritual-journey?branch_id=1')->assertOk();
+
+        $this->post('/pemuridan/spiritual-journey/'.$selectedBranchParticipantId.'/bridge-status?branch_id=2', [
+            'action' => 'save_journey_bridge_status',
+            'id' => $selectedBranchParticipantId,
+            'journey_bridge_status' => 'sudah_rg',
+        ])->assertRedirect('/pemuridan/spiritual-journey?saved=1');
+
+        $this->assertDatabaseHas('orang', [
+            'id' => $selectedBranchParticipantId,
+            'branch_id' => 2,
+            'journey_bridge_status' => 'sudah_rg',
+        ]);
+        $this->assertDatabaseHas('orang', [
+            'id' => $otherBranchParticipantId,
+            'branch_id' => 1,
+            'journey_bridge_status' => 'belum',
+        ]);
+
+        $this->post('/pemuridan/spiritual-journey/'.$otherBranchParticipantId.'/bridge-status?branch_id=2', [
+            'action' => 'save_journey_bridge_status',
+            'id' => $otherBranchParticipantId,
+            'journey_bridge_status' => 'ikut_keduanya',
+        ])->assertRedirect('/pemuridan/spiritual-journey');
+
+        $this->assertDatabaseHas('orang', [
+            'id' => $otherBranchParticipantId,
+            'branch_id' => 1,
+            'journey_bridge_status' => 'belum',
+        ]);
     }
 
     private function createMskTables(): void
@@ -600,4 +659,3 @@ class SpiritualJourneyPageTest extends TestCase
         return $matches[1] ?? [];
     }
 }
-

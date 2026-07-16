@@ -1,17 +1,20 @@
 <?php
 
 if ($page === 'msk_classes') {
+    $branchRouteParams = current_user_branch_id() !== null
+        ? ['branch_id' => current_user_branch_id()]
+        : [];
     $renderAsTabPanel = (bool) ($renderAsTabPanel ?? false);
     if (! $renderAsTabPanel) {
         page_header('Kelas MSK', $settings, $page, false, 'page-discipleship-table-scroll');
     } else {
-        echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-list-panel journey-workspace-panel msk-classes-panel" id="discipleship-tabpanel-msk" role="tabpanel" aria-labelledby="discipleship-tab-msk" tabindex="0" data-discipleship-tab-panel data-tab-key="msk" data-page-title="Kelas MSK" data-body-class="page-msk_classes" data-msk-detail-url-template="'.h(route('discipleship.msk-classes.detail', ['participant' => '__id__'])).'">'."\n";
+        echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-list-panel journey-workspace-panel msk-classes-panel" id="discipleship-tabpanel-msk" role="tabpanel" aria-labelledby="discipleship-tab-msk" tabindex="0" data-discipleship-tab-panel data-tab-key="msk" data-page-title="Kelas MSK" data-body-class="page-msk_classes" data-msk-detail-url-template="'.h(route('discipleship.msk-classes.detail', ['participant' => '__id__'] + $branchRouteParams)).'">'."\n";
     }
     $centralReadOnly = is_effective_central_discipleship_readonly();
-    $mskIndexAction = route('discipleship.msk-classes');
-    $mskStoreAction = route('discipleship.msk-classes.store');
-    $mskImportAction = route('discipleship.msk-classes.import');
-    $mskExportAction = route('discipleship.msk-classes.export');
+    $mskIndexAction = route('discipleship.msk-classes', $branchRouteParams);
+    $mskStoreAction = route('discipleship.msk-classes.store', $branchRouteParams);
+    $mskImportAction = route('discipleship.msk-classes.import', $branchRouteParams);
+    $mskExportAction = route('discipleship.msk-classes.export', $branchRouteParams);
 
     render_condition_alerts([
         ['when' => isset($_GET['saved']), 'tone' => 'success', 'message' => 'Data peserta kelas MSK berhasil disimpan.'],
@@ -579,7 +582,7 @@ if ($page === 'msk_classes') {
         ],
     ])->render();
 
-    echo '<section class="card table-card-plain" data-msk-list data-rows-url="'.h(route('discipleship.msk-classes.rows')).'" data-limit="'.h((string) ($mskLimit ?? 50)).'" data-has-more="'.(! empty($hasMoreMskRows) ? '1' : '0').'" data-next-cursor="'.h((string) ($nextMskCursor ?? '')).'">'."\n";
+    echo '<section class="card table-card-plain" data-msk-list data-rows-url="'.h(route('discipleship.msk-classes.rows', $branchRouteParams)).'" data-limit="'.h((string) ($mskLimit ?? 50)).'" data-has-more="'.(! empty($hasMoreMskRows) ? '1' : '0').'" data-next-cursor="'.h((string) ($nextMskCursor ?? '')).'">'."\n";
     echo "  <div class=\"table-wrap\" data-msk-scroll>\n";
     echo "    <table class=\"table\" id=\"msk-table\">\n";
     echo "      <thead><tr><th>Nama Peserta</th><th>Bulan MSK</th><th>Progress Sesi</th><th>Status</th><th>WhatsApp</th><th class=\"actions-head\">Aksi</th></tr></thead>\n";
@@ -645,7 +648,7 @@ if ($page === 'msk_classes') {
         if (! $centralReadOnly) {
             $toggleAction = $participantStatus === 'inactive' ? 'reactivate_msk_participant' : 'delete_msk_participant';
             $toggleRouteName = $participantStatus === 'inactive' ? 'discipleship.msk-classes.reactivate' : 'discipleship.msk-classes.deactivate';
-            $toggleRoute = route($toggleRouteName, ['participant' => $participantId]);
+            $toggleRoute = route($toggleRouteName, ['participant' => $participantId] + $branchRouteParams);
             $toggleLabel = $participantStatus === 'inactive' ? 'Aktifkan' : 'Nonaktifkan';
             $toggleConfirm = $participantStatus === 'inactive'
                 ? 'Aktifkan kembali data peserta MSK ini?'

@@ -44,9 +44,12 @@
     } elseif (in_array($journeyBridgeStatus, ['sudah_kgap', 'ikut_keduanya'], true)) {
         $bridgeStateClass = 'is-bridge-kgap';
     }
+    $bridgeRouteParams = current_user_branch_id() !== null
+        ? ['branch_id' => current_user_branch_id()]
+        : [];
     $bridgeFormAction = $journeyParticipantId !== ''
-        ? route('discipleship.spiritual-journey.bridge-status', ['participant' => $journeyParticipantId])
-        : route('discipleship.spiritual-journey.bridge-status-form');
+        ? route('discipleship.spiritual-journey.bridge-status', ['participant' => $journeyParticipantId] + $bridgeRouteParams)
+        : route('discipleship.spiritual-journey.bridge-status-form', $bridgeRouteParams);
     $mskDone = $mskPercent >= 100;
     $mskStepClass = $mskDone ? 'is-msk-done' : 'is-msk-progress';
 @endphp

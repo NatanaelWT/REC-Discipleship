@@ -54,7 +54,7 @@ class MskParticipantPageTest extends TestCase
         $this->assertLessThan(strpos($content, '<span>Export</span>'), strpos($content, '<span>Import</span>'));
     }
 
-    public function test_central_and_developer_see_export_without_import_controls(): void
+    public function test_central_and_developer_all_branch_summary_see_export_without_import_controls(): void
     {
         $this->createMskTables();
 
@@ -131,6 +131,46 @@ class MskParticipantPageTest extends TestCase
         $this->assertLessThan(strpos($content, 'Foto dan keterangan'), strpos($content, 'Kontak dan akses'));
         $this->assertLessThan(strpos($content, 'MSK dan pemuridan aktif'), strpos($content, 'Foto dan keterangan'));
         $this->assertLessThan(strpos($content, 'Riwayat pemuridan'), strpos($content, 'MSK dan pemuridan aktif'));
+    }
+
+    public function test_developer_selected_production_branch_can_create_and_edit_msk_data(): void
+    {
+        $this->createMskTables();
+        $this->actingAsRecUser('developer', null, 'developer');
+
+        $this->get('/pemuridan/msk?branch_id=2&batch_month=all')
+            ->assertOk()
+            ->assertSee('<option value="2" selected>GM</option>', false)
+            ->assertSee('data-msk-create-open', false)
+            ->assertSee('<span>Import</span>', false)
+            ->assertSee('<span>Export</span>', false);
+
+        $this->post('/pemuridan/msk/peserta?branch_id=2', [
+            'action' => 'save_msk_participant',
+            'full_name' => 'Peserta Developer GM',
+            'batch_month' => '2026-08',
+            'session_numbers' => [1, 2],
+        ])->assertRedirect('/pemuridan/msk?batch_month=2026-08&saved=1');
+
+        $storedParticipant = DB::table('orang')
+            ->where('full_name', 'Peserta Developer Gm')
+            ->first();
+        $this->assertNotNull($storedParticipant);
+        $this->assertSame(2, (int) $storedParticipant->branch_id);
+        $participantId = (int) $storedParticipant->id;
+        $this->assertGreaterThan(0, $participantId);
+        $this->assertDatabaseMissing('orang', [
+            'branch_id' => 1,
+            'full_name' => 'Peserta Developer Gm',
+        ]);
+
+        $detail = $this->get('/pemuridan/msk/'.$participantId.'/detail?branch_id=2&mode=edit')
+            ->assertOk()
+            ->assertJsonPath('title', 'Edit Peserta MSK: Peserta Developer Gm');
+
+        $detailHtml = (string) $detail->json('html');
+        $this->assertStringContainsString('name="full_name"', $detailHtml);
+        $this->assertStringContainsString('/pemuridan/msk/peserta?branch_id=2', $detailHtml);
     }
 
     public function test_msk_history_prefers_higher_stage_when_history_dates_match(): void
@@ -270,7 +310,7 @@ class MskParticipantPageTest extends TestCase
         ])->assertRedirect('/pemuridan/dashboard?error=access_denied');
     }
 
-    public function test_developer_can_export_but_cannot_import_msk_data(): void
+    public function test_developer_all_branch_summary_can_export_but_cannot_import_msk_data(): void
     {
         $this->createMskTables();
         $this->mock(MskParticipantExportService::class)
@@ -801,4 +841,3 @@ class MskParticipantPageTest extends TestCase
         ];
     }
 }
-

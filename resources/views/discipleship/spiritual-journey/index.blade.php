@@ -1,11 +1,14 @@
 <?php
 
 if ($page === 'spiritual_journey') {
+    $branchRouteParams = current_user_branch_id() !== null
+        ? ['branch_id' => current_user_branch_id()]
+        : [];
     $renderAsTabPanel = (bool) ($renderAsTabPanel ?? false);
     if (! $renderAsTabPanel) {
         page_header('Spiritual Journey', $settings, $page, false, 'page-discipleship-table-scroll');
     } else {
-        echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-list-panel journey-workspace-panel spiritual-journey-panel" id="discipleship-tabpanel-spiritual" role="tabpanel" aria-labelledby="discipleship-tab-spiritual" tabindex="0" data-discipleship-tab-panel data-tab-key="spiritual" data-page-title="Spiritual Journey" data-body-class="page-spiritual_journey" data-spiritual-detail-url-template="'.h(route('discipleship.spiritual-journey.detail', ['participant' => '__id__'])).'">'."\n";
+        echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-list-panel journey-workspace-panel spiritual-journey-panel" id="discipleship-tabpanel-spiritual" role="tabpanel" aria-labelledby="discipleship-tab-spiritual" tabindex="0" data-discipleship-tab-panel data-tab-key="spiritual" data-page-title="Spiritual Journey" data-body-class="page-spiritual_journey" data-spiritual-detail-url-template="'.h(route('discipleship.spiritual-journey.detail', ['participant' => '__id__'] + $branchRouteParams)).'">'."\n";
     }
     $peopleByMemberId = [];
     $peopleByName = [];
@@ -746,7 +749,7 @@ if ($page === 'spiritual_journey') {
             'tools' => [
                 'element' => 'form',
                 'method' => 'get',
-                'action' => route('discipleship.spiritual-journey'),
+                'action' => route('discipleship.spiritual-journey', $branchRouteParams),
                 'attributes' => ['data-spiritual-journey-search-form' => true],
                 'partial' => 'discipleship.partials.page-header-controls.spiritual-journey',
                 'data' => compact(
@@ -760,7 +763,7 @@ if ($page === 'spiritual_journey') {
     ])->render();
 
     $rows = is_array($spiritualJourneyRows ?? null) ? $spiritualJourneyRows : $rows;
-    echo '<section class="card table-card-plain" data-spiritual-journey-list data-rows-url="'.h(route('discipleship.spiritual-journey.rows')).'" data-limit="'.h((string) ($spiritualJourneyLimit ?? 50)).'" data-has-more="'.(! empty($hasMoreSpiritualJourneyRows) ? '1' : '0').'" data-next-cursor="'.h((string) ($nextSpiritualJourneyCursor ?? '')).'">'."\n";
+    echo '<section class="card table-card-plain" data-spiritual-journey-list data-rows-url="'.h(route('discipleship.spiritual-journey.rows', $branchRouteParams)).'" data-limit="'.h((string) ($spiritualJourneyLimit ?? 50)).'" data-has-more="'.(! empty($hasMoreSpiritualJourneyRows) ? '1' : '0').'" data-next-cursor="'.h((string) ($nextSpiritualJourneyCursor ?? '')).'">'."\n";
     echo "  <div class=\"table-wrap\" data-spiritual-journey-scroll data-table-horizontal-scroll>\n";
     echo "    <table class=\"table journey-dashboard-table\" id=\"spiritual-journey-table\">\n";
     echo "      <colgroup>\n";

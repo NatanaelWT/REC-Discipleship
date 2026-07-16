@@ -22,7 +22,7 @@
   <section class="card developer-panel developer-section-card">
     <div class="developer-section-head">
       <span class="developer-section-icon is-slate">@include('developer._icon', ['name' => 'users'])</span>
-      <div><span class="developer-section-kicker">Data Domain</span><h2>Akun dan Cabang</h2><p>Ringkasan akun pengguna dan cabang. Pemuridan lintas cabang hanya lihat.</p></div>
+      <div><span class="developer-section-kicker">Data Domain</span><h2>Akun dan Cabang</h2><p>Ringkasan akun pengguna dan cabang. Developer dapat mengelola data pemuridan pada setiap cabang.</p></div>
     </div>
 
     <div class="developer-metric-grid developer-access-metric-grid">

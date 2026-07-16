@@ -88,6 +88,14 @@ class DeveloperAccessTest extends TestCase
         $this->assertTrue(branch_can_use_action(current_user_branch(), 'save_worship_penatalayan'));
         $this->assertFalse(branch_can_use_action(current_user_branch(), 'save_person'));
         $this->assertTrue(is_effective_central_discipleship_readonly());
+
+        session()->put('central_rekap_branch_id', 2);
+        $this->assertSame('gm', current_user_branch());
+        $this->assertSame(2, current_user_branch_id());
+        $this->assertTrue(branch_can_use_action(current_user_branch(), 'save_person'));
+        $this->assertTrue(branch_can_use_action(current_user_branch(), 'save_msk_participant'));
+        $this->assertFalse(is_effective_central_discipleship_readonly());
+
         $this->assertTrue(can_manage_public_materials());
         $this->assertTrue(can_manage_difficult_questions());
         $this->assertTrue(branch_can_access_secure_upload_path(current_user_branch(), 'restricted/example.pdf'));
@@ -104,7 +112,7 @@ class DeveloperAccessTest extends TestCase
 
         $this->get('/developer')
             ->assertOk()
-            ->assertSee('Pemuridan lintas cabang hanya lihat')
+            ->assertSee('Developer dapat mengelola data pemuridan pada setiap cabang.')
             ->assertDontSee('Cabang Aktif')
             ->assertDontSee('Pakai')
             ->assertDontSee('Mode Pusat')
@@ -551,7 +559,7 @@ class DeveloperAccessTest extends TestCase
         $this->get('/pemuridan/target?branch_id='.$testingBranchId)
             ->assertOk()
             ->assertSee('is-developer-experiment-branch', false)
-            ->assertSee('data-discipleship-branch-group="testing" open', false)
+            ->assertSee('<option value="'.$testingBranchId.'" selected>Testing</option>', false)
             ->assertDontSee('central-rekap-toolbar', false)
             ->assertSee('Cabang Testing')
             ->assertSee('name="target_msk_completed"', false)
@@ -562,6 +570,39 @@ class DeveloperAccessTest extends TestCase
         $this->assertSame($testingBranchId, current_user_branch_id());
         $this->assertFalse(is_effective_central_discipleship_readonly());
         $this->assertTrue(branch_can_use_action(current_user_branch(), 'save_person'));
+    }
+
+    public function test_developer_production_branch_is_editable_context(): void
+    {
+        $this->createCoreTables();
+        $this->seedDeveloper();
+        $this->loginAs('developer');
+
+        $this->get('/pemuridan/target?branch_id=2')
+            ->assertOk()
+            ->assertSee('<option value="2" selected>GM</option>', false)
+            ->assertDontSee('is-central-readonly', false)
+            ->assertDontSee('is-developer-experiment-branch', false)
+            ->assertSee('Cabang GM')
+            ->assertSee('name="target_msk_completed"', false)
+            ->assertSee('Simpan Target');
+
+        $this->assertSame('gm', current_user_branch());
+        $this->assertSame(2, current_user_branch_id());
+        $this->assertFalse(is_effective_central_discipleship_readonly());
+        $this->assertTrue(branch_can_use_action(current_user_branch(), 'save_person'));
+
+        $this->post('/pemuridan/target?branch_id=2', [
+            'action' => 'save_discipleship_targets',
+            'target_dg_total_people' => 701,
+            'target_msk_completed' => 702,
+            'target_dg1_people' => 703,
+            'target_dg2_people' => 704,
+            'target_dg3_people' => 705,
+        ])->assertRedirect('/pemuridan/target?saved=1');
+
+        $this->assertSame(701, (int) DB::table('cabang')->where('id', 2)->value('camp_gap_participant_target'));
+        $this->assertSame(50, (int) DB::table('cabang')->where('id', 1)->value('camp_gap_participant_target'));
     }
 
     private function createCoreTables(): void

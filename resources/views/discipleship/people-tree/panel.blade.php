@@ -6,15 +6,18 @@
     $personSourceLabelLower = 'peserta MSK';
     $completedMskPlaceholder = '- Pilih Peserta MSK 12/12 -';
     $peopleTreeUrls = is_array($peopleTreeUrls ?? null) ? $peopleTreeUrls : [];
-    $peopleTreeSavePersonUrl = (string) ($peopleTreeUrls['save_person'] ?? '/pemuridan/pohon/orang');
-    $peopleTreeDeletePersonUrl = (string) ($peopleTreeUrls['delete_person'] ?? '/pemuridan/pohon/orang/hapus');
-    $peopleTreeSaveGroupUrl = (string) ($peopleTreeUrls['save_group'] ?? '/pemuridan/pohon/kelompok');
-    $peopleTreeLeaveGroupUrl = (string) ($peopleTreeUrls['leave_person_group'] ?? '/pemuridan/pohon/kelompok/keluar');
-    $peopleTreeCompleteGroupUrl = (string) ($peopleTreeUrls['complete_group'] ?? '/pemuridan/pohon/kelompok/selesai');
-    $peopleTreeReactivateGroupUrl = (string) ($peopleTreeUrls['reactivate_group'] ?? '/pemuridan/pohon/kelompok/aktifkan');
-    $peopleTreeExportDotUrl = (string) ($peopleTreeUrls['export_dot'] ?? '/pemuridan/pohon/export-dot');
-    $peopleTreePersonDetailUrl = (string) ($peopleTreeUrls['person_detail'] ?? '/pemuridan/pohon/orang/__id__/detail');
-    $peopleTreeGroupDetailUrl = (string) ($peopleTreeUrls['group_detail'] ?? '/pemuridan/pohon/kelompok/__id__/detail');
+    $branchRouteParams = current_user_branch_id() !== null
+        ? ['branch_id' => current_user_branch_id()]
+        : [];
+    $peopleTreeSavePersonUrl = (string) ($peopleTreeUrls['save_person'] ?? route('discipleship.tree.people.save', $branchRouteParams));
+    $peopleTreeDeletePersonUrl = (string) ($peopleTreeUrls['delete_person'] ?? route('discipleship.tree.people.delete', $branchRouteParams));
+    $peopleTreeSaveGroupUrl = (string) ($peopleTreeUrls['save_group'] ?? route('discipleship.tree.groups.save', $branchRouteParams));
+    $peopleTreeLeaveGroupUrl = (string) ($peopleTreeUrls['leave_person_group'] ?? route('discipleship.tree.groups.leave', $branchRouteParams));
+    $peopleTreeCompleteGroupUrl = (string) ($peopleTreeUrls['complete_group'] ?? route('discipleship.tree.groups.complete', $branchRouteParams));
+    $peopleTreeReactivateGroupUrl = (string) ($peopleTreeUrls['reactivate_group'] ?? route('discipleship.tree.groups.reactivate', $branchRouteParams));
+    $peopleTreeExportDotUrl = (string) ($peopleTreeUrls['export_dot'] ?? route('discipleship.tree.export-dot', $branchRouteParams));
+    $peopleTreePersonDetailUrl = (string) ($peopleTreeUrls['person_detail'] ?? route('discipleship.tree.people.detail', ['person' => '__id__'] + $branchRouteParams));
+    $peopleTreeGroupDetailUrl = (string) ($peopleTreeUrls['group_detail'] ?? route('discipleship.tree.groups.detail', ['group' => '__id__'] + $branchRouteParams));
     echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-tree-panel" id="discipleship-tabpanel-tree" role="tabpanel" aria-labelledby="discipleship-tab-tree" tabindex="0" data-discipleship-tab-panel data-tab-key="tree" data-page-title="Pohon Pemuridan" data-tree-person-detail-url-template="' . h($peopleTreePersonDetailUrl) . '" data-tree-group-detail-url-template="' . h($peopleTreeGroupDetailUrl) . '">' . "\n";
     $error = $_GET['error'] ?? '';
     if ($error === 'in_use') {

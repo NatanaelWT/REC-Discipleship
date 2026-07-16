@@ -11,7 +11,7 @@
                 'participant' => $participant,
                 'batchMonth' => $batchMonthFilterParam,
                 'closeActionAttr' => 'data-msk-edit-close',
-                'mskStoreAction' => route('discipleship.msk-classes.store'),
+                'mskStoreAction' => route('discipleship.msk-classes.store', current_user_branch_id() !== null ? ['branch_id' => current_user_branch_id()] : []),
             ])->render()
             : '';
     @endphp

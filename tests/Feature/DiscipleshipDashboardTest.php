@@ -152,7 +152,7 @@ class DiscipleshipDashboardTest extends TestCase
             ->assertSee('Peserta Testing Dashboard')
             ->assertDontSee('Peserta MSK Dashboard');
 
-        $this->post('/pemuridan/dashboard/msk-sessions', [
+        $this->post('/pemuridan/dashboard/msk-sessions?branch_id='.$testingBranchId, [
             'action' => 'save_msk_sessions',
             'id' => $testingParticipantId,
             'return_page' => 'discipleship_dashboard',
@@ -161,6 +161,62 @@ class DiscipleshipDashboardTest extends TestCase
 
         $sessions = json_decode((string) DB::table('orang')->where('id', $testingParticipantId)->value('session_numbers'), true);
         $this->assertSame([1, 2, 3], $sessions);
+    }
+
+    public function test_developer_active_branch_dashboard_write_stays_on_form_branch(): void
+    {
+        $this->createDashboardTables();
+        $this->seedDashboardData();
+        DB::table('cabang')->insert([
+            'id' => 2,
+            'label' => 'GM',
+            'is_active' => true,
+            'camp_gap_participant_target' => 50,
+            'msk_completion_target' => 50,
+            'dg1_completion_target' => 50,
+            'dg2_completion_target' => 50,
+            'dg3_completion_target' => 50,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        app(BranchCatalog::class)->clearCache();
+        $selectedParticipantId = DB::table('orang')->insertGetId([
+            'branch_id' => 2,
+            'full_name' => 'Peserta Dashboard Developer',
+            'batch_month' => '2026-07',
+            'journey_bridge_status' => 'belum',
+            'status' => 'active',
+            'session_numbers' => json_encode([1]),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $otherParticipantId = (int) DB::table('orang')
+            ->where('full_name', 'Peserta MSK Dashboard')
+            ->value('id');
+        $this->actingAsRecUser('developer', null, 'developer');
+
+        $this->get('/pemuridan/dashboard?branch_id=2')
+            ->assertOk()
+            ->assertSee('<option value="2" selected>GM</option>', false);
+        $this->get('/pemuridan/dashboard/sections/incomplete-msk?branch_id=2')
+            ->assertOk()
+            ->assertSee('Peserta Dashboard Developer')
+            ->assertSee('/pemuridan/dashboard/msk-sessions?branch_id=2', false);
+
+        $this->get('/pemuridan/dashboard?branch_id=1')->assertOk();
+
+        $this->post('/pemuridan/dashboard/msk-sessions?branch_id=2', [
+            'action' => 'save_msk_sessions',
+            'id' => $selectedParticipantId,
+            'return_page' => 'discipleship_dashboard',
+            'session_numbers' => ['1', '2', '3', '4'],
+        ])->assertRedirect('/pemuridan/dashboard?msk_session_saved=1');
+
+        $selectedSessions = json_decode((string) DB::table('orang')->where('id', $selectedParticipantId)->value('session_numbers'), true);
+        $otherSessions = json_decode((string) DB::table('orang')->where('id', $otherParticipantId)->value('session_numbers'), true);
+        $this->assertSame([1, 2, 3, 4], $selectedSessions);
+        $this->assertSame([1, 2], $otherSessions);
     }
 
     public function test_dashboard_initial_response_uses_aggregate_queries_and_bounded_html(): void
@@ -621,4 +677,3 @@ class DiscipleshipDashboardTest extends TestCase
         return $id;
     }
 }
-

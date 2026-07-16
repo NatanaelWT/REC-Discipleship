@@ -122,7 +122,7 @@ class CurrentDiscipleshipScope
         $this->selectedBranchId = $selected;
         $this->branchIds = [$selected];
         $this->allBranches = false;
-        $this->readOnly = ! ($this->user->isDeveloper() && $this->branches->isInactiveId($selected));
+        $this->readOnly = ! $this->user->isDeveloper();
     }
 
     private function selectionFromRequest(): int|string|null

@@ -79,7 +79,9 @@ class PeopleTreeDetailData
         return [
             'title' => $title,
             'html' => view('discipleship.msk-participants.profile', ['profile' => $profile])->render(),
-            'edit_url' => $this->scope->isReadOnly() ? null : route('discipleship.tree.people.save'),
+            'edit_url' => $this->scope->isReadOnly()
+                ? null
+                : route('discipleship.tree.people.save', $this->branchRouteParams()),
             'edit' => [
                 'person_id' => $id,
                 'member_id' => $id,
@@ -118,7 +120,17 @@ class PeopleTreeDetailData
         return [
             'title' => trim((string) ($detail['title'] ?? 'Riwayat Kelompok')) ?: 'Riwayat Kelompok',
             'html' => (string) ($detail['content'] ?? ''),
-            'edit_url' => $this->scope->isReadOnly() ? null : route('discipleship.tree.groups.save'),
+            'edit_url' => $this->scope->isReadOnly()
+                ? null
+                : route('discipleship.tree.groups.save', $this->branchRouteParams()),
         ];
+    }
+
+    /** @return array<string, int> */
+    private function branchRouteParams(): array
+    {
+        $branchId = $this->scope->selectedBranchId();
+
+        return $branchId !== null ? ['branch_id' => $branchId] : [];
     }
 }
