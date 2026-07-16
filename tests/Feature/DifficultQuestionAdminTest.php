@@ -41,7 +41,7 @@ class DifficultQuestionAdminTest extends TestCase
         $response->assertSee('Pertanyaan Sulit');
         $response->assertSee('+6281234567890');
         $response->assertSee('Apa arti pemuridan?');
-        $response->assertDontSee('name="answer_text"', false);
+        $response->assertSee('name="answer_text"', false);
     }
 
     public function test_public_submission_stores_optional_whatsapp_number(): void
@@ -149,6 +149,10 @@ class DifficultQuestionAdminTest extends TestCase
             'updated_at' => '2026-06-13 08:00:00',
         ]);
 
+        $this->get('/pemuridan/pertanyaan-sulit')
+            ->assertOk()
+            ->assertSee('name="answer_text"', false);
+
         $response = $this->post("/pemuridan/pertanyaan-sulit/{$questionId}/jawaban", [
             'answer_text' => 'Jawaban dari admin.',
         ]);
@@ -194,7 +198,7 @@ class DifficultQuestionAdminTest extends TestCase
         $response->assertSee('Jawaban publik tersedia.');
     }
 
-    public function test_central_discipleship_user_can_view_but_cannot_save_an_answer(): void
+    public function test_central_discipleship_user_can_view_and_save_an_answer(): void
     {
         $this->createDifficultQuestionsTable();
         $this->loginAsCentralDiscipleshipAdmin();
@@ -215,10 +219,47 @@ class DifficultQuestionAdminTest extends TestCase
         $this->get('/pemuridan/pertanyaan-sulit')
             ->assertOk()
             ->assertSee('Pertanyaan read only')
-            ->assertDontSee('name="answer_text"', false);
+            ->assertSee('name="answer_text"', false);
 
         $this->post("/pemuridan/pertanyaan-sulit/{$questionId}/jawaban", [
             'answer_text' => 'Jawaban dari pusat.',
+        ])->assertRedirect('/pemuridan/pertanyaan-sulit?answered=1');
+
+        $this->assertDatabaseHas('pertanyaan_sulit', [
+            'id' => $questionId,
+            'status' => 'answered',
+            'answer' => 'Jawaban dari pusat.',
+            'answered_by_username' => 'admin_pusat',
+        ]);
+    }
+
+    public function test_branch_user_sees_difficult_question_tab_but_cannot_answer(): void
+    {
+        $this->createDifficultQuestionsTable();
+        $this->actingAsRecUser('admin_kutisari', 'kutisari', 'pemuridan_cabang');
+
+        $questionId = DB::table('pertanyaan_sulit')->insertGetId([
+            'asker_name' => 'Tester Cabang',
+            'question' => 'Pertanyaan untuk dilihat cabang',
+            'password_hash' => null,
+            'password_lookup_hash' => 'lookup-branch-view',
+            'status' => 'pending',
+            'answer' => null,
+            'answered_by_username' => null,
+            'answered_at' => null,
+            'created_at' => '2026-06-13 08:00:00',
+            'updated_at' => '2026-06-13 08:00:00',
+        ]);
+
+        $this->get('/pemuridan/pertanyaan-sulit')
+            ->assertOk()
+            ->assertSee('id="discipleship-tab-questions"', false)
+            ->assertSee('data-tab-key="questions"', false)
+            ->assertSee('Pertanyaan untuk dilihat cabang')
+            ->assertDontSee('name="answer_text"', false);
+
+        $this->post("/pemuridan/pertanyaan-sulit/{$questionId}/jawaban", [
+            'answer_text' => 'Jawaban yang tidak boleh tersimpan.',
         ])->assertRedirect('/pemuridan/dashboard?error=access_denied');
 
         $this->assertDatabaseHas('pertanyaan_sulit', [
