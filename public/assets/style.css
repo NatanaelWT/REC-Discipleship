@@ -10805,6 +10805,8 @@ button.member-feedback-recap-count-pill:focus-visible {
 .msk-name-link {
   width: fit-content;
   border-radius: 4px;
+  font: inherit;
+  line-height: inherit;
   text-decoration: none;
   transition: color 160ms ease, box-shadow 160ms ease;
 }
@@ -11052,7 +11054,8 @@ button.member-feedback-recap-count-pill:focus-visible {
   padding: 0;
   border: 0;
   background: transparent;
-  font-family: inherit;
+  font: inherit;
+  line-height: inherit;
   text-align: left;
   cursor: pointer;
 }
@@ -11969,8 +11972,8 @@ button.member-feedback-recap-count-pill:focus-visible {
   border: 0;
   border-radius: 4px;
   background: transparent;
-  font-family: inherit;
-  line-height: 1.25;
+  font: inherit;
+  line-height: inherit;
   text-align: left;
   overflow-wrap: anywhere;
   cursor: pointer;
