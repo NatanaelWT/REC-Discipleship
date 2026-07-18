@@ -11,11 +11,23 @@
     }
     $roleToneClass = trim((string) ($row['role_tone_class'] ?? 'is-member'));
     $progressSteps = is_array($row['progress_steps'] ?? null) ? $row['progress_steps'] : [];
+    $personId = (int) ($row['id'] ?? 0);
 @endphp
 <tr data-people-filter="{{ $rowFilterState }}" data-people-progress="{{ $rowProgressKey }}" data-discipleship-people-search-row data-search-text="{{ $name }}">
   <td>
     <div class="people-name-cell">
-      <div class="people-name-main">{{ $name }}</div>
+      @if ($personId > 0)
+        <button
+          class="people-name-main people-name-link"
+          type="button"
+          data-tree-v2-node-action="person"
+          data-person-id="{{ $personId }}"
+          data-name="{{ $name }}"
+          aria-label="Lihat profil {{ $name }}"
+        >{{ $name }}</button>
+      @else
+        <div class="people-name-main">{{ $name }}</div>
+      @endif
     </div>
   </td>
   <td>

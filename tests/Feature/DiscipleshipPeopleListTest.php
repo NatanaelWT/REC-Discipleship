@@ -94,6 +94,11 @@ class DiscipleshipPeopleListTest extends TestCase
         $response->assertDontSee('discipleship-page-header__stat', false);
         $response->assertSee('people-export-button', false);
         $response->assertSee(icon_svg('download'), false);
+        $response->assertSee('data-tree-person-detail-url-template="'.route('discipleship.people-list.detail', ['person' => '__id__']).'"', false);
+        $response->assertSee('data-tree-v2-node-action="person"', false);
+        $response->assertSee('data-person-id="1"', false);
+        $response->assertSee('people-list-person-profile-modal', false);
+        $response->assertSee('data-tree-v2-person-profile-modal', false);
     }
 
     public function test_people_list_renders_shared_workspace_with_people_tab_active(): void
@@ -177,7 +182,7 @@ class DiscipleshipPeopleListTest extends TestCase
 
         $content = $this->get('/pemuridan/anggota')->assertOk()->getContent();
 
-        $this->assertSame(1, substr_count($content, '<div class="people-name-main">Identitas DG Sama</div>'));
+        $this->assertSame(1, substr_count($content, '>Identitas DG Sama</button>'));
     }
 
     public function test_people_list_shows_dg_only_progress_track_and_ignores_legacy_bridge_filter(): void

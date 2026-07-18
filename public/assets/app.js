@@ -5363,6 +5363,9 @@
         setupHorizontalTableScroll(panel);
         setupDiscipleshipPeopleList(panel);
         setupDiscipleshipGroupsList(panel);
+        if (key === 'people') {
+          setupDiscipleshipTreeActions(panel);
+        }
         if (key === 'groups') {
           setupDiscipleshipTreeHistory(panel);
         }

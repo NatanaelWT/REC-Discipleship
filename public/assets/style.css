@@ -11044,6 +11044,31 @@ button.member-feedback-recap-count-pill:focus-visible {
   color: #0f172a;
 }
 
+.people-name-link {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.people-name-link:hover {
+  color: var(--primary-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.people-name-link:focus-visible {
+  border-radius: 4px;
+  outline: 3px solid rgba(37, 99, 235, 0.22);
+  outline-offset: 3px;
+}
+
 .people-role-badge {
   display: inline-flex;
   align-items: center;

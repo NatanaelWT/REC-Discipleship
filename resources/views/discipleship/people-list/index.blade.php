@@ -7,6 +7,7 @@
   data-discipleship-tab-panel
   data-tab-key="people"
   data-page-title="{{ $pageTitle ?? 'Daftar Anggota DG' }}"
+  data-tree-person-detail-url-template="{{ route('discipleship.people-list.detail', ['person' => '__id__']) }}"
 >
   @if (request()->query('error') === 'export_zip_unavailable')
     <div class="alert danger">Fitur export Excel belum tersedia karena ekstensi ZipArchive belum aktif.</div>
@@ -54,4 +55,11 @@
       </table>
     </div>
   </section>
+
+  @include('discipleship.people-tree.partials.person-profile-modal', [
+      'centralReadOnly' => is_effective_central_discipleship_readonly(),
+      'showActions' => false,
+      'personProfileModalId' => 'people-list-person-profile-modal',
+      'personProfileEmptyMessage' => '<div class="panel-note">Klik nama peserta untuk melihat profil.</div>',
+  ])
 </section>

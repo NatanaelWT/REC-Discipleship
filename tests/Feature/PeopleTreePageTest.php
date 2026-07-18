@@ -357,6 +357,19 @@ class PeopleTreePageTest extends TestCase
             ->assertJsonStructure(['title', 'html', 'edit_url']);
     }
 
+    public function test_people_list_detail_endpoint_reuses_the_tree_person_detail(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $personId = (int) DB::table('orang')->where('full_name', 'Anggota Test')->value('id');
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/anggota/'.$personId.'/detail')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonStructure(['title', 'html', 'edit_url', 'edit']);
+    }
+
     public function test_tree_initial_graph_query_count_does_not_grow_per_person(): void
     {
         $this->createTables();

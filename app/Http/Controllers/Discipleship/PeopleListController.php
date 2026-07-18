@@ -7,6 +7,7 @@ use App\Http\Requests\DiscipleshipPeople\ExportDiscipleshipPeopleRequest;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DiscipleshipPeople\DiscipleshipPeopleExportService;
 use App\Services\DiscipleshipPeople\DiscipleshipPeopleListData;
+use App\Services\DiscipleshipPeopleTree\PeopleTreeDetailData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,6 +65,16 @@ class PeopleListController extends Controller
         DiscipleshipPeopleExportService $exporter,
     ): BinaryFileResponse|RedirectResponse {
         return $exporter->export($request);
+    }
+
+    public function detail(int $person, PeopleTreeDetailData $detailData): JsonResponse
+    {
+        $detail = $detailData->person($person);
+        if ($detail === null) {
+            abort(404);
+        }
+
+        return response()->json($detail)->header('Cache-Control', 'private, no-store');
     }
 
     private function tabBranchId(Request $request, CurrentDiscipleshipScope $scope): int|string|null
