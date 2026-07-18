@@ -261,9 +261,9 @@ class DiscipleshipGroupIndexData
 
     private function statusFilter(Request $request): string
     {
-        $status = trim((string) $request->query('status', 'all'));
+        $status = trim((string) $request->query('status', 'active'));
 
-        return in_array($status, ['all', 'active', 'inactive'], true) ? $status : 'all';
+        return in_array($status, ['all', 'active', 'inactive'], true) ? $status : 'active';
     }
 
     private function cursorNameExpression(): string
@@ -283,8 +283,14 @@ class DiscipleshipGroupIndexData
 
     private function emptyMessage(string $search, string $status): string
     {
-        return $search !== '' || $status !== 'all'
-            ? 'Kelompok tidak ditemukan.'
-            : 'Belum ada kelompok.';
+        if ($search !== '') {
+            return 'Kelompok tidak ditemukan.';
+        }
+
+        return match ($status) {
+            'active' => 'Belum ada kelompok aktif.',
+            'inactive' => 'Belum ada kelompok tidak aktif.',
+            default => 'Belum ada kelompok.',
+        };
     }
 }

@@ -16,7 +16,6 @@
     if ($progressLabel === '') {
         $progressLabel = '-';
     }
-    $progressHelper = trim((string) ($groupRow['progress_helper_text'] ?? ''));
     $memberSummary = trim((string) ($groupRow['member_summary'] ?? 'Belum ada peserta'));
     if ($memberSummary === '') {
         $memberSummary = 'Belum ada peserta';
@@ -50,7 +49,6 @@
   <td>
     <div class="group-progress-cell">
       <span class="group-progress-badge {{ $progressToneClass }}">{{ $progressLabel }}</span>
-      <div class="group-progress-sub">{{ $progressHelper }}</div>
     </div>
   </td>
   <td>

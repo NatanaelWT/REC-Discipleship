@@ -69,6 +69,7 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
         $response->assertOk()
             ->assertSee('Orang 0001')
             ->assertSee('Orang 0050')
+            ->assertDontSee('DG 1 (Orang 0001)')
             ->assertDontSee('Orang 0051')
             ->assertDontSee('Orang 0300')
             ->assertDontSee('rec-pagination', false)
@@ -135,6 +136,12 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
         ]);
         $this->actingAsRecUser();
 
+        $this->get('/pemuridan/kelompok')
+            ->assertOk()
+            ->assertDontSee('Pemimpin Historis')
+            ->assertSee('Kelompok Aktif (0)')
+            ->assertSee('Kelompok Tidak Aktif (1)');
+
         $this->get('/pemuridan/kelompok?status=inactive')
             ->assertOk()
             ->assertSee('Pemimpin Historis')
@@ -158,7 +165,7 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
         $this->get('/pemuridan/kelompok')
             ->assertOk()
             ->assertDontSee('data-groups-stat=', false)
-            ->assertSee('Belum ada kelompok.');
+            ->assertSee('Belum ada kelompok aktif.');
     }
 
     private function createTables(): void

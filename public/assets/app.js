@@ -937,7 +937,7 @@
         } else {
           url.searchParams.delete('q');
         }
-        if (status !== 'all') {
+        if (status !== 'active') {
           url.searchParams.set('status', status);
         } else {
           url.searchParams.delete('status');
