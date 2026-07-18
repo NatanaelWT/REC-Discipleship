@@ -86,7 +86,6 @@
               <td>
                 <div class="member-feedback-recap-main-cell">
                   <strong>{{ (string) ($group['leader_name'] ?? '-') }}</strong>
-                  <span>{{ (string) ($group['group_name'] ?? 'Kelompok') }}</span>
                   @if ($groupSearchText !== '')
                     <small class="member-feedback-recap-search-shadow">{{ $groupSearchText }}</small>
                   @endif

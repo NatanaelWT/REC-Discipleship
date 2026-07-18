@@ -113,8 +113,10 @@ class MemberFeedbackRecapTest extends TestCase
         $this->assertStringNotContainsString('discipleship-page-header__stats', $content);
         $this->assertStringContainsString('DG 1 (Pemimpin Test)', $content);
         $this->assertStringContainsString('DG 1 (Pemimpin Tanpa Feedback)', $content);
-        $this->assertMatchesRegularExpression('/DG 1 \(Pemimpin Test\).*?1 orang.*?1 orang.*?1 orang/s', $content);
-        $this->assertMatchesRegularExpression('/DG 1 \(Pemimpin Tanpa Feedback\).*?1 orang.*?0 orang.*?0 orang/s', $content);
+        $this->assertStringNotContainsString('<span>DG 1 (Pemimpin Test)</span>', $content);
+        $this->assertStringNotContainsString('<span>DG 1 (Pemimpin Tanpa Feedback)</span>', $content);
+        $this->assertMatchesRegularExpression('/<strong>Pemimpin Test<\/strong>.*?1 orang.*?1 orang.*?1 orang/s', $content);
+        $this->assertMatchesRegularExpression('/<strong>Pemimpin Tanpa Feedback<\/strong>.*?1 orang.*?0 orang.*?0 orang/s', $content);
         $this->assertStringNotContainsString('2 orang', $content);
     }
 
@@ -430,4 +432,3 @@ class MemberFeedbackRecapTest extends TestCase
         return $rows;
     }
 }
-
