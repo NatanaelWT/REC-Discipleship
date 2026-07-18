@@ -11227,9 +11227,7 @@ button.member-feedback-recap-count-pill:focus-visible {
   outline-offset: 3px;
 }
 
-.group-name-sub,
-.group-progress-sub,
-.group-members-sub {
+.group-name-sub {
   color: #64748b;
   font-size: 13px;
   line-height: 1.55;
@@ -17303,10 +17301,10 @@ body.page-discipleship-workspace:not(.modal-open) {
 #groups-dashboard-table td:nth-child(2) { width: 110px; }
 
 #groups-dashboard-table th:nth-child(3),
-#groups-dashboard-table td:nth-child(3) { width: 210px; }
+#groups-dashboard-table td:nth-child(3) { width: 140px; }
 
 #groups-dashboard-table th:nth-child(4),
-#groups-dashboard-table td:nth-child(4) { width: 320px; }
+#groups-dashboard-table td:nth-child(4) { width: 390px; }
 
 #spiritual-journey-table {
   min-width: 820px;

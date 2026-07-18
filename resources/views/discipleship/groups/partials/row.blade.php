@@ -20,7 +20,6 @@
     if ($memberSummary === '') {
         $memberSummary = 'Belum ada peserta';
     }
-    $memberHelper = trim((string) ($groupRow['member_helper_text'] ?? ''));
     $groupId = (int) ($groupRow['id'] ?? 0);
 @endphp
 <tr @if ($rowClass !== '') class="{{ $rowClass }}" @endif data-group-status="{{ $rowStatus }}" data-group-progress="{{ $rowProgress }}" data-discipleship-groups-row>
@@ -54,7 +53,6 @@
   <td>
     <div class="group-members-cell">
       <div class="group-members-main">{{ $memberSummary }}</div>
-      <div class="group-members-sub">{{ $memberHelper }}</div>
     </div>
   </td>
 </tr>

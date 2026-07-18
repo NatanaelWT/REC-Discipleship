@@ -2735,9 +2735,7 @@ textarea:focus-visible {
   outline-offset: 3px;
 }
 
-.group-name-sub,
-.group-progress-sub,
-.group-members-sub {
+.group-name-sub {
   color: #64748b;
   font-size: 13px;
   line-height: 1.55;

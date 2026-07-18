@@ -151,11 +151,6 @@ class DiscipleshipGroupIndexData
             if ($this->scope->includesAllBranches()) {
                 $leaderName = append_branch_suffix($leaderName, $branchLabel);
             }
-            $groupLabel = discipleship_group_display_label([
-                'progress' => $progress,
-                'leader_name' => $leaderName,
-            ], $progress !== '-' ? $progress : 'Kelompok DG');
-
             return [
                 'id' => (int) $group->id,
                 'row_status' => strtolower((string) $group->status) === 'active' ? 'active' : 'inactive',
@@ -170,9 +165,7 @@ class DiscipleshipGroupIndexData
                     'DG 1' => 'is-dg1', 'DG 2' => 'is-dg2', 'DG 3' => 'is-dg3', default => 'is-neutral',
                 },
                 'progress_label' => $progress,
-                'progress_helper_text' => $groupLabel,
                 'member_summary' => $members !== [] ? implode(', ', array_slice($members, 0, 8)) : ($isActiveGroup ? 'Belum ada peserta' : 'Tanpa riwayat peserta'),
-                'member_helper_text' => count($members).($isActiveGroup ? ' peserta aktif' : ' peserta tercatat'),
                 'member_count' => count($members),
             ];
         })->values();

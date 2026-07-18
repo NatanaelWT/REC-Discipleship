@@ -70,6 +70,7 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
             ->assertSee('Orang 0001')
             ->assertSee('Orang 0050')
             ->assertDontSee('DG 1 (Orang 0001)')
+            ->assertDontSee('1 peserta aktif')
             ->assertDontSee('Orang 0051')
             ->assertDontSee('Orang 0300')
             ->assertDontSee('rec-pagination', false)
@@ -147,7 +148,7 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
             ->assertSee('Pemimpin Historis')
             ->assertSee('Riwayat pendamping: Pendamping Historis')
             ->assertSee('Anggota Historis')
-            ->assertSee('1 peserta tercatat')
+            ->assertDontSee('1 peserta tercatat')
             ->assertDontSee('Belum ada peserta')
             ->assertDontSee('Tanpa pendamping');
     }
