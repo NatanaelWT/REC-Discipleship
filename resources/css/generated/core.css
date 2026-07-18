@@ -2647,6 +2647,7 @@ textarea:focus-visible {
 .people-name-main {
   font-size: 16px;
   font-weight: 800;
+  line-height: 1.25;
   color: #0f172a;
 }
 
@@ -2657,8 +2658,7 @@ textarea:focus-visible {
   padding: 0;
   border: 0;
   background: transparent;
-  font: inherit;
-  line-height: inherit;
+  font-family: inherit;
   text-align: left;
   cursor: pointer;
 }
