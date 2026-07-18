@@ -80,6 +80,7 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
             ->assertSee('data-tree-v2-history-modal', false)
             ->assertSee('data-tree-v2-history-open="1"', false)
             ->assertSee('Riwayat Kelompok')
+            ->assertSee('tree-group-history-modal-card discipleship-tree-panel', false)
             ->assertSee('data-tree-v2-action-do="add_member"', false)
             ->assertSee('data-tree-v2-action-do="complete_group"', false)
             ->assertSee('data-tree-v2-action-do="upgrade_group"', false)

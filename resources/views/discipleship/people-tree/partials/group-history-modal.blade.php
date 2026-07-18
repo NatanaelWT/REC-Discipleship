@@ -16,6 +16,7 @@
     'id' => $groupHistoryModalId ?? 'tree-v2-history-modal',
     'size' => 'wide',
     'modalAttrs' => ['data-tree-v2-history-modal' => true],
+    'cardClass' => 'tree-group-history-modal-card discipleship-tree-panel',
     'title' => 'Riwayat Kelompok',
     'titleAttrs' => ['data-tree-v2-history-title' => true],
     'closeAttrs' => ['data-tree-v2-history-close' => true],

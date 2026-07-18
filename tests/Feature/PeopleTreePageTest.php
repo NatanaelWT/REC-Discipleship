@@ -47,6 +47,7 @@ class PeopleTreePageTest extends TestCase
         $response->assertSee('tree-v2-person-profile-modal', false);
         $response->assertSee('data-tree-person-detail-url-template=', false);
         $response->assertSee('data-tree-group-detail-url-template=', false);
+        $response->assertSee('tree-group-history-modal-card discipleship-tree-panel', false);
         $response->assertSee('data-tree-v2-action-do="add_member"', false);
         $response->assertSee('data-tree-v2-action-do="complete_group"', false);
         $response->assertSee('data-tree-v2-action-do="upgrade_group"', false);
