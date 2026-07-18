@@ -4893,6 +4893,15 @@
           openView(trigger.getAttribute('data-msk-view-open') || '');
         });
         panel.addEventListener('click', (event) => {
+          const blockedDeactivate = event.target.closest('[data-msk-deactivate-blocked]');
+          if (blockedDeactivate) {
+            event.preventDefault();
+            window.alert(
+              blockedDeactivate.getAttribute('data-msk-deactivate-message')
+                || 'Peserta masih terhubung dengan DG aktif sehingga tidak dapat dinonaktifkan.'
+            );
+            return;
+          }
           const retry = event.target.closest('[data-msk-detail-retry="view"]');
           if (retry) {
             event.preventDefault();

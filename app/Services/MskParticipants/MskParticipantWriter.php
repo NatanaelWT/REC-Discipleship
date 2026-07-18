@@ -13,6 +13,7 @@ class MskParticipantWriter
     public function __construct(
         private readonly MutationLifecycle $lifecycle,
         private readonly ClientImageVariantStore $variantStore,
+        private readonly MskParticipantHistoryData $historyData,
     ) {}
 
     /**
@@ -99,14 +100,19 @@ class MskParticipantWriter
      */
     public function setStatus(Person $participant, string $status): array
     {
-        $branchCode = normalize_user_branch(current_user_branch());
         $participant = $this->currentBranchParticipant($participant);
         if ($participant === null) {
             return ['error' => 'invalid_msk_participant'];
         }
 
+        $normalizedStatus = normalize_msk_participant_status($status);
+        if ($normalizedStatus === 'inactive'
+            && $this->historyData->hasActiveDgConnection((int) $participant->getKey())) {
+            return ['error' => 'msk_participant_has_active_dg_connection'];
+        }
+
         $participant->forceFill([
-            'status' => normalize_msk_participant_status($status),
+            'status' => $normalizedStatus,
         ])->save();
 
         return ['error' => ''];

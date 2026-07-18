@@ -114,6 +114,7 @@ class MskParticipantController extends Controller
                     'batchMonthFilterParam' => $batchMonthFilterParam,
                     'branchRouteParams' => $branchRouteParams,
                     'editHref' => $editUrl,
+                    'canDeactivate' => ! (bool) ($detail['hasActiveDgConnection'] ?? false),
                 ])->render();
             }
         }
@@ -170,7 +171,7 @@ class MskParticipantController extends Controller
 
         $result = $writer->setStatus($participant, 'inactive');
         if ($result['error'] !== '') {
-            return redirect()->route('discipleship.msk-classes', ['error' => 'invalid_msk_participant'] + $batchMonthParam);
+            return redirect()->route('discipleship.msk-classes', ['error' => $result['error']] + $batchMonthParam);
         }
 
         return redirect()->route('discipleship.msk-classes', ['deleted' => 1] + $batchMonthParam);

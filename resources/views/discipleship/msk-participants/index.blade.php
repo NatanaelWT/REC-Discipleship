@@ -36,6 +36,7 @@ if ($page === 'msk_classes') {
         'msk_photo_too_large' => 'Ukuran foto peserta terlalu besar. Maksimal 5 MB per file.',
         'msk_photo_upload_failed' => 'Upload foto peserta gagal. Coba ulangi lagi.',
         'invalid_msk_participant' => 'Data peserta kelas MSK tidak ditemukan.',
+        'msk_participant_has_active_dg_connection' => 'Peserta tidak dapat dinonaktifkan karena masih menjadi pemimpin, pendamping, atau anggota DG aktif.',
         'msk_participant_must_be_inactive' => 'Peserta harus dinonaktifkan sebelum dapat dihapus permanen.',
         'export_zip_unavailable' => 'Fitur export Excel belum tersedia di server (ekstensi ZipArchive belum aktif).',
         'export_template_missing' => 'Template export MSK tidak ditemukan atau rusak.',

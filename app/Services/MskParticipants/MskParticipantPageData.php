@@ -29,7 +29,7 @@ class MskParticipantPageData
         ];
     }
 
-    /** @return array{participant:array<string,mixed>,profile:array<string,mixed>,centralReadOnly:bool,batchMonthFilterParam:string}|null */
+    /** @return array{participant:array<string,mixed>,profile:array<string,mixed>,centralReadOnly:bool,batchMonthFilterParam:string,hasActiveDgConnection:bool}|null */
     public function detailForCurrentContext(Request $request, int $participantId): ?array
     {
         if ($participantId < 1) {
@@ -67,6 +67,7 @@ class MskParticipantPageData
             'profile' => is_array($profiles[$id] ?? null) ? $profiles[$id] : [],
             'centralReadOnly' => $centralReadOnly,
             'batchMonthFilterParam' => $batchMonth,
+            'hasActiveDgConnection' => $this->historyData->hasActiveDgConnection((int) $participant->getKey()),
         ];
     }
 

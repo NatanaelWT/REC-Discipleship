@@ -11,6 +11,20 @@ use Illuminate\Support\Facades\DB;
 
 class MskParticipantHistoryData
 {
+    public function hasActiveDgConnection(int $personId): bool
+    {
+        if ($personId < 1) {
+            return false;
+        }
+
+        return DiscipleshipGroupPerson::query()
+            ->where('person_id', $personId)
+            ->whereNotNull('discipleship_group_id')
+            ->whereRaw('LOWER(TRIM(status)) = ?', ['active'])
+            ->whereNull('ended_on')
+            ->exists();
+    }
+
     /**
      * @param  array<int, array<string, mixed>>  $participants
      * @param  array<int, int>  $branchIds
@@ -268,6 +282,7 @@ class MskParticipantHistoryData
                     'note' => $this->reasonLabel((string) $link->end_reason),
                     'sort_date' => (string) ($link->ended_on ?? $link->started_on ?? $link->updated_at ?? ''),
                 ];
+
                 continue;
             }
 

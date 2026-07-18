@@ -4757,6 +4757,10 @@ button.member-feedback-recap-count-pill:focus-visible {
   color: #ffffff;
 }
 
+.msk-view-modal-card .msk-view-deactivate-button.is-blocked {
+  box-shadow: inset 0 0 0 1px rgba(120, 53, 15, 0.16);
+}
+
 .msk-view-modal-card .modal-footer > [data-msk-view-close] {
   min-width: 72px;
 }

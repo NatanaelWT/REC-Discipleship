@@ -132,8 +132,9 @@ class MskParticipantPageTest extends TestCase
         $content = (string) $response->json('html');
         $actionsHtml = (string) $response->json('actions_html');
         $this->assertStringContainsString('data-msk-edit-from-view="11"', $actionsHtml);
-        $this->assertStringContainsString('/pemuridan/msk/11/nonaktif', $actionsHtml);
+        $this->assertStringNotContainsString('/pemuridan/msk/11/nonaktif', $actionsHtml);
         $this->assertStringContainsString('Nonaktifkan', $actionsHtml);
+        $this->assertStringContainsString('data-msk-deactivate-blocked', $actionsHtml);
         $this->assertStringNotContainsString('permanently_delete_msk_participant', $actionsHtml);
         $this->assertLessThan(strpos($content, 'Kontak dan akses'), strpos($content, 'Profil peserta'));
         $this->assertLessThan(strpos($content, 'Foto dan keterangan'), strpos($content, 'Kontak dan akses'));
@@ -531,6 +532,64 @@ class MskParticipantPageTest extends TestCase
             ->assertDontSee('Peserta Batch Terbaru')
             ->assertSee('<option value="2026-06" >Juni 2026 (1)</option>', false)
             ->assertSee('<option value="2024-11" selected>November 2024 (1)</option>', false);
+    }
+
+    public function test_participants_with_active_dg_membership_or_leadership_cannot_be_deactivated(): void
+    {
+        $this->createMskTables();
+        $this->createDiscipleshipHistoryTables();
+        $memberId = DB::table('orang')->insertGetId(
+            $this->participantRow('Anggota DG Aktif', '2026-06'),
+        );
+        $leaderId = DB::table('orang')->insertGetId(
+            $this->participantRow('Pemimpin DG Aktif', '2026-06'),
+        );
+        DB::table('kelompok_dg')->insert([
+            ['id' => 20, 'branch_id' => 1, 'status' => 'active', 'stage' => 'DG 1', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 21, 'branch_id' => 2, 'status' => 'active', 'stage' => 'DG 2', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            ['branch_id' => 1, 'discipleship_group_id' => 20, 'person_id' => $memberId, 'role' => 'member', 'stage' => 'DG 1', 'status' => 'active', 'started_on' => '2026-01-01', 'ended_on' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['branch_id' => 2, 'discipleship_group_id' => 21, 'person_id' => $leaderId, 'role' => 'leader', 'stage' => null, 'status' => 'active', 'started_on' => '2026-02-01', 'ended_on' => null, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        $this->actingAsRecUser();
+
+        foreach ([$memberId, $leaderId] as $participantId) {
+            $actionsHtml = (string) $this->get('/pemuridan/msk/'.$participantId.'/detail?batch_month=all')
+                ->assertOk()
+                ->json('actions_html');
+            $this->assertStringNotContainsString('/pemuridan/msk/'.$participantId.'/nonaktif', $actionsHtml);
+            $this->assertStringContainsString('Nonaktifkan', $actionsHtml);
+            $this->assertStringContainsString('data-msk-deactivate-blocked', $actionsHtml);
+            $this->assertStringContainsString('tidak dapat dinonaktifkan', $actionsHtml);
+
+            $this->post('/pemuridan/msk/'.$participantId.'/nonaktif', [
+                'action' => 'delete_msk_participant',
+                'batch_month' => 'all',
+            ])->assertRedirect('/pemuridan/msk?error=msk_participant_has_active_dg_connection&batch_month=all');
+            $this->assertDatabaseHas('orang', ['id' => $participantId, 'status' => 'active']);
+        }
+
+        DB::table('keanggotaan_kelompok_dg')
+            ->where('person_id', $memberId)
+            ->update([
+                'status' => 'completed',
+                'ended_on' => '2026-07-01',
+                'updated_at' => now(),
+            ]);
+
+        $eligibleActions = (string) $this->get('/pemuridan/msk/'.$memberId.'/detail?batch_month=all')
+            ->assertOk()
+            ->json('actions_html');
+        $this->assertStringContainsString('/pemuridan/msk/'.$memberId.'/nonaktif', $eligibleActions);
+        $this->assertStringContainsString('Nonaktifkan', $eligibleActions);
+        $this->assertStringNotContainsString('data-msk-deactivate-blocked', $eligibleActions);
+
+        $this->post('/pemuridan/msk/'.$memberId.'/nonaktif', [
+            'action' => 'delete_msk_participant',
+            'batch_month' => 'all',
+        ])->assertRedirect('/pemuridan/msk?deleted=1&batch_month=all');
+        $this->assertDatabaseHas('orang', ['id' => $memberId, 'status' => 'inactive']);
     }
 
     public function test_permanent_delete_is_available_only_for_inactive_msk_participants(): void
