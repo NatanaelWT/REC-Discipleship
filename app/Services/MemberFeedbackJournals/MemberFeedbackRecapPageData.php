@@ -41,6 +41,7 @@ class MemberFeedbackRecapPageData
             fn (): array => $this->build($branchCodes, $centralReadOnly),
         );
 
+        $data['show_branch_suffix'] = $centralReadOnly && $selectedBranch === 'all';
         $data['settings'] = ['church_name' => app_church_name()];
 
         return $data;

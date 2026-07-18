@@ -110,6 +110,7 @@ class MemberFeedbackRecapTest extends TestCase
         $content = $this->get('/pemuridan/umpan-balik-anggota')->assertOk()->getContent();
 
         $this->assertStringContainsString('Pengisi Feedback per Kelompok', $content);
+        $this->assertStringNotContainsString('<th>Cabang</th>', $content);
         $this->assertStringNotContainsString('discipleship-page-header__stats', $content);
         $this->assertStringContainsString('DG 1 (Pemimpin Test)', $content);
         $this->assertStringContainsString('DG 1 (Pemimpin Tanpa Feedback)', $content);
@@ -130,18 +131,23 @@ class MemberFeedbackRecapTest extends TestCase
 
         $this->actingAsRecUser('recpusat', null, 'pemuridan_pusat');
 
-        $this->get('/pemuridan/umpan-balik-anggota?rekap_cabang=all')
+        $allBranchesResponse = $this->get('/pemuridan/umpan-balik-anggota?rekap_cabang=all')
             ->assertOk()
             ->assertSee('data-discipleship-branch-filter', false)
             ->assertSee('<option value="all" selected>Semua Cabang</option>', false)
-            ->assertDontSee('central-rekap-toolbar', false)
-            ->assertSee('Pemimpin Kutisari')
-            ->assertSee('Pemimpin GM');
+            ->assertDontSee('central-rekap-toolbar', false);
+        $allBranchesTable = $this->elementHtmlById($allBranchesResponse->getContent(), 'member-feedback-recap-group-table');
+        $this->assertStringContainsString('<strong>Pemimpin Kutisari (Kutisari)</strong>', $allBranchesTable);
+        $this->assertStringContainsString('<strong>Pemimpin GM (GM)</strong>', $allBranchesTable);
+        $this->assertStringNotContainsString('<th>Cabang</th>', $allBranchesTable);
 
-        $this->get('/pemuridan/umpan-balik-anggota?rekap_cabang=gm')
+        $gmResponse = $this->get('/pemuridan/umpan-balik-anggota?rekap_cabang=gm')
             ->assertOk()
-            ->assertDontSee('Pemimpin Kutisari')
-            ->assertSee('Pemimpin GM');
+            ->assertDontSee('Pemimpin Kutisari');
+        $gmTable = $this->elementHtmlById($gmResponse->getContent(), 'member-feedback-recap-group-table');
+        $this->assertStringContainsString('<strong>Pemimpin GM</strong>', $gmTable);
+        $this->assertStringNotContainsString('Pemimpin GM (GM)', $gmTable);
+        $this->assertStringNotContainsString('<th>Cabang</th>', $gmTable);
     }
 
     public function test_thematic_note_board_is_removed_but_detail_keeps_feedback_notes(): void

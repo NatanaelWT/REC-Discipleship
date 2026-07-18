@@ -15,6 +15,7 @@
       $groupRows = is_array($group_rows ?? null) ? $group_rows : [];
       $detailRows = is_array($detail_rows ?? null) ? $detail_rows : [];
       $filters = is_array($filters ?? null) ? $filters : [];
+      $showBranchSuffix = (bool) ($show_branch_suffix ?? false);
       $feedbackRowsByGroupSession = [];
       foreach ($detailRows as $detailRow) {
           $groupSessionKey = (string) ((int) ($detailRow['group_id'] ?? 0)).'-'.(string) ((int) ($detailRow['feedback_session'] ?? 0));
@@ -58,9 +59,8 @@
         <caption class="table-caption-accessible">Pengisi Feedback per Kelompok - {{ (string) count($groupRows) }} kelompok aktif</caption>
         <thead>
           <tr>
-            <th>Cabang</th>
             <th>Progress</th>
-            <th>Pemimpin / Kelompok</th>
+            <th>Pemimpin</th>
             <th>Anggota Aktif</th>
             <th>Sesi 3</th>
             <th>Sesi 12</th>
@@ -75,17 +75,20 @@
                 $sessionTokens = trim(($session3Count > 0 ? '3 ' : '').($session12Count > 0 ? '12' : ''));
                 $session3Key = $groupSessionKey($group['group_id'] ?? 0, 3);
                 $session12Key = $groupSessionKey($group['group_id'] ?? 0, 12);
+                $leaderName = trim((string) ($group['leader_name'] ?? '-')) ?: '-';
+                if ($showBranchSuffix) {
+                    $leaderName = append_branch_suffix($leaderName, (string) ($group['branch_label'] ?? '-'));
+                }
                 $groupSearchText = implode(' ', array_map(
                     static fn (array $feedbackRow): string => (string) ($feedbackRow['respondent_name'] ?? '').' '.(string) ($feedbackRow['note_summary'] ?? ''),
                     array_merge($feedbackRowsByGroupSession[$session3Key] ?? [], $feedbackRowsByGroupSession[$session12Key] ?? []),
                 ));
             @endphp
             <tr data-member-feedback-progress="{{ $progressKey((string) ($group['group_progress'] ?? '')) }}" data-member-feedback-session="{{ $sessionTokens }}">
-              <td>{{ (string) ($group['branch_label'] ?? '-') }}</td>
               <td><span class="group-progress-badge is-{{ $progressKey((string) ($group['group_progress'] ?? '')) }}">{{ (string) ($group['group_progress'] ?? '-') }}</span></td>
               <td>
                 <div class="member-feedback-recap-main-cell">
-                  <strong>{{ (string) ($group['leader_name'] ?? '-') }}</strong>
+                  <strong>{{ $leaderName }}</strong>
                   @if ($groupSearchText !== '')
                     <small class="member-feedback-recap-search-shadow">{{ $groupSearchText }}</small>
                   @endif
@@ -118,7 +121,7 @@
               </td>
             </tr>
           @empty
-            <tr><td colspan="7">Belum ada kelompok aktif pada scope ini.</td></tr>
+            <tr><td colspan="6">Belum ada kelompok aktif pada scope ini.</td></tr>
           @endforelse
         </tbody>
       </table>
