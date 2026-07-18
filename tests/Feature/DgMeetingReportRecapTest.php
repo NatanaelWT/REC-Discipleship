@@ -30,6 +30,7 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Jurnal Temu DG');
         $response->assertSee('Pemimpin Test');
+        $response->assertSee('dg-recap-main-title dg-recap-leader-name', false);
         $response->assertSee('Materi Test');
         $response->assertSee('card discipleship-page-header', false);
         $response->assertDontSee('discipleship-page-header__stats', false);

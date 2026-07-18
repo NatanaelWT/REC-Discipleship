@@ -758,6 +758,11 @@ button.note-link.dg-recap-photo-trigger {
   color: #0f172a;
 }
 
+#dg-recap-summary-table .dg-recap-leader-name {
+  font: inherit;
+  line-height: inherit;
+}
+
 .dg-recap-number-chip {
   display: inline-flex;
   align-items: center;

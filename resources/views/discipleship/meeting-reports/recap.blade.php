@@ -1098,7 +1098,7 @@ if ($page === 'dg_reports_recap') {
         }
         $progressFilter = strtolower(str_replace(' ', '', $progressLabel));
         echo '<tr data-recap-progress="'.h($progressFilter).'">';
-        echo '<td><div class="dg-recap-main-cell"><div class="dg-recap-main-title">'.h((string) ($groupRow['leader_name'] ?? '-')).'</div><div class="dg-recap-subtext">'.h($groupMembersLabel).'</div></div></td>';
+        echo '<td><div class="dg-recap-main-cell"><div class="dg-recap-main-title dg-recap-leader-name">'.h((string) ($groupRow['leader_name'] ?? '-')).'</div><div class="dg-recap-subtext">'.h($groupMembersLabel).'</div></div></td>';
         echo '<td><span class="dg-recap-stage-pill '.h($progressClass).'">'.h($progressLabel).'</span></td>';
         $reportCount = (int) ($groupRow['report_count'] ?? 0);
         $reportGroupKey = (string) ($groupRow['report_group_key'] ?? '');
