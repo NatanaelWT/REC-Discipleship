@@ -10,12 +10,15 @@
     $toggleConfirm = $isInactive
         ? 'Aktifkan kembali data peserta MSK ini?'
         : 'Nonaktifkan data peserta MSK ini?';
-    $toggleClass = $isInactive ? 'btn tiny secondary' : 'btn tiny danger';
-    $toggleIcon = $isInactive ? icon_svg('check') : icon_svg('trash');
+    $toggleClass = $isInactive ? 'btn tiny msk-view-reactivate-button' : 'btn tiny msk-view-deactivate-button';
+    $toggleIcon = $isInactive ? icon_svg('check') : icon_svg('exit');
     $toggleRoute = route($toggleRouteName, ['participant' => $participantId] + $branchRouteParams);
+    $permanentDeleteRoute = $isInactive
+        ? route('discipleship.msk-classes.destroy', ['participant' => $participantId] + $branchRouteParams)
+        : '';
 @endphp
 
-<a class="btn tiny secondary msk-view-action-button" href="{{ $editHref }}" data-msk-edit-from-view="{{ $participantId }}">
+<a class="btn tiny msk-view-action-button msk-view-edit-button" href="{{ $editHref }}" data-msk-edit-from-view="{{ $participantId }}">
   {!! icon_svg('edit') !!}
   <span>Edit</span>
 </a>
@@ -29,3 +32,16 @@
     <span>{{ $toggleLabel }}</span>
   </button>
 </form>
+@if ($isInactive)
+  <form method="post" action="{{ $permanentDeleteRoute }}" class="inline msk-view-action-form msk-view-permanent-delete-form" onsubmit="return confirm('Hapus permanen data peserta MSK ini? Tindakan ini tidak dapat dibatalkan.');">
+    @csrf
+    @method('DELETE')
+    <input type="hidden" name="action" value="permanently_delete_msk_participant">
+    <input type="hidden" name="id" value="{{ $participantId }}">
+    <input type="hidden" name="batch_month" value="{{ $batchMonthFilterParam }}">
+    <button class="btn tiny danger msk-view-action-button msk-view-permanent-delete-button" type="submit">
+      {!! icon_svg('trash') !!}
+      <span>Hapus Permanen</span>
+    </button>
+  </form>
+@endif

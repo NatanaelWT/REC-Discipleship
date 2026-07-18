@@ -152,6 +152,7 @@ Route::middleware('rec.maintenance')->group(function (): void {
         Route::post('/msk/{participant}/sesi', [DiscipleshipMskParticipantController::class, 'updateSessions'])->middleware('rec.page:msk_classes')->name('msk-classes.sessions');
         Route::post('/msk/{participant}/nonaktif', [DiscipleshipMskParticipantController::class, 'deactivate'])->middleware('rec.page:msk_classes')->name('msk-classes.deactivate');
         Route::post('/msk/{participant}/aktif', [DiscipleshipMskParticipantController::class, 'reactivate'])->middleware('rec.page:msk_classes')->name('msk-classes.reactivate');
+        Route::delete('/msk/{participant}/permanen', [DiscipleshipMskParticipantController::class, 'destroy'])->middleware('rec.page:msk_classes')->name('msk-classes.destroy');
         Route::get('/target', [DiscipleshipTargetController::class, 'index'])->middleware('rec.page:discipleship_targets')->name('targets');
         Route::post('/target', [DiscipleshipTargetController::class, 'update'])->middleware('rec.page:discipleship_targets')->name('targets.update');
         Route::get('/pertanyaan-sulit', [DiscipleshipDifficultQuestionController::class, 'index'])->middleware('rec.page:difficult_questions_admin')->name('difficult-questions');

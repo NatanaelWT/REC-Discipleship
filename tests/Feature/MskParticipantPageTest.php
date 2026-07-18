@@ -134,6 +134,7 @@ class MskParticipantPageTest extends TestCase
         $this->assertStringContainsString('data-msk-edit-from-view="11"', $actionsHtml);
         $this->assertStringContainsString('/pemuridan/msk/11/nonaktif', $actionsHtml);
         $this->assertStringContainsString('Nonaktifkan', $actionsHtml);
+        $this->assertStringNotContainsString('permanently_delete_msk_participant', $actionsHtml);
         $this->assertLessThan(strpos($content, 'Kontak dan akses'), strpos($content, 'Profil peserta'));
         $this->assertLessThan(strpos($content, 'Foto dan keterangan'), strpos($content, 'Kontak dan akses'));
         $this->assertLessThan(strpos($content, 'MSK dan pemuridan aktif'), strpos($content, 'Foto dan keterangan'));
@@ -530,6 +531,60 @@ class MskParticipantPageTest extends TestCase
             ->assertDontSee('Peserta Batch Terbaru')
             ->assertSee('<option value="2026-06" >Juni 2026 (1)</option>', false)
             ->assertSee('<option value="2024-11" selected>November 2024 (1)</option>', false);
+    }
+
+    public function test_permanent_delete_is_available_only_for_inactive_msk_participants(): void
+    {
+        $this->createMskTables();
+        $activeParticipantId = DB::table('orang')->insertGetId(
+            $this->participantRow('Peserta Aktif Permanen', '2026-06'),
+        );
+        $inactiveParticipantId = DB::table('orang')->insertGetId(array_merge(
+            $this->participantRow('Peserta Nonaktif Permanen', '2026-06'),
+            ['status' => 'inactive'],
+        ));
+        $otherBranchParticipantId = DB::table('orang')->insertGetId(array_merge(
+            $this->participantRow('Peserta Cabang Lain', '2026-06'),
+            ['branch_id' => 2, 'status' => 'inactive'],
+        ));
+        $this->actingAsRecUser();
+
+        $activeActions = (string) $this->get('/pemuridan/msk/'.$activeParticipantId.'/detail?batch_month=all')
+            ->assertOk()
+            ->json('actions_html');
+        $this->assertStringContainsString('msk-view-deactivate-button', $activeActions);
+        $this->assertStringContainsString('Nonaktifkan', $activeActions);
+        $this->assertStringNotContainsString('permanently_delete_msk_participant', $activeActions);
+        $this->assertStringNotContainsString('Hapus Permanen', $activeActions);
+
+        $this->delete('/pemuridan/msk/'.$activeParticipantId.'/permanen', [
+            'action' => 'permanently_delete_msk_participant',
+            'batch_month' => 'all',
+        ])->assertRedirect('/pemuridan/msk?error=msk_participant_must_be_inactive&batch_month=all');
+        $this->assertDatabaseHas('orang', ['id' => $activeParticipantId, 'status' => 'active']);
+
+        $inactiveActions = (string) $this->get('/pemuridan/msk/'.$inactiveParticipantId.'/detail?batch_month=all')
+            ->assertOk()
+            ->json('actions_html');
+        $this->assertStringContainsString('msk-view-reactivate-button', $inactiveActions);
+        $this->assertStringContainsString('Aktifkan', $inactiveActions);
+        $this->assertStringContainsString('msk-view-permanent-delete-button', $inactiveActions);
+        $this->assertStringContainsString('name="action" value="permanently_delete_msk_participant"', $inactiveActions);
+        $this->assertStringContainsString('/pemuridan/msk/'.$inactiveParticipantId.'/permanen', $inactiveActions);
+        $this->assertStringContainsString('Hapus Permanen', $inactiveActions);
+        $this->assertStringNotContainsString('Nonaktifkan', $inactiveActions);
+
+        $this->delete('/pemuridan/msk/'.$otherBranchParticipantId.'/permanen', [
+            'action' => 'permanently_delete_msk_participant',
+            'batch_month' => 'all',
+        ])->assertRedirect('/pemuridan/msk?error=invalid_msk_participant&batch_month=all');
+        $this->assertDatabaseHas('orang', ['id' => $otherBranchParticipantId, 'status' => 'inactive']);
+
+        $this->delete('/pemuridan/msk/'.$inactiveParticipantId.'/permanen', [
+            'action' => 'permanently_delete_msk_participant',
+            'batch_month' => 'all',
+        ])->assertRedirect('/pemuridan/msk?permanently_deleted=1&batch_month=all');
+        $this->assertDatabaseMissing('orang', ['id' => $inactiveParticipantId]);
     }
 
     public function test_store_msk_participant_persists_to_laravel_tables(): void

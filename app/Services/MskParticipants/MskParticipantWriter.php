@@ -112,6 +112,45 @@ class MskParticipantWriter
         return ['error' => ''];
     }
 
+    /**
+     * @return array{error: string}
+     */
+    public function deletePermanently(Person $participant): array
+    {
+        $participant = $this->currentBranchParticipant($participant);
+        if ($participant === null) {
+            return ['error' => 'invalid_msk_participant'];
+        }
+
+        $participant = Person::query()
+            ->where('branch_id', (int) $participant->branch_id)
+            ->whereKey((int) $participant->getKey())
+            ->lockForUpdate()
+            ->first();
+        if (! $participant instanceof Person) {
+            return ['error' => 'invalid_msk_participant'];
+        }
+        if (normalize_msk_participant_status((string) $participant->status) !== 'inactive') {
+            return ['error' => 'msk_participant_must_be_inactive'];
+        }
+
+        $photoPaths = $this->participantPhotoPaths($participant->toViewArray());
+        $participant->delete();
+
+        if ($photoPaths !== []) {
+            $this->lifecycle->onCommit(function () use ($photoPaths): void {
+                $usedPhotoPaths = $this->usedPhotoPathMap();
+                foreach ($photoPaths as $photoPath) {
+                    if (! isset($usedPhotoPaths[$photoPath])) {
+                        delete_relative_upload_file($photoPath);
+                    }
+                }
+            });
+        }
+
+        return ['error' => ''];
+    }
+
     public function currentBranchParticipant(Person $participant): ?Person
     {
         $branchCode = normalize_user_branch(current_user_branch());
@@ -365,6 +404,41 @@ class MskParticipantWriter
             ->map(static fn (Person $participant): array => $participant->toViewArray())
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $participant
+     * @return array<int, string>
+     */
+    private function participantPhotoPaths(array $participant): array
+    {
+        $paths = [];
+        foreach (extract_msk_participant_photos($participant) as $photo) {
+            foreach (['path', 'web_path', 'thumbnail_path'] as $key) {
+                $path = sanitize_relative_upload_path((string) ($photo[$key] ?? ''));
+                if ($path !== '') {
+                    $paths[$path] = true;
+                }
+            }
+        }
+
+        return array_keys($paths);
+    }
+
+    /** @return array<string, true> */
+    private function usedPhotoPathMap(): array
+    {
+        $usedPhotoPaths = [];
+        foreach (Person::query()->select(['id', 'photos'])->cursor() as $participant) {
+            $usedPaths = $this->participantPhotoPaths([
+                'photos' => is_array($participant->photos) ? $participant->photos : [],
+            ]);
+            foreach ($usedPaths as $usedPath) {
+                $usedPhotoPaths[$usedPath] = true;
+            }
+        }
+
+        return $usedPhotoPaths;
     }
 
     private function nullableString(mixed $value): ?string

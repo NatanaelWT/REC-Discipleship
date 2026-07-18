@@ -17,6 +17,7 @@ function discipleship_action_map(): array
             'save_journey_bridge_status' => true,
             'delete_msk_participant' => true,
             'reactivate_msk_participant' => true,
+            'permanently_delete_msk_participant' => true,
             'import_pemuridan_excel' => true,
             'export_pemuridan_excel' => true,
             'export_people_excel' => true,

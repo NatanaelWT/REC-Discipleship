@@ -4737,6 +4737,26 @@ button.member-feedback-recap-count-pill:focus-visible {
   flex: 0 0 16px;
 }
 
+.msk-view-modal-card .msk-view-edit-button {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: #ffffff;
+}
+
+.msk-view-modal-card .msk-view-deactivate-button {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #422006;
+}
+
+.msk-view-modal-card .msk-view-reactivate-button {
+  background: linear-gradient(135deg, #10b981, #047857);
+  color: #ffffff;
+}
+
+.msk-view-modal-card .msk-view-permanent-delete-button {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #ffffff;
+}
+
 .msk-view-modal-card .modal-footer > [data-msk-view-close] {
   min-width: 72px;
 }
@@ -4757,6 +4777,10 @@ button.member-feedback-recap-count-pill:focus-visible {
   .msk-view-modal-card .msk-view-action-button,
   .msk-view-modal-card .modal-footer > [data-msk-view-close] {
     width: 100%;
+  }
+
+  .msk-view-modal-card .msk-view-permanent-delete-form {
+    grid-column: 1 / -1;
   }
 }
 

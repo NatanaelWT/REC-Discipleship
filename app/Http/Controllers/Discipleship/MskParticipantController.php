@@ -8,6 +8,7 @@ use App\Http\Requests\MskParticipants\DeactivateMskParticipantRequest;
 use App\Http\Requests\MskParticipants\ExportMskParticipantsRequest;
 use App\Http\Requests\MskParticipants\ImportMskParticipantsRequest;
 use App\Http\Requests\MskParticipants\MskParticipantWriteRequest;
+use App\Http\Requests\MskParticipants\PermanentlyDeleteMskParticipantRequest;
 use App\Http\Requests\MskParticipants\ReactivateMskParticipantRequest;
 use App\Http\Requests\MskParticipants\StoreMskParticipantRequest;
 use App\Http\Requests\MskParticipants\UpdateMskParticipantRequest;
@@ -188,6 +189,21 @@ class MskParticipantController extends Controller
         }
 
         return redirect()->route('discipleship.msk-classes', ['reactivated' => 1] + $batchMonthParam);
+    }
+
+    public function destroy(
+        PermanentlyDeleteMskParticipantRequest $request,
+        Person $participant,
+        MskParticipantWriter $writer,
+    ): RedirectResponse {
+        $batchMonthParam = $this->batchMonthFilterParam($request);
+
+        $result = $writer->deletePermanently($participant);
+        if ($result['error'] !== '') {
+            return redirect()->route('discipleship.msk-classes', ['error' => $result['error']] + $batchMonthParam);
+        }
+
+        return redirect()->route('discipleship.msk-classes', ['permanently_deleted' => 1] + $batchMonthParam);
     }
 
     public function import(ImportMskParticipantsRequest $request, MskSynchronousImportService $imports): RedirectResponse|JsonResponse

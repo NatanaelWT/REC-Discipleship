@@ -20,6 +20,7 @@ if ($page === 'msk_classes') {
         ['when' => isset($_GET['saved']), 'tone' => 'success', 'message' => 'Data peserta kelas MSK berhasil disimpan.'],
         ['when' => isset($_GET['reactivated']), 'tone' => 'success', 'message' => 'Data peserta kelas MSK berhasil diaktifkan kembali.'],
         ['when' => isset($_GET['deleted']), 'tone' => 'success', 'message' => 'Data peserta kelas MSK berhasil dinonaktifkan.'],
+        ['when' => isset($_GET['permanently_deleted']), 'tone' => 'success', 'message' => 'Data peserta kelas MSK berhasil dihapus permanen.'],
         ['when' => isset($_GET['converted']), 'tone' => 'success', 'message' => 'Peserta luar yang menyelesaikan 12 sesi otomatis ditambahkan ke data pemuridan.'],
     ]);
     $error = trim((string) ($_GET['error'] ?? ''));
@@ -35,6 +36,7 @@ if ($page === 'msk_classes') {
         'msk_photo_too_large' => 'Ukuran foto peserta terlalu besar. Maksimal 5 MB per file.',
         'msk_photo_upload_failed' => 'Upload foto peserta gagal. Coba ulangi lagi.',
         'invalid_msk_participant' => 'Data peserta kelas MSK tidak ditemukan.',
+        'msk_participant_must_be_inactive' => 'Peserta harus dinonaktifkan sebelum dapat dihapus permanen.',
         'export_zip_unavailable' => 'Fitur export Excel belum tersedia di server (ekstensi ZipArchive belum aktif).',
         'export_template_missing' => 'Template export MSK tidak ditemukan atau rusak.',
         'export_failed' => 'Export data kelas MSK gagal. Coba ulangi lagi.',
