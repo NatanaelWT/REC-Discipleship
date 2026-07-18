@@ -59,8 +59,8 @@
         <caption class="table-caption-accessible">Pengisi Feedback per Kelompok - {{ (string) count($groupRows) }} kelompok aktif</caption>
         <thead>
           <tr>
-            <th>Progress</th>
             <th>Pemimpin</th>
+            <th>Progress</th>
             <th>Anggota Aktif</th>
             <th>Sesi 3</th>
             <th>Sesi 12</th>
@@ -85,7 +85,6 @@
                 ));
             @endphp
             <tr data-member-feedback-progress="{{ $progressKey((string) ($group['group_progress'] ?? '')) }}" data-member-feedback-session="{{ $sessionTokens }}">
-              <td><span class="group-progress-badge is-{{ $progressKey((string) ($group['group_progress'] ?? '')) }}">{{ (string) ($group['group_progress'] ?? '-') }}</span></td>
               <td>
                 <div class="member-feedback-recap-main-cell">
                   <strong>{{ $leaderName }}</strong>
@@ -94,6 +93,7 @@
                   @endif
                 </div>
               </td>
+              <td><span class="group-progress-badge is-{{ $progressKey((string) ($group['group_progress'] ?? '')) }}">{{ (string) ($group['group_progress'] ?? '-') }}</span></td>
               <td>{{ (string) ((int) ($group['active_member_count'] ?? 0)) }} orang</td>
               <td>
                 @if ($session3Count > 0)

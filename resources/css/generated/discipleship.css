@@ -4097,11 +4097,11 @@ button.note-link.dg-recap-photo-trigger {
 }
 
 .member-feedback-recap-group-table th:first-child {
-  width: 12%;
+  width: 32%;
 }
 
 .member-feedback-recap-group-table th:nth-child(2) {
-  width: 32%;
+  width: 12%;
 }
 
 .member-feedback-recap-group-table th:nth-child(3) {

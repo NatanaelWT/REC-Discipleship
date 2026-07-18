@@ -111,6 +111,7 @@ class MemberFeedbackRecapTest extends TestCase
 
         $this->assertStringContainsString('Pengisi Feedback per Kelompok', $content);
         $this->assertStringNotContainsString('<th>Cabang</th>', $content);
+        $this->assertLessThan(strpos($content, '<th>Progress</th>'), strpos($content, '<th>Pemimpin</th>'));
         $this->assertStringNotContainsString('discipleship-page-header__stats', $content);
         $this->assertStringContainsString('DG 1 (Pemimpin Test)', $content);
         $this->assertStringContainsString('DG 1 (Pemimpin Tanpa Feedback)', $content);
