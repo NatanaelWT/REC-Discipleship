@@ -48,13 +48,12 @@
     $nameSubLabel = $participantStatus === 'inactive' ? 'Peserta kelas MSK - Nonaktif' : 'Peserta kelas MSK';
 @endphp
 <tr data-msk-search-row data-search-text="{{ $searchText }}">
-  <td><div class="msk-name-cell"><span class="msk-name-main">{{ $fullName }}</span><span class="msk-name-sub">{{ $nameSubLabel }}</span></div></td>
+  <td><div class="msk-name-cell"><a class="msk-name-main msk-name-link" href="{{ $viewHref }}" data-msk-view-open="{{ $participantId }}" data-msk-view-href="{{ $viewHref }}" aria-label="Lihat detail {{ $fullName }}">{{ $fullName }}</a><span class="msk-name-sub">{{ $nameSubLabel }}</span></div></td>
   <td><div class="msk-month-cell"><span class="msk-month-main">{{ $mskMonthLabel }}</span><span class="msk-month-sub">Batch pembinaan</span></div></td>
   <td><div class="msk-progress-cell"><div class="msk-progress-top"><span class="msk-progress-value">{{ $progressLabel }}</span><span class="msk-progress-percent">{{ (string) $progressPercent }}%</span></div><div class="msk-progress-bar" aria-hidden="true"><span style="width:{{ (string) $progressPercent }}%"></span></div><div class="msk-progress-meta">{{ $progressMeta }}</div></div></td>
   <td>{!! $statusBadge !!}</td>
   <td>{!! $waHtml !!}</td>
   <td class="actions">
-    <button class="btn tiny secondary icon-btn" type="button" data-msk-view-open="{{ $participantId }}" data-msk-view-href="{{ $viewHref }}" aria-label="Lihat" title="Lihat">{!! icon_svg('eye') !!}</button>
     @if (! $centralReadOnly)
       @php
           $toggleAction = $participantStatus === 'inactive' ? 'reactivate_msk_participant' : 'delete_msk_participant';

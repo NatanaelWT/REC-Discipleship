@@ -10802,6 +10802,24 @@ button.member-feedback-recap-count-pill:focus-visible {
   color: #0f172a;
 }
 
+.msk-name-link {
+  width: fit-content;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: color 160ms ease, box-shadow 160ms ease;
+}
+
+.msk-name-link:hover {
+  color: var(--discipleship-msk);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.msk-name-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--discipleship-msk) 24%, transparent);
+}
+
 .msk-name-sub,
 .msk-month-sub,
 .msk-progress-meta,
@@ -10908,7 +10926,8 @@ button.member-feedback-recap-count-pill:focus-visible {
 
 #msk-table td.actions,
 #msk-table th.actions-head {
-  min-width: 148px;
+  width: 104px;
+  min-width: 104px;
 }
 
 #msk-table td.actions > * {

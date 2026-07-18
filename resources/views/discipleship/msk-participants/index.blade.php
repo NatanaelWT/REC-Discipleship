@@ -644,7 +644,6 @@ if ($page === 'msk_classes') {
         echo '<td>'.$statusBadge.'</td>';
         echo '<td>'.$waHtml.'</td>';
         echo '<td class="actions">';
-        echo '<button class="btn tiny secondary icon-btn" type="button" data-msk-view-open="'.h($participantId).'" aria-label="Lihat" title="Lihat">'.icon_svg('eye').'</button>';
         if (! $centralReadOnly) {
             $toggleAction = $participantStatus === 'inactive' ? 'reactivate_msk_participant' : 'delete_msk_participant';
             $toggleRouteName = $participantStatus === 'inactive' ? 'discipleship.msk-classes.reactivate' : 'discipleship.msk-classes.deactivate';
@@ -695,7 +694,7 @@ if ($page === 'msk_classes') {
         'titleAttrs' => ['data-msk-view-title' => true],
         'closeAttrs' => ['data-msk-view-close' => true],
         'bodyAttrs' => ['data-msk-view-body' => true],
-        'bodyHtml' => '<div class="panel-note msk-modal-empty-state">Pilih tombol Lihat pada baris peserta untuk membuka detail peserta MSK.</div>',
+        'bodyHtml' => '<div class="panel-note msk-modal-empty-state">Klik nama peserta untuk membuka detail peserta MSK.</div>',
         'footerHtml' => $mskViewFooterHtml,
     ])->render();
 

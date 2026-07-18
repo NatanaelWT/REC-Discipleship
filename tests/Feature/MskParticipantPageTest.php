@@ -435,7 +435,10 @@ class MskParticipantPageTest extends TestCase
             ->assertJsonPath('stats.total', 1);
 
         $this->assertStringContainsString('Nofida Lassa', (string) $response->json('html'));
-        $this->assertStringContainsString('data-msk-view-open="'.$participantId.'"', (string) $response->json('html'));
+        $rowsHtml = (string) $response->json('html');
+        $this->assertStringContainsString('<a class="msk-name-main msk-name-link"', $rowsHtml);
+        $this->assertStringContainsString('data-msk-view-open="'.$participantId.'"', $rowsHtml);
+        $this->assertStringNotContainsString('<button class="btn tiny secondary icon-btn" type="button" data-msk-view-open=', $rowsHtml);
         $this->assertArrayNotHasKey('templates_html', $response->json());
 
         $this->get('/pemuridan/msk/'.$participantId.'/detail?branch_id=all&batch_month=all')
