@@ -17347,3 +17347,50 @@ body.page-discipleship-workspace:not(.modal-open) {
     vertical-align: middle;
   }
 }
+
+body.page-discipleship-workspace.page-tree-v2:not(.modal-open) {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.page-discipleship-workspace.page-tree-v2 .app-shell,
+.page-discipleship-workspace.page-tree-v2 .app-main,
+.page-discipleship-workspace.page-tree-v2 .container {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.page-discipleship-workspace.page-tree-v2 .discipleship-workspace,
+.page-discipleship-workspace.page-tree-v2 .discipleship-workspace__panels,
+.page-discipleship-workspace.page-tree-v2 [data-discipleship-tab-panel][data-tab-key="tree"] {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.page-discipleship-workspace.page-tree-v2 .discipleship-workspace {
+  height: 100% !important;
+}
+
+.page-discipleship-workspace.page-tree-v2 .discipleship-workspace__panels,
+.page-discipleship-workspace.page-tree-v2 [data-discipleship-tab-panel][data-tab-key="tree"] {
+  height: auto !important;
+}
+
+.page-discipleship-workspace.page-tree-v2 .discipleship-tree-panel .tree-v2-surface {
+  flex: 1 1 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.page-discipleship-workspace.page-tree-v2 .discipleship-tree-panel .tree-v2-scroll {
+  flex: 1 1 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: auto !important;
+  overscroll-behavior: contain;
+}

@@ -4440,7 +4440,6 @@
       const payload = {
         scrollLeft: treeScrollArea.scrollLeft || 0,
         scrollTop: treeScrollArea.scrollTop || 0,
-        pageScrollY: window.scrollY || window.pageYOffset || 0,
         scale: currentTreeScale,
         savedAt: Date.now(),
       };
@@ -4598,12 +4597,9 @@
         window.requestAnimationFrame(() => {
           treeScrollArea.scrollLeft = Math.max(0, Number(restoredViewport.scrollLeft || 0));
           treeScrollArea.scrollTop = Math.max(0, Number(restoredViewport.scrollTop || 0));
-          const pageScrollY = Math.max(0, Number(restoredViewport.pageScrollY || 0));
-          window.scrollTo(0, pageScrollY);
           window.requestAnimationFrame(() => {
             treeScrollArea.scrollLeft = Math.max(0, Number(restoredViewport.scrollLeft || 0));
             treeScrollArea.scrollTop = Math.max(0, Number(restoredViewport.scrollTop || 0));
-            window.scrollTo(0, pageScrollY);
           });
         });
         window.sessionStorage.removeItem(treeViewportStorageKey);
