@@ -50,14 +50,8 @@
     </div>
   </section>
 
-  @include('partials.modal', [
-      'id' => 'groups-detail-modal',
-      'size' => 'wide',
-      'modalAttrs' => ['data-tree-v2-history-modal' => true],
-      'title' => 'Detail Kelompok',
-      'titleAttrs' => ['data-tree-v2-history-title' => true],
-      'closeAttrs' => ['data-tree-v2-history-close' => true],
-      'bodyAttrs' => ['data-tree-v2-history-body' => true],
-      'bodyHtml' => '<div class="journey-history-empty">Klik nama pemimpin untuk melihat detail kelompok.</div>',
+  @include('discipleship.people-tree.partials.group-history-modal', [
+      'centralReadOnly' => is_effective_central_discipleship_readonly(),
+      'groupHistoryModalId' => 'groups-detail-modal',
   ])
 </section>

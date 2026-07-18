@@ -2713,10 +2713,50 @@
       const bodyEl = treeV2HistoryModal.querySelector('[data-tree-v2-history-body]');
       const closeButtons = treeV2HistoryModal.querySelectorAll('[data-tree-v2-history-close]');
       const detailUrlTemplate = scope.getAttribute('data-tree-group-detail-url-template') || '';
+      const isGroupListScope = scope.getAttribute('data-tab-key') === 'groups';
+      const historyActionButtons = Array.from(treeV2HistoryModal.querySelectorAll('[data-tree-v2-action-do]'));
       const detailCache = new Map();
       let activeController = null;
       let activeGroupKey = '';
+      let activeTrigger = null;
       let requestSequence = 0;
+
+      const syncGroupListActions = (trigger) => {
+        if (!isGroupListScope) {
+          return;
+        }
+        const status = String(trigger?.getAttribute('data-group-detail-status') || '').trim().toLowerCase();
+        const progress = String(trigger?.getAttribute('data-group-detail-progress') || '').trim().toUpperCase();
+        const isActive = status === 'active';
+        const visibility = {
+          add_member: isActive,
+          complete_group: isActive,
+          reactivate_group: status !== '' && !isActive,
+          upgrade_group: isActive && progress !== 'DG 3',
+        };
+
+        historyActionButtons.forEach((button) => {
+          const action = button.getAttribute('data-tree-v2-action-do') || '';
+          const isVisible = visibility[action] === true;
+          button.classList.toggle('is-hidden', !isVisible);
+          button.disabled = !isVisible;
+        });
+      };
+
+      const openTreeGroupAction = (action) => {
+        const workspace = scope.closest('[data-discipleship-workspace]');
+        const treeTab = workspace ? workspace.querySelector('[data-discipleship-tab][data-tab-key="tree"]') : null;
+        if (!treeTab || !activeGroupKey) {
+          window.alert('Pohon Pemuridan tidak tersedia untuk menjalankan aksi kelompok ini.');
+          return;
+        }
+
+        const url = new URL(treeTab.href, window.location.origin);
+        url.searchParams.set('focus_group', activeGroupKey);
+        url.searchParams.set('tree_action', action);
+        url.searchParams.set('tree_return', 'groups_list');
+        window.location.assign(url.toString());
+      };
 
       const detailUrl = (groupKey) => {
         const raw = detailUrlTemplate.replace('__id__', encodeURIComponent(groupKey));
@@ -2781,10 +2821,12 @@
         });
       };
 
-      const openTreeV2History = (groupKey) => {
+      const openTreeV2History = (groupKey, trigger = null) => {
         const key = String(groupKey || '').trim();
         if (!key) return;
 
+        activeTrigger = trigger;
+        syncGroupListActions(activeTrigger);
         treeV2HistoryModal.classList.add('is-open');
         treeV2HistoryModal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('modal-open');
@@ -2799,6 +2841,7 @@
         treeV2HistoryModal.classList.remove('is-open');
         treeV2HistoryModal.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('modal-open');
+        activeTrigger = null;
       };
 
       scope.addEventListener('click', function (event) {
@@ -2807,10 +2850,16 @@
           return;
         }
         event.preventDefault();
-        openTreeV2History(trigger.getAttribute('data-tree-v2-history-open') || '');
+        openTreeV2History(trigger.getAttribute('data-tree-v2-history-open') || '', trigger);
       });
 
       treeV2HistoryModal.addEventListener('click', function (event) {
+        const actionButton = event.target.closest('[data-tree-v2-action-do]');
+        if (isGroupListScope && actionButton && !actionButton.disabled) {
+          event.preventDefault();
+          openTreeGroupAction(actionButton.getAttribute('data-tree-v2-action-do') || '');
+          return;
+        }
         const retry = event.target.closest('[data-tree-history-retry]');
         if (retry && activeGroupKey) {
           event.preventDefault();
@@ -2823,7 +2872,7 @@
         const target = event.target;
         if (!target || !target.matches || !target.matches('[data-tree-v2-history-open]')) return;
         event.preventDefault();
-        openTreeV2History(target.getAttribute('data-tree-v2-history-open') || '');
+        openTreeV2History(target.getAttribute('data-tree-v2-history-open') || '', target);
       });
 
       closeButtons.forEach((btn) => {
@@ -2846,6 +2895,11 @@
 
       scope.addEventListener('discipleship:tree-mutated', function () {
         detailCache.clear();
+      });
+      scope.addEventListener('discipleship:panel-deactivate', function () {
+        if (treeV2HistoryModal.classList.contains('is-open')) {
+          closeTreeV2History();
+        }
       });
       scope.addEventListener('discipleship:panel-destroy', function () {
         detailCache.clear();
@@ -4621,6 +4675,54 @@
       }
     };
 
+    const openRequestedTreeGroupAction = (scope) => {
+      const currentUrl = new URL(window.location.href);
+      const groupId = String(currentUrl.searchParams.get('focus_group') || '').trim();
+      const action = String(currentUrl.searchParams.get('tree_action') || '').trim();
+      const returnPage = String(currentUrl.searchParams.get('tree_return') || '').trim();
+      const supportedActions = ['add_member', 'complete_group', 'reactivate_group', 'upgrade_group'];
+      if (!groupId || !supportedActions.includes(action)) {
+        return;
+      }
+
+      const clearRequest = () => {
+        currentUrl.searchParams.delete('focus_group');
+        currentUrl.searchParams.delete('tree_action');
+        currentUrl.searchParams.delete('tree_return');
+        window.history.replaceState(window.history.state, '', currentUrl.toString());
+      };
+
+      window.requestAnimationFrame(() => {
+        const groupNode = scope.querySelector(
+          '[data-tree-v2-node-action="group"][data-group-id="' + cssAttributeValue(groupId) + '"]'
+        );
+        if (!groupNode) {
+          clearRequest();
+          window.alert('Kelompok tidak ditemukan pada Pohon Pemuridan.');
+          return;
+        }
+
+        if (returnPage === 'groups_list') {
+          scope.querySelectorAll('input[name="return_page"]').forEach((input) => {
+            input.value = 'groups_list';
+          });
+        }
+
+        groupNode.click();
+        window.requestAnimationFrame(() => {
+          const actionButton = scope.querySelector(
+            '[data-tree-v2-history-modal] [data-tree-v2-action-do="' + cssAttributeValue(action) + '"]'
+          );
+          clearRequest();
+          if (!actionButton || actionButton.disabled || actionButton.classList.contains('is-hidden')) {
+            window.alert('Aksi tersebut tidak tersedia untuk kondisi kelompok saat ini.');
+            return;
+          }
+          actionButton.click();
+        });
+      });
+    };
+
     const initDiscipleshipTreePane = (panel) => {
       if (
         !panel
@@ -4637,6 +4739,7 @@
       setupDiscipleshipTreeActions(panel);
       setupFilePreviewModal(panel);
       setupDiscipleshipTreeViewport(panel);
+      openRequestedTreeGroupAction(panel);
     };
 
     const setupMemberFeedbackRecap = (scope = document) => {

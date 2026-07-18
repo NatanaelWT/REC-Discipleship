@@ -32,6 +32,8 @@
           class="group-name-main group-name-link"
           type="button"
           data-tree-v2-history-open="{{ $groupId }}"
+          data-group-detail-status="{{ $rowStatus }}"
+          data-group-detail-progress="{{ $progressLabel }}"
           aria-label="Lihat detail kelompok {{ $leaderName }}"
         >{{ $leaderName }}</button>
       @else
