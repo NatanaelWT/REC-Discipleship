@@ -4863,23 +4863,19 @@
       if (viewModal) {
         const titleEl = viewModal.querySelector('[data-msk-view-title]');
         const bodyEl = viewModal.querySelector('[data-msk-view-body]');
-        const editLinkEl = viewModal.querySelector('[data-msk-view-edit-link]');
+        const actionsEl = viewModal.querySelector('[data-msk-view-actions]');
         const openView = async (participantId) => {
           const key = String(participantId || '').trim();
           if (!key) { return; }
           if (titleEl) { titleEl.textContent = 'Detail Peserta MSK'; }
           if (bodyEl) { bodyEl.innerHTML = '<div class="panel-note">Memuat detail peserta...</div>'; }
-          if (editLinkEl) { editLinkEl.classList.add('is-hidden'); }
+          if (actionsEl) { actionsEl.innerHTML = ''; }
           openModal(viewModal);
           try {
             const data = await fetchDetail(key, 'view');
             if (titleEl) { titleEl.textContent = data.title || 'Detail Peserta MSK'; }
             if (bodyEl) { bodyEl.innerHTML = String(data.html || ''); }
-            if (editLinkEl && data.edit_url) {
-              editLinkEl.setAttribute('href', data.edit_url);
-              editLinkEl.setAttribute('data-msk-edit-from-view', key);
-              editLinkEl.classList.remove('is-hidden');
-            }
+            if (actionsEl) { actionsEl.innerHTML = String(data.actions_html || ''); }
           } catch (error) {
             if (error && error.name === 'AbortError') { return; }
             if (bodyEl) {

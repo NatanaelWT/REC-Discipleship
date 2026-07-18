@@ -585,11 +585,11 @@ if ($page === 'msk_classes') {
     echo '<section class="card table-card-plain" data-msk-list data-rows-url="'.h(route('discipleship.msk-classes.rows', $branchRouteParams)).'" data-limit="'.h((string) ($mskLimit ?? 50)).'" data-has-more="'.(! empty($hasMoreMskRows) ? '1' : '0').'" data-next-cursor="'.h((string) ($nextMskCursor ?? '')).'">'."\n";
     echo "  <div class=\"table-wrap\" data-msk-scroll>\n";
     echo "    <table class=\"table\" id=\"msk-table\">\n";
-    echo "      <thead><tr><th>Nama Peserta</th><th>Bulan MSK</th><th>Progress Sesi</th><th>Status</th><th>WhatsApp</th><th class=\"actions-head\">Aksi</th></tr></thead>\n";
+    echo "      <thead><tr><th>Nama Peserta</th><th>Bulan MSK</th><th>Progress Sesi</th><th>Status</th><th>WhatsApp</th></tr></thead>\n";
     echo "      <tbody data-msk-list-body>\n";
     echo view('discipleship.msk-participants.partials.rows', compact('participantsFilteredByBatch', 'centralReadOnly', 'batchMonthFilterParam'))->render();
-    echo '<tr data-msk-search-empty '.(((int) $totalParticipantsFiltered !== 0) ? 'hidden' : '').'><td colspan="6" aria-live="polite">'.h((string) ($mskEmptyMessage ?? 'Peserta tidak ditemukan.'))."</td></tr>\n";
-    echo "<tr data-msk-loading hidden><td colspan=\"6\" aria-live=\"polite\">Memuat peserta...</td></tr>\n";
+    echo '<tr data-msk-search-empty '.(((int) $totalParticipantsFiltered !== 0) ? 'hidden' : '').'><td colspan="5" aria-live="polite">'.h((string) ($mskEmptyMessage ?? 'Peserta tidak ditemukan.'))."</td></tr>\n";
+    echo "<tr data-msk-loading hidden><td colspan=\"5\" aria-live=\"polite\">Memuat peserta...</td></tr>\n";
     /*
     foreach ($participantsFilteredByBatch as $participant) {
         $participantId = trim((string) ($participant['id'] ?? ''));
@@ -677,10 +677,7 @@ if ($page === 'msk_classes') {
     echo "  </div>\n";
     echo "</section>\n";
 
-    $mskViewFooterHtml = '';
-    if (! $centralReadOnly) {
-        $mskViewFooterHtml .= '<a class="btn tiny secondary is-hidden" href="#" data-msk-view-edit-link>Edit</a>';
-    }
+    $mskViewFooterHtml = '<div class="msk-view-modal-actions" data-msk-view-actions></div>';
     $mskViewFooterHtml .= '<button class="btn tiny ghost" type="button" data-msk-view-close>Tutup</button>';
     echo view('partials.modal', [
         'id' => 'msk-view-modal',

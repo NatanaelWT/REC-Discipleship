@@ -108,7 +108,9 @@ class MskParticipantPageTest extends TestCase
         $this->get('/pemuridan/msk?batch_month=2026-06')
             ->assertOk()
             ->assertDontSee('msk-view-person-hero', false)
-            ->assertSee('data-msk-view-edit-link', false);
+            ->assertSee('data-msk-view-actions', false)
+            ->assertDontSee('<th class="actions-head">Aksi</th>', false)
+            ->assertDontSee('data-msk-edit-open', false);
 
         $response = $this->get('/pemuridan/msk/11/detail?batch_month=2026-06')
             ->assertOk()
@@ -124,9 +126,14 @@ class MskParticipantPageTest extends TestCase
             ->assertSee('Riwayat Sebagai Anggota')
             ->assertSee('Riwayat Memimpin')
             ->assertSee('DG 1 (Peserta Modal)')
-            ->assertSee('Anggota Modal');
+            ->assertSee('Anggota Modal')
+            ->assertJsonStructure(['title', 'html', 'edit_url', 'actions_html']);
 
         $content = (string) $response->json('html');
+        $actionsHtml = (string) $response->json('actions_html');
+        $this->assertStringContainsString('data-msk-edit-from-view="11"', $actionsHtml);
+        $this->assertStringContainsString('/pemuridan/msk/11/nonaktif', $actionsHtml);
+        $this->assertStringContainsString('Nonaktifkan', $actionsHtml);
         $this->assertLessThan(strpos($content, 'Kontak dan akses'), strpos($content, 'Profil peserta'));
         $this->assertLessThan(strpos($content, 'Foto dan keterangan'), strpos($content, 'Kontak dan akses'));
         $this->assertLessThan(strpos($content, 'MSK dan pemuridan aktif'), strpos($content, 'Foto dan keterangan'));
@@ -439,6 +446,8 @@ class MskParticipantPageTest extends TestCase
         $this->assertStringContainsString('<a class="msk-name-main msk-name-link"', $rowsHtml);
         $this->assertStringContainsString('data-msk-view-open="'.$participantId.'"', $rowsHtml);
         $this->assertStringNotContainsString('<button class="btn tiny secondary icon-btn" type="button" data-msk-view-open=', $rowsHtml);
+        $this->assertStringNotContainsString('<td class="actions">', $rowsHtml);
+        $this->assertStringNotContainsString('data-msk-edit-open=', $rowsHtml);
         $this->assertArrayNotHasKey('templates_html', $response->json());
 
         $this->get('/pemuridan/msk/'.$participantId.'/detail?branch_id=all&batch_month=all')

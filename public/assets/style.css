@@ -10924,14 +10924,11 @@ button.member-feedback-recap-count-pill:focus-visible {
   font-weight: 700;
 }
 
-#msk-table td.actions,
-#msk-table th.actions-head {
-  width: 104px;
-  min-width: 104px;
-}
-
-#msk-table td.actions > * {
-  margin-right: 6px;
+.msk-view-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
 }
 
 .people-export-button {

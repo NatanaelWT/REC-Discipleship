@@ -84,27 +84,44 @@ class MskParticipantController extends Controller
         $row = is_array($detail['participant'] ?? null) ? $detail['participant'] : [];
         $title = trim((string) ($row['full_name'] ?? 'Peserta MSK')) ?: 'Peserta MSK';
         $mode = $request->query('mode') === 'edit' ? 'edit' : 'view';
+        $centralReadOnly = (bool) ($detail['centralReadOnly'] ?? false);
+        $batchMonthFilterParam = (string) ($detail['batchMonthFilterParam'] ?? '');
+        $branchRouteParams = $this->currentBranchRouteParams();
+        $editUrl = ! $centralReadOnly
+            ? route('discipleship.msk-classes', [
+                'edit' => $participant->getKey(),
+                'batch_month' => $batchMonthFilterParam,
+            ] + $branchRouteParams)
+            : null;
+        $actionsHtml = '';
         if ($mode === 'edit') {
-            abort_if((bool) ($detail['centralReadOnly'] ?? false), 403);
+            abort_if($centralReadOnly, 403);
             $html = view('discipleship.msk-participants.partials.form', [
                 'participant' => $row,
-                'batchMonth' => (string) ($detail['batchMonthFilterParam'] ?? ''),
+                'batchMonth' => $batchMonthFilterParam,
                 'closeActionAttr' => 'data-msk-edit-close',
-                'mskStoreAction' => route('discipleship.msk-classes.store', $this->currentBranchRouteParams()),
+                'mskStoreAction' => route('discipleship.msk-classes.store', $branchRouteParams),
             ])->render();
             $title = 'Edit Peserta MSK: '.$title;
         } else {
             $html = view('discipleship.msk-participants.profile', [
                 'profile' => is_array($detail['profile'] ?? null) ? $detail['profile'] : [],
             ])->render();
+            if (! $centralReadOnly && $editUrl !== null) {
+                $actionsHtml = view('discipleship.msk-participants.partials.view-actions', [
+                    'participant' => $row,
+                    'batchMonthFilterParam' => $batchMonthFilterParam,
+                    'branchRouteParams' => $branchRouteParams,
+                    'editHref' => $editUrl,
+                ])->render();
+            }
         }
 
         return response()->json([
             'title' => $title,
             'html' => $html,
-            'edit_url' => ! (bool) ($detail['centralReadOnly'] ?? false)
-                ? route('discipleship.msk-classes', ['edit' => $participant->getKey()] + $this->currentBranchRouteParams())
-                : null,
+            'edit_url' => $editUrl,
+            'actions_html' => $actionsHtml,
         ])->header('Cache-Control', 'private, no-store');
     }
 
