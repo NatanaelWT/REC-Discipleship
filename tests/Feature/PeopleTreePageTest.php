@@ -340,6 +340,19 @@ class PeopleTreePageTest extends TestCase
         $this->assertLessThanOrEqual(6, count($queries), implode("\n", $queries));
     }
 
+    public function test_group_list_detail_endpoint_reuses_the_tree_group_detail(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $groupId = (int) DB::table('kelompok_dg')->where('branch_id', 1)->value('id');
+        $this->actingAsRecUser();
+
+        $this->get('/pemuridan/kelompok/'.$groupId.'/detail')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonStructure(['title', 'html', 'edit_url']);
+    }
+
     public function test_tree_initial_graph_query_count_does_not_grow_per_person(): void
     {
         $this->createTables();

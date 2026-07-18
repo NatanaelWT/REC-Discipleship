@@ -5260,6 +5260,9 @@
         setupHorizontalTableScroll(panel);
         setupDiscipleshipPeopleList(panel);
         setupDiscipleshipGroupsList(panel);
+        if (key === 'groups') {
+          setupDiscipleshipTreeHistory(panel);
+        }
         setupSpiritualJourneyList(panel);
         setupMskList(panel);
         setupSpiritualJourneyPanelInteractions(panel);

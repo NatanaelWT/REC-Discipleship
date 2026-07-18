@@ -76,6 +76,9 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
             ->assertSee('data-discipleship-groups-list', false)
             ->assertSee('data-discipleship-groups-search-form', false)
             ->assertSee('data-discipleship-groups-search-input', false)
+            ->assertSee('data-tree-group-detail-url-template=', false)
+            ->assertSee('data-tree-v2-history-modal', false)
+            ->assertSee('data-tree-v2-history-open="1"', false)
             ->assertSee('data-next-cursor="', false)
             ->assertDontSee('discipleship-page-header__stats', false)
             ->assertDontSee('discipleship-page-header__stat', false)
@@ -94,6 +97,7 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
         $this->assertNotEmpty($pageTwo->json('next_cursor'));
         $this->assertArrayNotHasKey('next_page', $pageTwo->json());
         $this->assertStringContainsString('Orang 0051', (string) $pageTwo->json('html'));
+        $this->assertStringContainsString('data-tree-v2-history-open="51"', (string) $pageTwo->json('html'));
         $this->assertStringContainsString('Orang 0100', (string) $pageTwo->json('html'));
         $this->assertStringNotContainsString('Orang 0101', (string) $pageTwo->json('html'));
 
@@ -211,4 +215,3 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
         app(BranchCatalog::class)->clearCache();
     }
 }
-

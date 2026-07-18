@@ -22,11 +22,21 @@
         $memberSummary = 'Belum ada peserta';
     }
     $memberHelper = trim((string) ($groupRow['member_helper_text'] ?? ''));
+    $groupId = (int) ($groupRow['id'] ?? 0);
 @endphp
 <tr @if ($rowClass !== '') class="{{ $rowClass }}" @endif data-group-status="{{ $rowStatus }}" data-group-progress="{{ $rowProgress }}" data-discipleship-groups-row>
   <td>
     <div class="group-name-cell">
-      <div class="group-name-main">{{ $leaderName }}</div>
+      @if ($groupId > 0)
+        <button
+          class="group-name-main group-name-link"
+          type="button"
+          data-tree-v2-history-open="{{ $groupId }}"
+          aria-label="Lihat detail kelompok {{ $leaderName }}"
+        >{{ $leaderName }}</button>
+      @else
+        <div class="group-name-main">{{ $leaderName }}</div>
+      @endif
       <div class="group-name-sub">{{ $leaderSummary }}</div>
     </div>
   </td>

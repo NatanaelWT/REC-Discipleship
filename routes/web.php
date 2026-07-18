@@ -112,6 +112,7 @@ Route::middleware('rec.maintenance')->group(function (): void {
         Route::get('/kelompok', [DiscipleshipGroupController::class, 'index'])->middleware('rec.page:groups_list')->name('groups');
         Route::get('/orang', [SystemRouteController::class, 'legacyPeople'])->name('people');
         Route::get('/kelompok/rows', [DiscipleshipGroupController::class, 'rows'])->middleware('rec.page:groups_list')->name('groups.rows');
+        Route::get('/kelompok/{group}/detail', [DiscipleshipGroupController::class, 'detail'])->whereNumber('group')->middleware('rec.page:groups_list')->name('groups.detail');
         Route::get('/anggota', [DiscipleshipPeopleListController::class, 'index'])->middleware('rec.page:people_list')->name('people-list');
         Route::get('/anggota/rows', [DiscipleshipPeopleListController::class, 'rows'])->middleware('rec.page:people_list')->name('people-list.rows');
         Route::get('/anggota/ekspor', [DiscipleshipPeopleListController::class, 'export'])->middleware('rec.page:people_list')->name('people-list.export');

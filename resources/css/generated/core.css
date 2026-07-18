@@ -2709,6 +2709,32 @@ textarea:focus-visible {
   flex-wrap: wrap;
 }
 
+.group-name-link {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: #0f172a;
+  background: transparent;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.group-name-link:hover {
+  color: var(--primary-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.group-name-link:focus-visible {
+  border-radius: 4px;
+  outline: 3px solid rgba(15, 118, 110, 0.28);
+  outline-offset: 3px;
+}
+
 .group-name-sub,
 .group-progress-sub,
 .group-members-sub {

@@ -7,6 +7,7 @@
   data-discipleship-tab-panel
   data-tab-key="groups"
   data-page-title="{{ $pageTitle ?? 'Kelompok DG' }}"
+  data-tree-group-detail-url-template="{{ route('discipleship.groups.detail', ['group' => '__id__']) }}"
 >
   @include('discipleship.partials.page-header', [
       'header' => [
@@ -48,4 +49,15 @@
       </table>
     </div>
   </section>
+
+  @include('partials.modal', [
+      'id' => 'groups-detail-modal',
+      'size' => 'wide',
+      'modalAttrs' => ['data-tree-v2-history-modal' => true],
+      'title' => 'Detail Kelompok',
+      'titleAttrs' => ['data-tree-v2-history-title' => true],
+      'closeAttrs' => ['data-tree-v2-history-close' => true],
+      'bodyAttrs' => ['data-tree-v2-history-body' => true],
+      'bodyHtml' => '<div class="journey-history-empty">Klik nama pemimpin untuk melihat detail kelompok.</div>',
+  ])
 </section>

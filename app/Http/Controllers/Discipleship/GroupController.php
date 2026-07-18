@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Discipleship;
 use App\Http\Controllers\Controller;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DiscipleshipGroups\DiscipleshipGroupIndexData;
+use App\Services\DiscipleshipPeopleTree\PeopleTreeDetailData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -53,6 +54,16 @@ class GroupController extends Controller
             'empty' => count($data['groups'] ?? []) === 0,
             'empty_message' => (string) ($data['groupsEmptyMessage'] ?? 'Kelompok tidak ditemukan.'),
         ]);
+    }
+
+    public function detail(int $group, PeopleTreeDetailData $detailData): JsonResponse
+    {
+        $detail = $detailData->group($group);
+        if ($detail === null) {
+            abort(404);
+        }
+
+        return response()->json($detail)->header('Cache-Control', 'private, no-store');
     }
 
     private function tabBranchId(Request $request, CurrentDiscipleshipScope $scope): int|string|null
