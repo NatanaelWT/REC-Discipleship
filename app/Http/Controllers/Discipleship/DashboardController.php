@@ -8,6 +8,8 @@ use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\DiscipleshipDashboard\DashboardMskSessionUpdater;
 use App\Services\DiscipleshipDashboard\DashboardPageData;
 use App\Services\DiscipleshipDashboard\DashboardSectionData;
+use App\Services\DiscipleshipPeopleTree\PeopleTreeDetailData;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -75,6 +77,16 @@ class DashboardController extends Controller
             'branch-breakdown' => view('discipleship.dashboard.sections.branch-breakdown', $sections->branchBreakdown()),
             default => abort(404),
         };
+    }
+
+    public function groupDetail(int $group, PeopleTreeDetailData $detailData): JsonResponse
+    {
+        $detail = $detailData->group($group);
+        if ($detail === null) {
+            abort(404);
+        }
+
+        return response()->json($detail)->header('Cache-Control', 'private, no-store');
     }
 
     private function guardPageAccess(Request $request): ?RedirectResponse

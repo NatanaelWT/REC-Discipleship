@@ -5366,7 +5366,7 @@
         if (key === 'people') {
           setupDiscipleshipTreeActions(panel);
         }
-        if (key === 'groups') {
+        if (key === 'groups' || key === 'dashboard') {
           setupDiscipleshipTreeHistory(panel);
         }
         setupSpiritualJourneyList(panel);

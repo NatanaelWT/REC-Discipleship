@@ -8,6 +8,7 @@
   data-discipleship-dashboard-panel
   data-tab-key="dashboard"
   data-page-title="{{ $pageTitle ?? 'Dashboard Pemuridan' }}"
+  data-tree-group-detail-url-template="{{ route('discipleship.dashboard.groups.detail', ['group' => '__id__']) }}"
 >
 <?php
 
@@ -116,5 +117,10 @@ $formatPercent = static function (float $value): string {
       'bodyAttrs' => ['data-msk-edit-body' => true],
   ])
 @endif
+
+@include('discipleship.people-tree.partials.group-history-modal', [
+    'centralReadOnly' => true,
+    'groupHistoryModalId' => 'dashboard-group-detail-modal',
+])
 
 </section>

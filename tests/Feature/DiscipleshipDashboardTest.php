@@ -51,13 +51,23 @@ class DiscipleshipDashboardTest extends TestCase
         $section->assertSee('data-msk-edit-open', false);
         $section->assertDontSee('dashboard-section-pagination', false);
         $response->assertSee('data-msk-edit-modal', false);
+        $response->assertSee('data-tree-group-detail-url-template="'.route('discipleship.dashboard.groups.detail', ['group' => '__id__']).'"', false);
+        $response->assertSee('dashboard-group-detail-modal', false);
+        $response->assertSee('data-tree-v2-history-modal', false);
 
         $overdueSection = $this->get('/pemuridan/dashboard/sections/overdue-groups');
         $overdueSection->assertOk();
         $overdueSection->assertSee('<span>Peserta</span>', false);
         $overdueSection->assertDontSee('<span>Kelompok</span>', false);
         $overdueSection->assertDontSee('<strong>Kelompok Dashboard</strong>', false);
+        $overdueSection->assertSee('data-tree-v2-history-open="1"', false);
+        $overdueSection->assertSee('discipleship-overdue-name-link', false);
         $overdueSection->assertDontSee('dashboard-section-pagination', false);
+
+        $this->get('/pemuridan/dashboard/groups/1/detail')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonStructure(['title', 'html', 'edit_url']);
     }
 
     public function test_dashboard_tab_fragment_returns_only_the_marked_panel(): void

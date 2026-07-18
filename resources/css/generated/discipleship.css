@@ -7894,6 +7894,32 @@ button.member-feedback-recap-count-pill:focus-visible {
   max-width: 100%;
 }
 
+.discipleship-overdue-name-link {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.discipleship-overdue-name-link:hover {
+  color: var(--primary-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.discipleship-overdue-name-link:focus-visible {
+  border-radius: 4px;
+  outline: 3px solid rgba(15, 118, 110, 0.24);
+  outline-offset: 3px;
+}
+
 .discipleship-page-header__main > *,
 .discipleship-page-header__tools > *,
 .journey-progress-chip > * {

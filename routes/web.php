@@ -108,6 +108,7 @@ Route::middleware('rec.maintenance')->group(function (): void {
             ->whereIn('section', ['incomplete-msk', 'overdue-groups', 'branch-breakdown'])
             ->middleware('rec.page:discipleship_dashboard')
             ->name('dashboard.section');
+        Route::get('/dashboard/groups/{group}/detail', [DiscipleshipDashboardController::class, 'groupDetail'])->whereNumber('group')->middleware('rec.page:discipleship_dashboard')->name('dashboard.groups.detail');
         Route::post('/dashboard/msk-sessions', [DiscipleshipDashboardController::class, 'updateMskSessions'])->middleware('rec.page:discipleship_dashboard')->name('dashboard.msk-sessions');
         Route::get('/kelompok', [DiscipleshipGroupController::class, 'index'])->middleware('rec.page:groups_list')->name('groups');
         Route::get('/orang', [SystemRouteController::class, 'legacyPeople'])->name('people');
