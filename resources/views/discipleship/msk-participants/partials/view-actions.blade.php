@@ -15,16 +15,16 @@
     $toggleRoute = route($toggleRouteName, ['participant' => $participantId] + $branchRouteParams);
 @endphp
 
-<a class="btn tiny secondary" href="{{ $editHref }}" data-msk-edit-from-view="{{ $participantId }}">
+<a class="btn tiny secondary msk-view-action-button" href="{{ $editHref }}" data-msk-edit-from-view="{{ $participantId }}">
   {!! icon_svg('edit') !!}
   <span>Edit</span>
 </a>
-<form method="post" action="{{ $toggleRoute }}" class="inline" onsubmit="return confirm('{{ $toggleConfirm }}');">
+<form method="post" action="{{ $toggleRoute }}" class="inline msk-view-action-form" onsubmit="return confirm('{{ $toggleConfirm }}');">
   @csrf
   <input type="hidden" name="action" value="{{ $toggleAction }}">
   <input type="hidden" name="id" value="{{ $participantId }}">
   <input type="hidden" name="batch_month" value="{{ $batchMonthFilterParam }}">
-  <button class="{{ $toggleClass }}" type="submit">
+  <button class="{{ $toggleClass }} msk-view-action-button" type="submit">
     {!! $toggleIcon !!}
     <span>{{ $toggleLabel }}</span>
   </button>

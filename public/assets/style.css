@@ -10927,8 +10927,60 @@ button.member-feedback-recap-count-pill:focus-visible {
 .msk-view-modal-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 10px;
   margin-right: auto;
+}
+
+.msk-view-action-form {
+  display: flex;
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.msk-view-modal-card .msk-view-action-button,
+.msk-view-modal-card .modal-footer > [data-msk-view-close] {
+  width: auto;
+  min-height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 13px;
+  border-radius: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.msk-view-modal-card .msk-view-action-button .icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.msk-view-modal-card .modal-footer > [data-msk-view-close] {
+  min-width: 72px;
+}
+
+@media (max-width: 480px) {
+  .msk-view-modal-card .modal-footer {
+    align-items: stretch;
+  }
+
+  .msk-view-modal-card .modal-footer > .msk-view-modal-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .msk-view-modal-card .msk-view-action-form,
+  .msk-view-modal-card .msk-view-action-button,
+  .msk-view-modal-card .modal-footer > [data-msk-view-close] {
+    width: 100%;
+  }
 }
 
 .people-export-button {
