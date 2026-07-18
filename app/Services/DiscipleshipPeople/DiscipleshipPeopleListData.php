@@ -215,21 +215,12 @@ class DiscipleshipPeopleListData
     {
         $personIds = $people->pluck('id')->map(static fn ($id): int => (int) $id)->all();
         $groupPeople = $this->groupPeople($personIds);
-        $groupIds = $groupPeople->pluck('discipleship_group_id')->filter()->map(static fn ($id): int => (int) $id)->unique()->all();
-        $allGroupLinks = $this->groupLinks($groupIds);
-        $relatedIds = $groupPeople->pluck('person_id')
-            ->merge($allGroupLinks->pluck('person_id'))
-            ->filter()
-            ->unique()
-            ->all();
-        $names = DiscipleshipPersonProfile::namesByPersonIds($relatedIds);
         $branchOptions = $this->scope->optionsById();
 
-        return $people->map(function (Person $person) use ($groupPeople, $allGroupLinks, $names, $branchOptions): array {
+        return $people->map(function (Person $person) use ($groupPeople, $branchOptions): array {
             $personId = (int) $person->id;
             $links = $groupPeople->where('person_id', $personId);
             $isLeader = $links->contains(static fn (DiscipleshipGroupPerson $row): bool => $row->role !== 'member' && $row->status === 'active' && $row->ended_on === null);
-            $activeGroups = $this->activeGroupSummaries($links, $allGroupLinks, $names);
             $progress = $this->progressStateResolver->resolve($links);
             $tokens = $progress['filters'];
             $lastStage = $this->lastStage($links);
@@ -247,26 +238,11 @@ class DiscipleshipPeopleListData
                 'name' => $name,
                 'export_name' => $exportName,
                 'branch_label' => $branchLabel,
-                'parent_summary' => $activeGroups !== [] ? 'Kelompok aktif: '.implode(', ', $activeGroups) : 'Belum ada kelompok aktif',
                 'role_label' => $isLeader ? 'Pemimpin' : 'Anggota',
                 'role_tone_class' => $isLeader ? 'is-leader' : 'is-member',
-                'role_subtitle' => $isLeader ? 'Memimpin kelompok DG' : ($activeGroups !== [] ? 'Anggota kelompok DG' : 'Belum ada kelompok aktif'),
                 'progress_steps' => $progress['steps'],
-                'progress_summary' => $progress['summary'],
             ];
         })->values();
-    }
-
-    private function groupLinks(array $groupIds): Collection
-    {
-        if ($groupIds === []) {
-            return collect();
-        }
-
-        return DiscipleshipGroupPerson::query()
-            ->whereIn('branch_id', $this->scope->branchIds())
-            ->whereIn('discipleship_group_id', $groupIds)
-            ->get(['id', 'discipleship_group_id', 'person_id', 'role', 'stage', 'status', 'ended_on', 'end_reason', 'started_on', 'updated_at']);
     }
 
     private function groupPeople(array $personIds)
@@ -281,32 +257,6 @@ class DiscipleshipPeopleListData
             ->get(['id', 'discipleship_group_id', 'person_id', 'role', 'stage', 'status', 'ended_on', 'end_reason', 'started_on']);
 
         return $rows->merge($this->manualGroupPeople($personIds));
-    }
-
-    private function activeGroupSummaries(Collection $links, Collection $allGroupLinks, array $names): array
-    {
-        return $links
-            ->filter(static fn (DiscipleshipGroupPerson $row): bool => $row->role === 'member' && $row->status === 'active' && $row->ended_on === null)
-            ->map(function (DiscipleshipGroupPerson $link) use ($allGroupLinks, $names): string {
-                $groupId = (int) $link->discipleship_group_id;
-                $leaders = $allGroupLinks
-                    ->where('discipleship_group_id', $groupId)
-                    ->filter(static fn (DiscipleshipGroupPerson $row): bool => $row->role !== 'member' && $row->status === 'active' && $row->ended_on === null)
-                    ->map(static fn (DiscipleshipGroupPerson $row): string => trim((string) ($names[(int) $row->person_id] ?? '')))
-                    ->filter()
-                    ->unique()
-                    ->values()
-                    ->all();
-
-                return discipleship_group_display_label([
-                    'progress' => normalize_dg_progress_value((string) $link->stage),
-                    'leader_name' => implode(', ', $leaders),
-                ]);
-            })
-            ->filter(static fn (string $label): bool => $label !== '')
-            ->unique()
-            ->values()
-            ->all();
     }
 
     private function lastStage($links): string

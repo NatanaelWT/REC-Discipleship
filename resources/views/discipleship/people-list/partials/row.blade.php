@@ -5,38 +5,27 @@
     if ($name === '') {
         $name = '-';
     }
-    $parentSummary = trim((string) ($row['parent_summary'] ?? 'Belum terhubung ke pembina'));
-    if ($parentSummary === '') {
-        $parentSummary = 'Belum terhubung ke pembina';
-    }
     $roleLabel = trim((string) ($row['role_label'] ?? 'Anggota'));
     if ($roleLabel === '') {
         $roleLabel = 'Anggota';
     }
     $roleToneClass = trim((string) ($row['role_tone_class'] ?? 'is-member'));
-    $roleSubtitle = trim((string) ($row['role_subtitle'] ?? 'Belum ada kelompok aktif'));
-    if ($roleSubtitle === '') {
-        $roleSubtitle = 'Belum ada kelompok aktif';
-    }
     $progressSteps = is_array($row['progress_steps'] ?? null) ? $row['progress_steps'] : [];
-    $progressSummary = trim((string) ($row['progress_summary'] ?? 'Belum memulai DG'));
 @endphp
 <tr data-people-filter="{{ $rowFilterState }}" data-people-progress="{{ $rowProgressKey }}" data-discipleship-people-search-row data-search-text="{{ $name }}">
   <td>
     <div class="people-name-cell">
       <div class="people-name-main">{{ $name }}</div>
-      <div class="people-name-sub">{{ $parentSummary }}</div>
     </div>
   </td>
   <td>
     <div class="people-role-cell">
       <span class="people-role-badge {{ $roleToneClass }}">{{ $roleLabel }}</span>
-      <div class="people-role-sub">{{ $roleSubtitle }}</div>
     </div>
   </td>
   <td>
     <div class="people-progress-cell">
-      <div class="people-progress-track" aria-label="{{ $progressSummary }}">
+      <div class="people-progress-track" aria-label="Progress DG {{ $name }}">
         @foreach ($progressSteps as $step)
           @php
               $stepState = trim((string) ($step['state'] ?? 'is-pending'));
@@ -52,7 +41,6 @@
           </span>
         @endforeach
       </div>
-      <span class="people-progress-summary">{{ $progressSummary }}</span>
     </div>
   </td>
 </tr>

@@ -227,7 +227,9 @@ class DiscipleshipPeopleListTest extends TestCase
             ->assertSee('people-progress-track', false)
             ->assertSee('people-progress-step is-complete', false)
             ->assertSee('people-progress-step is-current', false)
-            ->assertSee('Sedang menjalani DG 2')
+            ->assertDontSee('Sedang menjalani DG 2')
+            ->assertDontSee('Kelompok aktif:')
+            ->assertDontSee('Anggota kelompok DG')
             ->assertDontSee('Selesai Camp GAP')
             ->assertDontSee('Selesai RG');
     }
@@ -355,8 +357,9 @@ class DiscipleshipPeopleListTest extends TestCase
             ->assertDontSee('Identitas Arsip DG')
             ->assertDontSee('Belum Pernah DG')
             ->assertDontSee('data-people-stat=', false)
-            ->assertSee('Terakhir menyelesaikan DG 1')
-            ->assertSee('Terakhir menyelesaikan DG 2');
+            ->assertDontSee('Terakhir menyelesaikan DG 1')
+            ->assertDontSee('Terakhir menyelesaikan DG 2')
+            ->assertDontSee('Belum ada kelompok aktif');
     }
 
     public function test_people_list_lazy_loads_rows_and_ajax_searches_server_side(): void

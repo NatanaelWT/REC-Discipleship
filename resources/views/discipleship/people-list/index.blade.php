@@ -41,7 +41,7 @@
   >
     <div class="table-wrap" data-discipleship-people-scroll data-table-horizontal-scroll>
       <table class="table people-dashboard-table" id="people-dashboard-table">
-        <thead><tr><th>Nama & Relasi</th><th>Peran</th><th>Progress DG</th></tr></thead>
+        <thead><tr><th>Nama</th><th>Peran</th><th>Progress DG</th></tr></thead>
         <tbody data-discipleship-people-list-body>
           @include('discipleship.people-list.partials.rows', ['people' => $people])
           <tr data-discipleship-people-search-empty @if ((int) $filteredPeopleRows !== 0) hidden @endif>

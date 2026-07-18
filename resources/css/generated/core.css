@@ -2650,13 +2650,6 @@ textarea:focus-visible {
   color: #0f172a;
 }
 
-.people-name-sub,
-.people-role-sub {
-  color: #64748b;
-  font-size: 13px;
-  line-height: 1.55;
-}
-
 .people-role-badge {
   display: inline-flex;
   align-items: center;
