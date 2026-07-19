@@ -37,21 +37,4 @@
     </div>
   </section>
 
-  <div class="developer-dashboard-grid">
-    <section class="card developer-panel developer-section-card">
-      <div class="developer-section-head">
-        <span class="developer-section-icon is-blue">@include('developer._icon', ['name' => 'users'])</span>
-        <div><span class="developer-section-kicker">Administrasi</span><h2>Kelola Akun</h2><p>Tambah pengguna, ubah akses, atur status akun, dan reset password.</p></div>
-        <a class="btn tiny ghost developer-link-button" href="{{ route('developer.users') }}">@include('developer._icon', ['name' => 'arrow-right'])<span>Buka</span></a>
-      </div>
-    </section>
-
-    <section class="card developer-panel developer-section-card">
-      <div class="developer-section-head">
-        <span class="developer-section-icon">@include('developer._icon', ['name' => 'dashboard'])</span>
-        <div><span class="developer-section-kicker">Pemuridan</span><h2>Kelola Cabang</h2><p>Tambah cabang serta perbarui nama, kode, dan status cabang.</p></div>
-        <a class="btn tiny ghost developer-link-button" href="{{ route('developer.branches') }}">@include('developer._icon', ['name' => 'arrow-right'])<span>Buka</span></a>
-      </div>
-    </section>
-  </div>
 @endsection
