@@ -16,7 +16,6 @@
         ['label' => 'Nama Aplikasi', 'value' => $configValues['church_name'] ?? app_church_name()],
         ['label' => 'Maintenance', 'value' => ($configValues['maintenance_mode'] ?? '0') === '1' ? 'Aktif' : 'Nonaktif'],
         ['label' => 'Debug Banner', 'value' => ($configValues['developer_debug_banner'] ?? '0') === '1' ? 'Aktif' : 'Nonaktif'],
-        ['label' => 'Pilihan Timezone', 'value' => number_format(count($timezoneOptions), 0, ',', '.')],
       ],
     ])
 
