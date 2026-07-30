@@ -73,27 +73,28 @@ class DashboardSectionData
     public function overdueGroups(Request $request): array
     {
         $branchIds = $this->scope->branchIds();
-        $latest = DB::table('jurnal_temu_dg')
-            ->selectRaw('branch_id, discipleship_group_id, MAX(meeting_date) AS last_report_date')
-            ->whereIn('branch_id', $branchIds)
-            ->whereNotNull('discipleship_group_id')
-            ->groupBy('branch_id', 'discipleship_group_id');
+        $cutoff = now()->subDays(30)->toDateString();
 
         $groups = DiscipleshipGroup::query()
             ->from('kelompok_dg as g')
-            ->leftJoinSub($latest, 'latest_report', function ($join): void {
-                $join->on('latest_report.branch_id', '=', 'g.branch_id')
-                    ->on('latest_report.discipleship_group_id', '=', 'g.id');
-            })
             ->whereIn('g.branch_id', $branchIds)
             ->where('g.status', 'active')
-            ->where(function ($query): void {
-                $query->whereNull('latest_report.last_report_date')
-                    ->orWhere('latest_report.last_report_date', '<', now()->subDays(30)->toDateString());
+            ->whereNotExists(function ($query) use ($cutoff): void {
+                $query->selectRaw('1')
+                    ->from('jurnal_temu_dg as recent_report')
+                    ->whereColumn('recent_report.branch_id', 'g.branch_id')
+                    ->whereColumn('recent_report.discipleship_group_id', 'g.id')
+                    ->where('recent_report.meeting_date', '>=', $cutoff);
             })
-            ->select(['g.id', 'g.branch_id', 'g.stage', 'latest_report.last_report_date'])
-            ->orderByRaw('CASE WHEN latest_report.last_report_date IS NULL THEN 0 ELSE 1 END')
-            ->orderBy('latest_report.last_report_date')
+            ->select(['g.id', 'g.branch_id', 'g.stage'])
+            ->selectSub(function ($query): void {
+                $query->from('jurnal_temu_dg as report')
+                    ->selectRaw('MAX(report.meeting_date)')
+                    ->whereColumn('report.branch_id', 'g.branch_id')
+                    ->whereColumn('report.discipleship_group_id', 'g.id');
+            }, 'last_report_date')
+            ->orderByRaw('CASE WHEN last_report_date IS NULL THEN 0 ELSE 1 END')
+            ->orderBy('last_report_date')
             ->orderBy('g.stage')
             ->orderBy('g.id')
             ->get();
