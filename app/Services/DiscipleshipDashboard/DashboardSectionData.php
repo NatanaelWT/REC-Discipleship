@@ -7,6 +7,7 @@ use App\Models\DiscipleshipGroupPerson;
 use App\Models\Person;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Support\DiscipleshipPersonProfile;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -108,10 +109,13 @@ class DashboardSectionData
 
             return [
                 'id' => (int) $group->id,
-                'leader_name' => $people['leaders'][0] ?? '-',
-                'members_first_names' => implode(', ', array_slice($people['members'], 0, 8)) ?: '-',
-                'progress' => discipleship_group_stage_value($group) ?: 'DG 1',
+                'leader_name' => ($people['leaders'] ?? [])[0] ?? '-',
+                'members_first_names' => implode(', ', array_slice($people['members'] ?? [], 0, 8)) ?: '-',
+                'progress' => trim((string) $group->stage) ?: 'DG 1',
                 'last_report_date' => trim((string) $group->last_report_date),
+                'last_report_label' => $group->last_report_date
+                    ? Carbon::parse($group->last_report_date)->locale('id')->translatedFormat('l, j F Y')
+                    : 'Belum Pernah Lapor',
                 'branch_label' => $branches[(int) $group->branch_id]['label'] ?? 'Tanpa cabang',
             ];
         });
