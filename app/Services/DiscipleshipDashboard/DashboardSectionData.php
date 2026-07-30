@@ -72,8 +72,10 @@ class DashboardSectionData
     /** @return array<string, mixed> */
     public function overdueGroups(Request $request): array
     {
+        $branchIds = $this->scope->branchIds();
         $latest = DB::table('jurnal_temu_dg')
             ->selectRaw('branch_id, discipleship_group_id, MAX(meeting_date) AS last_report_date')
+            ->whereIn('branch_id', $branchIds)
             ->whereNotNull('discipleship_group_id')
             ->groupBy('branch_id', 'discipleship_group_id');
 
@@ -83,7 +85,7 @@ class DashboardSectionData
                 $join->on('latest_report.branch_id', '=', 'g.branch_id')
                     ->on('latest_report.discipleship_group_id', '=', 'g.id');
             })
-            ->whereIn('g.branch_id', $this->scope->branchIds())
+            ->whereIn('g.branch_id', $branchIds)
             ->where('g.status', 'active')
             ->where(function ($query): void {
                 $query->whereNull('latest_report.last_report_date')
