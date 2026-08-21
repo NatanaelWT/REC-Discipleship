@@ -62,6 +62,20 @@ function dgv2_save_person_single(array &$model, array $payload, array $members, 
     }
 
     $personId = $id !== '' ? $id : temporary_model_id('person');
+    if ($groupId !== '') {
+        foreach ($model['group_leaderships'] as $leadership) {
+            if (! is_array($leadership) || ! dgv2_is_current_period($leadership)) {
+                continue;
+            }
+            if (
+                trim((string) ($leadership['group_id'] ?? '')) === $groupId
+                && trim((string) ($leadership['leader_person_id'] ?? '')) === $personId
+            ) {
+                return ['ok' => false, 'error' => 'leader_cannot_join_own_group'];
+            }
+        }
+    }
+
     $now = now_iso();
     $row = [
         'id' => $personId,

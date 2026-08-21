@@ -34,6 +34,8 @@
         echo "<div class=\"alert danger\">" . h($personSourceLabel) . " sudah terdaftar di DG.</div>\n";
     } elseif ($error === 'member_not_complete') {
         echo "<div class=\"alert danger\">Peserta MSK harus sudah menyelesaikan 12 sesi.</div>\n";
+    } elseif ($error === 'leader_cannot_join_own_group') {
+        echo "<div class=\"alert danger\">Leader tidak dapat menjadi anggota kelompok sendiri.</div>\n";
     } elseif ($error === 'missing_person_name') {
         echo "<div class=\"alert danger\">Nama peserta DG wajib diisi.</div>\n";
     } elseif ($error === 'invalid_person') {
@@ -398,6 +400,7 @@
             if ($existingGroupId === '') {
                 continue;
             }
+            $existingGroupLeaderId = trim((string) ($existingGroup['leader_id'] ?? ''));
             $existingGroupLeader = trim((string) ($existingGroup['leader_name'] ?? ''));
             $existingGroupProgress = trim((string) ($existingGroup['progress'] ?? ''));
             $existingMemberIds = $existingGroup['member_ids'] ?? [];
@@ -421,7 +424,7 @@
                 }
             }
             $existingMemberLabel = count($existingMemberFirstNames) > 0 ? implode(', ', $existingMemberFirstNames) : '-';
-            echo "<option value=\"" . h($existingGroupId) . "\">" . h($existingGroupLeader . ' | ' . $existingGroupProgress . ' | ' . $existingMemberLabel) . "</option>";
+            echo "<option value=\"" . h($existingGroupId) . "\" data-leader-id=\"" . h($existingGroupLeaderId) . "\">" . h($existingGroupLeader . ' | ' . $existingGroupProgress . ' | ' . $existingMemberLabel) . "</option>";
         }
         echo "</select></label>\n";
         echo "        <label class=\"modal-field\">Catatan<textarea name=\"notes\" rows=\"3\"></textarea></label>\n";

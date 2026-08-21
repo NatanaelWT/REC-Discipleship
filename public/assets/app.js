@@ -3197,6 +3197,17 @@
         });
       };
 
+      const filterOwnLeaderGroupOptions = (selectEl, personId) => {
+        if (!selectEl) return;
+        Array.from(selectEl.options).forEach((opt) => {
+          const isBlocked = String(opt.getAttribute('data-leader-id') || '').trim() === String(personId || '').trim() && opt.value !== '';
+          opt.hidden = isBlocked;
+          opt.disabled = isBlocked;
+          if (isBlocked && opt.selected) opt.selected = false;
+        });
+        if (selectEl.selectedOptions[0]?.disabled) selectEl.value = '';
+      };
+
       const syncAddMemberRows = (pickerEl) => {
         if (!pickerEl) return;
         const rowEls = Array.from(pickerEl.querySelectorAll('[data-add-member-row]'));
@@ -3360,7 +3371,9 @@
             leaderInput.value = '';
           }
           if (groupSelect) {
+            filterOwnLeaderGroupOptions(groupSelect, personId);
             groupSelect.value = groupId || '';
+            if (groupSelect.selectedOptions[0]?.disabled) groupSelect.value = '';
             groupSelect.disabled = isRoot;
           }
 
