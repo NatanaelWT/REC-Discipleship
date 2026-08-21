@@ -71,14 +71,14 @@ const fontFaces = `/* Local variable fonts. Licenses: /assets/fonts/licenses/ */
 
 `;
 
-function selectorDomain(selector) {
-    for (const domain of ['public', 'developer', 'worship', 'discipleship']) {
-        if (domainPatterns[domain].some((pattern) => pattern.test(selector))) {
-            return domain;
-        }
-    }
+function selectorDomains(selector) {
+    const domain = ['public', 'developer', 'worship', 'discipleship'].find((candidate) => (
+        domainPatterns[candidate].some((pattern) => pattern.test(selector))
+    )) || 'core';
 
-    return 'core';
+    return selector.includes('discipleship-page-header')
+        ? [...new Set([domain, 'developer', 'worship'])]
+        : [domain];
 }
 
 function splitContainer(container) {
@@ -88,7 +88,9 @@ function splitContainer(container) {
         if (node.type === 'rule') {
             const selectorsByDomain = Object.fromEntries(domains.map((domain) => [domain, []]));
             for (const selector of node.selectors || [node.selector]) {
-                selectorsByDomain[selectorDomain(selector)].push(selector);
+                for (const domain of selectorDomains(selector)) {
+                    selectorsByDomain[domain].push(selector);
+                }
             }
             for (const domain of domains) {
                 if (selectorsByDomain[domain].length === 0) {

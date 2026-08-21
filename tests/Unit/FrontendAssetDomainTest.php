@@ -24,4 +24,27 @@ class FrontendAssetDomainTest extends TestCase
         $this->assertSame('core', frontend_asset_domain('settings', 'page-settings'));
         $this->assertSame('core', frontend_asset_domain('', 'page-file-preview-standalone'));
     }
+
+    public function test_developer_and_worship_domains_include_shared_page_header_selectors(): void
+    {
+        $selectors = [
+            '.discipleship-page-header {',
+            '.discipleship-page-header__main {',
+            '.discipleship-page-header__copy {',
+            '.discipleship-page-header__kicker {',
+            '.discipleship-page-header__stats {',
+            '.discipleship-page-header__stat {',
+            '.discipleship-page-header__stat-label',
+            '.discipleship-page-header__stat-value',
+        ];
+
+        foreach (['developer', 'worship'] as $domain) {
+            $css = file_get_contents(dirname(__DIR__, 2)."/resources/css/generated/{$domain}.css");
+
+            $this->assertIsString($css);
+            foreach ($selectors as $selector) {
+                $this->assertStringContainsString($selector, $css);
+            }
+        }
+    }
 }
