@@ -11,8 +11,15 @@ class DiscipleshipPeopleXlsxWriter
      * @param  array<int, string>  $headers
      * @param  iterable<int, array<int, string|int|float|null>>  $rows
      */
-    public function create(array $headers, iterable $rows, string $subtitle, string &$errorCode): ?string
-    {
+    public function create(
+        array $headers,
+        iterable $rows,
+        string $subtitle,
+        string &$errorCode,
+        string $title = 'Daftar Anggota DG',
+        string $sheetName = 'Anggota DG',
+    ): ?string {
+
         $errorCode = '';
         if (! class_exists(ZipArchive::class)) {
             $errorCode = 'zip_unavailable';
@@ -34,7 +41,7 @@ class DiscipleshipPeopleXlsxWriter
         $completed = false;
 
         try {
-            $worksheetPath = $this->writeWorksheetFile($headers, $rows, $subtitle);
+            $worksheetPath = $this->writeWorksheetFile($headers, $rows, $subtitle, $title);
             if ($worksheetPath === null) {
                 $errorCode = 'export_failed';
 
@@ -52,9 +59,9 @@ class DiscipleshipPeopleXlsxWriter
             $entries = [
                 '[Content_Types].xml' => $this->contentTypesXml(),
                 '_rels/.rels' => $this->rootRelationshipsXml(),
-                'docProps/app.xml' => $this->appPropertiesXml(),
+                'docProps/app.xml' => $this->appPropertiesXml($sheetName),
                 'docProps/core.xml' => $this->corePropertiesXml(),
-                'xl/workbook.xml' => $this->workbookXml(),
+                'xl/workbook.xml' => $this->workbookXml($sheetName),
                 'xl/_rels/workbook.xml.rels' => $this->workbookRelationshipsXml(),
                 'xl/styles.xml' => $this->stylesXml(),
             ];
@@ -111,7 +118,7 @@ class DiscipleshipPeopleXlsxWriter
      * @param  array<int, string>  $headers
      * @param  iterable<int, array<int, string|int|float|null>>  $rows
      */
-    private function writeWorksheetFile(array $headers, iterable $rows, string $subtitle): ?string
+    private function writeWorksheetFile(array $headers, iterable $rows, string $subtitle, string $title): ?string
     {
         $worksheetPath = tempnam(sys_get_temp_dir(), 'dgpeople_sheet_');
         if ($worksheetPath === false) {
@@ -140,9 +147,9 @@ class DiscipleshipPeopleXlsxWriter
                 .'<col min="3" max="3" width="18" customWidth="1"/>'
                 .'<col min="4" max="4" width="16" customWidth="1"/>'
                 .'<col min="5" max="7" width="14" customWidth="1"/>'
-                .'<col min="8" max="8" width="32" customWidth="1"/>'
+                .'<col min="8" max="'.max(8, count($headers)).'" width="32" customWidth="1"/>'
                 .'</cols><sheetData>'
-                .'<row r="1" ht="28" customHeight="1">'.$this->inlineCell('A1', 'Daftar Anggota DG', 1).'</row>'
+                .'<row r="1" ht="28" customHeight="1">'.$this->inlineCell('A1', $title, 1).'</row>'
                 .'<row r="2" ht="24" customHeight="1">'.$this->inlineCell('A2', $subtitle, 2).'</row>'
                 .'<row r="4" ht="26" customHeight="1">')) {
                 return null;
@@ -245,12 +252,12 @@ class DiscipleshipPeopleXlsxWriter
             .'</Relationships>';
     }
 
-    private function workbookXml(): string
+    private function workbookXml(string $sheetName): string
     {
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
             .'<bookViews><workbookView xWindow="0" yWindow="0" windowWidth="18000" windowHeight="10000"/></bookViews>'
-            .'<sheets><sheet name="Anggota DG" sheetId="1" r:id="rId1"/></sheets>'
+            .'<sheets><sheet name="'.export_xlsx_inline_text($sheetName).'" sheetId="1" r:id="rId1"/></sheets>'
             .'</workbook>';
     }
 
@@ -299,13 +306,13 @@ class DiscipleshipPeopleXlsxWriter
             .'</cp:coreProperties>';
     }
 
-    private function appPropertiesXml(): string
+    private function appPropertiesXml(string $sheetName): string
     {
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">'
             .'<Application>REC</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop>'
             .'<HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs>'
-            .'<TitlesOfParts><vt:vector size="1" baseType="lpstr"><vt:lpstr>Anggota DG</vt:lpstr></vt:vector></TitlesOfParts>'
+            .'<TitlesOfParts><vt:vector size="1" baseType="lpstr"><vt:lpstr>'.export_xlsx_inline_text($sheetName).'</vt:lpstr></vt:vector></TitlesOfParts>'
             .'</Properties>';
     }
 }

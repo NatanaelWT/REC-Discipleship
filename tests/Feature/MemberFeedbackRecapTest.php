@@ -7,6 +7,7 @@ use App\Services\MemberFeedbackJournals\MemberFeedbackQuestionCatalog;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\TestCase;
 
 class MemberFeedbackRecapTest extends TestCase
@@ -41,6 +42,8 @@ class MemberFeedbackRecapTest extends TestCase
         $response->assertSee('data-member-feedback-detail-open', false);
         $response->assertSee('data-member-feedback-detail-modal', false);
         $response->assertSee('class="member-feedback-recap-latest"', false);
+        $response->assertSee('Export Excel');
+        $response->assertSee(route('discipleship.member-feedback-recap.export'), false);
         $response->assertSee('<time datetime="', false);
         $response->assertSee('discipleship-list-panel member-feedback-recap-panel', false);
         $response->assertSee('card table-card-plain dg-recap-section-card member-feedback-recap-group-card', false);
@@ -151,6 +154,78 @@ class MemberFeedbackRecapTest extends TestCase
         $this->assertStringNotContainsString('<th>Cabang</th>', $gmTable);
     }
 
+    public function test_branch_user_exports_full_feedback_to_a_valid_excel_file(): void
+    {
+        $this->createTables();
+        $selected = $this->seedFeedbackFixture(memberName: 'Pengisi Export');
+        $other = $this->seedFeedbackFixture(branchId: 2, leaderName: 'Pemimpin Rahasia', memberName: 'Pengisi Rahasia');
+        $this->seedFeedback($selected, respondentName: 'Pengisi Export', noteContent: 'Catatan export lengkap.');
+        $this->seedFeedback($other, respondentName: 'Pengisi Rahasia', noteContent: 'Catatan cabang lain.');
+        $this->actingAsRecUser();
+
+        $response = $this->get('/pemuridan/umpan-balik-anggota/ekspor');
+
+        $response->assertOk();
+        $this->assertInstanceOf(BinaryFileResponse::class, $response->baseResponse);
+        $this->assertSame(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            $response->headers->get('Content-Type'),
+        );
+        $this->assertStringContainsString('jurnal-umpan-balik-kutisari-', (string) $response->headers->get('Content-Disposition'));
+
+        $path = $response->baseResponse->getFile()->getPathname();
+        try {
+            $error = '';
+            $sheets = import_read_xlsx_sheets($path, $error);
+            $this->assertSame('', $error);
+            $this->assertArrayHasKey('Jurnal Umpan Balik', $sheets);
+            $sheet = $sheets['Jurnal Umpan Balik'];
+            $this->assertSame('Jurnal Umpan Balik Anggota', $sheet[0][0] ?? null);
+            $this->assertSame('No.', $sheet[2][0] ?? null);
+            $this->assertSame('Tanggal', $sheet[2][1] ?? null);
+            $this->assertSame('Cabang', $sheet[2][2] ?? null);
+            $this->assertContains('Apakah pemimpin DG dapat menjadi fasilitator yang baik?', $sheet[2] ?? []);
+            $this->assertContains('Hal lain apa yang bisa Saudara bagikan mengenai pemimpin DG Saudara?', $sheet[2] ?? []);
+            $this->assertSame('Kutisari', $sheet[3][2] ?? null);
+            $this->assertContains('Pengisi Export', $sheet[3] ?? []);
+            $this->assertContains('10 / 10', $sheet[3] ?? []);
+            $this->assertContains('Catatan export lengkap.', $sheet[3] ?? []);
+            $this->assertStringNotContainsString('Pengisi Rahasia', json_encode($sheets, JSON_UNESCAPED_UNICODE));
+            $this->assertStringNotContainsString('Catatan cabang lain.', json_encode($sheets, JSON_UNESCAPED_UNICODE));
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    public function test_central_export_honors_selected_branch(): void
+    {
+        $this->createTables();
+        $kutisari = $this->seedFeedbackFixture(memberName: 'Pengisi Kutisari Export');
+        $gm = $this->seedFeedbackFixture(branchId: 2, leaderName: 'Pemimpin GM Export', memberName: 'Pengisi GM Export');
+        $this->seedFeedback($kutisari, respondentName: 'Pengisi Kutisari Export');
+        $this->seedFeedback($gm, respondentName: 'Pengisi GM Export');
+        $this->actingAsRecUser('recpusat', null, 'pemuridan_pusat');
+
+        $response = $this->get('/pemuridan/umpan-balik-anggota/ekspor?branch_id=2')->assertOk();
+        $path = $response->baseResponse->getFile()->getPathname();
+        try {
+            $error = '';
+            $sheets = import_read_xlsx_sheets($path, $error);
+            $content = json_encode($sheets, JSON_UNESCAPED_UNICODE);
+            $this->assertSame('', $error);
+            $this->assertStringContainsString('Pengisi GM Export', $content);
+            $this->assertStringNotContainsString('Pengisi Kutisari Export', $content);
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    public function test_feedback_export_requires_authentication(): void
+    {
+        $this->get('/pemuridan/umpan-balik-anggota/ekspor')
+            ->assertRedirect(route('auth.login'));
+    }
+
     public function test_thematic_note_board_is_removed_but_detail_keeps_feedback_notes(): void
     {
         $this->createTables();
@@ -217,7 +292,7 @@ class MemberFeedbackRecapTest extends TestCase
 
     private function elementHtmlById(string $html, string $id): string
     {
-        $document = new \DOMDocument();
+        $document = new \DOMDocument;
         $previousErrorMode = libxml_use_internal_errors(true);
 
         try {
@@ -312,8 +387,7 @@ class MemberFeedbackRecapTest extends TestCase
         string $leaderName = 'Pemimpin Test',
         string $memberName = 'Anggota Test',
         string $groupName = 'Kelompok Test',
-    ): array
-    {
+    ): array {
         $leaderId = DB::table('orang')->insertGetId([
             'branch_id' => $branchId,
             'full_name' => $leaderName,
@@ -383,8 +457,7 @@ class MemberFeedbackRecapTest extends TestCase
         string $noteContent = 'Catatan feedback.',
         int $balanceScore = 3,
         int $feedbackSession = 3,
-    ): void
-    {
+    ): void {
         DB::table('jurnal_umpan_balik')->insert([
             'branch_id' => $ids['branch_id'],
             'feedback_session' => $feedbackSession,

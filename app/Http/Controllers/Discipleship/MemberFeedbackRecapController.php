@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Discipleship;
 
 use App\Http\Controllers\Controller;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
+use App\Services\MemberFeedbackJournals\MemberFeedbackExportService;
 use App\Services\MemberFeedbackJournals\MemberFeedbackRecapPageData;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class MemberFeedbackRecapController extends Controller
 {
@@ -32,6 +35,11 @@ class MemberFeedbackRecapController extends Controller
             'panelView' => 'discipleship.member-feedback.panel',
             'tabBranchId' => $this->tabBranchId($request, $scope),
         ]);
+    }
+
+    public function export(Request $request, MemberFeedbackExportService $exporter): BinaryFileResponse|RedirectResponse
+    {
+        return $exporter->export($request);
     }
 
     private function tabBranchId(Request $request, CurrentDiscipleshipScope $scope): int|string|null

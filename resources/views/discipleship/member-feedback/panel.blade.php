@@ -42,6 +42,12 @@
       }
   @endphp
 
+  @if (request()->query('error') === 'export_zip_unavailable')
+    <div class="alert danger">Fitur export Excel belum tersedia karena ekstensi ZipArchive belum aktif.</div>
+  @elseif (request()->query('error') === 'export_failed')
+    <div class="alert danger">Export jurnal umpan balik gagal. Silakan coba kembali.</div>
+  @endif
+
   @include('discipleship.partials.page-header', [
       'header' => [
           'tools' => [

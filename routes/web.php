@@ -140,6 +140,7 @@ Route::middleware('rec.maintenance')->group(function (): void {
         Route::post('/spiritual-journey/{participant}/bridge-status', [DiscipleshipSpiritualJourneyController::class, 'updateBridgeStatus'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.bridge-status');
         Route::get('/laporan-dg', [DiscipleshipMeetingReportRecapController::class, 'index'])->middleware('rec.page:dg_reports_recap')->name('reports-recap');
         Route::get('/umpan-balik-anggota', [DiscipleshipMemberFeedbackRecapController::class, 'index'])->middleware('rec.page:member_feedback_recap')->name('member-feedback-recap');
+        Route::get('/umpan-balik-anggota/ekspor', [DiscipleshipMemberFeedbackRecapController::class, 'export'])->middleware('rec.page:member_feedback_recap')->name('member-feedback-recap.export');
         Route::get('/msk', [DiscipleshipMskParticipantController::class, 'index'])->middleware('rec.page:msk_classes')->name('msk-classes');
         Route::get('/msk/rows', [DiscipleshipMskParticipantController::class, 'rows'])->middleware('rec.page:msk_classes')->name('msk-classes.rows');
         Route::get('/msk/{participant}/detail', [DiscipleshipMskParticipantController::class, 'detail'])->middleware('rec.page:msk_classes')->name('msk-classes.detail');

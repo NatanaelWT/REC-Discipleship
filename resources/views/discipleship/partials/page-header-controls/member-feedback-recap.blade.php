@@ -10,6 +10,10 @@
       @endforeach
     </select>
   </div>
+  <a class="btn tiny ghost member-feedback-export-button" href="{{ route('discipleship.member-feedback-recap.export', request()->only(['branch_id', 'rekap_cabang'])) }}">
+    <?php echo icon_svg('download'); ?>
+    <span>Export Excel</span>
+  </a>
 </div>
 
 <div class="discipleship-page-header__search member-feedback-recap-header-search">
