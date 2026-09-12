@@ -2018,6 +2018,13 @@ button.note-link.dg-recap-photo-trigger {
   white-space: nowrap;
 }
 
+.tree-v2-profile-action.is-hidden,
+.tree-v2-profile-action[hidden],
+.tree-v2-action-buttons .btn.is-hidden,
+.tree-v2-action-buttons .btn[hidden] {
+  display: none;
+}
+
 .tree-v2-profile-action .icon {
   width: 15px;
   height: 15px;

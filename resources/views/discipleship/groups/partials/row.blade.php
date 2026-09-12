@@ -2,6 +2,8 @@
     $rowClass = trim((string) ($groupRow['row_class'] ?? ''));
     $rowStatus = trim((string) ($groupRow['row_status'] ?? 'active'));
     $rowProgress = trim((string) ($groupRow['row_progress'] ?? 'none'));
+    $actionStatus = strtolower(trim((string) ($groupRow['action_status'] ?? $rowStatus)));
+    $hasChildGroup = ! empty($groupRow['has_child_group']);
     $leaderName = trim((string) ($groupRow['leader_name'] ?? '-'));
     if ($leaderName === '') {
         $leaderName = '-';
@@ -30,8 +32,9 @@
           class="group-name-main group-name-link"
           type="button"
           data-tree-v2-history-open="{{ $groupId }}"
-          data-group-detail-status="{{ $rowStatus }}"
+          data-group-detail-status="{{ $actionStatus }}"
           data-group-detail-progress="{{ $progressLabel }}"
+          data-group-detail-has-child="{{ $hasChildGroup ? '1' : '0' }}"
           aria-label="Lihat detail kelompok {{ $leaderName }}"
         >{{ $leaderName }}</button>
       @else

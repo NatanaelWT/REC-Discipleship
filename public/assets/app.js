@@ -2727,11 +2727,12 @@
         }
         const status = String(trigger?.getAttribute('data-group-detail-status') || '').trim().toLowerCase();
         const progress = String(trigger?.getAttribute('data-group-detail-progress') || '').trim().toUpperCase();
+        const hasChildGroup = trigger?.getAttribute('data-group-detail-has-child') === '1';
         const isActive = status === 'active';
         const visibility = {
           add_member: isActive,
           complete_group: isActive,
-          reactivate_group: status !== '' && !isActive,
+          reactivate_group: status === 'completed' && !hasChildGroup,
           upgrade_group: isActive && progress !== 'DG 3',
         };
 
@@ -2739,6 +2740,7 @@
           const action = button.getAttribute('data-tree-v2-action-do') || '';
           const isVisible = visibility[action] === true;
           button.classList.toggle('is-hidden', !isVisible);
+          button.hidden = !isVisible;
           button.disabled = !isVisible;
         });
       };
@@ -3800,13 +3802,9 @@
         const buttons = buttonsByAction[action];
         if (!Array.isArray(buttons)) return;
         buttons.forEach(button => {
-          if (visible) {
-            button.classList.remove('is-hidden');
-            button.disabled = false;
-          } else {
-            button.classList.add('is-hidden');
-            button.disabled = true;
-          }
+          button.classList.toggle('is-hidden', !visible);
+          button.hidden = !visible;
+          button.disabled = !visible;
         });
       };
 
@@ -3877,13 +3875,9 @@
         if (!personProfileModal) return;
         const button = personProfileModal.querySelector('[data-tree-v2-profile-action="' + action + '"]');
         if (!button) return;
-        if (visible) {
-          button.classList.remove('is-hidden');
-          button.disabled = false;
-        } else {
-          button.classList.add('is-hidden');
-          button.disabled = true;
-        }
+        button.classList.toggle('is-hidden', !visible);
+        button.hidden = !visible;
+        button.disabled = !visible;
       };
 
       const currentPersonGroupContext = () => {
@@ -4006,7 +4000,7 @@
           && !nodeData.isRoot
           && currentGroupId !== ''
           && currentGroupStatus === 'active';
-        const isActiveGroup = !isPerson && String(nodeData.status || 'active').trim() === 'active';
+        const isActiveGroup = !isPerson && String(nodeData.status || '').trim() === 'active';
         const canAddMember = (!isPerson && !nodeData.isUngrouped && isActiveGroup) || (isPerson && nodeData.isRoot);
         const canViewHistory = !isPerson && nodeData.groupId !== '';
         const canCompleteGroup = !isPerson

@@ -81,6 +81,8 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
             ->assertSee('data-tree-group-detail-url-template=', false)
             ->assertSee('data-tree-v2-history-modal', false)
             ->assertSee('data-tree-v2-history-open="1"', false)
+            ->assertSee('data-group-detail-status="active"', false)
+            ->assertSee('data-group-detail-has-child="0"', false)
             ->assertSee('Riwayat Kelompok')
             ->assertSee('tree-group-history-modal-card discipleship-tree-panel', false)
             ->assertSee('data-tree-v2-action-do="add_member"', false)
@@ -125,10 +127,22 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
             ['id' => 3, 'branch_id' => 1, 'full_name' => 'Anggota Historis', 'status' => 'active'],
         ]);
         DB::table('kelompok_dg')->insert([
-            'id' => 1,
-            'branch_id' => 1,
-            'status' => 'completed',
-            'stage' => 'DG 2',
+            [
+                'id' => 1,
+                'branch_id' => 1,
+                'status' => 'completed',
+                'stage' => 'DG 2',
+                'parent_group_id' => null,
+                'source_group_id' => null,
+            ],
+            [
+                'id' => 2,
+                'branch_id' => 1,
+                'status' => 'completed',
+                'stage' => 'DG 3',
+                'parent_group_id' => 1,
+                'source_group_id' => null,
+            ],
         ]);
         DB::table('keanggotaan_kelompok_dg')->insert([
             ['branch_id' => 1, 'discipleship_group_id' => 1, 'person_id' => 1, 'role' => 'leader', 'stage' => null, 'status' => 'closed', 'ended_on' => '2026-05-01'],
@@ -148,6 +162,8 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
             ->assertSee('Pemimpin Historis')
             ->assertSee('Riwayat pendamping: Pendamping Historis')
             ->assertSee('Anggota Historis')
+            ->assertSee('data-group-detail-status="completed"', false)
+            ->assertSee('data-group-detail-has-child="1"', false)
             ->assertDontSee('1 peserta tercatat')
             ->assertDontSee('Belum ada peserta')
             ->assertDontSee('Tanpa pendamping');
@@ -187,6 +203,8 @@ class DiscipleshipGroupListPerformanceTest extends TestCase
             $table->unsignedBigInteger('branch_id');
             $table->string('status')->default('active');
             $table->string('stage')->nullable();
+            $table->unsignedBigInteger('parent_group_id')->nullable();
+            $table->unsignedBigInteger('source_group_id')->nullable();
             $table->timestamps();
         });
         Schema::create('keanggotaan_kelompok_dg', function (Blueprint $table): void {

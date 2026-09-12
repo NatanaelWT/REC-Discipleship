@@ -5,10 +5,10 @@
 
     if (! $groupHistoryReadOnly) {
         $groupHistoryFooterHtml .= '<div class="tree-v2-profile-actions tree-v2-history-actions">';
-        $groupHistoryFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-add" type="button" data-tree-v2-action-do="add_member">'.icon_svg('plus').'<span>Tambah Anggota</span></button>';
-        $groupHistoryFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-complete" type="button" data-tree-v2-action-do="complete_group">'.icon_svg('check').'<span>Selesaikan DG</span></button>';
-        $groupHistoryFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-reactivate" type="button" data-tree-v2-action-do="reactivate_group">'.icon_svg('check').'<span>Aktifkan DG</span></button>';
-        $groupHistoryFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-upgrade" type="button" data-tree-v2-action-do="upgrade_group">'.icon_svg('plus').'<span>Upgrade DG</span></button>';
+        $groupHistoryFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-add is-hidden" type="button" data-tree-v2-action-do="add_member" hidden disabled>'.icon_svg('plus').'<span>Tambah Anggota</span></button>';
+        $groupHistoryFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-complete is-hidden" type="button" data-tree-v2-action-do="complete_group" hidden disabled>'.icon_svg('check').'<span>Selesaikan DG</span></button>';
+        $groupHistoryFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-reactivate is-hidden" type="button" data-tree-v2-action-do="reactivate_group" hidden disabled>'.icon_svg('check').'<span>Aktifkan DG</span></button>';
+        $groupHistoryFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-upgrade is-hidden" type="button" data-tree-v2-action-do="upgrade_group" hidden disabled>'.icon_svg('plus').'<span>Upgrade DG</span></button>';
         if ($groupHistoryAllowDelete) {
             $groupHistoryFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-delete" type="button" data-tree-v2-action-do="delete_group">'.icon_svg('trash').'<span>Hapus Kelompok</span></button>';
         }

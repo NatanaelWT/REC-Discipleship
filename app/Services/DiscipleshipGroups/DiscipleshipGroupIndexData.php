@@ -40,6 +40,14 @@ class DiscipleshipGroupIndexData
         $nameExpression = $this->cursorNameExpression();
         $query = $this->filteredGroupQuery($search, $status)
             ->select(['discipleship_groups.id', 'branch_id', 'status', 'stage', 'created_at'])
+            ->selectRaw('EXISTS (
+                SELECT 1 FROM kelompok_dg AS child_groups
+                WHERE child_groups.id <> discipleship_groups.id
+                AND (
+                    child_groups.parent_group_id = discipleship_groups.id
+                    OR child_groups.source_group_id = discipleship_groups.id
+                )
+            ) AS has_child_group')
             ->addSelect(DB::raw($nameExpression.' as cursor_name'))
             ->orderByRaw($nameExpression)
             ->orderBy('discipleship_groups.id');
@@ -113,7 +121,7 @@ class DiscipleshipGroupIndexData
     }
 
     /**
-     * @param Collection<int, DiscipleshipGroup> $groups
+     * @param  Collection<int, DiscipleshipGroup>  $groups
      * @return Collection<int, array<string, mixed>>
      */
     private function rows(Collection $groups): Collection
@@ -151,9 +159,12 @@ class DiscipleshipGroupIndexData
             if ($this->scope->includesAllBranches()) {
                 $leaderName = append_branch_suffix($leaderName, $branchLabel);
             }
+
             return [
                 'id' => (int) $group->id,
                 'row_status' => strtolower((string) $group->status) === 'active' ? 'active' : 'inactive',
+                'action_status' => strtolower(trim((string) $group->status)),
+                'has_child_group' => (bool) $group->has_child_group,
                 'row_progress' => strtolower(str_replace(' ', '', $progress)),
                 'row_class' => strtolower((string) $group->status) === 'active' ? '' : 'is-inactive',
                 'leader_name' => $leaderName,
