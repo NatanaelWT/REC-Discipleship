@@ -261,28 +261,6 @@
   }
 }
 
-.dg-checklist {
-  margin: 0;
-  padding: 14px 14px 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #f8fafc;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.dg-checklist label.check-label {
-  font-weight: 500;
-  line-height: 1.45;
-  align-items: flex-start;
-}
-
-.dg-checklist label.check-label input[type="checkbox"] {
-  margin-top: 2px;
-  flex: 0 0 auto;
-}
-
 .dg-checklist.msk-session-checklist {
   gap: 10px;
 }
@@ -306,66 +284,7 @@
   margin-top: 0;
 }
 
-.dg-rating {
-  margin: 0;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #f8fafc;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.dg-rating-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.dg-rating-hint {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.dg-rating-hint span:last-child {
-  text-align: right;
-}
-
-.dg-rating-scale {
-  display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.dg-rating-option {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 4px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  color: var(--text);
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.dg-rating-option input[type="radio"] {
-  margin: 0;
-}
-
-.dg-rating-option span {
-  line-height: 1;
-}
-
-.dg-checklist legend,
-.dg-rating legend,
-.dg-section-title {
+.dg-checklist legend {
   display: block;
   width: 100%;
   margin: 0 0 6px;
@@ -376,21 +295,6 @@
   letter-spacing: 0;
   color: #000000;
   padding: 0;
-}
-
-.form-grid label.dg-member-item {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 8px;
-  color: var(--text);
-  font-weight: 500;
-  margin: 0;
-}
-
-.form-grid label.dg-member-item input[type="checkbox"] {
-  margin-top: 2px;
-  flex: 0 0 auto;
 }
 
 .dg-recap-table td {
@@ -3517,10 +3421,6 @@ button.note-link.dg-recap-photo-trigger {
   .tree-v2-meta {
     font-size: 10px;
   }
-
-  .dg-rating-scale {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 720px) {
@@ -3596,9 +3496,6 @@ button.note-link.dg-recap-photo-trigger {
   .central-rekap-head {
     align-items: stretch;
   }
-  .dg-rating-scale {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
   .tree.horizontal .tree-row,
   .group-members .tree-row {
     --row-gap: 8px;
@@ -3614,13 +3511,6 @@ button.note-link.dg-recap-photo-trigger {
   .discipleship-progress-pie-grid > .member-pie-card:first-child .member-pie-svg {
     width: 188px;
     height: 188px;
-  }
-  .dg-rating-hint {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .dg-rating-hint span:last-child {
-    text-align: left;
   }
 
 }

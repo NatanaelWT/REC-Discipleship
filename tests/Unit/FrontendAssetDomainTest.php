@@ -25,6 +25,25 @@ class FrontendAssetDomainTest extends TestCase
         $this->assertSame('core', frontend_asset_domain('', 'page-file-preview-standalone'));
     }
 
+    public function test_shared_dg_form_components_stay_in_core_bundle(): void
+    {
+        $css = file_get_contents(dirname(__DIR__, 2).'/resources/css/generated/core.css');
+
+        $this->assertIsString($css);
+        foreach ([
+            '.dg-checklist {',
+            '.dg-rating {',
+            '.dg-rating-body {',
+            '.dg-rating-hint {',
+            '.dg-rating-scale {',
+            '.dg-rating-option {',
+            '.dg-section-title {',
+            '.form-grid label.dg-member-item {',
+        ] as $selector) {
+            $this->assertStringContainsString($selector, $css);
+        }
+    }
+
     public function test_developer_and_worship_domains_include_shared_page_header_selectors(): void
     {
         $selectors = [

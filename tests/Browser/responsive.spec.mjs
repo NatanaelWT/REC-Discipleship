@@ -493,6 +493,40 @@ async function assertWorkspaceUsesDocumentScroll(page, label, panelSelector) {
     return result.documentScrollRange;
 }
 
+test.describe('DG report layout regression', () => {
+    test.use({ viewport: { width: 1110, height: 800 } });
+
+    test('loads shared form styles and avoids cramped four-column layout', async ({ page }) => {
+        const response = await goto(page, '/publik/jurnal-dg/kutisari/laporan');
+        expect(response?.status()).toBeLessThan(400);
+
+        const layout = await page.evaluate(() => {
+            const form = document.querySelector('.dg-public-report-form');
+            const checklist = document.querySelector('.dg-section-quality');
+            const rating = document.querySelector('.dg-section-sharing');
+            const ratingOption = document.querySelector('.dg-rating-option');
+            if (!form || !checklist || !rating || !ratingOption) return null;
+
+            return {
+                columns: getComputedStyle(form).gridTemplateColumns.split(' ').length,
+                checklistDisplay: getComputedStyle(checklist).display,
+                checklistBorder: getComputedStyle(checklist).borderTopWidth,
+                ratingDisplay: getComputedStyle(rating).display,
+                ratingOptionDisplay: getComputedStyle(ratingOption).display,
+            };
+        });
+
+        expect(layout).toEqual({
+            columns: 2,
+            checklistDisplay: 'flex',
+            checklistBorder: '1px',
+            ratingDisplay: 'flex',
+            ratingOptionDisplay: 'flex',
+        });
+        await assertResponsive(page, 'dg-report-1110');
+    });
+});
+
 for (const viewport of viewports) {
     test.describe(viewport.name, () => {
         test.use({ viewport: { width: viewport.width, height: viewport.height } });

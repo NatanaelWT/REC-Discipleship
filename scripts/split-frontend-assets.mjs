@@ -71,10 +71,19 @@ const fontFaces = `/* Local variable fonts. Licenses: /assets/fonts/licenses/ */
 
 `;
 
+const sharedComponentPatterns = [
+    /^\.dg-checklist(?:\s+label\.check-label(?:\s+input\[type="checkbox"\])?)?$/,
+    /^\.dg-rating(?:$|-body$|-hint(?:\s+span:last-child)?$|-scale$|-option(?:\s+(?:input\[type="radio"\]|span))?$|\s+legend$)/,
+    /^\.dg-section-title$/,
+    /^\.form-grid label\.dg-member-item(?:\s+input\[type="checkbox"\])?$/,
+];
+
 function selectorDomains(selector) {
-    const domain = ['public', 'developer', 'worship', 'discipleship'].find((candidate) => (
-        domainPatterns[candidate].some((pattern) => pattern.test(selector))
-    )) || 'core';
+    const domain = sharedComponentPatterns.some((pattern) => pattern.test(selector))
+        ? 'core'
+        : ['public', 'developer', 'worship', 'discipleship'].find((candidate) => (
+            domainPatterns[candidate].some((pattern) => pattern.test(selector))
+        )) || 'core';
 
     return selector.includes('discipleship-page-header')
         ? [...new Set([domain, 'developer', 'worship'])]
