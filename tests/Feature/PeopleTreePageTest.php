@@ -6,6 +6,7 @@ use App\Services\Branches\BranchCatalog;
 use App\Services\DiscipleshipPeopleTree\PeopleTreeModelStore;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\AssertsDiscipleshipWorkspace;
 use Tests\TestCase;
@@ -51,6 +52,8 @@ class PeopleTreePageTest extends TestCase
         $response->assertSee('data-tree-v2-action-do="add_member"', false);
         $response->assertSee('data-tree-v2-action-do="complete_group"', false);
         $response->assertSee('data-tree-v2-action-do="upgrade_group"', false);
+        $response->assertSee('data-tree-v2-action-do="delete_group"', false);
+        $response->assertSee('data-tree-v2-delete-group-form', false);
         $response->assertDontSee('data-tree-v2-person-profile-template=', false);
         $response->assertDontSee('data-tree-v2-history-template=', false);
         $response->assertSee('tree-v2-history-actions', false);
@@ -229,6 +232,8 @@ class PeopleTreePageTest extends TestCase
             ->assertSee('data-tree-v2-node-action="person" data-person-id="626"', false)
             ->assertSee('tree-v2-node tree-v2-person is-male is-actionable', false)
             ->assertDontSee('data-tree-v2-profile-action="edit_person"', false)
+            ->assertDontSee('data-tree-v2-action-do="delete_group"', false)
+            ->assertDontSee('data-tree-v2-delete-group-form', false)
             ->assertDontSee('data-tree-v2-action-modal', false);
 
         $detail = $this->get('/pemuridan/pohon/orang/626/detail?branch_id=1')
@@ -790,6 +795,97 @@ class PeopleTreePageTest extends TestCase
         $this->assertContains((string) $personId, $groups[(string) $dg3GroupId]['member_ids']);
     }
 
+    public function test_branch_user_can_permanently_delete_group_data_without_deleting_people(): void
+    {
+        $this->createTables();
+        $this->createGroupDeletionTables();
+        $this->seedPeopleTree();
+
+        $groupId = (int) DB::table('kelompok_dg')->where('branch_id', 1)->value('id');
+        $personIds = DB::table('keanggotaan_kelompok_dg')
+            ->where('discipleship_group_id', $groupId)
+            ->pluck('person_id')
+            ->map(static fn (mixed $id): int => (int) $id)
+            ->all();
+        $childGroupId = DB::table('kelompok_dg')->insertGetId([
+            'branch_id' => 1,
+            'status' => 'active',
+            'stage' => 'DG 2',
+            'parent_group_id' => $groupId,
+            'source_group_id' => $groupId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $photoPath = 'uploads/dg_reports/delete-group-'.bin2hex(random_bytes(6)).'.jpg';
+        $absolutePhotoPath = storage_path('app/private/'.$photoPath);
+        File::ensureDirectoryExists(dirname($absolutePhotoPath));
+        File::put($absolutePhotoPath, 'test-photo');
+
+        DB::table('jurnal_temu_dg')->insert([
+            'branch_id' => 1,
+            'discipleship_group_id' => $groupId,
+            'photos' => json_encode([['path' => $photoPath]]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('jurnal_umpan_balik')->insert([
+            'branch_id' => 1,
+            'discipleship_group_id' => $groupId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAsRecUser();
+
+        try {
+            $this->delete('/pemuridan/pohon/kelompok/'.$groupId, [
+                'return_page' => 'people_tree',
+            ])->assertRedirect('/pemuridan/pohon?group_deleted=1');
+
+            $this->assertDatabaseMissing('kelompok_dg', ['id' => $groupId]);
+            $this->assertDatabaseMissing('keanggotaan_kelompok_dg', ['discipleship_group_id' => $groupId]);
+            $this->assertDatabaseMissing('jurnal_temu_dg', ['discipleship_group_id' => $groupId]);
+            $this->assertDatabaseMissing('jurnal_umpan_balik', ['discipleship_group_id' => $groupId]);
+            foreach ($personIds as $personId) {
+                $this->assertDatabaseHas('orang', ['id' => $personId]);
+            }
+            $this->assertDatabaseHas('kelompok_dg', [
+                'id' => $childGroupId,
+                'parent_group_id' => null,
+                'source_group_id' => null,
+            ]);
+            $this->assertFileDoesNotExist($absolutePhotoPath);
+        } finally {
+            File::delete($absolutePhotoPath);
+        }
+    }
+
+    public function test_group_delete_is_scoped_to_the_users_branch(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $groupId = (int) DB::table('kelompok_dg')->where('branch_id', 1)->value('id');
+        $this->actingAsRecUser('gm_user', 'gm');
+
+        $this->delete('/pemuridan/pohon/kelompok/'.$groupId)->assertNotFound();
+
+        $this->assertDatabaseHas('kelompok_dg', ['id' => $groupId, 'branch_id' => 1]);
+        $this->assertDatabaseHas('keanggotaan_kelompok_dg', ['discipleship_group_id' => $groupId]);
+    }
+
+    public function test_central_read_only_user_cannot_delete_a_group(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $groupId = (int) DB::table('kelompok_dg')->where('branch_id', 1)->value('id');
+        $this->actingAsRecUser('central_reader', null, 'pemuridan_pusat');
+
+        $this->delete('/pemuridan/pohon/kelompok/'.$groupId.'?branch_id=1')->assertForbidden();
+
+        $this->assertDatabaseHas('kelompok_dg', ['id' => $groupId, 'branch_id' => 1]);
+        $this->assertDatabaseHas('keanggotaan_kelompok_dg', ['discipleship_group_id' => $groupId]);
+    }
+
     public function test_people_tree_write_invalidates_cached_read_model(): void
     {
         $this->createTables();
@@ -1023,8 +1119,28 @@ class PeopleTreePageTest extends TestCase
         ]);
     }
 
+    private function createGroupDeletionTables(): void
+    {
+        Schema::create('jurnal_temu_dg', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->unsignedBigInteger('discipleship_group_id')->nullable();
+            $table->json('photos')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('jurnal_umpan_balik', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('branch_id');
+            $table->unsignedBigInteger('discipleship_group_id')->nullable();
+            $table->timestamps();
+        });
+    }
+
     private function createTables(): void
     {
+        Schema::dropIfExists('jurnal_umpan_balik');
+        Schema::dropIfExists('jurnal_temu_dg');
         Schema::dropIfExists('dg_manual');
         Schema::dropIfExists('keanggotaan_kelompok_dg');
         Schema::dropIfExists('relasi_dg');

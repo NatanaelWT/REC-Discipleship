@@ -81,7 +81,7 @@ class PublicMaterialManagementTest extends TestCase
 
         $response = $this->post('/materi/materi_dg_1/upload', [
             'title' => 'Materi Baru Pusat',
-            'material_file' => UploadedFile::fake()->create('materi-baru.pdf', 12, 'application/pdf'),
+            'material_file' => UploadedFile::fake()->createWithContent('materi-baru.pdf', $this->minimalPdf()),
         ]);
 
         $response->assertRedirect('/materi/materi_dg_1?material_status=uploaded');
@@ -97,6 +97,21 @@ class PublicMaterialManagementTest extends TestCase
         $this->assertFileExists(storage_path('app/public/'.(string) $row->relative_path));
         $this->assertFileDoesNotExist(rec_runtime_path((string) $row->relative_path));
         $this->assertNoTrackingQueriesWereExecuted();
+    }
+
+    public function test_upload_rejects_a_pdf_extension_with_non_pdf_contents(): void
+    {
+        $this->loginAsMaterialManager();
+        $filesBefore = $this->storedMaterialFilePaths();
+
+        $response = $this->post('/materi/materi_dg_1/upload', [
+            'title' => 'Materi Palsu',
+            'material_file' => UploadedFile::fake()->createWithContent('materi-palsu.pdf', '<?php echo "not a pdf";'),
+        ]);
+
+        $response->assertRedirect('/materi/materi_dg_1?material_error=invalid_file_type');
+        $this->assertDatabaseMissing('materi_publik', ['title' => 'Materi Palsu']);
+        $this->assertSame($filesBefore, $this->storedMaterialFilePaths());
     }
 
     public function test_public_material_preview_streams_file_from_public_storage(): void
@@ -465,6 +480,25 @@ class PublicMaterialManagementTest extends TestCase
     private function test_relative_folder(PublicMaterialMenuKey $menu): string
     {
         return public_material_folder_relative_path($menu->folder());
+    }
+
+    /** @return array<int, string> */
+    private function storedMaterialFilePaths(): array
+    {
+        $directory = storage_path('app/public/'.$this->testBasePath);
+        if (! File::isDirectory($directory)) {
+            return [];
+        }
+
+        $paths = array_map(static fn ($file): string => $file->getPathname(), File::allFiles($directory));
+        sort($paths);
+
+        return $paths;
+    }
+
+    private function minimalPdf(): string
+    {
+        return "%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n";
     }
 
     private function loginAsMaterialManager(): void

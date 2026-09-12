@@ -2,6 +2,7 @@
 
 namespace App\Services\DiscipleshipPeopleTree;
 
+use App\Http\Requests\DiscipleshipPeopleTree\DeletePeopleTreeGroupRequest;
 use App\Services\Branches\BranchCatalog;
 use App\Services\Routing\AppPageRouteMap;
 use Illuminate\Http\RedirectResponse;
@@ -12,6 +13,7 @@ class PeopleTreeWriter
 {
     public function __construct(
         private readonly PeopleTreeModelStore $modelStore,
+        private readonly PeopleTreeGroupDeleter $groupDeleter,
         private readonly BranchCatalog $branches,
     ) {}
 
@@ -28,6 +30,19 @@ class PeopleTreeWriter
     public function saveGroup(Request $request): RedirectResponse
     {
         return $this->handle($request, 'save_group');
+    }
+
+    public function deleteGroup(DeletePeopleTreeGroupRequest $request): RedirectResponse
+    {
+        if (! $this->validPostRequest()) {
+            abort(403, 'Permintaan ditolak demi keamanan.');
+        }
+
+        if (! $this->groupDeleter->delete($request->branchId(), $request->groupId())) {
+            abort(404);
+        }
+
+        return $this->redirectToReturnPage($request, ['group_deleted' => 1]);
     }
 
     public function leavePersonGroup(Request $request): RedirectResponse
@@ -143,8 +158,6 @@ class PeopleTreeWriter
             $result = dgv2_archive_person($model, trim((string) $request->input('id', '')));
         } elseif ($action === 'save_group') {
             $result = dgv2_save_group($model, $payload, $leaderCandidatesById, $localProjectionPeopleById);
-        } elseif ($action === 'delete_group') {
-            $result = dgv2_archive_group($model, trim((string) $request->input('id', '')));
         } elseif ($action === 'leave_person_group') {
             $result = dgv2_leave_group(
                 $model,
@@ -224,7 +237,6 @@ class PeopleTreeWriter
             'save_person',
             'delete_person',
             'save_group',
-            'delete_group',
             'leave_person_group',
             'complete_group',
             'reactivate_group',

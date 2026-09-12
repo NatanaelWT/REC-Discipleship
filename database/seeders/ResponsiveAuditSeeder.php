@@ -51,14 +51,14 @@ class ResponsiveAuditSeeder extends Seeder
         }
 
         $people = collect([
-            ['Nama Peserta Dengan Teks Sangat Panjang Untuk Pengujian Responsif', range(1, 12)],
-            ['Adelynn Regina Gunawan', [1, 2, 3, 4]],
-            ['Agnes Pramayu', [1, 2]],
-            ['Christopher Jonathan Setiawan', range(1, 12)],
-            ['Maria Magdalena', [1, 2, 3, 4, 5, 6]],
-            ['Yohanes Kurniawan', range(1, 12)],
-            ['Stefanny Soesanto', [1]],
-            ['Michelle Heidy Widjaya', range(1, 12)],
+            ['Peserta Uji Dengan Teks Sangat Panjang Untuk Pengujian Responsif', range(1, 12)],
+            ['Peserta Uji 01', [1, 2, 3, 4]],
+            ['Peserta Uji 02', [1, 2]],
+            ['Peserta Uji 03', range(1, 12)],
+            ['Peserta Uji 04', [1, 2, 3, 4, 5, 6]],
+            ['Peserta Uji 05', range(1, 12)],
+            ['Peserta Uji 06', [1]],
+            ['Peserta Uji 07', range(1, 12)],
         ])->map(function (array $row, int $index) use ($branchIds): Person {
             return Person::query()->create([
                 'branch_id' => $branchIds['kutisari'],

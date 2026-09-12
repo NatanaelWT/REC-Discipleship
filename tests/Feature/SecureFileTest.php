@@ -2,8 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Services\Branches\BranchCatalog;
 use App\Support\RuntimeBootstrap;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
@@ -18,6 +22,9 @@ class SecureFileTest extends TestCase
     private string $blockedPath = 'uploads/secure-test/script.php';
 
     private string $legacyTextPath = 'uploads/secure-test-legacy/readme.txt';
+
+    /** @var array<int, string> */
+    private array $branchPaths = [];
 
     protected function setUp(): void
     {
@@ -44,6 +51,9 @@ class SecureFileTest extends TestCase
             File::deleteDirectory($this->testUploadDirectory);
         }
         File::deleteDirectory(public_path('uploads/secure-test-legacy'));
+        foreach ($this->branchPaths as $path) {
+            File::delete(rec_runtime_path($path));
+        }
         if (File::isDirectory(public_path('uploads')) && count(File::files(public_path('uploads'))) === 0 && count(File::directories(public_path('uploads'))) === 0) {
             File::deleteDirectory(public_path('uploads'));
         }
@@ -149,6 +159,57 @@ class SecureFileTest extends TestCase
         $tampered = str_replace('readme.txt', 'preview.png', $url);
 
         $this->get($tampered)->assertForbidden();
+    }
+
+    public function test_branch_user_cannot_access_another_branch_secure_file(): void
+    {
+        Schema::create('cabang', function (Blueprint $table): void {
+            $table->id();
+            $table->string('label')->unique();
+            $table->boolean('is_active')->default(true);
+        });
+        foreach (['orang', 'jurnal_temu_dg'] as $tableName) {
+            Schema::create($tableName, function (Blueprint $table): void {
+                $table->id();
+                $table->unsignedBigInteger('branch_id');
+                $table->json('photos')->nullable();
+            });
+        }
+        DB::table('cabang')->insert([
+            ['id' => 1, 'label' => 'Kutisari', 'is_active' => true],
+            ['id' => 2, 'label' => 'GM', 'is_active' => true],
+        ]);
+
+        $branchFiles = [
+            'orang' => [
+                1 => 'uploads/peserta/secure-branch-kutisari-test.txt',
+                2 => 'uploads/peserta/secure-branch-gm-test.txt',
+            ],
+            'jurnal_temu_dg' => [
+                1 => 'uploads/dg_reports/secure-branch-kutisari-test.txt',
+                2 => 'uploads/dg_reports/secure-branch-gm-test.txt',
+            ],
+        ];
+        foreach ($branchFiles as $table => $paths) {
+            foreach ($paths as $branchId => $path) {
+                $this->branchPaths[] = $path;
+                File::ensureDirectoryExists(dirname(rec_runtime_path($path)));
+                File::put(rec_runtime_path($path), "Secure branch file\n");
+                DB::table($table)->insert([
+                    'branch_id' => $branchId,
+                    'photos' => json_encode([['path' => $path]]),
+                ]);
+            }
+        }
+        app(BranchCatalog::class)->clearCache();
+        $this->actingAsRecUser('kutisari-user', 'kutisari');
+
+        foreach ($branchFiles as $paths) {
+            $this->get($this->secureUrl($paths[1], ['raw' => '1']))->assertOk();
+            $this->get($this->secureUrl($paths[2], ['raw' => '1']))
+                ->assertForbidden()
+                ->assertSee('Akses file tidak diizinkan.');
+        }
     }
 
     /** @param array<string, string> $parameters */

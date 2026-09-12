@@ -6,6 +6,8 @@ use App\Enums\UserAccessRole;
 use App\Models\User;
 use App\Services\Branches\BranchCatalog;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class CurrentUserContext
 {
@@ -230,7 +232,47 @@ class CurrentUserContext
 
         foreach ($allowedPrefixes as $prefix) {
             if (str_starts_with($path, $prefix)) {
-                return true;
+                return ! $this->isDiscipleshipBranch() || $this->secureUploadPathBelongsToBranch($path, $this->branchId());
+            }
+        }
+
+        return false;
+    }
+
+    private function secureUploadPathBelongsToBranch(string $path, ?int $branchId): bool
+    {
+        if ($branchId === null) {
+            return false;
+        }
+
+        $table = str_starts_with($path, 'uploads/dg_reports/') ? 'jurnal_temu_dg' : 'orang';
+
+        // ponytail: Legacy paths have no owner column; normalize ownership when a schema migration is approved.
+        try {
+            $rows = DB::table($table)
+                ->where('branch_id', $branchId)
+                ->where('photos', 'like', '%'.basename($path).'%')
+                ->pluck('photos');
+        } catch (Throwable) {
+            return false;
+        }
+
+        foreach ($rows as $rawPhotos) {
+            $photos = is_string($rawPhotos) ? json_decode($rawPhotos, true) : $rawPhotos;
+            if (! is_array($photos)) {
+                continue;
+            }
+
+            foreach ($photos as $photo) {
+                if (! is_array($photo)) {
+                    continue;
+                }
+
+                foreach (['path', 'web_path', 'thumbnail_path'] as $key) {
+                    if (sanitize_relative_upload_path((string) ($photo[$key] ?? '')) === $path) {
+                        return true;
+                    }
+                }
             }
         }
 

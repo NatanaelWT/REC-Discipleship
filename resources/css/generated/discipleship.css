@@ -3732,6 +3732,19 @@ button.note-link.dg-recap-photo-trigger {
   width: 210px;
 }
 
+.member-feedback-export-button {
+  flex: 0 0 auto;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.member-feedback-export-button .icon {
+  width: 18px;
+  height: 18px;
+}
+
 .member-feedback-recap-header-search {
   flex: 1 1 420px;
   width: auto;

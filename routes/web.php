@@ -126,6 +126,7 @@ Route::middleware('rec.maintenance')->group(function (): void {
         Route::post('/pohon/orang', [DiscipleshipPeopleTreeController::class, 'savePerson'])->middleware('rec.page:people_tree')->name('tree.people.save');
         Route::post('/pohon/orang/hapus', [DiscipleshipPeopleTreeController::class, 'deletePerson'])->middleware('rec.page:people_tree')->name('tree.people.delete');
         Route::post('/pohon/kelompok', [DiscipleshipPeopleTreeController::class, 'saveGroup'])->middleware('rec.page:people_tree')->name('tree.groups.save');
+        Route::delete('/pohon/kelompok/{group}', [DiscipleshipPeopleTreeController::class, 'deleteGroup'])->whereNumber('group')->middleware('rec.page:people_tree')->name('tree.groups.delete');
         Route::post('/pohon/kelompok/keluar', [DiscipleshipPeopleTreeController::class, 'leavePersonGroup'])->middleware('rec.page:people_tree')->name('tree.groups.leave');
         Route::post('/pohon/kelompok/selesai', [DiscipleshipPeopleTreeController::class, 'completeGroup'])->middleware('rec.page:people_tree')->name('tree.groups.complete');
         Route::post('/pohon/kelompok/aktifkan', [DiscipleshipPeopleTreeController::class, 'reactivateGroup'])->middleware('rec.page:people_tree')->name('tree.groups.reactivate');

@@ -10,9 +10,11 @@ use App\Services\Mutation\MutationLifecycle;
 use App\Services\PublicMaterials\PublicMaterialCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use ZipArchive;
 
 class MaterialController extends Controller
 {
@@ -84,7 +86,7 @@ class MaterialController extends Controller
         }
 
         $allowedExtensions = secure_file_allowed_extensions();
-        if ($extension === '' || ! isset($allowedExtensions[$extension])) {
+        if ($extension === '' || ! isset($allowedExtensions[$extension]) || ! $this->hasValidFileContents($file, $extension)) {
             return $this->redirectToMaterialMenu($menu, ['material_error' => 'invalid_file_type']);
         }
 
@@ -159,6 +161,59 @@ class MaterialController extends Controller
         ])->save();
 
         return $this->redirectToMaterialMenu($menu, ['material_status' => 'renamed']);
+    }
+
+    private function hasValidFileContents(UploadedFile $file, string $extension): bool
+    {
+        // ponytail: This verifies file structure, not malware; add quarantine scanning when infrastructure supports it.
+        $path = (string) ($file->getRealPath() ?: '');
+        $header = $path !== '' ? @file_get_contents($path, false, null, 0, 16) : false;
+        if (! is_string($header)) {
+            return false;
+        }
+
+        return match ($extension) {
+            'pdf' => str_starts_with($header, '%PDF-'),
+            'doc', 'xls', 'ppt' => str_starts_with($header, "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"),
+            'docx' => $this->hasValidZipContents($path, 'word/document.xml'),
+            'xlsx' => $this->hasValidZipContents($path, 'xl/workbook.xml'),
+            'pptx' => $this->hasValidZipContents($path, 'ppt/presentation.xml'),
+            'jpg' => $this->hasValidImageContents($path, IMAGETYPE_JPEG),
+            'png' => $this->hasValidImageContents($path, IMAGETYPE_PNG),
+            'webp' => $this->hasValidImageContents($path, IMAGETYPE_WEBP),
+            'gif' => $this->hasValidImageContents($path, IMAGETYPE_GIF),
+            'zip' => $this->hasValidZipContents($path),
+            'rar' => str_starts_with($header, "Rar!\x1A\x07\x00") || str_starts_with($header, "Rar!\x1A\x07\x01\x00"),
+            'txt', 'csv' => ! str_contains($header, "\0"),
+            default => false,
+        };
+    }
+
+    private function hasValidImageContents(string $path, int $expectedType): bool
+    {
+        $size = @getimagesize($path);
+
+        return is_array($size) && ($size[2] ?? null) === $expectedType;
+    }
+
+    private function hasValidZipContents(string $path, ?string $requiredEntry = null): bool
+    {
+        if (! class_exists(ZipArchive::class)) {
+            return false;
+        }
+
+        $zip = new ZipArchive;
+        if ($zip->open($path) !== true) {
+            return false;
+        }
+
+        try {
+            return $requiredEntry === null
+                || ($zip->locateName('[Content_Types].xml', ZipArchive::FL_NOCASE) !== false
+                    && $zip->locateName($requiredEntry, ZipArchive::FL_NOCASE) !== false);
+        } finally {
+            $zip->close();
+        }
     }
 
     /**

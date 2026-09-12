@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Discipleship;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DiscipleshipPeopleTree\CompletePeopleTreeGroupRequest;
+use App\Http\Requests\DiscipleshipPeopleTree\DeletePeopleTreeGroupRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\DeletePeopleTreePersonRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\ExportPeopleTreeDotRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\LeavePeopleTreeGroupRequest;
@@ -115,6 +116,11 @@ class PeopleTreeController extends Controller
         }
 
         return $writer->saveGroup($request);
+    }
+
+    public function deleteGroup(DeletePeopleTreeGroupRequest $request, PeopleTreeWriter $writer): RedirectResponse
+    {
+        return $writer->deleteGroup($request);
     }
 
     public function leavePersonGroup(LeavePeopleTreeGroupRequest $request, PeopleTreeWriter $writer): RedirectResponse

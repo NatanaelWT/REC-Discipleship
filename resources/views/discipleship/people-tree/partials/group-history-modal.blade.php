@@ -1,5 +1,6 @@
 @php
     $groupHistoryReadOnly = (bool) ($centralReadOnly ?? is_effective_central_discipleship_readonly());
+    $groupHistoryAllowDelete = (bool) ($allowGroupDelete ?? false);
     $groupHistoryFooterHtml = '';
 
     if (! $groupHistoryReadOnly) {
@@ -8,6 +9,9 @@
         $groupHistoryFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-complete" type="button" data-tree-v2-action-do="complete_group">'.icon_svg('check').'<span>Selesaikan DG</span></button>';
         $groupHistoryFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-reactivate" type="button" data-tree-v2-action-do="reactivate_group">'.icon_svg('check').'<span>Aktifkan DG</span></button>';
         $groupHistoryFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-upgrade" type="button" data-tree-v2-action-do="upgrade_group">'.icon_svg('plus').'<span>Upgrade DG</span></button>';
+        if ($groupHistoryAllowDelete) {
+            $groupHistoryFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-delete" type="button" data-tree-v2-action-do="delete_group">'.icon_svg('trash').'<span>Hapus Kelompok</span></button>';
+        }
         $groupHistoryFooterHtml .= '</div>';
     }
 @endphp

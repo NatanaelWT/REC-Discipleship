@@ -3090,6 +3090,7 @@
           'left_group',
           'person_archived',
           'group_completed',
+          'group_deleted',
           'group_reactivated',
           'edit_msk_sessions',
           'msk_session_saved',
@@ -3779,6 +3780,7 @@
       const viewHistoryProxy = scope.querySelector('[data-tree-v2-proxy="view-history"]');
       const leaveGroupForm = scope.querySelector('[data-tree-v2-leave-form]');
       const deletePersonForm = scope.querySelector('[data-tree-v2-delete-person-form]');
+      const deleteGroupForm = scope.querySelector('[data-tree-v2-delete-group-form]');
       const completeGroupForm = scope.querySelector('[data-tree-v2-complete-group-form]');
       const reactivateGroupForm = scope.querySelector('[data-tree-v2-reactivate-group-form]');
       const buttonsByAction = {};
@@ -4024,7 +4026,11 @@
           && nodeData.groupId !== ''
           && isActiveGroup
           && String(nodeData.progress || '').trim() !== 'DG 3';
-        const hasAnyAction = canViewHistory || canAddGroup || canEditPerson || canDeletePerson || canLeaveGroup || canAddMember || canCompleteGroup || canReactivateGroup || canUpgradeGroup;
+        const canDeleteGroup = !isPerson
+          && !nodeData.isUngrouped
+          && !nodeData.isVirtual
+          && nodeData.groupId !== '';
+        const hasAnyAction = canViewHistory || canAddGroup || canEditPerson || canDeletePerson || canLeaveGroup || canAddMember || canCompleteGroup || canReactivateGroup || canUpgradeGroup || canDeleteGroup;
 
         setActionVisible('view_history', canViewHistory);
         setActionVisible('add_group', canAddGroup);
@@ -4035,6 +4041,7 @@
         setActionVisible('complete_group', canCompleteGroup);
         setActionVisible('reactivate_group', canReactivateGroup);
         setActionVisible('upgrade_group', canUpgradeGroup);
+        setActionVisible('delete_group', canDeleteGroup);
 
         if (titleEl) {
           titleEl.textContent = isPerson ? ('Aksi Orang: ' + nodeData.name) : ('Aksi Kelompok: ' + nodeData.name);
@@ -4177,6 +4184,22 @@
           addGroupProxy.dataset.progress = 'DG 1';
           addGroupProxy.dataset.groupTitle = 'Tambah Kelompok';
           clickProxy(addGroupProxy);
+          return;
+        }
+
+        if (actionName === 'delete_group' && deleteGroupForm) {
+          if (!window.confirm('Hapus kelompok ini secara permanen? Semua jurnal dan hubungan leader/anggota pada kelompok ini akan dihapus. Data orang tetap tersimpan. Tindakan ini tidak dapat dibatalkan.')) {
+            return;
+          }
+          const groupId = String(activeNodeData.groupId || '').trim();
+          const urlTemplate = deleteGroupForm.getAttribute('data-delete-url-template') || '';
+          if (!groupId || !urlTemplate) {
+            return;
+          }
+          deleteGroupForm.action = urlTemplate.replace('__id__', encodeURIComponent(groupId));
+          closeActionModal();
+          closeHistoryModal();
+          deleteGroupForm.submit();
           return;
         }
 
@@ -5510,6 +5533,7 @@
           'left_group',
           'person_archived',
           'group_completed',
+          'group_deleted',
           'group_reactivated',
           'edit_msk_sessions',
           'msk_session_saved',

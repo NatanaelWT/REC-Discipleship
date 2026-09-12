@@ -15,8 +15,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call(CurrentDatabaseSnapshotSeeder::class);
-
         if (trim((string) env('DEVELOPER_PASSWORD', '')) !== '') {
             app(DeveloperUserService::class)->ensureDeveloperUserFromEnvironment();
         }

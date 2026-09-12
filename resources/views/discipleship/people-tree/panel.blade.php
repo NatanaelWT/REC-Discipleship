@@ -12,6 +12,7 @@
     $peopleTreeSavePersonUrl = (string) ($peopleTreeUrls['save_person'] ?? route('discipleship.tree.people.save', $branchRouteParams));
     $peopleTreeDeletePersonUrl = (string) ($peopleTreeUrls['delete_person'] ?? route('discipleship.tree.people.delete', $branchRouteParams));
     $peopleTreeSaveGroupUrl = (string) ($peopleTreeUrls['save_group'] ?? route('discipleship.tree.groups.save', $branchRouteParams));
+    $peopleTreeDeleteGroupUrl = (string) ($peopleTreeUrls['delete_group'] ?? route('discipleship.tree.groups.delete', ['group' => '__id__'] + $branchRouteParams));
     $peopleTreeLeaveGroupUrl = (string) ($peopleTreeUrls['leave_person_group'] ?? route('discipleship.tree.groups.leave', $branchRouteParams));
     $peopleTreeCompleteGroupUrl = (string) ($peopleTreeUrls['complete_group'] ?? route('discipleship.tree.groups.complete', $branchRouteParams));
     $peopleTreeReactivateGroupUrl = (string) ($peopleTreeUrls['reactivate_group'] ?? route('discipleship.tree.groups.reactivate', $branchRouteParams));
@@ -77,6 +78,9 @@
     }
     if (isset($_GET['group_completed'])) {
         echo "<div class=\"alert success\">DG berhasil ditandai selesai dan sekarang sudah tidak aktif lagi.</div>\n";
+    }
+    if (isset($_GET['group_deleted'])) {
+        echo "<div class=\"alert success\">Kelompok beserta jurnal dan hubungannya berhasil dihapus. Data orang tetap tersimpan.</div>\n";
     }
     if (isset($_GET['group_reactivated'])) {
         echo "<div class=\"alert success\">DG berhasil diaktifkan kembali.</div>\n";
@@ -339,6 +343,7 @@
 
     echo view('discipleship.people-tree.partials.group-history-modal', [
         'centralReadOnly' => $centralReadOnly,
+        'allowGroupDelete' => true,
         'groupHistoryModalId' => 'tree-v2-history-modal',
     ])->render();
 
@@ -682,6 +687,11 @@
         echo "  <input type=\"hidden\" name=\"action\" value=\"delete_person\">\n";
         echo "  <input type=\"hidden\" name=\"return_page\" value=\"people_tree\">\n";
         echo "  <input type=\"hidden\" name=\"id\" value=\"\">\n";
+        echo "</form>\n";
+        echo "<form method=\"post\" action=\"" . h($peopleTreeDeleteGroupUrl) . "\" class=\"is-hidden\" data-tree-v2-delete-group-form data-delete-url-template=\"" . h($peopleTreeDeleteGroupUrl) . "\">\n";
+        echo "  " . csrf_field() . "\n";
+        echo "  " . method_field('DELETE') . "\n";
+        echo "  <input type=\"hidden\" name=\"return_page\" value=\"people_tree\">\n";
         echo "</form>\n";
         echo "<form method=\"post\" action=\"" . h($peopleTreeCompleteGroupUrl) . "\" class=\"is-hidden\" data-tree-v2-complete-group-form>\n";
         echo "  " . csrf_field() . "\n";
