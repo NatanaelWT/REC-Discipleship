@@ -21,6 +21,7 @@ function discipleship_action_map(): array
             'import_pemuridan_excel' => true,
             'export_pemuridan_excel' => true,
             'export_people_excel' => true,
+            'export_spiritual_journey_excel' => true,
         ];
     }
 

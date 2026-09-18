@@ -588,6 +588,31 @@ class PeopleTreePageTest extends TestCase
         $this->assertStringNotContainsString('Person Archived', $historyHtml);
     }
 
+    public function test_dg2_group_history_detail_loads_with_parent_group(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+
+        $parentGroupId = (int) DB::table('kelompok_dg')->orderBy('id')->value('id');
+        $childGroupId = DB::table('kelompok_dg')->insertGetId([
+            'branch_id' => 1,
+            'status' => 'active',
+            'stage' => 'DG 2',
+            'parent_group_id' => $parentGroupId,
+            'source_group_id' => $parentGroupId,
+            'multiplied_at' => '2026-07-01',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->actingAsRecUser();
+
+        $response = $this->get('/pemuridan/pohon/kelompok/'.$childGroupId.'/detail')
+            ->assertOk()
+            ->assertJsonStructure(['title', 'html', 'edit_url']);
+
+        $this->assertStringContainsString('DG 2', (string) $response->json('html'));
+    }
+
     public function test_upgraded_completed_group_cannot_be_reactivated(): void
     {
         $this->createTables();

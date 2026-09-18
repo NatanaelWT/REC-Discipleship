@@ -3,10 +3,13 @@
 namespace Tests\Feature;
 
 use App\Services\Branches\BranchCatalog;
+use App\Services\SpiritualJourney\SpiritualJourneyExportService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\TestCase;
+use ZipArchive;
 
 class SpiritualJourneyPageTest extends TestCase
 {
@@ -60,6 +63,8 @@ class SpiritualJourneyPageTest extends TestCase
         $response->assertDontSee('data-spiritual-journey-view-template=', false);
         $response->assertSee('data-spiritual-detail-url-template=', false);
         $response->assertSee('data-spiritual-journey-view-title>Profil Peserta', false);
+        $response->assertSee('formaction="'.route('discipleship.spiritual-journey.export').'"', false);
+        $response->assertSee('data-live-search-external-submit', false);
         $content = (string) $response->getContent();
         $this->assertSame(2, substr_count($content, 'people-progress-step journey-dg-step is-complete'));
         $this->assertSame(1, substr_count($content, 'people-progress-step journey-dg-step is-pending'));
@@ -214,6 +219,7 @@ class SpiritualJourneyPageTest extends TestCase
         $this->assertStringNotContainsString('journey-history-trigger', (string) $pageTwo->json('html'));
         $this->assertStringContainsString('people-progress-step journey-msk-step', (string) $pageTwo->json('html'));
         $this->assertStringContainsString('people-progress-step journey-track-bridge journey-bridge-step', (string) $pageTwo->json('html'));
+        $this->assertStringContainsString('people-progress-step journey-leader-step', (string) $pageTwo->json('html'));
         $this->assertStringContainsString('Peserta Journey 100', (string) $pageTwo->json('html'));
         $this->assertStringNotContainsString('Peserta Journey 101', (string) $pageTwo->json('html'));
 
@@ -222,6 +228,158 @@ class SpiritualJourneyPageTest extends TestCase
             ->assertJsonPath('has_more', false);
         $this->assertStringContainsString('Peserta Journey 125', (string) $search->json('html'));
         $this->assertStringNotContainsString('Peserta Journey 001', (string) $search->json('html'));
+    }
+
+    public function test_spiritual_journey_shows_whether_each_person_has_ever_led_a_dg_group(): void
+    {
+        $this->createMskTables();
+        $leaderId = $this->seedParticipant();
+        $memberId = DB::table('orang')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Peserta Bukan Pemimpin',
+            'journey_bridge_status' => 'belum',
+            'status' => 'active',
+            'session_numbers' => json_encode([]),
+            'photos' => json_encode([]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $groupId = DB::table('kelompok_dg')->insertGetId([
+            'branch_id' => 1,
+            'status' => 'completed',
+            'stage' => 'DG 3',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $leaderId,
+                'role' => 'leader',
+                'stage' => null,
+                'status' => 'closed',
+                'started_on' => now()->subYear()->toDateString(),
+                'ended_on' => now()->subMonth()->toDateString(),
+                'end_reason' => 'group_completed',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1,
+                'discipleship_group_id' => $groupId,
+                'person_id' => $memberId,
+                'role' => 'member',
+                'stage' => 'DG 3',
+                'status' => 'completed',
+                'started_on' => now()->subYear()->toDateString(),
+                'ended_on' => now()->subMonth()->toDateString(),
+                'end_reason' => 'group_completed',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->actingAsRecUser();
+        $content = (string) $this->get('/pemuridan/spiritual-journey')->assertOk()->getContent();
+
+        $this->assertSame(2, substr_count($content, '<strong>Pemimpin DG</strong>'));
+        $this->assertMatchesRegularExpression('/Peserta Bukan Pemimpin.*?journey-leader-step is-pending.*?<small>Belum pernah<\/small>/s', $content);
+        $this->assertMatchesRegularExpression('/Peserta Journey.*?journey-leader-step is-complete.*?<small>Pernah<\/small>/s', $content);
+    }
+
+    public function test_spiritual_journey_exports_filtered_branch_rows_to_a_valid_excel_file(): void
+    {
+        $this->createMskTables();
+        $selectedId = $this->seedParticipant();
+        DB::table('orang')->where('id', $selectedId)->update([
+            'full_name' => 'Journey Export Dipilih',
+            'session_numbers' => json_encode(range(1, 12)),
+        ]);
+        $kgapId = DB::table('orang')->insertGetId([
+            'branch_id' => 1, 'full_name' => 'Journey Export Sudah KGAP',
+            'journey_bridge_status' => 'sudah_kgap', 'status' => 'active',
+            'session_numbers' => json_encode([1]), 'photos' => json_encode([]),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $otherBranchId = DB::table('orang')->insertGetId([
+            'branch_id' => 2, 'full_name' => 'Journey Export Rahasia',
+            'journey_bridge_status' => 'belum', 'status' => 'active',
+            'session_numbers' => json_encode([1]), 'photos' => json_encode([]),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            [
+                'branch_id' => 1, 'discipleship_group_id' => 1, 'person_id' => $selectedId,
+                'role' => 'member', 'stage' => 'DG 1', 'status' => 'active',
+                'started_on' => '2026-01-01', 'ended_on' => null, 'end_reason' => null,
+                'created_at' => now(), 'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1, 'discipleship_group_id' => 2, 'person_id' => $selectedId,
+                'role' => 'leader', 'stage' => null, 'status' => 'closed',
+                'started_on' => '2025-01-01', 'ended_on' => '2025-12-31', 'end_reason' => 'group_completed',
+                'created_at' => now(), 'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 1, 'discipleship_group_id' => 3, 'person_id' => $kgapId,
+                'role' => 'member', 'stage' => 'DG 1', 'status' => 'active',
+                'started_on' => '2026-01-01', 'ended_on' => null, 'end_reason' => null,
+                'created_at' => now(), 'updated_at' => now(),
+            ],
+            [
+                'branch_id' => 2, 'discipleship_group_id' => 4, 'person_id' => $otherBranchId,
+                'role' => 'member', 'stage' => 'DG 1', 'status' => 'active',
+                'started_on' => '2026-01-01', 'ended_on' => null, 'end_reason' => null,
+                'created_at' => now(), 'updated_at' => now(),
+            ],
+        ]);
+        $this->actingAsRecUser();
+
+        $response = $this->get('/pemuridan/spiritual-journey/ekspor?journey_filter=dg_without_kgap&q=Journey+Export');
+
+        $response->assertOk();
+        $this->assertInstanceOf(BinaryFileResponse::class, $response->baseResponse);
+        $this->assertSame('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('spiritual-journey-kutisari-', (string) $response->headers->get('Content-Disposition'));
+        $path = $response->baseResponse->getFile()->getPathname();
+        try {
+            $error = '';
+            $sheets = import_read_xlsx_sheets($path, $error);
+            $this->assertSame('', $error);
+            $sheet = $sheets['Spiritual Journey'] ?? [];
+            $this->assertSame('Spiritual Journey', $sheet[0][0] ?? null);
+            $this->assertSame(['No.', 'Nama', 'Cabang', 'MSK', 'DG 1', 'RG / KGAP', 'DG 2', 'DG 3', 'Pemimpin DG', 'Ringkasan Progress'], $sheet[2] ?? null);
+            $this->assertSame(['1', 'Journey Export Dipilih', 'Kutisari', '12/12', 'Sedang', 'Belum', 'Belum', 'Belum', 'Pernah', 'Sedang menjalani DG 1'], $sheet[3] ?? null);
+            $contents = json_encode($sheets, JSON_UNESCAPED_UNICODE);
+            $this->assertIsString($contents);
+            $this->assertStringNotContainsString('Journey Export Sudah KGAP', $contents);
+            $this->assertStringNotContainsString('Journey Export Rahasia', $contents);
+
+            $zip = new ZipArchive;
+            $this->assertTrue($zip->open($path) === true);
+            $sheetXml = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
+            $zip->close();
+            $this->assertStringContainsString('<autoFilter ref="A4:J5"/>', $sheetXml);
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    public function test_central_and_developer_can_export_spiritual_journey(): void
+    {
+        $this->mock(SpiritualJourneyExportService::class)
+            ->shouldReceive('export')
+            ->twice()
+            ->andReturn(redirect('/pemuridan/spiritual-journey?exported=1'));
+
+        $this->actingAsRecUser('central_reader', null, 'pemuridan_pusat');
+        $this->get('/pemuridan/spiritual-journey/ekspor?branch_id=all')
+            ->assertRedirect('/pemuridan/spiritual-journey?exported=1');
+
+        $this->actingAsRecUser('developer', null, 'developer');
+        $this->get('/pemuridan/spiritual-journey/ekspor?branch_id=all')
+            ->assertRedirect('/pemuridan/spiritual-journey?exported=1');
     }
 
     public function test_spiritual_journey_filters_dg_participants_without_kgap(): void

@@ -2122,6 +2122,10 @@
         });
       }
       form.addEventListener('submit', (event) => {
+        if (event.submitter && event.submitter.hasAttribute('data-live-search-external-submit')) {
+          return;
+        }
+
         event.preventDefault();
         if (searchTimer !== null) {
           window.clearTimeout(searchTimer);

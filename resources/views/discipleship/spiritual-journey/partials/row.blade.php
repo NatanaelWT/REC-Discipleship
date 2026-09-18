@@ -11,6 +11,7 @@
     $hasCompletedDg1 = ! empty($row['completed_dg1']);
     $hasCompletedDg2 = ! empty($row['completed_dg2']);
     $hasCompletedDg3 = ! empty($row['completed_dg3']);
+    $hasLedDg = ! empty($row['has_led_dg']);
     $fallbackDgSteps = [
         [
             'label' => 'DG 1',
@@ -61,7 +62,7 @@
     </div>
   </td>
   <td>
-    <div class="journey-inline-track" title="Tahap DG dan MSK peserta">
+    <div class="journey-inline-track" title="Tahap pemuridan dan status pemimpin DG peserta">
       <span class="people-progress-step journey-msk-step is-msk {{ $mskStepClass }}" aria-label="{{ 'MSK: '.$mskProgressLabel }}">
         <span class="people-progress-step-marker" aria-hidden="true"></span>
         <span class="people-progress-step-copy">
@@ -112,6 +113,13 @@
           </div>
         @endif
       @endforeach
+      <span class="people-progress-step journey-leader-step {{ $hasLedDg ? 'is-complete' : 'is-pending' }}" aria-label="{{ 'Pemimpin DG: '.($hasLedDg ? 'Pernah' : 'Belum pernah') }}">
+        <span class="people-progress-step-marker" aria-hidden="true"></span>
+        <span class="people-progress-step-copy">
+          <strong>Pemimpin DG</strong>
+          <small>{{ $hasLedDg ? 'Pernah' : 'Belum pernah' }}</small>
+        </span>
+      </span>
     </div>
   </td>
 </tr>

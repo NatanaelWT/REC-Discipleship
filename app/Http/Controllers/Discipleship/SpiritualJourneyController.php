@@ -3,16 +3,19 @@
 namespace App\Http\Controllers\Discipleship;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SpiritualJourney\ExportSpiritualJourneyRequest;
 use App\Http\Requests\SpiritualJourney\UpdateSpiritualJourneyBridgeStatusRequest;
 use App\Models\Person;
 use App\Services\Discipleship\CurrentDiscipleshipScope;
 use App\Services\SpiritualJourney\SpiritualJourneyBridgeStatusService;
+use App\Services\SpiritualJourney\SpiritualJourneyExportService;
 use App\Services\SpiritualJourney\SpiritualJourneyPageData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class SpiritualJourneyController extends Controller
 {
@@ -61,6 +64,13 @@ class SpiritualJourneyController extends Controller
             'empty' => count($data['spiritualJourneyRows'] ?? []) === 0,
             'empty_message' => (string) ($data['spiritualJourneyEmptyMessage'] ?? 'Peserta tidak ditemukan.'),
         ]);
+    }
+
+    public function export(
+        ExportSpiritualJourneyRequest $request,
+        SpiritualJourneyExportService $exporter,
+    ): BinaryFileResponse|RedirectResponse {
+        return $exporter->export($request);
     }
 
     public function detail(Request $request, Person $participant, SpiritualJourneyPageData $pageData): JsonResponse

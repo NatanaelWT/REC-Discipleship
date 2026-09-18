@@ -72,21 +72,7 @@ class SpiritualJourneyPageData
     {
         $search = strtolower(trim((string) $request->query('q', '')));
         $journeyFilter = trim((string) $request->query('journey_filter', 'all'));
-        $query = Person::query()
-            ->from('orang as people')
-            ->select([
-                'id', 'branch_id', 'full_name', 'gender', 'birth_date',
-                'birth_place', 'address', 'email', 'whatsapp', 'batch_month', 'notes', 'completed_at',
-                'journey_bridge_status', 'status', 'session_numbers', 'photos', 'created_at', 'updated_at',
-            ])
-            ->whereIn('branch_id', $this->scope->branchIds());
-        $this->applyJourneyFilter($query, $journeyFilter);
-        if ($search !== '') {
-            $query->where(static function (Builder $builder) use ($search): void {
-                $builder->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%'])
-                    ->orWhereRaw('LOWER(whatsapp) LIKE ?', ['%'.$search.'%']);
-            });
-        }
+        $query = $this->filteredParticipantsQuery($search, $journeyFilter);
 
         $stats = $this->stats(clone $query);
         $limit = $this->limit($request);
@@ -124,6 +110,7 @@ class SpiritualJourneyPageData
         $participantRows = $participants->map(static function (Person $participant) use ($branches): array {
             $row = $participant->toViewArray();
             $row['branch_code'] = $branches[(int) $participant->branch_id]['slug'] ?? '';
+            $row['branch_label'] = $branches[(int) $participant->branch_id]['label'] ?? 'Tanpa cabang';
 
             return $row;
         })->values()->all();
@@ -155,6 +142,69 @@ class SpiritualJourneyPageData
         ];
     }
 
+    /** @return \Generator<int, array<string, mixed>> */
+    public function exportRowsForCurrentContext(Request $request): \Generator
+    {
+        $search = strtolower(trim((string) $request->query('q', '')));
+        $journeyFilter = trim((string) $request->query('journey_filter', 'all'));
+        $query = $this->filteredParticipantsQuery($search, $journeyFilter);
+        $branches = $this->scope->optionsById();
+
+        foreach ($query->lazyById(500, 'people.id', 'id')->chunk(500) as $participants) {
+            $participantRows = collect($participants)->map(static function (Person $participant) use ($branches): array {
+                $row = $participant->toViewArray();
+                $row['branch_code'] = $branches[(int) $participant->branch_id]['slug'] ?? '';
+                $row['branch_label'] = $branches[(int) $participant->branch_id]['label'] ?? 'Tanpa cabang';
+
+                return $row;
+            })->values()->all();
+            $personIds = collect($participantRows)
+                ->pluck('id')
+                ->map(static fn ($id): int => (int) $id)
+                ->filter()
+                ->all();
+            $groupPeople = $this->groupPeople($personIds);
+
+            foreach ($this->journeyRows($participantRows, $groupPeople) as $row) {
+                yield $row;
+            }
+        }
+    }
+
+    /** @return array{search:string,journey_filter:string} */
+    public function exportContext(Request $request): array
+    {
+        $search = strtolower(trim((string) $request->query('q', '')));
+        $journeyFilter = trim((string) $request->query('journey_filter', 'all'));
+        $this->applyJourneyFilter(Person::query()->from('orang as people'), $journeyFilter);
+
+        return [
+            'search' => $search,
+            'journey_filter' => $journeyFilter,
+        ];
+    }
+
+    private function filteredParticipantsQuery(string $search, string &$journeyFilter): Builder
+    {
+        $query = Person::query()
+            ->from('orang as people')
+            ->select([
+                'id', 'branch_id', 'full_name', 'gender', 'birth_date',
+                'birth_place', 'address', 'email', 'whatsapp', 'batch_month', 'notes', 'completed_at',
+                'journey_bridge_status', 'status', 'session_numbers', 'photos', 'created_at', 'updated_at',
+            ])
+            ->whereIn('branch_id', $this->scope->branchIds());
+        $this->applyJourneyFilter($query, $journeyFilter);
+        if ($search !== '') {
+            $query->where(static function (Builder $builder) use ($search): void {
+                $builder->whereRaw('LOWER(full_name) LIKE ?', ['%'.$search.'%'])
+                    ->orWhereRaw('LOWER(whatsapp) LIKE ?', ['%'.$search.'%']);
+            });
+        }
+
+        return $query;
+    }
+
     /** @return array{total:int,completed_msk:int,following_kgap:int,completed_dg1:int,completed_dg2:int,completed_dg3:int} */
     private function stats(Builder $query): array
     {
@@ -183,7 +233,7 @@ class SpiritualJourneyPageData
     private function sessionCountExpression(): string
     {
         return DB::connection()->getDriverName() === 'sqlite'
-            ? "COALESCE(json_array_length(people.session_numbers), 0)"
+            ? 'COALESCE(json_array_length(people.session_numbers), 0)'
             : 'COALESCE(JSON_LENGTH(people.session_numbers), 0)';
     }
 
@@ -217,9 +267,14 @@ class SpiritualJourneyPageData
     private function journeyRows(array $participantRows, $groupPeople): array
     {
         $emptyProgress = $this->progressStateResolver->resolve(collect());
-        $progressByPerson = $groupPeople
-            ->groupBy(static fn (DiscipleshipGroupPerson $row): int => (int) $row->person_id)
+        $groupPeopleByPerson = $groupPeople
+            ->groupBy(static fn (DiscipleshipGroupPerson $row): int => (int) $row->person_id);
+        $progressByPerson = $groupPeopleByPerson
             ->map(fn ($links): array => $this->progressStateResolver->resolve($links));
+        $hasLedDgByPerson = $groupPeopleByPerson
+            ->map(static fn ($links): bool => $links->contains(
+                static fn (DiscipleshipGroupPerson $row): bool => strtolower((string) $row->role) === 'leader'
+            ));
         $rows = [];
         foreach ($participantRows as $participant) {
             if (! is_array($participant)) {
@@ -249,6 +304,7 @@ class SpiritualJourneyPageData
             $rows[] = [
                 'id' => (string) ($participant['id'] ?? ''),
                 'name' => $fullName,
+                'branch_label' => (string) ($participant['branch_label'] ?? 'Tanpa cabang'),
                 'search_text' => trim($fullName.' '.(string) ($participant['whatsapp'] ?? '')),
                 'msk_progress' => $sessionCount > 0 ? ((string) $sessionCount.'/12') : '-',
                 'session_count' => $sessionCount,
@@ -258,6 +314,7 @@ class SpiritualJourneyPageData
                 'completed_dg1' => ! empty($dg1Step['is_complete']),
                 'completed_dg2' => ! empty($dg2Step['is_complete']),
                 'completed_dg3' => ! empty($dg3Step['is_complete']),
+                'has_led_dg' => (bool) $hasLedDgByPerson->get($personId, false),
                 'progress_steps' => $progressSteps,
                 'progress_summary' => (string) ($progress['summary'] ?? 'Belum memulai DG'),
                 'journey_bridge_status' => normalize_journey_bridge_status((string) ($participant['journey_bridge_status'] ?? 'belum')),

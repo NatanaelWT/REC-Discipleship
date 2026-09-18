@@ -10,6 +10,11 @@ if ($page === 'spiritual_journey') {
     } else {
         echo '<section class="discipleship-tab-panel discipleship-workspace__panel discipleship-list-panel journey-workspace-panel spiritual-journey-panel" id="discipleship-tabpanel-spiritual" role="tabpanel" aria-labelledby="discipleship-tab-spiritual" tabindex="0" data-discipleship-tab-panel data-tab-key="spiritual" data-page-title="Spiritual Journey" data-body-class="page-spiritual_journey" data-spiritual-detail-url-template="'.h(route('discipleship.spiritual-journey.detail', ['participant' => '__id__'] + $branchRouteParams)).'">'."\n";
     }
+    if (request()->query('error') === 'export_zip_unavailable') {
+        echo '<div class="alert danger">Fitur export Excel belum tersedia karena ekstensi ZipArchive belum aktif.</div>'."\n";
+    } elseif (request()->query('error') === 'export_failed') {
+        echo '<div class="alert danger">Export Spiritual Journey gagal. Silakan coba kembali.</div>'."\n";
+    }
     $peopleByMemberId = [];
     $peopleByName = [];
     foreach ($people as $personRow) {

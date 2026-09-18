@@ -136,6 +136,7 @@ Route::middleware('rec.maintenance')->group(function (): void {
             ->name('tree.export-dot');
         Route::get('/spiritual-journey', [DiscipleshipSpiritualJourneyController::class, 'index'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey');
         Route::get('/spiritual-journey/rows', [DiscipleshipSpiritualJourneyController::class, 'rows'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.rows');
+        Route::get('/spiritual-journey/ekspor', [DiscipleshipSpiritualJourneyController::class, 'export'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.export');
         Route::get('/spiritual-journey/{participant}/detail', [DiscipleshipSpiritualJourneyController::class, 'detail'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.detail');
         Route::post('/spiritual-journey', [DiscipleshipSpiritualJourneyController::class, 'updateBridgeStatusFromForm'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.bridge-status-form');
         Route::post('/spiritual-journey/{participant}/bridge-status', [DiscipleshipSpiritualJourneyController::class, 'updateBridgeStatus'])->middleware('rec.page:spiritual_journey')->name('spiritual-journey.bridge-status');

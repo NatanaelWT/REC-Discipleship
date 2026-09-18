@@ -147,6 +147,20 @@ async function assertSpiritualJourneyDgPresentation(page) {
         'data-spiritual-journey-panel-ready',
         '1',
     );
+    const exportButton = page.locator('.journey-export-button');
+    await expect(exportButton).toHaveCount(1);
+    await expect(exportButton).toHaveText('Export');
+    const exportButtonGeometry = await exportButton.evaluate((button) => ({
+        flexShrink: getComputedStyle(button).flexShrink,
+        whiteSpace: getComputedStyle(button).whiteSpace,
+        width: button.getBoundingClientRect().width,
+        height: button.getBoundingClientRect().height,
+    }));
+    expect(exportButtonGeometry.flexShrink).toBe('0');
+    expect(exportButtonGeometry.whiteSpace).toBe('nowrap');
+    expect(exportButtonGeometry.width).toBeGreaterThanOrEqual(80);
+    expect(exportButtonGeometry.height).toBeLessThanOrEqual(44);
+
     const firstRow = page.locator('[data-spiritual-journey-search-row]').first();
     await expect(firstRow).toBeVisible();
     const nameTrigger = firstRow.locator('.journey-name-trigger');
@@ -179,21 +193,32 @@ async function assertSpiritualJourneyDgPresentation(page) {
         '.journey-inline-track > .journey-track-badge.is-dg3',
     ].join(','))).toHaveCount(0);
 
-    const stageCards = firstRow.locator('.journey-msk-step, .journey-dg-step, .journey-bridge-step');
-    await expect(stageCards).toHaveCount(5);
+    const leaderStep = firstRow.locator('.journey-leader-step');
+    await expect(leaderStep).toHaveCount(1);
+    await expect(leaderStep.locator('strong')).toHaveText('Pemimpin DG');
+    await expect(leaderStep.locator('small')).toHaveText(/^(Pernah|Belum pernah)$/);
+
+    const stageCards = firstRow.locator('.journey-msk-step, .journey-dg-step, .journey-bridge-step, .journey-leader-step');
+    await expect(stageCards).toHaveCount(6);
     const geometries = await stageCards.evaluateAll((cards) => cards.map((card) => {
         const style = getComputedStyle(card);
         return {
             minHeight: style.minHeight,
             borderRadius: style.borderRadius,
             width: card.getBoundingClientRect().width,
+            height: card.getBoundingClientRect().height,
         };
     }));
     geometries.forEach((geometry) => {
         expect(geometry.minHeight).toBe('42px');
         expect(geometry.borderRadius).toBe('7px');
         expect(geometry.width).toBeGreaterThanOrEqual(108);
+        expect(geometry.height).toBeLessThan(48);
     });
+    const compactCardHeights = await firstRow
+        .locator('.journey-msk-step, .journey-dg-step, .journey-leader-step')
+        .evaluateAll((cards) => cards.map((card) => card.getBoundingClientRect().height));
+    expect(new Set(compactCardHeights).size).toBe(1);
 
     return dgStatesByName(
         page,

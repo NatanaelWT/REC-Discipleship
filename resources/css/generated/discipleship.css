@@ -5488,10 +5488,20 @@ button.member-feedback-recap-count-pill:focus-visible {
 }
 
 .journey-msk-step,
-.journey-dg-step {
+.journey-dg-step,
+.journey-leader-step {
   flex: 0 0 108px;
   min-width: 108px;
   text-align: left;
+}
+
+.journey-leader-step {
+  gap: 5px;
+  padding-inline: 6px;
+}
+
+.journey-leader-step .people-progress-step-copy strong {
+  white-space: nowrap;
 }
 
 .journey-msk-step.is-msk-progress {

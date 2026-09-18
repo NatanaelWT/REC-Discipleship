@@ -121,7 +121,7 @@ class PeopleTreeModelStore
                     ->orWhere('source_group_id', $groupId)
                     ->orWhere('parent_group_id', $groupId);
                 if ((int) $target->parent_group_id > 0) {
-                    $query->orWhereKey((int) $target->parent_group_id);
+                    $query->orWhere('id', (int) $target->parent_group_id);
                 }
             })
             ->orderBy('id')
@@ -769,8 +769,8 @@ class PeopleTreeModelStore
     }
 
     /**
-     * @param array<string, int> $map
-     * @param array<int, int> $personIds
+     * @param  array<string, int>  $map
+     * @param  array<int, int>  $personIds
      */
     private function mapExistingPeople(array &$map, array $personIds): void
     {
@@ -908,9 +908,9 @@ class PeopleTreeModelStore
     }
 
     /**
-     * @param array<int, mixed> $groups
-     * @param array<int, mixed> $groupPeople
-     * @param array<int, mixed> $multiplications
+     * @param  array<int, mixed>  $groups
+     * @param  array<int, mixed>  $groupPeople
+     * @param  array<int, mixed>  $multiplications
      * @return array<int, int>
      */
     private function referencedPersonIds(array $groups, array $groupPeople, array $multiplications = []): array
