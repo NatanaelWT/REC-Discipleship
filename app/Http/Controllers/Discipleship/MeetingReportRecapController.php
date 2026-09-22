@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Discipleship;
 
 use App\Http\Controllers\Controller;
-use App\Services\Discipleship\CurrentDiscipleshipScope;
+use App\Services\DgMeetingReports\DgMeetingReportExportService;
 use App\Services\DgMeetingReports\DgMeetingReportRecapPageData;
+use App\Services\Discipleship\CurrentDiscipleshipScope;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class MeetingReportRecapController extends Controller
 {
@@ -34,6 +37,11 @@ class MeetingReportRecapController extends Controller
             'panelView' => 'discipleship.meeting-reports.recap',
             'tabBranchId' => $this->tabBranchId($request, $scope),
         ]);
+    }
+
+    public function export(Request $request, DgMeetingReportExportService $exporter): BinaryFileResponse|RedirectResponse
+    {
+        return $exporter->export($request);
     }
 
     private function tabBranchId(Request $request, CurrentDiscipleshipScope $scope): int|string|null

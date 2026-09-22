@@ -101,6 +101,19 @@ async function assertResponsive(page, label) {
     expect(result.offenders, `${label} has elements outside the viewport`).toEqual([]);
 }
 
+async function assertMeetingReportExportButton(page) {
+    const button = page.locator('.dg-recap-export-button');
+    await expect(button).toHaveCount(1);
+    await expect(button).toHaveText('Export Excel');
+    const layout = await button.evaluate((element) => ({
+        flexShrink: getComputedStyle(element).flexShrink,
+        whiteSpace: getComputedStyle(element).whiteSpace,
+        height: element.getBoundingClientRect().height,
+        iconWidth: element.querySelector('.icon')?.getBoundingClientRect().width,
+    }));
+    expect(layout).toEqual({ flexShrink: '0', whiteSpace: 'nowrap', height: 36, iconWidth: 18 });
+}
+
 async function assertRefreshButtonJoinsWorkspace(page, label) {
     const result = await page.evaluate(() => {
         const tabbar = document.querySelector('.discipleship-workspace__tabbar');
@@ -605,6 +618,7 @@ for (const viewport of viewports) {
                         expect(journeyDgStates[personName], `${personName} DG states`).toEqual(states);
                     });
                 }
+                if (name === 'meeting-reports') await assertMeetingReportExportButton(page);
                 if (name === 'msk') await assertMobileMenuOverlaysWorkspace(page);
                 if (viewport.width === 320 && [
                     'discipleship-people',

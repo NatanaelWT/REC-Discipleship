@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Services\Branches\BranchCatalog;
+use App\Services\DiscipleshipPeople\DiscipleshipPeopleXlsxWriter;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\TestCase;
 
 class DgMeetingReportRecapTest extends TestCase
@@ -39,6 +41,8 @@ class DgMeetingReportRecapTest extends TestCase
         $response->assertSee('data-filter-role="recap-progress"', false);
         $response->assertSee('discipleship-page-header__search', false);
         $response->assertSee('data-recap-progress="dg1"', false);
+        $response->assertSee('Export Excel');
+        $response->assertSee(route('discipleship.reports-recap.export'), false);
 
         $content = $response->getContent();
         $this->assertLessThan(
@@ -92,6 +96,136 @@ class DgMeetingReportRecapTest extends TestCase
             ->assertSee('Materi Test')
             ->assertDontSee('Kelompok Nonaktif')
             ->assertDontSee('Materi Kelompok Nonaktif');
+    }
+
+    public function test_branch_user_exports_all_meeting_reports_to_a_valid_excel_file(): void
+    {
+        $this->createTables();
+        $ids = $this->seedReport();
+        DB::table('jurnal_temu_dg')->where('id', $ids['report_id'])->update([
+            'meditation_sharers' => json_encode([[
+                'person_id' => $ids['member_id'],
+                'person_name_snapshot' => 'Anggota Test',
+            ]]),
+            'photos' => json_encode([[
+                'path' => 'uploads/dg_reports/internal-photo.png',
+                'name' => 'Foto Pertemuan.png',
+            ]]),
+        ]);
+        $this->actingAsRecUser();
+
+        $response = $this->get('/pemuridan/laporan-dg/ekspor?progress=dg2&q=tidak-cocok');
+
+        $response->assertOk();
+        $this->assertInstanceOf(BinaryFileResponse::class, $response->baseResponse);
+        $this->assertSame(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            $response->headers->get('Content-Type'),
+        );
+        $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+        $this->assertSame('no-cache', $response->headers->get('Pragma'));
+        $this->assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
+        $this->assertStringContainsString('jurnal-temu-dg-kutisari-', (string) $response->headers->get('Content-Disposition'));
+
+        $path = $response->baseResponse->getFile()->getPathname();
+        try {
+            $error = '';
+            $sheets = import_read_xlsx_sheets($path, $error);
+            $this->assertSame('', $error);
+            $this->assertArrayHasKey('Jurnal Temu DG', $sheets);
+            $sheet = $sheets['Jurnal Temu DG'];
+            $this->assertSame('Jurnal Temu DG', $sheet[0][0] ?? null);
+            $this->assertSame('No.', $sheet[2][0] ?? null);
+            $this->assertSame('Tanggal Pertemuan', $sheet[2][1] ?? null);
+            $this->assertSame('Cabang', $sheet[2][2] ?? null);
+            $this->assertContains('Pemimpin Test', $sheet[3] ?? []);
+            $this->assertContains('Materi Test', $sheet[3] ?? []);
+            $this->assertContains('Anggota Test', $sheet[3] ?? []);
+            $this->assertContains('3 / 4', $sheet[3] ?? []);
+            $this->assertContains('8 / 10', $sheet[3] ?? []);
+            $this->assertContains('Catatan laporan', $sheet[3] ?? []);
+            $this->assertContains('Foto Pertemuan.png', $sheet[3] ?? []);
+            $this->assertStringNotContainsString('internal-photo.png', json_encode($sheets, JSON_UNESCAPED_UNICODE));
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    public function test_central_meeting_report_export_honors_selected_branch(): void
+    {
+        $this->createTables();
+        $this->seedReport();
+        $gm = $this->seedGmReportFormData();
+        DB::table('jurnal_temu_dg')->insert([
+            'branch_id' => 2,
+            'leader_person_id' => $gm['leader_id'],
+            'leader_name_snapshot' => 'Pemimpin GM Export',
+            'discipleship_group_id' => $gm['group_id'],
+            'meeting_date' => '2026-06-02',
+            'material_topic' => 'Materi GM Export',
+            'group_progress_snapshot' => 'DG 2',
+            'absences' => json_encode([]),
+            'meditation_sharers' => json_encode([]),
+            'photos' => json_encode([]),
+            'source' => 'public_form',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->actingAsRecUser('recpusat', null, 'pemuridan_pusat');
+
+        $response = $this->get('/pemuridan/laporan-dg/ekspor?branch_id=2')->assertOk();
+        $path = $response->baseResponse->getFile()->getPathname();
+        try {
+            $error = '';
+            $sheets = import_read_xlsx_sheets($path, $error);
+            $content = json_encode($sheets, JSON_UNESCAPED_UNICODE);
+            $this->assertSame('', $error);
+            $this->assertStringContainsString('Materi GM Export', $content);
+            $this->assertStringNotContainsString('Materi Test', $content);
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    public function test_meeting_report_export_redirects_with_selected_branch_when_writer_fails(): void
+    {
+        $writer = new class extends DiscipleshipPeopleXlsxWriter
+        {
+            public function create(
+                array $headers,
+                iterable $rows,
+                string $subtitle,
+                string &$errorCode,
+                string $title = 'Daftar Anggota DG',
+                string $sheetName = 'Anggota DG',
+            ): ?string {
+                $errorCode = 'export_failed';
+
+                return null;
+            }
+        };
+        $this->app->instance(DiscipleshipPeopleXlsxWriter::class, $writer);
+        $this->actingAsRecUser('recpusat', null, 'pemuridan_pusat');
+
+        $this->get('/pemuridan/laporan-dg/ekspor?branch_id=2')
+            ->assertRedirect(route('discipleship.reports-recap', [
+                'branch_id' => '2',
+                'error' => 'export_failed',
+            ]));
+    }
+
+    public function test_meeting_report_export_requires_authentication(): void
+    {
+        $this->get('/pemuridan/laporan-dg/ekspor')
+            ->assertRedirect(route('auth.login'));
+    }
+
+    public function test_meeting_report_export_requires_page_access(): void
+    {
+        $this->actingAsRecUser('pelayan', null, 'pelayan');
+
+        $this->get('/pemuridan/laporan-dg/ekspor')
+            ->assertRedirect(route('worship.penatalayan', ['error' => 'access_denied']));
     }
 
     public function test_calendar_cells_keep_dates_and_report_counts_visible(): void

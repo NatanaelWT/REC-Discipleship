@@ -800,6 +800,12 @@ if ($page === 'dg_reports_recap') {
         }
     }
 
+    if (request()->query('error') === 'export_zip_unavailable') {
+        echo '<div class="alert danger">Fitur export Excel belum tersedia karena ekstensi ZipArchive belum aktif.</div>'."\n";
+    } elseif (request()->query('error') === 'export_failed') {
+        echo '<div class="alert danger">Export jurnal temu DG gagal. Silakan coba kembali.</div>'."\n";
+    }
+
     echo view('discipleship.partials.page-header', [
         'header' => [
             'tools' => [

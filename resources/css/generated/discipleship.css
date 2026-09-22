@@ -3620,16 +3620,19 @@ button.note-link.dg-recap-photo-trigger {
   align-items: center;
 }
 
-.member-feedback-recap-header-controls {
+.member-feedback-recap-header-controls,
+.dg-recap-header-controls {
   flex: 0 1 auto;
 }
 
-.member-feedback-recap-header-filter {
+.member-feedback-recap-header-filter,
+.dg-recap-header-filter {
   flex: 0 1 210px;
   width: 210px;
 }
 
-.member-feedback-export-button {
+.member-feedback-export-button,
+.dg-recap-export-button {
   flex: 0 0 auto;
   justify-content: center;
   min-height: 42px;
@@ -3637,12 +3640,14 @@ button.note-link.dg-recap-photo-trigger {
   white-space: nowrap;
 }
 
-.member-feedback-export-button .icon {
+.member-feedback-export-button .icon,
+.dg-recap-export-button .icon {
   width: 18px;
   height: 18px;
 }
 
-.member-feedback-recap-header-search {
+.member-feedback-recap-header-search,
+.dg-recap-header-search {
   flex: 1 1 420px;
   width: auto;
 }
@@ -3650,6 +3655,15 @@ button.note-link.dg-recap-photo-trigger {
 .member-feedback-recap-header-search .member-feedback-recap-search {
   width: 100%;
   min-width: 240px;
+}
+
+.discipleship-workspace .dg-recap-export-button {
+  box-sizing: border-box;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  line-height: 1;
 }
 
 .member-feedback-recap-kicker {
