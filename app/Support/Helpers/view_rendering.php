@@ -352,7 +352,7 @@ function discipleship_sidebar_item_href(string $routeName, ?int $branchId): stri
 
 function render_discipleship_branch_filter(array $scopes): void
 {
-    echo "          <form class=\"discipleship-branch-filter\" method=\"get\" action=\"".h(request()->url())."\">\n";
+    echo '          <form class="discipleship-branch-filter" method="get" action="'.h(request()->url())."\">\n";
     foreach (request()->query() as $key => $value) {
         if ($key === 'branch_id' || is_array($value)) {
             continue;
@@ -595,8 +595,10 @@ function render_people_tree_v3_group_branch(
         $groupNodeAttrs .= ' data-name="'.h($groupName).'"';
         $groupNodeAttrs .= ' data-leader-id="'.h($leaderPersonId).'"';
         $groupNodeAttrs .= ' data-leader-name="'.h($leaderName).'"';
+        $groupNodeAttrs .= ' data-assistant-id="'.h((string) ($groupBranch['assistant_id'] ?? '')).'"';
         $groupNodeAttrs .= ' data-progress="'.h($groupProgress).'"';
         $groupNodeAttrs .= ' data-status="'.h($groupStatus).'"';
+        $groupNodeAttrs .= ' data-parent-group-id="'.h((string) ($groupBranch['parent_group_id'] ?? '')).'"';
         $groupNodeAttrs .= ' data-has-child-group="'.($hasChildGroup ? '1' : '0').'"';
         $groupNodeAttrs .= ' data-is-virtual="'.($isVirtualGroup ? '1' : '0').'"';
         $groupNodeAttrs .= ' data-is-ungrouped="'.($isUngrouped ? '1' : '0').'"';

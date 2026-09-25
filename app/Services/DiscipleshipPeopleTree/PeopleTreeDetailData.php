@@ -92,7 +92,7 @@ class PeopleTreeDetailData
         ];
     }
 
-    /** @return array{title:string,html:string,edit_url:?string}|null */
+    /** @return array{title:string,html:string,edit_url:?string,edit:array<string,mixed>}|null */
     public function group(int $groupId): ?array
     {
         $branchIds = $this->scope->branchIds();
@@ -117,12 +117,46 @@ class PeopleTreeDetailData
             return null;
         }
 
+        $groupRow = null;
+        foreach (build_people_tree_group_rows($model, index_by_id($people)) as $row) {
+            if ((int) ($row['id'] ?? 0) === $groupId) {
+                $groupRow = $row;
+                break;
+            }
+        }
+        if (! is_array($groupRow)) {
+            foreach (($model['discipleship_groups'] ?? []) as $row) {
+                if (is_array($row) && (int) ($row['id'] ?? 0) === $groupId) {
+                    $groupRow = [
+                        'id' => (string) $groupId,
+                        'leader_id' => '',
+                        'assistant_id' => '',
+                        'progress' => discipleship_group_stage_value($row) ?: 'DG 1',
+                        'parent_group_id' => trim((string) ($row['parent_group_id'] ?? '')),
+                        'notes' => (string) ($row['notes'] ?? ''),
+                    ];
+                    break;
+                }
+            }
+        }
+        if (! is_array($groupRow)) {
+            return null;
+        }
+
         return [
             'title' => trim((string) ($detail['title'] ?? 'Riwayat Kelompok')) ?: 'Riwayat Kelompok',
             'html' => (string) ($detail['content'] ?? ''),
             'edit_url' => $this->scope->isReadOnly()
                 ? null
                 : route('discipleship.tree.groups.save', $this->branchRouteParams()),
+            'edit' => [
+                'group_id' => (string) $groupId,
+                'leader_id' => trim((string) ($groupRow['leader_id'] ?? '')),
+                'assistant_id' => trim((string) ($groupRow['assistant_id'] ?? '')),
+                'progress' => trim((string) ($groupRow['progress'] ?? '')),
+                'parent_group_id' => trim((string) ($groupRow['parent_group_id'] ?? '')),
+                'notes' => (string) ($groupRow['notes'] ?? ''),
+            ],
         ];
     }
 

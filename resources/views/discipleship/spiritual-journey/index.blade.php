@@ -108,6 +108,7 @@ if ($page === 'spiritual_journey') {
             'group_archived' => 'Kelompok diarsipkan',
             'stage_transition' => 'Transisi tahap',
             'removed_from_group' => 'Dikeluarkan dari kelompok',
+            'moved_group' => 'Pindah kelompok',
             'left_group' => 'Keluar dari kelompok',
             'continued_to_child' => 'Naik ke kelompok lanjutan',
             'group_completed.' => 'Kelompok selesai',
@@ -137,6 +138,9 @@ if ($page === 'spiritual_journey') {
         }
         if ($reason === 'removed_from_group') {
             return 'Dikeluarkan dari kelompok';
+        }
+        if ($reason === 'moved_group') {
+            return 'Pindah kelompok';
         }
         if ($reason === 'stage_transition') {
             return 'Transisi tahap';

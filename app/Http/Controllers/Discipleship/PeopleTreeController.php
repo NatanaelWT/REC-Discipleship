@@ -8,6 +8,7 @@ use App\Http\Requests\DiscipleshipPeopleTree\DeletePeopleTreeGroupRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\DeletePeopleTreePersonRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\ExportPeopleTreeDotRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\LeavePeopleTreeGroupRequest;
+use App\Http\Requests\DiscipleshipPeopleTree\MovePeopleTreeMemberRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\PeopleTreeActionRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\ReactivatePeopleTreeGroupRequest;
 use App\Http\Requests\DiscipleshipPeopleTree\SavePeopleTreeGroupRequest;
@@ -131,6 +132,11 @@ class PeopleTreeController extends Controller
         }
 
         return $writer->leavePersonGroup($request);
+    }
+
+    public function movePersonGroup(MovePeopleTreeMemberRequest $request, PeopleTreeWriter $writer): RedirectResponse
+    {
+        return $writer->movePersonGroup($request);
     }
 
     public function completeGroup(CompletePeopleTreeGroupRequest $request, PeopleTreeWriter $writer): RedirectResponse

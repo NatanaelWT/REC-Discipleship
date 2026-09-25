@@ -13,6 +13,7 @@
     $peopleTreeDeletePersonUrl = (string) ($peopleTreeUrls['delete_person'] ?? route('discipleship.tree.people.delete', $branchRouteParams));
     $peopleTreeSaveGroupUrl = (string) ($peopleTreeUrls['save_group'] ?? route('discipleship.tree.groups.save', $branchRouteParams));
     $peopleTreeDeleteGroupUrl = (string) ($peopleTreeUrls['delete_group'] ?? route('discipleship.tree.groups.delete', ['group' => '__id__'] + $branchRouteParams));
+    $peopleTreeMoveGroupUrl = (string) ($peopleTreeUrls['move_person_group'] ?? route('discipleship.tree.groups.move', $branchRouteParams));
     $peopleTreeLeaveGroupUrl = (string) ($peopleTreeUrls['leave_person_group'] ?? route('discipleship.tree.groups.leave', $branchRouteParams));
     $peopleTreeCompleteGroupUrl = (string) ($peopleTreeUrls['complete_group'] ?? route('discipleship.tree.groups.complete', $branchRouteParams));
     $peopleTreeReactivateGroupUrl = (string) ($peopleTreeUrls['reactivate_group'] ?? route('discipleship.tree.groups.reactivate', $branchRouteParams));
@@ -33,6 +34,8 @@
         echo "<div class=\"alert danger\">Data " . h($personSourceLabelLower) . " tidak valid.</div>\n";
     } elseif ($error === 'member_exists') {
         echo "<div class=\"alert danger\">" . h($personSourceLabel) . " sudah terdaftar di DG.</div>\n";
+    } elseif (in_array($error, ['same_group', 'invalid_source_group', 'invalid_target_group', 'target_group_inactive', 'target_group_stage_mismatch', 'member_not_in_source_group'], true)) {
+        echo "<div class=\"alert danger\">Perpindahan kelompok tidak valid. Muat ulang halaman lalu pilih kelompok aktif lain.</div>\n";
     } elseif ($error === 'member_not_complete') {
         echo "<div class=\"alert danger\">Peserta MSK harus sudah menyelesaikan 12 sesi.</div>\n";
     } elseif ($error === 'leader_cannot_join_own_group') {
@@ -84,6 +87,9 @@
     }
     if (isset($_GET['group_reactivated'])) {
         echo "<div class=\"alert success\">DG berhasil diaktifkan kembali.</div>\n";
+    }
+    if (isset($_GET['member_moved'])) {
+        echo "<div class=\"alert success\">Anggota berhasil dipindahkan. Riwayat kelompok sebelumnya tetap tersimpan.</div>\n";
     }
 
     $editId = $_GET['edit'] ?? '';
@@ -558,6 +564,7 @@
             echo "<option value=\"" . h($pid) . "\">" . h($p['name'] ?? '') . "</option>";
         }
         echo "</select></label>\n";
+        echo "        <div class=\"panel-note\">Leader dan pendamping dapat berasal dari cabang lain. Nama lintas cabang ditandai dengan nama cabangnya.</div>\n";
         echo "        <input type=\"hidden\" name=\"progress\" value=\"DG 1\">\n";
         echo "        <input type=\"hidden\" name=\"parent_group_id\" value=\"\">\n";
         echo "        <div class=\"modal-field is-hidden\" data-group-transition-wrap>\n";
@@ -593,6 +600,7 @@
             echo "<option value=\"" . h($pid) . "\">" . h($p['name'] ?? '') . "</option>";
         }
         echo "</select></label>\n";
+        echo "        <div class=\"panel-note\">Leader dan pendamping dapat berasal dari cabang lain. Nama lintas cabang ditandai dengan nama cabangnya.</div>\n";
         echo "        <label class=\"modal-field\">Progress<select name=\"progress\">";
         foreach ($progressOptions as $opt) {
             echo "<option value=\"" . h($opt) . "\">" . h($opt) . "</option>";
@@ -630,6 +638,42 @@
             'bodyHtml' => $groupModalBodyHtml,
         ])->render();
 
+        ob_start();
+        echo "      <form method=\"post\" action=\"" . h($peopleTreeMoveGroupUrl) . "\" class=\"modal-form\" data-tree-v2-move-group-form>\n";
+        echo "        " . csrf_field() . "\n";
+        echo "        <input type=\"hidden\" name=\"return_page\" value=\"people_tree\">\n";
+        echo "        <input type=\"hidden\" name=\"person_id\" value=\"\">\n";
+        echo "        <input type=\"hidden\" name=\"from_group_id\" value=\"\">\n";
+        echo "        <div class=\"panel-note\">Pindah kelompok mempertahankan riwayat lama. Pilihan hanya menampilkan kelompok aktif pada tahap DG yang sama.</div>\n";
+        echo "        <label class=\"modal-field\">Kelompok Tujuan<select name=\"to_group_id\" required>\n";
+        echo "          <option value=\"\">- Pilih Kelompok Tujuan -</option>\n";
+        foreach ($groupUpgradeSources as $existingGroup) {
+            if (strtolower(trim((string) ($existingGroup['status'] ?? ''))) !== 'active') {
+                continue;
+            }
+            $targetId = trim((string) ($existingGroup['id'] ?? ''));
+            $targetStage = trim((string) ($existingGroup['progress'] ?? ''));
+            $targetLeader = trim((string) ($existingGroup['leader_name'] ?? '-'));
+            $targetMembers = trim((string) ($existingGroup['member_label'] ?? '-'));
+            echo "          <option value=\"" . h($targetId) . "\" data-stage=\"" . h($targetStage) . "\">" . h($targetLeader . ' | ' . $targetStage . ' | ' . $targetMembers) . "</option>\n";
+        }
+        echo "        </select></label>\n";
+        echo "        <div class=\"modal-actions\">\n";
+        echo "          <button class=\"btn\" type=\"submit\">Pindahkan</button>\n";
+        echo "          <button class=\"btn ghost\" type=\"button\" data-tree-v2-move-group-close>Batal</button>\n";
+        echo "        </div>\n";
+        echo "      </form>\n";
+        $moveGroupModalBodyHtml = ob_get_clean();
+        echo view('partials.modal', [
+            'id' => 'move-group-modal',
+            'size' => 'standard',
+            'modalAttrs' => ['data-tree-v2-move-group-modal' => true],
+            'title' => 'Pindah Kelompok',
+            'titleAttrs' => ['data-tree-v2-move-group-title' => true],
+            'closeAttrs' => ['data-tree-v2-move-group-close' => true],
+            'bodyHtml' => $moveGroupModalBodyHtml,
+        ])->render();
+
         echo "<div class=\"is-hidden\" data-group-member-sources>\n";
         foreach ($groupUpgradeSources as $existingGroup) {
             $existingGroupId = trim((string) ($existingGroup['id'] ?? ''));
@@ -660,6 +704,7 @@
             'closeAttrs' => ['data-tree-v2-action-close' => true],
             'bodyHtml' => '<div class="modal-actions tree-v2-action-buttons">'
                 .'<button class="btn ghost" type="button" data-tree-v2-action-do="view_history">Lihat History</button>'
+                .'<button class="btn" type="button" data-tree-v2-action-do="edit_group">Edit Kelompok</button>'
                 .'<button class="btn" type="button" data-tree-v2-action-do="add_group">Tambah Kelompok</button>'
                 .'<button class="btn" type="button" data-tree-v2-action-do="add_member">Tambah Anggota</button>'
                 .'<button class="btn" type="button" data-tree-v2-action-do="edit_person">Edit Orang</button>'
@@ -674,6 +719,7 @@
         echo "<button class=\"is-hidden\" type=\"button\" data-tree-v2-proxy=\"add-member\" data-modal-open=\"add\"></button>\n";
         echo "<button class=\"is-hidden\" type=\"button\" data-tree-v2-proxy=\"edit-person\" data-modal-open=\"edit\"></button>\n";
         echo "<button class=\"is-hidden\" type=\"button\" data-tree-v2-proxy=\"add-group\" data-group-open=\"add\"></button>\n";
+        echo "<button class=\"is-hidden\" type=\"button\" data-tree-v2-proxy=\"edit-group\" data-group-open=\"edit\"></button>\n";
         echo "<button class=\"is-hidden\" type=\"button\" data-tree-v2-proxy=\"view-history\" data-tree-v2-history-open=\"\"></button>\n";
         echo "<form method=\"post\" action=\"" . h($peopleTreeLeaveGroupUrl) . "\" class=\"is-hidden\" data-tree-v2-leave-form>\n";
         echo "  " . csrf_field() . "\n";

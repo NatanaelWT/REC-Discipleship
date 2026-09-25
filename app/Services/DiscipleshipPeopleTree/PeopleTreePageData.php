@@ -61,6 +61,7 @@ class PeopleTreePageData
             'delete_person' => route('discipleship.tree.people.delete', $branchRouteParams),
             'save_group' => route('discipleship.tree.groups.save', $branchRouteParams),
             'delete_group' => route('discipleship.tree.groups.delete', ['group' => '__id__'] + $branchRouteParams),
+            'move_person_group' => route('discipleship.tree.groups.move', $branchRouteParams),
             'leave_person_group' => route('discipleship.tree.groups.leave', $branchRouteParams),
             'complete_group' => route('discipleship.tree.groups.complete', $branchRouteParams),
             'reactivate_group' => route('discipleship.tree.groups.reactivate', $branchRouteParams),

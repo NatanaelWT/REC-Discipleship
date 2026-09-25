@@ -9,6 +9,7 @@ function discipleship_action_map(): array
             'delete_person' => true,
             'save_group' => true,
             'delete_group' => true,
+            'move_person_group' => true,
             'leave_person_group' => true,
             'complete_group' => true,
             'reactivate_group' => true,

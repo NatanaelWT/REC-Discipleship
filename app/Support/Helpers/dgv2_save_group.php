@@ -9,6 +9,7 @@ function dgv2_save_group(array &$model, array $payload, array $leaderPeopleById,
     $stage = normalize_dg_progress_value((string) ($payload['progress'] ?? ''));
     $notes = trim((string) ($payload['notes'] ?? ''));
     $parentGroupId = trim((string) ($payload['parent_group_id'] ?? ''));
+    $memberIdsProvided = array_key_exists('member_ids', $payload);
     $memberIds = $payload['member_ids'] ?? [];
     if (! is_array($memberIds)) {
         $memberIds = [];
@@ -87,6 +88,9 @@ function dgv2_save_group(array &$model, array $payload, array $leaderPeopleById,
     }
 
     $groupId = $id !== '' ? $id : temporary_model_id('group');
+    if (! $memberIdsProvided && $existing !== null) {
+        $memberIds = dgv2_group_active_member_ids($model, $groupId);
+    }
     $now = now_iso();
     $row = [
         'id' => $groupId,

@@ -2734,6 +2734,7 @@
         const hasChildGroup = trigger?.getAttribute('data-group-detail-has-child') === '1';
         const isActive = status === 'active';
         const visibility = {
+          edit_group: true,
           add_member: isActive,
           complete_group: isActive,
           reactivate_group: status === 'completed' && !hasChildGroup,
@@ -3777,13 +3778,20 @@
       const personProfileCloseButtons = personProfileModal ? personProfileModal.querySelectorAll('[data-tree-v2-person-profile-close]') : [];
       const personProfileActionButtons = personProfileModal ? personProfileModal.querySelectorAll('[data-tree-v2-profile-action]') : [];
       const personDetailUrlTemplate = scope.getAttribute('data-tree-person-detail-url-template') || '';
+      const groupDetailUrlTemplate = scope.getAttribute('data-tree-group-detail-url-template') || '';
       const personDetailCache = new Map();
       let personDetailController = null;
       let personDetailSequence = 0;
       const addMemberProxy = scope.querySelector('[data-tree-v2-proxy="add-member"]');
       const editPersonProxy = scope.querySelector('[data-tree-v2-proxy="edit-person"]');
       const addGroupProxy = scope.querySelector('[data-tree-v2-proxy="add-group"]');
+      const editGroupProxy = scope.querySelector('[data-tree-v2-proxy="edit-group"]');
       const viewHistoryProxy = scope.querySelector('[data-tree-v2-proxy="view-history"]');
+      const moveGroupModal = scope.querySelector('[data-tree-v2-move-group-modal]');
+      const moveGroupForm = scope.querySelector('[data-tree-v2-move-group-form]');
+      const moveGroupTitle = moveGroupModal ? moveGroupModal.querySelector('[data-tree-v2-move-group-title]') : null;
+      const moveGroupSelect = moveGroupForm ? moveGroupForm.querySelector('select[name="to_group_id"]') : null;
+      const moveGroupCloseButtons = moveGroupModal ? moveGroupModal.querySelectorAll('[data-tree-v2-move-group-close]') : [];
       const leaveGroupForm = scope.querySelector('[data-tree-v2-leave-form]');
       const deletePersonForm = scope.querySelector('[data-tree-v2-delete-person-form]');
       const deleteGroupForm = scope.querySelector('[data-tree-v2-delete-group-form]');
@@ -3832,6 +3840,13 @@
         }
       };
 
+      const closeMoveGroupModal = () => {
+        if (!moveGroupModal) return;
+        moveGroupModal.classList.remove('is-open');
+        moveGroupModal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+      };
+
       const closeHistoryModal = () => {
         if (!treeV2HistoryModal) return;
         treeV2HistoryModal.classList.remove('is-open');
@@ -3869,7 +3884,6 @@
           status: (dataset.status || '').trim().toLowerCase(),
           parentGroupId: (dataset.parentGroupId || '').trim(),
           hasChildGroup: dataset.hasChildGroup === '1',
-          members: dataset.members || '',
           isVirtual: dataset.isVirtual === '1',
           isUngrouped: dataset.isUngrouped === '1',
         };
@@ -3896,11 +3910,33 @@
           status: parentGroupNode && parentGroupNode.dataset
             ? String(parentGroupNode.dataset.status || '').trim().toLowerCase()
             : '',
+          stage: parentGroupNode && parentGroupNode.dataset
+            ? String(parentGroupNode.dataset.progress || '').trim()
+            : '',
         };
+      };
+
+      const hasMoveDestination = (groupId, stage) => {
+        if (!moveGroupSelect) return false;
+        return Array.from(moveGroupSelect.options).some((option) => (
+          option.value !== ''
+          && option.value !== groupId
+          && String(option.dataset.stage || '').trim() === stage
+        ));
       };
 
       const personDetailUrl = (personId) => {
         const raw = personDetailUrlTemplate.replace('__id__', encodeURIComponent(personId));
+        const url = new URL(raw, window.location.origin);
+        const current = new URL(window.location.href);
+        if (current.searchParams.has('branch_id')) {
+          url.searchParams.set('branch_id', current.searchParams.get('branch_id') || 'all');
+        }
+        return url.toString();
+      };
+
+      const groupDetailUrl = (groupId) => {
+        const raw = groupDetailUrlTemplate.replace('__id__', encodeURIComponent(groupId));
         const url = new URL(raw, window.location.origin);
         const current = new URL(window.location.href);
         if (current.searchParams.has('branch_id')) {
@@ -3926,7 +3962,9 @@
         setProfileActionVisible('add_group', personId !== '');
         setProfileActionVisible('edit_person', personId !== '' && Boolean(data && data.edit_url));
         setProfileActionVisible('delete_person', personId !== '' && Boolean(data && data.edit_url));
-        setProfileActionVisible('leave_group', personId !== '' && Boolean(data && data.edit_url) && groupContext.id !== '' && groupContext.status === 'active');
+        const canChangeGroup = personId !== '' && Boolean(data && data.edit_url) && groupContext.id !== '' && groupContext.status === 'active';
+        setProfileActionVisible('move_group', canChangeGroup && hasMoveDestination(groupContext.id, groupContext.stage));
+        setProfileActionVisible('leave_group', canChangeGroup);
       };
 
       const loadPersonDetail = (personId, force = false) => {
@@ -3971,7 +4009,7 @@
         activeNodeData = nodeData;
         if (personProfileTitleEl) personProfileTitleEl.textContent = nodeData.name || 'Profil Orang';
         personProfileBodyEl.innerHTML = '<div class="panel-note" role="status">Memuat profil...</div>';
-        ['add_group', 'edit_person', 'leave_group', 'delete_person'].forEach((action) => setProfileActionVisible(action, false));
+        ['add_group', 'edit_person', 'move_group', 'leave_group', 'delete_person'].forEach((action) => setProfileActionVisible(action, false));
 
         personProfileModal.classList.add('is-open');
         personProfileModal.setAttribute('aria-hidden', 'false');
@@ -4028,9 +4066,11 @@
           && !nodeData.isUngrouped
           && !nodeData.isVirtual
           && nodeData.groupId !== '';
+        const canEditGroup = canDeleteGroup;
         const hasAnyAction = canViewHistory || canAddGroup || canEditPerson || canDeletePerson || canLeaveGroup || canAddMember || canCompleteGroup || canReactivateGroup || canUpgradeGroup || canDeleteGroup;
 
         setActionVisible('view_history', canViewHistory);
+        setActionVisible('edit_group', canEditGroup);
         setActionVisible('add_group', canAddGroup);
         setActionVisible('edit_person', canEditPerson);
         setActionVisible('delete_person', canDeletePerson);
@@ -4081,6 +4121,9 @@
           closeActionModal();
         });
       });
+      moveGroupCloseButtons.forEach(button => {
+        button.addEventListener('click', closeMoveGroupModal);
+      });
 
       if (treeV2ActionModal) {
         treeV2ActionModal.addEventListener('click', function (event) {
@@ -4103,6 +4146,13 @@
           }
         });
       }
+      if (moveGroupModal) {
+        moveGroupModal.addEventListener('click', function (event) {
+          if (event.target === moveGroupModal) {
+            closeMoveGroupModal();
+          }
+        });
+      }
 
       scope.addEventListener('keydown', function (event) {
         if (
@@ -4110,14 +4160,47 @@
           && (
             (treeV2ActionModal && treeV2ActionModal.classList.contains('is-open'))
             || (personProfileModal && personProfileModal.classList.contains('is-open'))
+            || (moveGroupModal && moveGroupModal.classList.contains('is-open'))
           )
         ) {
-          closeActionModal();
+          if (moveGroupModal && moveGroupModal.classList.contains('is-open')) {
+            closeMoveGroupModal();
+          } else {
+            closeActionModal();
+          }
         }
       });
 
       const submitAction = actionName => {
         if (!activeNodeData) return;
+
+        if (actionName === 'edit_group' && editGroupProxy) {
+          const groupId = String(activeNodeData.groupId || '').trim();
+          if (!groupId || !groupDetailUrlTemplate) return;
+          window.fetch(groupDetailUrl(groupId), {
+            headers: {
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          }).then((response) => {
+            if (!response.ok) throw new Error('detail request failed');
+            return response.json();
+          }).then((data) => {
+            const edit = data && typeof data.edit === 'object' ? data.edit : {};
+            editGroupProxy.dataset.groupId = String(edit.group_id || groupId);
+            editGroupProxy.dataset.leaderId = String(edit.leader_id || '');
+            editGroupProxy.dataset.assistantId = String(edit.assistant_id || '');
+            editGroupProxy.dataset.progress = String(edit.progress || 'DG 1');
+            editGroupProxy.dataset.parentGroupId = String(edit.parent_group_id || '');
+            editGroupProxy.dataset.notes = String(edit.notes || '');
+            closeActionModal(true);
+            closeHistoryModal();
+            clickProxy(editGroupProxy);
+          }).catch(() => {
+            window.alert('Data kelompok gagal dimuat. Coba lagi.');
+          });
+          return;
+        }
 
         if (actionName === 'add_member' && addMemberProxy) {
           const addParentId = activeNodeData.kind === 'person' ? activeNodeData.personId : activeNodeData.leaderId;
@@ -4142,6 +4225,45 @@
           editPersonProxy.dataset.groupId = currentGroupId;
           editPersonProxy.dataset.isRoot = activeNodeData.isRoot ? '1' : '0';
           clickProxy(editPersonProxy);
+          return;
+        }
+
+        if (actionName === 'move_group' && moveGroupModal && moveGroupForm && moveGroupSelect) {
+          const groupContext = currentPersonGroupContext();
+          if (!groupContext.id || groupContext.status !== 'active') {
+            window.alert('Anggota tidak sedang berada di kelompok aktif.');
+            return;
+          }
+
+          let availableTargets = 0;
+          Array.from(moveGroupSelect.options).forEach((option) => {
+            if (option.value === '') {
+              option.hidden = false;
+              option.disabled = false;
+              return;
+            }
+            const blocked = option.value === groupContext.id
+              || String(option.dataset.stage || '').trim() !== groupContext.stage;
+            option.hidden = blocked;
+            option.disabled = blocked;
+            if (!blocked) availableTargets += 1;
+          });
+          moveGroupSelect.value = '';
+          if (availableTargets === 0) {
+            window.alert('Belum ada kelompok aktif lain pada tahap ' + (groupContext.stage || 'DG yang sama') + '.');
+            return;
+          }
+
+          const personInput = moveGroupForm.querySelector('input[name="person_id"]');
+          const sourceInput = moveGroupForm.querySelector('input[name="from_group_id"]');
+          if (personInput) personInput.value = activeNodeData.personId || '';
+          if (sourceInput) sourceInput.value = groupContext.id;
+          if (moveGroupTitle) moveGroupTitle.textContent = 'Pindah Kelompok: ' + (activeNodeData.name || 'Anggota');
+
+          closeActionModal(true);
+          moveGroupModal.classList.add('is-open');
+          moveGroupModal.setAttribute('aria-hidden', 'false');
+          document.body.classList.add('modal-open');
           return;
         }
 
@@ -4268,6 +4390,18 @@
           }
         });
       });
+      if (moveGroupForm) {
+        moveGroupForm.addEventListener('submit', function (event) {
+          if (!moveGroupSelect || moveGroupSelect.value === '') {
+            event.preventDefault();
+            window.alert('Pilih kelompok tujuan terlebih dahulu.');
+            return;
+          }
+          if (!window.confirm('Pindahkan anggota ke kelompok pilihan? Riwayat kelompok sebelumnya tetap disimpan.')) {
+            event.preventDefault();
+          }
+        });
+      }
 
       scope.addEventListener('discipleship:tree-mutated', function () {
         personDetailCache.clear();
@@ -4714,7 +4848,7 @@
       const groupId = String(currentUrl.searchParams.get('focus_group') || '').trim();
       const action = String(currentUrl.searchParams.get('tree_action') || '').trim();
       const returnPage = String(currentUrl.searchParams.get('tree_return') || '').trim();
-      const supportedActions = ['add_member', 'complete_group', 'reactivate_group', 'upgrade_group'];
+      const supportedActions = ['edit_group', 'add_member', 'complete_group', 'reactivate_group', 'upgrade_group'];
       if (!groupId || !supportedActions.includes(action)) {
         return;
       }

@@ -3,6 +3,7 @@
 namespace App\Services\DiscipleshipPeopleTree;
 
 use App\Http\Requests\DiscipleshipPeopleTree\DeletePeopleTreeGroupRequest;
+use App\Http\Requests\DiscipleshipPeopleTree\MovePeopleTreeMemberRequest;
 use App\Services\Branches\BranchCatalog;
 use App\Services\Routing\AppPageRouteMap;
 use Illuminate\Http\RedirectResponse;
@@ -14,6 +15,7 @@ class PeopleTreeWriter
     public function __construct(
         private readonly PeopleTreeModelStore $modelStore,
         private readonly PeopleTreeGroupDeleter $groupDeleter,
+        private readonly PeopleTreeMemberMover $memberMover,
         private readonly BranchCatalog $branches,
     ) {}
 
@@ -48,6 +50,20 @@ class PeopleTreeWriter
     public function leavePersonGroup(Request $request): RedirectResponse
     {
         return $this->handle($request, 'leave_person_group');
+    }
+
+    public function movePersonGroup(MovePeopleTreeMemberRequest $request): RedirectResponse
+    {
+        $error = $this->memberMover->move(
+            $request->branchId(),
+            $request->personId(),
+            $request->fromGroupId(),
+            $request->toGroupId(),
+        );
+
+        return $error === null
+            ? $this->redirectToReturnPage($request, ['member_moved' => 1])
+            : $this->errorRedirect($request, $error);
     }
 
     public function completeGroup(Request $request): RedirectResponse

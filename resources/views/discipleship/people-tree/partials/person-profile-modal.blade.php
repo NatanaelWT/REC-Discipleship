@@ -7,6 +7,7 @@
         $personProfileFooterHtml .= '<div class="tree-v2-profile-actions">';
         $personProfileFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-add" type="button" data-tree-v2-profile-action="add_group">'.icon_svg('plus').'<span>Tambah Kelompok</span></button>';
         $personProfileFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-edit" type="button" data-tree-v2-profile-action="edit_person">'.icon_svg('edit').'<span>Edit Orang</span></button>';
+        $personProfileFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-edit" type="button" data-tree-v2-profile-action="move_group">'.icon_svg('edit').'<span>Pindah Kelompok</span></button>';
         $personProfileFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-leave" type="button" data-tree-v2-profile-action="leave_group">'.icon_svg('exit').'<span>Keluar DG</span></button>';
         $personProfileFooterHtml .= '<button class="btn tiny tree-v2-profile-action is-delete" type="button" data-tree-v2-profile-action="delete_person">'.icon_svg('trash').'<span>Hapus Anggota</span></button>';
         $personProfileFooterHtml .= '</div>';

@@ -1,9 +1,10 @@
 <?php
 
-function build_people_tree_group_history_views(array $model, array $peopleById, array $dgMeetingReports = []): array {
+function build_people_tree_group_history_views(array $model, array $peopleById, array $dgMeetingReports = []): array
+{
     $groupsById = [];
     foreach (($model['discipleship_groups'] ?? []) as $groupRow) {
-        if (!is_array($groupRow)) {
+        if (! is_array($groupRow)) {
             continue;
         }
         $groupId = trim((string) ($groupRow['id'] ?? ''));
@@ -15,7 +16,7 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
 
     $membershipsByGroupId = [];
     foreach (($model['group_memberships'] ?? []) as $membershipRow) {
-        if (!is_array($membershipRow)) {
+        if (! is_array($membershipRow)) {
             continue;
         }
         $groupId = trim((string) ($membershipRow['group_id'] ?? ''));
@@ -27,7 +28,7 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
 
     $leadershipsByGroupId = [];
     foreach (($model['group_leaderships'] ?? []) as $leadershipRow) {
-        if (!is_array($leadershipRow)) {
+        if (! is_array($leadershipRow)) {
             continue;
         }
         $groupId = trim((string) ($leadershipRow['group_id'] ?? ''));
@@ -39,7 +40,7 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
 
     $multiplicationsBySourceGroupId = [];
     foreach (($model['group_multiplications'] ?? []) as $multiplicationRow) {
-        if (!is_array($multiplicationRow)) {
+        if (! is_array($multiplicationRow)) {
             continue;
         }
         $sourceGroupId = trim((string) ($multiplicationRow['source_group_id'] ?? ''));
@@ -51,7 +52,7 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
 
     $reportsByGroupId = [];
     foreach ($dgMeetingReports as $reportRow) {
-        if (!is_array($reportRow)) {
+        if (! is_array($reportRow)) {
             continue;
         }
         $groupId = trim((string) ($reportRow['group_id'] ?? ''));
@@ -63,6 +64,7 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
 
     $personName = static function (string $personId) use ($peopleById): string {
         $label = trim((string) ($peopleById[$personId]['name'] ?? ''));
+
         return $label !== '' ? $label : '-';
     };
     $textLabel = static function (string $value, string $fallback = '-'): string {
@@ -70,6 +72,7 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
         if ($value === '') {
             return $fallback;
         }
+
         return ucwords(str_replace('_', ' ', $value));
     };
     $groupStatusLabel = static function (string $status): string {
@@ -80,6 +83,7 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
         if ($status === 'archived' || $status === 'closed' || $status === 'inactive') {
             return 'Tidak Aktif';
         }
+
         return 'Aktif';
     };
     $dateRangeLabel = static function (string $startDate, string $endDate): string {
@@ -93,7 +97,8 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
         if ($startDate !== '' && $endDate !== '' && $startDate === $endDate) {
             return $startLabel;
         }
-        return $startLabel . ' - ' . $endLabel;
+
+        return $startLabel.' - '.$endLabel;
     };
     $reasonLabel = static function (string $reason): string {
         $reason = trim($reason);
@@ -112,9 +117,13 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
         if ($reason === 'removed_from_group') {
             return 'Dikeluarkan dari kelompok';
         }
+        if ($reason === 'moved_group') {
+            return 'Pindah kelompok';
+        }
         if ($reason === 'left_group') {
             return 'Keluar dari kelompok';
         }
+
         return $reason !== '' ? ucwords(str_replace('_', ' ', $reason)) : '-';
     };
 
@@ -134,6 +143,7 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
             if ($dateA !== $dateB) {
                 return strcmp($dateA, $dateB);
             }
+
             return strcmp((string) ($a['created_at'] ?? ''), (string) ($b['created_at'] ?? ''));
         });
 
@@ -144,6 +154,7 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
             if ($dateA !== $dateB) {
                 return strcmp($dateA, $dateB);
             }
+
             return strcmp((string) ($a['created_at'] ?? ''), (string) ($b['created_at'] ?? ''));
         });
 
@@ -154,7 +165,7 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
                 continue;
             }
             $label = $personName($leaderPersonId);
-            if ($label !== '-' && !in_array($label, $leaderNames, true)) {
+            if ($label !== '-' && ! in_array($label, $leaderNames, true)) {
                 $leaderNames[] = $label;
             }
         }
@@ -171,7 +182,7 @@ function build_people_tree_group_history_views(array $model, array $peopleById, 
                 continue;
             }
             $label = $personName($memberPersonId);
-            if ($label !== '-' && !in_array($label, $memberNames, true)) {
+            if ($label !== '-' && ! in_array($label, $memberNames, true)) {
                 $memberNames[] = $label;
             }
         }

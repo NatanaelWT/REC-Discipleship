@@ -50,6 +50,7 @@ class PeopleTreePageTest extends TestCase
         $response->assertSee('data-tree-group-detail-url-template=', false);
         $response->assertSee('tree-group-history-modal-card discipleship-tree-panel', false);
         $response->assertSee('data-tree-v2-action-do="add_member"', false);
+        $response->assertSee('data-tree-v2-action-do="edit_group"', false);
         $response->assertSee('data-tree-v2-action-do="complete_group"', false);
         $response->assertSee('data-tree-v2-action-do="upgrade_group"', false);
         $response->assertSee('data-tree-v2-action-do="delete_group"', false);
@@ -61,6 +62,7 @@ class PeopleTreePageTest extends TestCase
         $response->assertSee('data-tree-v2-action-do="upgrade_group"', false);
         $response->assertSee('data-tree-v2-profile-action="add_group"', false);
         $response->assertSee('data-tree-v2-profile-action="edit_person"', false);
+        $response->assertSee('data-tree-v2-profile-action="move_group"', false);
         $response->assertSee('data-tree-v2-profile-action="leave_group"', false);
         $response->assertSee('data-tree-v2-profile-action="delete_person"', false);
         $response->assertDontSee('Lihat Riwayat Pemuridan');
@@ -305,7 +307,9 @@ class PeopleTreePageTest extends TestCase
             ->assertJsonStructure(['title', 'html', 'edit_url', 'edit']);
         $this->get('/pemuridan/pohon/kelompok/'.$ownGroupId.'/detail')
             ->assertOk()
-            ->assertJsonStructure(['title', 'html', 'edit_url']);
+            ->assertJsonStructure(['title', 'html', 'edit_url', 'edit' => [
+                'group_id', 'leader_id', 'assistant_id', 'progress', 'parent_group_id', 'notes',
+            ]]);
 
         $this->get('/pemuridan/pohon/orang/'.$otherPersonId.'/detail')->assertNotFound();
         $this->get('/pemuridan/pohon/kelompok/'.$otherGroupId.'/detail')->assertNotFound();
@@ -359,7 +363,7 @@ class PeopleTreePageTest extends TestCase
         $this->get('/pemuridan/kelompok/'.$groupId.'/detail')
             ->assertOk()
             ->assertHeader('Cache-Control', 'no-store, private')
-            ->assertJsonStructure(['title', 'html', 'edit_url']);
+            ->assertJsonStructure(['title', 'html', 'edit_url', 'edit']);
     }
 
     public function test_people_list_detail_endpoint_reuses_the_tree_person_detail(): void
@@ -1141,6 +1145,135 @@ class PeopleTreePageTest extends TestCase
             'branch_id' => 1,
             'person_id' => 900,
             'role' => 'member',
+        ]);
+    }
+
+    public function test_branch_user_can_move_member_between_active_groups_without_losing_history(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+
+        $memberId = (int) DB::table('orang')->where('full_name', 'Anggota Test')->value('id');
+        $sourceGroupId = (int) DB::table('kelompok_dg')->orderBy('id')->value('id');
+        $targetLeaderId = DB::table('orang')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Leader Tujuan',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $targetGroupId = DB::table('kelompok_dg')->insertGetId([
+            'branch_id' => 1,
+            'status' => 'active',
+            'stage' => 'DG 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            'branch_id' => 1,
+            'discipleship_group_id' => $targetGroupId,
+            'person_id' => $targetLeaderId,
+            'role' => 'leader',
+            'status' => 'active',
+            'started_on' => '2026-09-01',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAsRecUser();
+
+        $this->post('/pemuridan/pohon/kelompok/pindah', [
+            'person_id' => $memberId,
+            'from_group_id' => $sourceGroupId,
+            'to_group_id' => $targetGroupId,
+            'return_page' => 'people_tree',
+        ])->assertRedirect('/pemuridan/pohon?member_moved=1');
+
+        $this->assertDatabaseHas('keanggotaan_kelompok_dg', [
+            'discipleship_group_id' => $sourceGroupId,
+            'person_id' => $memberId,
+            'role' => 'member',
+            'status' => 'closed',
+            'end_reason' => 'moved_group',
+        ]);
+        $this->assertDatabaseHas('keanggotaan_kelompok_dg', [
+            'discipleship_group_id' => $targetGroupId,
+            'person_id' => $memberId,
+            'role' => 'member',
+            'stage' => 'DG 1',
+            'status' => 'active',
+        ]);
+        $this->assertSame(1, DB::table('keanggotaan_kelompok_dg')
+            ->where('person_id', $memberId)
+            ->where('role', 'member')
+            ->where('status', 'active')
+            ->whereNull('ended_on')
+            ->count());
+    }
+
+    public function test_branch_user_cannot_move_member_to_group_in_another_stage(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+
+        $memberId = (int) DB::table('orang')->where('full_name', 'Anggota Test')->value('id');
+        $sourceGroupId = (int) DB::table('kelompok_dg')->orderBy('id')->value('id');
+        $targetGroupId = DB::table('kelompok_dg')->insertGetId([
+            'branch_id' => 1,
+            'status' => 'active',
+            'stage' => 'DG 2',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAsRecUser();
+
+        $this->post('/pemuridan/pohon/kelompok/pindah', [
+            'person_id' => $memberId,
+            'from_group_id' => $sourceGroupId,
+            'to_group_id' => $targetGroupId,
+            'return_page' => 'people_tree',
+        ])->assertRedirect('/pemuridan/pohon?error=target_group_stage_mismatch');
+
+        $this->assertDatabaseHas('keanggotaan_kelompok_dg', [
+            'discipleship_group_id' => $sourceGroupId,
+            'person_id' => $memberId,
+            'role' => 'member',
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseMissing('keanggotaan_kelompok_dg', [
+            'discipleship_group_id' => $targetGroupId,
+            'person_id' => $memberId,
+            'role' => 'member',
+        ]);
+    }
+
+    public function test_editing_group_without_member_ids_preserves_active_members(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+
+        $groupId = (int) DB::table('kelompok_dg')->orderBy('id')->value('id');
+        $leaderId = (int) DB::table('orang')->where('full_name', 'Leader Test')->value('id');
+        $memberId = (int) DB::table('orang')->where('full_name', 'Anggota Test')->value('id');
+
+        $this->actingAsRecUser();
+
+        $this->post('/pemuridan/pohon/kelompok', [
+            'id' => $groupId,
+            'leader_id' => $leaderId,
+            'assistant_id' => '',
+            'progress' => 'DG 1',
+            'parent_group_id' => '',
+            'notes' => 'Catatan kelompok diperbarui',
+            'return_page' => 'people_tree',
+        ])->assertRedirect('/pemuridan/pohon?saved=1');
+
+        $this->assertDatabaseHas('keanggotaan_kelompok_dg', [
+            'discipleship_group_id' => $groupId,
+            'person_id' => $memberId,
+            'role' => 'member',
+            'status' => 'active',
         ]);
     }
 
