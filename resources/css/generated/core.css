@@ -3704,10 +3704,10 @@ textarea:focus-visible {
 
 @keyframes discipleship-workspace-progress {
   from {
-    transform: translateX(-110%);
+    background-position: -56% 0;
   }
   to {
-    transform: translateX(385%);
+    background-position: 156% 0;
   }
 }
 

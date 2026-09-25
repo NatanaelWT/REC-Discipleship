@@ -19,5 +19,7 @@ assert.match(discipleship, /requestIdleCallback\(run, \{ timeout: 1800 \}\)/, 'W
 assert.match(discipleship, /const initializersByTab = \{[\s\S]{0,900}?feedback: \[setupMemberFeedbackRecap\]/, 'Workspace panels must initialize only tab-specific features.');
 assert.match(css, /\.dashboard-lazy-shell\s*\{[\s\S]{0,160}?content-visibility: auto;/, 'Off-screen dashboard sections must skip rendering work.');
 assert.match(css, /page-tree-v2[\s\S]{0,1000}?overflow-y: visible !important;/, 'People tree workspace must use document scrolling.');
+assert.match(css, /discipleship-workspace__panels\.is-loading::before[\s\S]{0,650}?width: 100%;[\s\S]{0,350}?background-size: 36% 100%;/, 'Workspace progress must paint inside the panel width.');
+assert.doesNotMatch(css, /@keyframes discipleship-workspace-progress[\s\S]{0,180}?translateX/, 'Workspace progress must not translate outside visible panels.');
 
 console.log('Frontend performance static assertions passed.');
