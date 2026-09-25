@@ -5516,6 +5516,7 @@
       let activeController = null;
       let requestSequence = 0;
       let retryTarget = null;
+      const fragmentRequests = new Map();
 
       const statusEl = document.createElement('div');
       statusEl.className = 'discipleship-workspace__status';
@@ -5560,24 +5561,20 @@
             syncBodyModalState();
           });
         }
-        setupDiscipleshipDashboard(panel);
-        setupHorizontalTableScroll(panel);
-        setupDiscipleshipPeopleList(panel);
-        setupDiscipleshipGroupsList(panel);
-        if (key === 'people') {
-          setupDiscipleshipTreeActions(panel);
-        }
-        if (key === 'groups' || key === 'dashboard') {
-          setupDiscipleshipTreeHistory(panel);
-        }
-        setupSpiritualJourneyList(panel);
-        setupMskList(panel);
-        setupSpiritualJourneyPanelInteractions(panel);
-        setupMskPanelInteractions(panel);
         setupFilterControls(panel);
         setupAutoSubmitSearchForms(panel);
-        setupMemberFeedbackRecap(panel);
-        initDiscipleshipTreePane(panel);
+        setupHorizontalTableScroll(panel);
+
+        const initializersByTab = {
+          dashboard: [setupDiscipleshipDashboard, setupDiscipleshipTreeHistory],
+          people: [setupDiscipleshipPeopleList, setupDiscipleshipTreeActions],
+          groups: [setupDiscipleshipGroupsList, setupDiscipleshipTreeHistory],
+          tree: [initDiscipleshipTreePane],
+          spiritual: [setupSpiritualJourneyList, setupSpiritualJourneyPanelInteractions],
+          msk: [setupMskList, setupMskPanelInteractions],
+          feedback: [setupMemberFeedbackRecap]
+        };
+        (initializersByTab[key] || []).forEach((initialize) => initialize(panel));
       };
 
       const canonicalUrlForTab = (key) => {
@@ -5594,6 +5591,73 @@
         } catch (_error) {
           return String(url || '');
         }
+      };
+
+      const requestFragment = (url, forceReload = false) => {
+        const cacheKey = comparableUrl(url);
+        if (forceReload && fragmentRequests.has(cacheKey)) {
+          fragmentRequests.get(cacheKey).controller.abort();
+          fragmentRequests.delete(cacheKey);
+        }
+
+        const cachedRequest = fragmentRequests.get(cacheKey);
+        if (cachedRequest && !cachedRequest.controller.signal.aborted) {
+          return cachedRequest;
+        }
+        fragmentRequests.delete(cacheKey);
+
+        const controller = new AbortController();
+        let request;
+        const promise = window.fetch(url, {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: {
+            'X-Discipleship-Fragment': 'tab',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'text/html'
+          },
+          signal: controller.signal
+        }).then(async (response) => {
+          if (response.redirected) {
+            return { type: 'redirect', url: response.url || url };
+          }
+
+          const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+          if (!response.ok || !contentType.includes('text/html')) {
+            return { type: 'invalid' };
+          }
+
+          return { type: 'html', html: await response.text() };
+        }).catch((error) => {
+          if (fragmentRequests.get(cacheKey) === request) {
+            fragmentRequests.delete(cacheKey);
+          }
+          throw error;
+        });
+        request = { controller, promise };
+        fragmentRequests.set(cacheKey, request);
+        return request;
+      };
+
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const prefetchEnabled = !connection?.saveData
+        && !['slow-2g', '2g'].includes(String(connection?.effectiveType || '').toLowerCase());
+      const prefetchTab = (key) => {
+        if (!prefetchEnabled || panels.has(key)) {
+          return Promise.resolve();
+        }
+        const url = canonicalUrlForTab(key);
+        if (!url) {
+          return Promise.resolve();
+        }
+        try {
+          if (new URL(url, window.location.href).origin !== window.location.origin) {
+            return Promise.resolve();
+          }
+        } catch (_error) {
+          return Promise.resolve();
+        }
+        return requestFragment(url).promise.catch(() => undefined);
       };
 
       const setBusy = (isBusy) => {
@@ -5807,23 +5871,16 @@
           return;
         }
 
-        const controller = new AbortController();
+        const cacheKey = comparableUrl(url);
+        const request = requestFragment(url, forceReload);
+        const controller = request.controller;
         activeController = controller;
         const sequence = requestSequence;
         setBusy(true);
 
-        let response;
+        let result;
         try {
-          response = await window.fetch(url, {
-            method: 'GET',
-            credentials: 'same-origin',
-            headers: {
-              'X-Discipleship-Fragment': 'tab',
-              'X-Requested-With': 'XMLHttpRequest',
-              'Accept': 'text/html'
-            },
-            signal: controller.signal
-          });
+          result = await request.promise;
         } catch (error) {
           if (controller.signal.aborted || sequence !== requestSequence) {
             return;
@@ -5838,37 +5895,21 @@
           return;
         }
 
-        if (response.redirected) {
+        if (result.type === 'redirect') {
           if (activeController === controller) {
             activeController = null;
           }
           setBusy(false);
-          hardNavigate(response.url || url);
+          hardNavigate(result.url || url);
           return;
         }
 
-        const contentType = String(response.headers.get('content-type') || '').toLowerCase();
-        if (!response.ok || !contentType.includes('text/html')) {
+        if (result.type !== 'html') {
           if (activeController === controller) {
             activeController = null;
           }
           setBusy(false);
           hardNavigate(url);
-          return;
-        }
-
-        let html;
-        try {
-          html = await response.text();
-        } catch (error) {
-          if (controller.signal.aborted || sequence !== requestSequence) {
-            return;
-          }
-          if (activeController === controller) {
-            activeController = null;
-          }
-          setBusy(false);
-          showRetry(key, url, shouldPush, forceReload);
           return;
         }
         if (controller.signal.aborted || sequence !== requestSequence) {
@@ -5878,8 +5919,9 @@
           activeController = null;
         }
 
-        const panel = parsePanel(html, key);
+        const panel = parsePanel(result.html, key);
         if (!panel) {
+          fragmentRequests.delete(cacheKey);
           setBusy(false);
           hardNavigate(url);
           return;
@@ -5901,6 +5943,7 @@
         executePanelScripts(panel);
         panels.set(key, panel);
         panelUrls.set(key, url);
+        fragmentRequests.delete(cacheKey);
         initializePanel(panel);
         setBusy(false);
         showPanel(key, url, shouldPush);
@@ -5942,6 +5985,13 @@
         event.preventDefault();
         const targetUrl = panelUrls.get(key) || new URL(tabEl.href, window.location.href).toString();
         activateTab(key, { url: targetUrl, push: key !== currentKey });
+      });
+
+      tabEls.forEach((tabEl) => {
+        const key = String(tabEl.getAttribute('data-tab-key') || '').trim();
+        const prefetch = () => { void prefetchTab(key); };
+        tabEl.addEventListener('pointerenter', prefetch, { once: true, passive: true });
+        tabEl.addEventListener('focus', prefetch, { once: true, passive: true });
       });
 
       tabList.addEventListener('keydown', (event) => {
@@ -6040,6 +6090,30 @@
 
       initializePanel(initialPanel);
       showPanel(initialKey, window.location.href, false);
+
+      const idlePrefetchKeys = Array.from(tabs.keys()).filter((key) => key !== initialKey);
+      let idlePrefetchScheduled = false;
+      const scheduleIdlePrefetch = () => {
+        if (!prefetchEnabled || idlePrefetchScheduled || document.hidden || idlePrefetchKeys.length === 0) {
+          return;
+        }
+        idlePrefetchScheduled = true;
+        const run = () => {
+          idlePrefetchScheduled = false;
+          const key = idlePrefetchKeys.shift();
+          if (!key) {
+            return;
+          }
+          void prefetchTab(key).finally(scheduleIdlePrefetch);
+        };
+        if (typeof window.requestIdleCallback === 'function') {
+          window.requestIdleCallback(run, { timeout: 1800 });
+        } else {
+          window.setTimeout(run, 1000);
+        }
+      };
+      scheduleIdlePrefetch();
+      document.addEventListener('visibilitychange', scheduleIdlePrefetch);
     };
 
     setupDiscipleshipWorkspace();
