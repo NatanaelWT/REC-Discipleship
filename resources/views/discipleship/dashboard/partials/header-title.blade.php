@@ -1,1 +1,1 @@
-Monitor Pemuridan <span class="discipleship-dashboard-hero-branch">REC {{ $selectedBranchLabel }}</span>
+Dashboard Pemuridan <span class="discipleship-dashboard-hero-branch">REC {{ $selectedBranchLabel }}</span>

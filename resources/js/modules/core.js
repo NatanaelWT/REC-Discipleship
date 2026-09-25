@@ -20,8 +20,18 @@ function setupClock() {
         timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
     });
     const update = () => nodes.forEach((node) => { node.textContent = `${formatter.format(new Date())} WIB`; });
-    update();
-    window.setInterval(update, 1000);
+    let timer = null;
+    const schedule = () => {
+        if (timer !== null) window.clearTimeout(timer);
+        if (document.hidden) {
+            timer = null;
+            return;
+        }
+        update();
+        timer = window.setTimeout(schedule, 1000 - (Date.now() % 1000));
+    };
+    document.addEventListener('visibilitychange', schedule);
+    schedule();
 }
 
 function setupSidebar() {

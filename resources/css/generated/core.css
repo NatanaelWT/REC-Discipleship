@@ -4024,3 +4024,203 @@ button,
   white-space: nowrap;
   border: 0;
 }
+
+:root {
+  --bg: #f5f7fb;
+  --bg-2: #edf3f7;
+  --card: #ffffff;
+  --text: #102033;
+  --muted: #617083;
+  --primary: #087f73;
+  --primary-strong: #075f59;
+  --accent: #f4a621;
+  --border: #dbe4ec;
+  --shadow: rgba(30, 55, 75, 0.08);
+  --surface-soft: #f8fafc;
+  --surface-raised: rgba(255, 255, 255, 0.92);
+  --focus-ring: rgba(8, 127, 115, 0.28);
+}
+
+html {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body.app-page {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(900px 420px at 4% -10%, rgba(45, 212, 191, 0.11), transparent 62%),
+    radial-gradient(760px 360px at 96% 0%, rgba(56, 189, 248, 0.09), transparent 60%),
+    linear-gradient(180deg, #fbfcfe 0%, var(--bg) 36%, #f8fafc 100%);
+  background-attachment: scroll;
+}
+
+.app-shell {
+  background: transparent;
+}
+
+.app-main {
+  min-width: 0;
+}
+
+.container {
+  width: min(100%, 1480px);
+}
+
+.sidebar {
+  width: 256px;
+  padding: 20px 14px;
+  gap: 12px;
+  border-right: 1px solid rgba(148, 163, 184, 0.12);
+  background:
+    radial-gradient(340px 220px at 0% 0%, rgba(20, 184, 166, 0.14), transparent 70%),
+    linear-gradient(180deg, #0b1727 0%, #102235 56%, #0d1a2b 100%);
+  box-shadow: 12px 0 36px rgba(15, 23, 42, 0.08);
+}
+
+.sidebar-brand {
+  margin: 0 4px 10px;
+  padding: 8px 10px 14px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.1);
+}
+
+.sidebar-brand .brand {
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+
+.brand-sub,
+.sidebar-label {
+  letter-spacing: 0.14em;
+}
+
+.sidebar-nav,
+.sidebar-subnav,
+.nav-group {
+  gap: 5px;
+}
+
+.nav-item,
+button.nav-item {
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: rgba(241, 245, 249, 0.86);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 650;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.nav-item:hover,
+button.nav-item:hover {
+  border-color: rgba(148, 163, 184, 0.16);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.nav-item.active,
+.nav-sub .nav-item.active {
+  border-color: rgba(94, 234, 212, 0.22);
+  color: #ecfeff;
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.86), rgba(8, 127, 115, 0.72));
+  box-shadow: 0 8px 18px rgba(5, 150, 105, 0.16), inset 3px 0 0 #99f6e4;
+}
+
+.card {
+  border-color: rgba(203, 213, 225, 0.78);
+  border-radius: 20px;
+  background: var(--surface-raised);
+  box-shadow: 0 14px 36px rgba(30, 55, 75, 0.07);
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  min-height: 44px;
+  border-color: #cbd8e4;
+  border-radius: 12px;
+  color: var(--text);
+  background-color: #ffffff;
+  box-shadow: inset 0 1px 2px rgba(30, 55, 75, 0.025);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.btn {
+  min-height: 42px;
+  padding: 9px 15px;
+  border-radius: 12px;
+  font-weight: 750;
+  box-shadow: 0 7px 16px rgba(8, 127, 115, 0.12);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.btn:hover:not(:disabled):not(.disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(8, 127, 115, 0.16);
+}
+
+.btn.secondary,
+.btn.ghost {
+  box-shadow: none;
+}
+
+.table-wrap {
+  border-radius: 16px;
+  scrollbar-color: rgba(100, 116, 139, 0.42) transparent;
+}
+
+.table th {
+  color: #526174;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.table tbody tr {
+  transition: background-color 0.14s ease;
+}
+
+.table tbody tr:hover td {
+  background-color: rgba(13, 148, 136, 0.055);
+}
+
+.dashboard-lazy-shell {
+  min-height: 180px;
+}
+
+@supports (content-visibility: auto) {
+  .dashboard-lazy-shell {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 360px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    width: min(86vw, 300px);
+  }
+}
+
+@media (max-width: 720px) {
+  .container {
+    padding-inline: 10px;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .btn:hover:not(:disabled):not(.disabled) {
+    transform: none;
+  }
+}

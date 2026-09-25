@@ -22,21 +22,22 @@ const bootOptionalModules = () => {
         setupImageVariants(document);
     }
 
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            mutation.addedNodes.forEach((node) => {
-                if (!(node instanceof Element)) {
-                    return;
-                }
-                if (node.matches('[data-client-image-variants]')) {
-                    setupImageVariants(node.parentElement || document);
-                } else if (node.querySelector('[data-client-image-variants]')) {
-                    setupImageVariants(node);
-                }
-            });
-        });
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+    const setupFromTarget = (target) => {
+        const input = target instanceof Element
+            ? target.closest('[data-client-image-variants]')
+            : null;
+        if (input) {
+            setupImageVariants(input.parentElement || document);
+        }
+    };
+
+    document.addEventListener('pointerdown', (event) => setupFromTarget(event.target), true);
+    document.addEventListener('focusin', (event) => setupFromTarget(event.target));
+    document.addEventListener('discipleship:panel-activate', (event) => {
+        if (event.target instanceof Element && event.target.querySelector('[data-client-image-variants]')) {
+            setupImageVariants(event.target);
+        }
+    }, true);
 };
 
 const bootRouteModule = () => {

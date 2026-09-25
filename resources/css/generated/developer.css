@@ -2078,3 +2078,15 @@
     max-height: none;
   }
 }
+
+.discipleship-page-header::before {
+  height: 4px;
+  background: linear-gradient(90deg, #0d9488, #38bdf8 52%, #f59e0b);
+}
+
+@media (max-width: 720px) {
+
+  .discipleship-dashboard-hero-card .discipleship-page-header__copy h1 {
+    font-size: clamp(28px, 9vw, 38px);
+  }
+}

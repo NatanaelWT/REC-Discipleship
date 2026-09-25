@@ -36,8 +36,8 @@ $formatPercent = static function (float $value): string {
 @include('discipleship.partials.page-header', [
     'header' => [
         'kicker' => 'Dashboard Pemuridan',
-        'title' => 'Monitor Pemuridan',
-        'description' => 'Ringkasan capaian target, kesehatan kelompok, dan area yang perlu segera ditindaklanjuti.',
+        'title' => 'Dashboard Pemuridan',
+        'description' => 'Pantau pertumbuhan peserta, kesehatan kelompok, dan tindak lanjut prioritas dalam satu tampilan.',
         'attributes' => [
             'class' => 'discipleship-dashboard-hero-card',
             'data-discipleship-dashboard-header' => true,
@@ -57,18 +57,25 @@ $formatPercent = static function (float $value): string {
 ])
 
 <section class="card discipleship-dashboard-progress-card">
-  <div class="card-row discipleship-dashboard-section-head"><h2>Achievement Target</h2><span class="badge muted">Ringkasan terkini</span></div>
+  <div class="card-row discipleship-dashboard-section-head">
+    <div>
+      <span class="discipleship-dashboard-section-kicker">Perjalanan Peserta</span>
+      <h2>Capaian Target</h2>
+      <p>Perbandingan progres aktual terhadap target cabang.</p>
+    </div>
+    <span class="badge muted">Data terkini</span>
+  </div>
   <div class="journey-progress-grid journey-progress-grid-standalone">
     @foreach ($journeyProgressRows as $row)
       <?php $percent = $row['target'] > 0 ? min(100, ($row['value'] / $row['target']) * 100) : 0; ?>
-      <div class="journey-progress-chip">
-        <div class="journey-progress-ring" style="--pct:{{ $percent }};--ring-color:{{ $row['color'] }};"><span>{{ $formatPercent($percent) }}%</span></div>
+      <article class="journey-progress-chip">
+        <div class="journey-progress-ring" style="--pct:{{ $percent }};--ring-color:{{ $row['color'] }};" role="img" aria-label="{{ $row['label'] }} {{ $formatPercent($percent) }} persen"><span>{{ $formatPercent($percent) }}%</span></div>
         <div class="journey-progress-copy"><div class="journey-progress-label">{{ $row['label'] }}</div><div class="journey-progress-value">{{ number_format($row['value'], 0, ',', '.') }} / {{ number_format($row['target'], 0, ',', '.') }}</div></div>
-      </div>
+      </article>
     @endforeach
   </div>
 
-  <div class="discipleship-dashboard-data-stats">
+  <div class="discipleship-dashboard-data-stats" aria-label="Ringkasan data pemuridan">
     @foreach ($summaryStats as $stat)
       <article class="discipleship-dashboard-data-stat {{ $stat['tone'] }}">
         <span class="discipleship-dashboard-data-stat-label">{{ $stat['label'] }}</span>
@@ -78,13 +85,20 @@ $formatPercent = static function (float $value): string {
     @endforeach
   </div>
 
+  <div class="card-row discipleship-dashboard-section-head is-secondary">
+    <div>
+      <span class="discipleship-dashboard-section-kicker">Kelompok Pemuridan</span>
+      <h2>Pertumbuhan Kelompok</h2>
+      <p>Perkembangan DG 1 hingga DG 3 terhadap sasaran aktif.</p>
+    </div>
+  </div>
   <div class="journey-progress-grid journey-progress-grid-standalone discipleship-dashboard-group-progress">
     @foreach ($groupProgressRows as $row)
       <?php $percent = $row['target'] > 0 ? min(100, ($row['value'] / $row['target']) * 100) : 0; ?>
-      <div class="journey-progress-chip">
-        <div class="journey-progress-ring" style="--pct:{{ $percent }};--ring-color:{{ $row['color'] }};"><span>{{ $formatPercent($percent) }}%</span></div>
+      <article class="journey-progress-chip">
+        <div class="journey-progress-ring" style="--pct:{{ $percent }};--ring-color:{{ $row['color'] }};" role="img" aria-label="{{ $row['label'] }} {{ $formatPercent($percent) }} persen"><span>{{ $formatPercent($percent) }}%</span></div>
         <div class="journey-progress-copy"><div class="journey-progress-label">{{ $row['label'] }}</div><div class="journey-progress-value">{{ number_format($row['value'], 0, ',', '.') }} / {{ number_format($row['target'], 0, ',', '.') }}</div></div>
-      </div>
+      </article>
     @endforeach
   </div>
 </section>

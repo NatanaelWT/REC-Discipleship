@@ -141,8 +141,20 @@
         });
       };
 
-      syncClock();
-      window.setInterval(syncClock, 1000);
+      let clockTimer = null;
+      const scheduleClock = () => {
+        if (clockTimer !== null) {
+          window.clearTimeout(clockTimer);
+        }
+        if (document.hidden) {
+          clockTimer = null;
+          return;
+        }
+        syncClock();
+        clockTimer = window.setTimeout(scheduleClock, 1000 - (Date.now() % 1000));
+      };
+      document.addEventListener('visibilitychange', scheduleClock);
+      scheduleClock();
     };
 
     setupLiveJakartaTime();
@@ -1191,6 +1203,7 @@
       const sections = Array.from(panel.querySelectorAll('[data-dashboard-section]'));
       const modal = panel.querySelector('[data-msk-edit-modal]');
       const sectionStates = new Map();
+      let sectionObserver = null;
       let destroyed = false;
 
       sections.forEach((section) => {
@@ -1331,10 +1344,26 @@
         sections.forEach((section) => {
           const state = sectionStates.get(section);
           if (state && !state.loaded && state.pending) {
-            loadSection(section);
+            if (section.hasAttribute('data-auto-edit-id') || !sectionObserver) {
+              loadSection(section);
+            } else {
+              sectionObserver.observe(section);
+            }
           }
         });
       };
+
+      if ('IntersectionObserver' in window) {
+        sectionObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) {
+              return;
+            }
+            sectionObserver.unobserve(entry.target);
+            loadSection(entry.target);
+          });
+        }, { rootMargin: '420px 0px' });
+      }
 
       const suspendPanel = () => {
         sectionStates.forEach((state, section) => {
@@ -1386,6 +1415,10 @@
       panel.addEventListener('discipleship:panel-destroy', () => {
         suspendPanel();
         destroyed = true;
+        if (sectionObserver) {
+          sectionObserver.disconnect();
+          sectionObserver = null;
+        }
         sectionStates.clear();
       });
 

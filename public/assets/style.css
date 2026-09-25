@@ -17523,3 +17523,519 @@ body.page-discipleship-workspace.page-tree-v2:not(.modal-open) {
   overflow: auto !important;
   overscroll-behavior: contain;
 }
+
+:root {
+  --bg: #f5f7fb;
+  --bg-2: #edf3f7;
+  --card: #ffffff;
+  --text: #102033;
+  --muted: #617083;
+  --primary: #087f73;
+  --primary-strong: #075f59;
+  --accent: #f4a621;
+  --border: #dbe4ec;
+  --shadow: rgba(30, 55, 75, 0.08);
+  --surface-soft: #f8fafc;
+  --surface-raised: rgba(255, 255, 255, 0.92);
+  --focus-ring: rgba(8, 127, 115, 0.28);
+}
+
+html {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body.app-page {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(900px 420px at 4% -10%, rgba(45, 212, 191, 0.11), transparent 62%),
+    radial-gradient(760px 360px at 96% 0%, rgba(56, 189, 248, 0.09), transparent 60%),
+    linear-gradient(180deg, #fbfcfe 0%, var(--bg) 36%, #f8fafc 100%);
+  background-attachment: scroll;
+}
+
+.app-shell {
+  background: transparent;
+}
+
+.app-main {
+  min-width: 0;
+}
+
+.container {
+  width: min(100%, 1480px);
+}
+
+.sidebar {
+  width: 256px;
+  padding: 20px 14px;
+  gap: 12px;
+  border-right: 1px solid rgba(148, 163, 184, 0.12);
+  background:
+    radial-gradient(340px 220px at 0% 0%, rgba(20, 184, 166, 0.14), transparent 70%),
+    linear-gradient(180deg, #0b1727 0%, #102235 56%, #0d1a2b 100%);
+  box-shadow: 12px 0 36px rgba(15, 23, 42, 0.08);
+}
+
+.sidebar-brand {
+  margin: 0 4px 10px;
+  padding: 8px 10px 14px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.1);
+}
+
+.sidebar-brand .brand {
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+
+.brand-sub,
+.sidebar-label {
+  letter-spacing: 0.14em;
+}
+
+.sidebar-nav,
+.sidebar-subnav,
+.nav-group {
+  gap: 5px;
+}
+
+.nav-item,
+button.nav-item {
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: rgba(241, 245, 249, 0.86);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 650;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.nav-item:hover,
+button.nav-item:hover {
+  border-color: rgba(148, 163, 184, 0.16);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.nav-item.active,
+.nav-sub .nav-item.active {
+  border-color: rgba(94, 234, 212, 0.22);
+  color: #ecfeff;
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.86), rgba(8, 127, 115, 0.72));
+  box-shadow: 0 8px 18px rgba(5, 150, 105, 0.16), inset 3px 0 0 #99f6e4;
+}
+
+.card {
+  border-color: rgba(203, 213, 225, 0.78);
+  border-radius: 20px;
+  background: var(--surface-raised);
+  box-shadow: 0 14px 36px rgba(30, 55, 75, 0.07);
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  min-height: 44px;
+  border-color: #cbd8e4;
+  border-radius: 12px;
+  color: var(--text);
+  background-color: #ffffff;
+  box-shadow: inset 0 1px 2px rgba(30, 55, 75, 0.025);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.btn {
+  min-height: 42px;
+  padding: 9px 15px;
+  border-radius: 12px;
+  font-weight: 750;
+  box-shadow: 0 7px 16px rgba(8, 127, 115, 0.12);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.btn:hover:not(:disabled):not(.disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(8, 127, 115, 0.16);
+}
+
+.btn.secondary,
+.btn.ghost {
+  box-shadow: none;
+}
+
+.table-wrap {
+  border-radius: 16px;
+  scrollbar-color: rgba(100, 116, 139, 0.42) transparent;
+}
+
+.table th {
+  color: #526174;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.table tbody tr {
+  transition: background-color 0.14s ease;
+}
+
+.table tbody tr:hover td {
+  background-color: rgba(13, 148, 136, 0.055);
+}
+
+.discipleship-workspace {
+  gap: 0;
+}
+
+.discipleship-workspace__tabbar {
+  position: relative;
+  align-items: flex-end;
+  padding: 6px 6px 0;
+  border: 1px solid rgba(203, 213, 225, 0.78);
+  border-bottom: 0;
+  border-radius: 17px 17px 0 0;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 10px 28px rgba(30, 55, 75, 0.07);
+  backdrop-filter: blur(14px);
+}
+
+.discipleship-workspace__tabs,
+.discipleship-workspace__tabbar .discipleship-workspace__tabs {
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.discipleship-workspace__tab {
+  min-height: 42px;
+  padding: 10px 15px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.discipleship-workspace__tab:hover {
+  background: rgba(226, 232, 240, 0.58);
+}
+
+.discipleship-workspace__tab.is-active,
+.discipleship-workspace__tab[aria-selected="true"] {
+  border-color: rgba(13, 148, 136, 0.18);
+  color: #075f59;
+  background: linear-gradient(135deg, #ecfdf8, #f0fdfa);
+  box-shadow: 0 6px 14px rgba(13, 148, 136, 0.1);
+}
+
+.discipleship-workspace__tab.is-active::after,
+.discipleship-workspace__tab[aria-selected="true"]::after,
+.discipleship-workspace__refresh::after {
+  display: none;
+}
+
+.discipleship-workspace__tab-indicator {
+  background: #94a3b8;
+  box-shadow: none;
+}
+
+.discipleship-workspace__tab.is-active .discipleship-workspace__tab-indicator,
+.discipleship-workspace__tab[aria-selected="true"] .discipleship-workspace__tab-indicator {
+  background: #0d9488;
+  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.12);
+}
+
+.discipleship-workspace__refresh {
+  align-self: flex-end;
+  width: 38px;
+  height: 38px;
+  margin: 0 2px 0 4px;
+  border: 1px solid rgba(203, 213, 225, 0.86);
+  border-bottom: 0;
+  border-radius: 11px 11px 0 0;
+  color: #526174;
+  background: #f8fafc;
+}
+
+.discipleship-workspace__panels {
+  overflow: hidden;
+  border-color: rgba(203, 213, 225, 0.76);
+  border-radius: 0 0 22px 22px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 18px 42px rgba(30, 55, 75, 0.08);
+}
+
+.discipleship-dashboard-hero-card,
+.discipleship-dashboard-progress-card,
+.discipleship-overdue-card {
+  border-color: rgba(203, 213, 225, 0.72);
+  box-shadow: 0 16px 38px rgba(30, 55, 75, 0.07);
+}
+
+.discipleship-dashboard-hero-card {
+  background:
+    radial-gradient(560px 280px at 4% 0%, rgba(45, 212, 191, 0.16), transparent 62%),
+    radial-gradient(460px 240px at 100% 0%, rgba(56, 189, 248, 0.12), transparent 60%),
+    linear-gradient(135deg, #ffffff, #f7fbfc);
+}
+
+.discipleship-dashboard-hero-card::before,
+.discipleship-page-header::before {
+  height: 4px;
+  background: linear-gradient(90deg, #0d9488, #38bdf8 52%, #f59e0b);
+}
+
+.discipleship-dashboard-hero-summary {
+  border-color: rgba(203, 213, 225, 0.7);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.discipleship-dashboard-progress-card {
+  padding: clamp(18px, 2vw, 28px);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.discipleship-dashboard-section-head {
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+.discipleship-dashboard-section-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.discipleship-dashboard-section-head h2 {
+  color: var(--text);
+  font-size: clamp(20px, 2vw, 26px);
+  letter-spacing: -0.025em;
+}
+
+.discipleship-dashboard-section-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.discipleship-dashboard-section-head.is-secondary {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(203, 213, 225, 0.72);
+}
+
+.discipleship-dashboard-section-kicker {
+  color: #087f73;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.journey-progress-grid {
+  gap: 12px;
+}
+
+.journey-progress-chip {
+  min-height: 96px;
+  padding: 14px 16px;
+  border-color: rgba(203, 213, 225, 0.7);
+  border-radius: 17px;
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  box-shadow: 0 8px 22px rgba(30, 55, 75, 0.055);
+}
+
+.journey-progress-ring {
+  width: 68px;
+  height: 68px;
+  min-width: 68px;
+}
+
+.discipleship-dashboard-data-stats {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.discipleship-dashboard-data-stat {
+  min-height: 118px;
+  padding: 16px 15px 14px;
+  border-radius: 17px;
+  box-shadow: 0 8px 22px rgba(30, 55, 75, 0.05);
+}
+
+.discipleship-progress-overdue-grid {
+  gap: 16px;
+}
+
+.dashboard-lazy-shell {
+  min-height: 180px;
+}
+
+.journey-bridge-select {
+  min-height: 0;
+  height: 14px;
+  padding: 0 16px 0 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+@supports (content-visibility: auto) {
+  .dashboard-lazy-shell {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 360px;
+  }
+}
+
+body.page-discipleship-workspace.page-tree-v2:not(.modal-open),
+.page-discipleship-workspace.page-tree-v2 .app-shell,
+.page-discipleship-workspace.page-tree-v2 .app-main,
+.page-discipleship-workspace.page-tree-v2 .container,
+.page-discipleship-workspace.page-tree-v2 .discipleship-workspace,
+.page-discipleship-workspace.page-tree-v2 .discipleship-workspace__panels,
+.page-discipleship-workspace.page-tree-v2 [data-discipleship-tab-panel][data-tab-key="tree"] {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.page-discipleship-workspace.page-tree-v2 .discipleship-tree-panel .tree-v2-surface {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.page-discipleship-workspace.page-tree-v2 .discipleship-tree-panel .tree-v2-scroll {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: 560px !important;
+  max-height: none !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    width: min(86vw, 300px);
+  }
+
+  body.page-discipleship-workspace.page-tree-v2:not(.modal-open),
+  .page-discipleship-workspace.page-tree-v2 .app-shell,
+  .page-discipleship-workspace.page-tree-v2 .app-main,
+  .page-discipleship-workspace.page-tree-v2 .container,
+  .page-discipleship-workspace.page-tree-v2 .discipleship-workspace,
+  .page-discipleship-workspace.page-tree-v2 .discipleship-workspace__panels,
+  .page-discipleship-workspace.page-tree-v2 [data-discipleship-tab-panel][data-tab-key="tree"] {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .page-discipleship-workspace.page-tree-v2 .discipleship-tree-panel .tree-v2-surface {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .page-discipleship-workspace.page-tree-v2 .discipleship-tree-panel .tree-v2-scroll {
+    height: auto !important;
+    min-height: 480px !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .container,
+  .page-discipleship-workspace .container {
+    padding-inline: 10px;
+  }
+
+  .discipleship-workspace {
+    gap: 0;
+  }
+
+  .discipleship-workspace__tabbar {
+    padding: 5px 5px 0;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .discipleship-workspace__tab {
+    min-height: 40px;
+    padding: 9px 12px;
+  }
+
+  .discipleship-workspace__panels {
+    border-radius: 0 0 16px 16px;
+  }
+
+  .discipleship-tab-panel,
+  .discipleship-workspace__panel {
+    padding: 10px;
+  }
+
+  .discipleship-dashboard-hero-card,
+  .discipleship-dashboard-progress-card,
+  .discipleship-overdue-card {
+    border-radius: 18px;
+  }
+
+  .discipleship-dashboard-hero-card {
+    padding: 20px 18px;
+  }
+
+  .discipleship-dashboard-hero-card .discipleship-page-header__copy h1 {
+    font-size: clamp(28px, 9vw, 38px);
+  }
+
+  .discipleship-dashboard-hero-summary {
+    width: 100%;
+    min-width: 0;
+    padding: 14px;
+  }
+
+  .discipleship-dashboard-hero-summary-ring {
+    width: 104px;
+    height: 104px;
+    min-width: 104px;
+  }
+
+  .discipleship-dashboard-section-head {
+    align-items: flex-start;
+  }
+
+  .journey-progress-grid,
+  .journey-progress-grid-standalone,
+  .discipleship-dashboard-data-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .journey-progress-grid .journey-progress-chip:first-child {
+    grid-column: auto;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .btn:hover:not(:disabled):not(.disabled) {
+    transform: none;
+  }
+}
