@@ -70,6 +70,40 @@ class PeopleTreePageTest extends TestCase
         $response->assertDontSee('data-tree-v2-proxy="view-person-journey"', false);
     }
 
+    public function test_leaving_a_group_keeps_the_person_active_for_future_group_assignment(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+        $memberId = (int) DB::table('orang')->where('full_name', 'Anggota Test')->value('id');
+        $groupId = (int) DB::table('kelompok_dg')->where('branch_id', 1)->value('id');
+
+        $this->actingAsRecUser();
+
+        $this->post('/pemuridan/pohon/kelompok/keluar', [
+            'id' => (string) $memberId,
+            'group_id' => (string) $groupId,
+            'return_page' => 'people_tree',
+        ])->assertRedirect('/pemuridan/pohon?left_group=1');
+
+        $this->assertDatabaseHas('orang', [
+            'id' => $memberId,
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('keanggotaan_kelompok_dg', [
+            'discipleship_group_id' => $groupId,
+            'person_id' => $memberId,
+            'role' => 'member',
+            'status' => 'closed',
+            'end_reason' => 'left_group',
+        ]);
+        $this->assertDatabaseMissing('keanggotaan_kelompok_dg', [
+            'discipleship_group_id' => $groupId,
+            'person_id' => $memberId,
+            'role' => 'member',
+            'status' => 'active',
+        ]);
+    }
+
     public function test_people_tree_renders_shared_workspace_and_branch_workspace_sidebar(): void
     {
         $this->createTables();
