@@ -37,22 +37,26 @@
             <tr>
               <th><input type="hidden" name="row_labels[]" value="{{ $roleLabel }}"><span class="worship-steward-row-label">{{ $roleLabel }}</span></th>
               @for ($weekIndex = 0; $weekIndex < count($selectedWeekDates); $weekIndex++)
-                @php $cellValue = (string) ($assignments[$weekIndex] ?? ''); @endphp
+                @php
+                    $cellValue = (string) ($assignments[$weekIndex] ?? '');
+                    $weekDate = (string) ($selectedWeekDates[$weekIndex] ?? '');
+                    $fieldLabel = $roleLabel.' '.format_short_indo_weekday_date($weekDate);
+                @endphp
                 @if ($isTrainingSchedule)
                   @php
                       $trainingValue = worship_penatalayan_training_field_value($cellValue, $selectedMonth);
                       $trainingLabel = $trainingValue !== '' ? format_short_indo_weekday_date($trainingValue) : 'Pilih tanggal latihan';
                   @endphp
-                  <td><div class="worship-steward-cell-shell worship-steward-training-field"><input class="worship-steward-training-input" type="date" name="assignments[{{ (string) $rowIndex }}][{{ (string) $weekIndex }}]" value="{{ $trainingValue }}"><span class="worship-steward-training-preview" data-empty="Pilih tanggal latihan">{{ $trainingLabel }}</span></div></td>
+                  <td><div class="worship-steward-cell-shell worship-steward-training-field"><input aria-label="{{ $fieldLabel }}" class="worship-steward-training-input" type="date" name="assignments[{{ (string) $rowIndex }}][{{ (string) $weekIndex }}]" value="{{ $trainingValue }}"><span class="worship-steward-training-preview" data-empty="Pilih tanggal latihan">{{ $trainingLabel }}</span></div></td>
                 @elseif ($isDualRole)
                   @php
                       $cellLines = preg_split("/\r\n?|\n/", $cellValue) ?: [];
                       $firstValue = trim((string) ($cellLines[0] ?? ''));
                       $secondValue = trim((string) ($cellLines[1] ?? ''));
                   @endphp
-                  <td><div class="worship-steward-cell-shell worship-steward-duo"><input autocomplete="off" class="worship-steward-duo-input" data-steward-count-field="1" type="text" name="assignments[{{ (string) $rowIndex }}][{{ (string) $weekIndex }}][]" value="{{ $firstValue }}" placeholder="Nama 1"><input autocomplete="off" class="worship-steward-duo-input" data-steward-count-field="1" type="text" name="assignments[{{ (string) $rowIndex }}][{{ (string) $weekIndex }}][]" value="{{ $secondValue }}" placeholder="Nama 2"></div></td>
+                  <td><div class="worship-steward-cell-shell worship-steward-duo"><input aria-label="{{ $fieldLabel }} Nama 1" autocomplete="off" class="worship-steward-duo-input" data-steward-count-field="1" type="text" name="assignments[{{ (string) $rowIndex }}][{{ (string) $weekIndex }}][]" value="{{ $firstValue }}" placeholder="Nama 1"><input aria-label="{{ $fieldLabel }} Nama 2" autocomplete="off" class="worship-steward-duo-input" data-steward-count-field="1" type="text" name="assignments[{{ (string) $rowIndex }}][{{ (string) $weekIndex }}][]" value="{{ $secondValue }}" placeholder="Nama 2"></div></td>
                 @else
-                  <td><div class="worship-steward-cell-shell"><textarea autocomplete="off" class="worship-steward-cell" data-steward-count-field="1" name="assignments[{{ (string) $rowIndex }}][{{ (string) $weekIndex }}]" rows="1" placeholder="Nama">{{ $cellValue }}</textarea></div></td>
+                  <td><div class="worship-steward-cell-shell"><textarea aria-label="{{ $fieldLabel }}" autocomplete="off" class="worship-steward-cell" data-steward-count-field="1" name="assignments[{{ (string) $rowIndex }}][{{ (string) $weekIndex }}]" rows="1" placeholder="Nama">{{ $cellValue }}</textarea></div></td>
                 @endif
               @endfor
             </tr>

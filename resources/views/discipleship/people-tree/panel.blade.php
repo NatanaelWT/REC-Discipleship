@@ -309,7 +309,7 @@
     $dotExportButtonAttrs = $dotExportDisabled ? ' disabled aria-disabled="true" title="Pilih satu cabang dulu"' : ' title="Export .dot"';
     echo "        <button class=\"btn tiny ghost tree-v2-export-dot\" type=\"submit\"" . $dotExportButtonAttrs . ">" . icon_svg('download') . "<span>Export .dot</span></button>\n";
     echo "      </form>\n";
-    echo "      <input type=\"search\" list=\"tree-person-search-list\" placeholder=\"Cari nama di pohon...\" data-tree-search-input>\n";
+    echo "      <input type=\"search\" list=\"tree-person-search-list\" placeholder=\"Cari nama di pohon...\" aria-label=\"Cari nama di pohon\" autocomplete=\"off\" data-tree-search-input>\n";
     echo "      <button class=\"btn tiny ghost\" type=\"button\" data-tree-search-submit>Cari</button>\n";
     echo "      <datalist id=\"tree-person-search-list\">\n";
     foreach ($peopleSorted as $searchPerson) {

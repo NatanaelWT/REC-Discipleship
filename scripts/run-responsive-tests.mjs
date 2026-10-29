@@ -31,22 +31,62 @@ function executable(name) {
     return name === 'composer' ? 'composer.bat' : `${name}.cmd`;
 }
 
+function terminateProcessTree(child) {
+    if (!child || child.killed) return;
+    if (process.platform === 'win32') {
+        spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], {
+            windowsHide: true,
+            stdio: 'ignore',
+        });
+        return;
+    }
+    child.kill('SIGTERM');
+}
+
 function run(command, args, options = {}) {
+    const {
+        label = `${command} ${args.join(' ')}`,
+        timeoutMs = 120_000,
+        ...spawnOptions
+    } = options;
+
     return new Promise((resolve, reject) => {
         const child = spawn(command, args, {
             cwd: root,
             env,
             stdio: 'inherit',
-            ...options,
+            windowsHide: true,
+            ...spawnOptions,
         });
-        child.on('error', reject);
-        child.on('exit', (code) => code === 0
-            ? resolve()
-            : reject(new Error(`${command} exited with code ${code}`)));
+        let settled = false;
+        const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            terminateProcessTree(child);
+            reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+
+        child.on('error', (error) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            reject(new Error(`${label} failed to start: ${error.message}`));
+        });
+        child.on('exit', (code, signal) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            if (code === 0) {
+                resolve();
+                return;
+            }
+            reject(new Error(`${label} exited with code ${code ?? 'null'}${signal ? ` (${signal})` : ''}`));
+        });
     });
 }
 
 async function waitForServer(url) {
+    console.log(`[responsive] waiting for ${url}`);
     const deadline = Date.now() + 30_000;
     while (Date.now() < deadline) {
         try {
@@ -62,12 +102,23 @@ async function waitForServer(url) {
 
 let server;
 try {
-    await run(executable('composer'), ['dump-autoload', '--no-scripts', '--classmap-authoritative'], {
-        shell: process.platform === 'win32',
-        stdio: 'ignore',
+    if (process.env.RESPONSIVE_REFRESH_AUTOLOAD === '1') {
+        await run(executable('composer'), ['dump-autoload', '--no-scripts', '--classmap-authoritative'], {
+            label: 'composer dump-autoload',
+            timeoutMs: 60_000,
+            shell: process.platform === 'win32',
+        });
+    } else {
+        console.log('[responsive] using existing vendor autoload (set RESPONSIVE_REFRESH_AUTOLOAD=1 to refresh)');
+    }
+    await run('php', ['artisan', 'migrate:fresh', '--force', '--no-ansi'], {
+        label: 'php artisan migrate:fresh',
+        timeoutMs: 60_000,
     });
-    await run('php', ['artisan', 'migrate:fresh', '--force', '--no-ansi'], { stdio: 'ignore' });
-    await run('php', ['artisan', 'db:seed', '--class=ResponsiveAuditSeeder', '--force', '--no-ansi'], { stdio: 'ignore' });
+    await run('php', ['artisan', 'db:seed', '--class=ResponsiveAuditSeeder', '--force', '--no-ansi'], {
+        label: 'php artisan db:seed ResponsiveAuditSeeder',
+        timeoutMs: 60_000,
+    });
 
     server = spawn('php', [
         '-S',
@@ -76,9 +127,11 @@ try {
     ], { cwd: path.join(root, 'public'), env, stdio: 'ignore' });
     await waitForServer(`${env.RESPONSIVE_BASE_URL}/up`);
     await run(executable('npx'), ['playwright', 'test', '--config=playwright.responsive.config.mjs', ...playwrightArgs], {
+        label: 'playwright responsive suite',
+        timeoutMs: 15 * 60_000,
         shell: process.platform === 'win32',
     });
 } finally {
-    if (server && !server.killed) server.kill();
+    terminateProcessTree(server);
     await rm(tempRoot, { recursive: true, force: true });
 }

@@ -5,10 +5,16 @@ const viewports = [
     { name: 'phone-320', width: 320, height: 568 },
     { name: 'phone-360', width: 360, height: 800 },
     { name: 'phone-390', width: 390, height: 844 },
+    { name: 'phone-412', width: 412, height: 915 },
+    { name: 'phone-480', width: 480, height: 800 },
+    { name: 'phone-600', width: 600, height: 900 },
+    { name: 'phone-landscape-844', width: 844, height: 390 },
     { name: 'tablet-portrait', width: 768, height: 1024 },
     { name: 'tablet-landscape', width: 1024, height: 768 },
+    { name: 'desktop-1280', width: 1280, height: 800 },
     { name: 'desktop-1366', width: 1366, height: 768 },
     { name: 'desktop-1440', width: 1440, height: 900 },
+    { name: 'desktop-1920', width: 1920, height: 1080 },
 ];
 
 const publicPages = [
@@ -83,6 +89,7 @@ async function assertResponsive(page, label) {
             return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
         };
         const offenders = [];
+        const wideElements = [];
         for (const element of document.querySelectorAll('main *')) {
             if (!visible(element) || element.closest(allowedSelector)) continue;
             const rect = element.getBoundingClientRect();
@@ -91,14 +98,78 @@ async function assertResponsive(page, label) {
             }
             if (offenders.length >= 8) break;
         }
+        for (const element of document.querySelectorAll('main *')) {
+            if (!visible(element)) continue;
+            const rect = element.getBoundingClientRect();
+            if (rect.right > innerWidth + 2) {
+                wideElements.push({
+                    selector: `${element.tagName.toLowerCase()}.${String(element.className).replaceAll(' ', '.')}`,
+                    right: Math.round(rect.right),
+                    width: Math.round(rect.width),
+                    overflowX: getComputedStyle(element).overflowX,
+                });
+            }
+            if (wideElements.length >= 12) break;
+        }
         return {
             documentOverflow: root.scrollWidth - root.clientWidth,
             offenders,
+            wideElements,
         };
     });
 
-    expect(result.documentOverflow, `${label} has document overflow`).toBeLessThanOrEqual(2);
+    expect(result.documentOverflow, `${label} has document overflow: ${JSON.stringify(result.wideElements)}`).toBeLessThanOrEqual(2);
     expect(result.offenders, `${label} has elements outside the viewport`).toEqual([]);
+}
+
+async function assertAccessibleBasics(page, label) {
+    const issues = await page.evaluate(() => {
+        const visible = (element) => {
+            const style = getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            return !element.closest('[hidden], [aria-hidden="true"]')
+                && style.display !== 'none'
+                && style.visibility !== 'hidden'
+                && rect.width > 0
+                && rect.height > 0;
+        };
+        const results = [];
+        document.querySelectorAll('img').forEach((image) => {
+            if (visible(image) && !image.hasAttribute('alt')) results.push('image missing alt');
+        });
+        document.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach((control) => {
+            if (!visible(control)) return;
+            const id = control.getAttribute('id');
+            const labelled = Boolean(
+                control.getAttribute('aria-label')
+                || control.getAttribute('aria-labelledby')
+                || control.closest('label')
+                || (id && document.querySelector(`label[for="${CSS.escape(id)}"]`)),
+            );
+            if (!labelled) results.push(`${control.tagName.toLowerCase()} missing label`);
+        });
+        document.querySelectorAll('button, a, [role="button"]').forEach((control) => {
+            if (!visible(control)) return;
+            const hasName = Boolean(
+                String(control.textContent || '').trim()
+                || control.getAttribute('aria-label')
+                || control.getAttribute('title')
+                || control.querySelector('img[alt], [aria-label]'),
+            );
+            if (!hasName) results.push(`${control.tagName.toLowerCase()} missing accessible name`);
+        });
+        document.querySelectorAll('[data-table-horizontal-scroll]').forEach((area) => {
+            if (!visible(area) || area.scrollWidth <= area.clientWidth + 1) return;
+            if (area.tabIndex < 0) results.push('horizontal table missing tabindex');
+            if (area.getAttribute('role') !== 'region') results.push('horizontal table missing region role');
+            if (!area.getAttribute('aria-label') && !area.getAttribute('aria-describedby')) {
+                results.push('horizontal table missing scroll description');
+            }
+        });
+        return results.slice(0, 20);
+    });
+
+    expect(issues, `${label} accessibility basics`).toEqual([]);
 }
 
 async function assertMeetingReportExportButton(page) {
@@ -319,12 +390,38 @@ async function assertWideTablesScrollable(page, label) {
     });
 
     expect(failures, `${label} has a wide table without usable horizontal scrolling`).toEqual([]);
+
+    const keyboardFailures = await page.evaluate(() => {
+        const visible = (element) => {
+            const style = getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            return style.display !== 'none'
+                && style.visibility !== 'hidden'
+                && rect.width > 0
+                && rect.height > 0
+                && !element.closest('[hidden], [aria-hidden="true"]');
+        };
+        const failures = [];
+        document.querySelectorAll('[data-table-horizontal-scroll]').forEach((area) => {
+            if (!visible(area) || area.scrollWidth <= area.clientWidth + 1) return;
+            area.scrollLeft = 0;
+            area.focus();
+            area.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+            if (area.scrollLeft < 1) failures.push('ArrowRight did not scroll');
+            area.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+            if (area.scrollLeft !== 0) failures.push('Home did not reset scroll');
+            area.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+            if (area.scrollLeft < area.scrollWidth - area.clientWidth - 1) failures.push('End did not reach end');
+        });
+        return failures;
+    });
+    expect(keyboardFailures, `${label} horizontal table keyboard scrolling`).toEqual([]);
 }
 
 async function openMobileSidebar(page) {
     const toggle = page.locator('[data-sidebar-toggle]');
     if (!await toggle.isVisible()) return;
-    await toggle.click();
+    await page.evaluate(() => document.querySelector('[data-sidebar-toggle]')?.click());
     const sidebar = page.locator('#app-sidebar');
     await expect(sidebar).toBeVisible();
     await expect.poll(async () => (await sidebar.boundingBox())?.x ?? -999).toBeGreaterThanOrEqual(-1);
@@ -333,6 +430,7 @@ async function openMobileSidebar(page) {
     expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual((await page.viewportSize()).width + 1);
     await page.keyboard.press('Escape');
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect.poll(async () => page.evaluate(() => document.activeElement?.matches('[data-sidebar-toggle]'))).toBe(true);
 }
 
 async function assertMobileMenuOverlaysWorkspace(page) {
@@ -346,6 +444,7 @@ async function assertMobileMenuOverlaysWorkspace(page) {
     await expect(toggle).toHaveAttribute('aria-label', 'Buka menu navigasi');
     await expect(tabbar).toBeVisible();
     await expect(firstTab).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 0));
 
     const layout = await page.evaluate(() => {
         const toggle = document.querySelector('[data-sidebar-toggle]');
@@ -381,7 +480,9 @@ async function assertMobileMenuOverlaysWorkspace(page) {
 
 async function assertMskModal(page) {
     await goto(page, '/pemuridan/msk');
-    await page.locator('[data-msk-create-open]').click();
+    const trigger = page.locator('[data-msk-create-open]').first();
+    await trigger.focus();
+    await trigger.click();
     const modal = page.locator('[data-msk-create-modal]');
     const card = modal.locator('.modal-card');
     await expect(modal).toHaveAttribute('aria-hidden', 'false');
@@ -392,8 +493,14 @@ async function assertMskModal(page) {
     expect(box?.y ?? -1).toBeGreaterThanOrEqual(-1);
     expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport.width + 1);
     expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(viewport.height + 1);
+    await expect(modal).toHaveAttribute('aria-labelledby', /.+/);
+    await expect.poll(async () => page.evaluate(() => {
+        const modal = document.querySelector('[data-msk-create-modal]');
+        return Boolean(modal && modal.contains(document.activeElement));
+    })).toBe(true);
     await modal.locator('[data-msk-create-close]').first().click();
     await expect(modal).toHaveAttribute('aria-hidden', 'true');
+    await expect.poll(async () => page.evaluate(() => document.activeElement?.matches('[data-msk-create-open]'))).toBe(true);
 }
 
 async function tableLayout(page, panelSelector, cardSelector, wrapperSelector) {
@@ -531,6 +638,33 @@ async function assertWorkspaceUsesDocumentScroll(page, label, panelSelector) {
     return result.documentScrollRange;
 }
 
+async function assertTreeUsesContainedScroll(page, label) {
+    const result = await page.evaluate(() => {
+        const panel = document.querySelector('#discipleship-tabpanel-tree');
+        const host = panel?.closest('[data-discipleship-panels]');
+        const surface = panel?.querySelector('.tree-v2-surface');
+        const scroll = panel?.querySelector('.tree-v2-scroll');
+        if (!panel || !host || !surface || !scroll) return null;
+        return {
+            bodyTreeMode: document.body.classList.contains('page-tree-v2'),
+            panelOverflowY: getComputedStyle(panel).overflowY,
+            hostOverflowY: getComputedStyle(host).overflowY,
+            surfaceOverflow: getComputedStyle(surface).overflow,
+            scrollOverflow: getComputedStyle(scroll).overflow,
+            scrollOverflowY: getComputedStyle(scroll).overflowY,
+            scrollHeight: scroll.scrollHeight,
+            clientHeight: scroll.clientHeight,
+        };
+    });
+
+    expect(result, `${label} tree workspace state`).not.toBeNull();
+    expect(result.bodyTreeMode, `${label} tree body mode`).toBe(true);
+    expect(result.panelOverflowY, `${label} tree panel overflow`).toBe('hidden');
+    expect(result.hostOverflowY, `${label} tree host overflow`).toBe('hidden');
+    expect(result.surfaceOverflow, `${label} tree surface overflow`).toBe('hidden');
+    expect(result.scrollOverflowY, `${label} tree scroll overflow`).toBe('auto');
+}
+
 test.describe('DG report layout regression', () => {
     test.use({ viewport: { width: 1110, height: 800 } });
 
@@ -568,7 +702,7 @@ test.describe('DG report layout regression', () => {
 for (const viewport of viewports) {
     test.describe(viewport.name, () => {
         test.use({ viewport: { width: viewport.width, height: viewport.height } });
-        const exhaustive = viewport.width === 320 || viewport.width === 1440;
+        const exhaustive = true;
 
         test('public pages stay within the viewport', async ({ page }) => {
             const pages = exhaustive ? publicPages : publicPages.slice(0, 3);
@@ -576,6 +710,7 @@ for (const viewport of viewports) {
                 const response = await goto(page, url);
                 expect(response?.status(), `${name} response`).toBeLessThan(400);
                 await assertResponsive(page, name);
+                await assertAccessibleBasics(page, name);
                 await assertWideTablesScrollable(page, name);
             }
             await goto(page, '/');
@@ -595,6 +730,7 @@ for (const viewport of viewports) {
                 const response = await goto(page, url);
                 expect(response?.status(), `${name} response`).toBeLessThan(400);
                 await assertResponsive(page, name);
+                await assertAccessibleBasics(page, name);
                 await assertWideTablesScrollable(page, name);
                 if (await page.locator('[data-discipleship-tab-refresh]').count()) {
                     await assertRefreshButtonJoinsWorkspace(page, name);
@@ -697,7 +833,9 @@ for (const viewport of viewports) {
                     await expect(page.locator(panelSelector)).toBeVisible();
                     await expect(page.locator('[data-discipleship-panels] > [data-discipleship-tab-panel]:visible')).toHaveCount(1);
                     await page.evaluate(() => window.scrollTo(0, 0));
-                    const documentScrollRange = await assertWorkspaceUsesDocumentScroll(page, key, panelSelector);
+                    const documentScrollRange = key === 'tree'
+                        ? await assertTreeUsesContainedScroll(page, key).then(() => 0)
+                        : await assertWorkspaceUsesDocumentScroll(page, key, panelSelector);
                     if (key === 'dashboard') {
                         expect(documentScrollRange, 'dashboard document scroll range').toBeGreaterThan(0);
                         await page.evaluate(() => window.scrollTo(0, document.scrollingElement.scrollHeight));
@@ -750,6 +888,7 @@ for (const viewport of viewports) {
                 const response = await goto(page, url);
                 expect(response?.status(), `${name} response`).toBeLessThan(400);
                 await assertResponsive(page, name);
+                await assertAccessibleBasics(page, name);
                 await assertWideTablesScrollable(page, name);
             }
         });
@@ -765,6 +904,7 @@ for (const viewport of viewports) {
                 const response = await goto(page, url);
                 expect(response?.status(), `${name} response`).toBeLessThan(400);
                 await assertResponsive(page, name);
+                await assertAccessibleBasics(page, name);
                 await assertWideTablesScrollable(page, name);
             }
             if (viewport.width <= 1024) await openMobileSidebar(page);
@@ -780,13 +920,14 @@ for (const viewport of viewports) {
                 const response = await goto(page, url);
                 expect(response?.status(), `${name} response`).toBeLessThan(400);
                 await assertResponsive(page, name);
+                await assertAccessibleBasics(page, name);
                 await assertWideTablesScrollable(page, name);
             }
             if (viewport.width <= 1024) await openMobileSidebar(page);
         });
 
         test('journal tables match across AJAX, refresh, and direct navigation', async ({ page }) => {
-            test.skip(!exhaustive);
+            test.skip(![320, 1440].includes(viewport.width));
             await login(page, 'responsive_branch');
             await goto(page, '/pemuridan/laporan-dg');
 

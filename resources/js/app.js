@@ -39,6 +39,38 @@ const bootOptionalModules = () => {
     observer.observe(document.body, { childList: true, subtree: true });
 };
 
+const bootSidebarFocusFallback = () => {
+    const shell = document.querySelector('.app-shell');
+    const sidebar = shell?.querySelector('.sidebar');
+    const toggle = shell?.querySelector('[data-sidebar-toggle]');
+    if (!shell || !sidebar || !toggle || toggle.dataset.sidebarFocusFallback === '1') return;
+    toggle.dataset.sidebarFocusFallback = '1';
+    sidebar.setAttribute('tabindex', '-1');
+    const focusSidebar = () => {
+        if (toggle.getAttribute('aria-expanded') !== 'true') return;
+        const first = sidebar.querySelector('a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])');
+        (first || sidebar).focus();
+    };
+    const retrySidebarFocus = () => {
+        focusSidebar();
+        const stopAt = Date.now() + 600;
+        const timer = window.setInterval(() => {
+            if (toggle.getAttribute('aria-expanded') !== 'true' || Date.now() >= stopAt) {
+                window.clearInterval(timer);
+                return;
+            }
+            if (!sidebar.contains(document.activeElement)) focusSidebar();
+        }, 50);
+    };
+    new MutationObserver(() => {
+        if (toggle.getAttribute('aria-expanded') === 'true') window.setTimeout(retrySidebarFocus, 0);
+    }).observe(toggle, { attributes: true, attributeFilter: ['aria-expanded'] });
+    toggle.addEventListener('click', () => {
+        window.requestAnimationFrame(retrySidebarFocus);
+        window.setTimeout(retrySidebarFocus, 260);
+    });
+};
+
 const bootRouteModule = () => {
     const body = document.body;
     if (!body) return;
@@ -56,10 +88,12 @@ const bootRouteModule = () => {
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
+        bootSidebarFocusFallback();
         bootOptionalModules();
         bootRouteModule();
     }, { once: true });
 } else {
+    bootSidebarFocusFallback();
     bootOptionalModules();
     bootRouteModule();
 }

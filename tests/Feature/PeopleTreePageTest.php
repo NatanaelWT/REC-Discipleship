@@ -1245,6 +1245,78 @@ class PeopleTreePageTest extends TestCase
             ->count());
     }
 
+    public function test_branch_user_can_move_member_without_active_membership_from_their_latest_group(): void
+    {
+        $this->createTables();
+        $this->seedPeopleTree();
+
+        $memberId = (int) DB::table('orang')->where('full_name', 'Anggota Test')->value('id');
+        $sourceGroupId = (int) DB::table('kelompok_dg')->orderBy('id')->value('id');
+        $targetLeaderId = DB::table('orang')->insertGetId([
+            'branch_id' => 1,
+            'full_name' => 'Target Leader Test',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $targetGroupId = DB::table('kelompok_dg')->insertGetId([
+            'branch_id' => 1,
+            'status' => 'active',
+            'stage' => 'DG 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('keanggotaan_kelompok_dg')->insert([
+            'branch_id' => 1,
+            'discipleship_group_id' => $targetGroupId,
+            'person_id' => $targetLeaderId,
+            'role' => 'leader',
+            'status' => 'active',
+            'started_on' => '2026-09-01',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('keanggotaan_kelompok_dg')
+            ->where('discipleship_group_id', $sourceGroupId)
+            ->where('person_id', $memberId)
+            ->update([
+                'status' => 'closed',
+                'ended_on' => '2026-05-19',
+                'end_reason' => 'left_group',
+            ]);
+
+        $this->actingAsRecUser();
+
+        $this->post('/pemuridan/pohon/kelompok/pindah', [
+            'person_id' => $memberId,
+            'from_group_id' => $sourceGroupId,
+            'to_group_id' => $targetGroupId,
+            'return_page' => 'people_tree',
+        ])->assertRedirect('/pemuridan/pohon?member_moved=1');
+
+        $this->assertDatabaseHas('keanggotaan_kelompok_dg', [
+            'discipleship_group_id' => $sourceGroupId,
+            'person_id' => $memberId,
+            'role' => 'member',
+            'status' => 'closed',
+            'end_reason' => 'left_group',
+        ]);
+        $this->assertDatabaseHas('keanggotaan_kelompok_dg', [
+            'discipleship_group_id' => $targetGroupId,
+            'person_id' => $memberId,
+            'role' => 'member',
+            'stage' => 'DG 1',
+            'status' => 'active',
+        ]);
+        $this->assertSame(1, DB::table('keanggotaan_kelompok_dg')
+            ->where('person_id', $memberId)
+            ->where('role', 'member')
+            ->where('status', 'active')
+            ->whereNull('ended_on')
+            ->count());
+    }
+
     public function test_branch_user_cannot_move_member_to_group_in_another_stage(): void
     {
         $this->createTables();

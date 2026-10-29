@@ -57,8 +57,34 @@ class PeopleTreeMemberMover
                 ->whereNull('ended_on')
                 ->lockForUpdate()
                 ->first();
+
             if (! $sourceMembership instanceof DiscipleshipGroupPerson) {
-                return 'member_not_in_source_group';
+                $activeElsewhere = DiscipleshipGroupPerson::query()
+                    ->where('branch_id', $branchId)
+                    ->where('person_id', $personId)
+                    ->where('status', 'active')
+                    ->whereNull('ended_on')
+                    ->lockForUpdate()
+                    ->first();
+                if ($activeElsewhere instanceof DiscipleshipGroupPerson) {
+                    return 'member_not_in_source_group';
+                }
+
+                $latestMembership = DiscipleshipGroupPerson::query()
+                    ->where('branch_id', $branchId)
+                    ->where('person_id', $personId)
+                    ->where('role', 'member')
+                    ->orderByRaw("CASE WHEN status = 'active' AND ended_on IS NULL THEN 1 ELSE 0 END DESC")
+                    ->orderByDesc('ended_on')
+                    ->orderByDesc('started_on')
+                    ->orderByDesc('id')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $latestMembership instanceof DiscipleshipGroupPerson
+                    || (int) $latestMembership->discipleship_group_id !== $fromGroupId) {
+                    return 'member_not_in_source_group';
+                }
             }
 
             $targetLinks = DiscipleshipGroupPerson::query()
@@ -77,11 +103,13 @@ class PeopleTreeMemberMover
             }
 
             $today = today_date();
-            $sourceMembership->forceFill([
-                'status' => 'closed',
-                'ended_on' => $today,
-                'end_reason' => 'moved_group',
-            ])->save();
+            if ($sourceMembership instanceof DiscipleshipGroupPerson) {
+                $sourceMembership->forceFill([
+                    'status' => 'closed',
+                    'ended_on' => $today,
+                    'end_reason' => 'moved_group',
+                ])->save();
+            }
 
             DiscipleshipGroupPerson::query()->create([
                 'branch_id' => $branchId,

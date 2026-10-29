@@ -2225,13 +2225,42 @@
     };
 
     const setupHorizontalTableScroll = (scope = document) => {
-      const areas = scope.matches?.('[data-table-horizontal-scroll]')
+      const selector = [
+        '[data-table-horizontal-scroll]',
+        '.table-wrap',
+        '.worship-steward-table-wrap',
+        '.member-feedback-recap-table-wrap',
+        '.dg-recap-group-report-table-wrap',
+        '.tree-group-journal-table-wrap',
+      ].join(',');
+      const areas = scope.matches?.(selector)
         ? [scope]
-        : Array.from(scope.querySelectorAll?.('[data-table-horizontal-scroll]') || []);
+        : Array.from(scope.querySelectorAll?.(selector) || []);
 
       areas.forEach((area) => {
         if (area.getAttribute('data-table-horizontal-scroll-ready') === '1') return;
+        if (!area.querySelector('table')) return;
         area.setAttribute('data-table-horizontal-scroll-ready', '1');
+        area.setAttribute('data-table-horizontal-scroll', '');
+
+        if (!area.hasAttribute('tabindex')) area.setAttribute('tabindex', '0');
+        if (!area.hasAttribute('role')) area.setAttribute('role', 'region');
+        if (!area.hasAttribute('aria-label')) {
+          const table = area.querySelector('table');
+          const caption = table?.querySelector('caption')?.textContent?.trim();
+          const label = table?.getAttribute('aria-label') || caption || 'Tabel';
+          area.setAttribute('aria-label', label + '. Geser untuk melihat kolom lain.');
+        }
+        if (!area.hasAttribute('aria-describedby')) {
+          const hint = document.createElement('span');
+          const hintId = 'table-scroll-hint-' + Math.random().toString(36).slice(2, 10);
+          hint.id = hintId;
+          hint.className = 'table-scroll-hint';
+          hint.setAttribute('data-table-scroll-hint', '');
+          hint.textContent = 'Gunakan tombol panah kiri dan kanan untuk melihat kolom lain.';
+          area.appendChild(hint);
+          area.setAttribute('aria-describedby', hintId);
+        }
 
         let dragging = false;
         let moved = false;
@@ -2257,6 +2286,19 @@
           startX = event.clientX;
           startLeft = area.scrollLeft;
           area.classList.add('is-dragging');
+        });
+        area.addEventListener('keydown', (event) => {
+          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+          const maxScroll = Math.max(0, area.scrollWidth - area.clientWidth);
+          if (maxScroll <= 0) return;
+          const step = Math.max(48, Math.round(area.clientWidth * 0.72));
+          const target = event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? maxScroll
+              : area.scrollLeft + (event.key === 'ArrowRight' ? step : -step);
+          event.preventDefault();
+          area.scrollTo({ left: Math.max(0, Math.min(maxScroll, target)), behavior: 'auto' });
         });
         window.addEventListener('mousemove', (event) => {
           if (!dragging) return;
@@ -3127,12 +3169,55 @@
     const sidebarMobileQuery = window.matchMedia('(max-width: 1024px)');
 
     if (appShell && sidebar && sidebarToggle && sidebarBackdrop) {
+      const sidebarFocusableSelector = [
+        'a[href]',
+        'button:not([disabled])',
+        'input:not([disabled]):not([type="hidden"])',
+        'select:not([disabled])',
+        'textarea:not([disabled])',
+        '[tabindex]:not([tabindex="-1"])'
+      ].join(',');
+      let sidebarReturnFocus = null;
+      const sidebarFocusable = () => Array.from(sidebar.querySelectorAll(sidebarFocusableSelector)).filter((node) => {
+        const style = getComputedStyle(node);
+        const rect = node.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+      });
+      sidebar.setAttribute('tabindex', '-1');
       const setSidebarOpen = (open) => {
         const shouldOpen = Boolean(open) && sidebarMobileQuery.matches;
+        if (shouldOpen && !appShell.classList.contains('sidebar-open')) {
+          sidebarReturnFocus = sidebarToggle;
+        }
         appShell.classList.toggle('sidebar-open', shouldOpen);
         document.body.classList.toggle('sidebar-open', shouldOpen);
         sidebarToggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+        sidebar.setAttribute('aria-hidden', shouldOpen || !sidebarMobileQuery.matches ? 'false' : 'true');
+        if (shouldOpen) {
+          const focusSidebar = () => {
+            if (!appShell.classList.contains('sidebar-open')) return;
+            const first = sidebarFocusable()[0];
+            if (first) first.focus();
+            else {
+              sidebar.focus();
+            }
+          };
+          focusSidebar();
+          window.requestAnimationFrame(focusSidebar);
+          window.setTimeout(focusSidebar, 260);
+          window.setTimeout(focusSidebar, 1000);
+        } else {
+          const target = sidebarReturnFocus instanceof HTMLElement && sidebarReturnFocus.isConnected
+            ? sidebarReturnFocus
+            : sidebarToggle;
+          target.focus();
+          sidebarReturnFocus = null;
+        }
       };
+      sidebar.setAttribute('aria-hidden', sidebarMobileQuery.matches ? 'true' : 'false');
+      sidebarToggle.addEventListener('mousedown', function (event) {
+        if (sidebarMobileQuery.matches && !appShell.classList.contains('sidebar-open')) event.preventDefault();
+      });
 
       sidebarToggle.addEventListener('click', function () {
         const isOpen = appShell.classList.contains('sidebar-open');
@@ -3144,8 +3229,27 @@
       });
 
       document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && appShell.classList.contains('sidebar-open')) {
+        if (!appShell.classList.contains('sidebar-open')) return;
+        if (event.key === 'Escape') {
+          event.preventDefault();
           setSidebarOpen(false);
+          return;
+        }
+        if (event.key !== 'Tab') return;
+        const items = sidebarFocusable();
+        if (!items.length) {
+          event.preventDefault();
+          sidebar.focus();
+          return;
+        }
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
         }
       });
 
@@ -4891,6 +4995,117 @@
       });
     };
 
+    const setupAccessibilityFocusManagement = () => {
+      const focusableSelector = [
+        'a[href]',
+        'button:not([disabled])',
+        'input:not([disabled]):not([type="hidden"])',
+        'select:not([disabled])',
+        'textarea:not([disabled])',
+        '[tabindex]:not([tabindex="-1"])'
+      ].join(',');
+      const visibleFocusable = (root) => Array.from(root.querySelectorAll(focusableSelector)).filter((node) => {
+        const style = getComputedStyle(node);
+        const rect = node.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+      });
+      const returnFocus = new WeakMap();
+      let lastTrigger = null;
+      const openTriggerSelector = [
+        '[data-modal-open]',
+        '[data-group-open]',
+        '[data-tree-v2-action-open]',
+        '[data-tree-v2-person-profile-open]',
+        '[data-tree-v2-history-open]',
+        '[data-member-feedback-group-open]',
+        '[data-member-feedback-detail-open]',
+        '[data-msk-view-open]',
+        '[data-spiritual-journey-view-open]',
+        '[data-file-preview-open]',
+        '[data-worship-attendance-open]',
+        '[data-dg-recap-modal-open]'
+      ].join(',');
+      document.addEventListener('click', (event) => {
+        const trigger = event.target.closest?.(openTriggerSelector);
+        if (trigger && !trigger.closest('.modal')) lastTrigger = trigger;
+      }, true);
+
+      const focusModal = (modal) => {
+        const items = visibleFocusable(modal);
+        if (items[0]) {
+          items[0].focus();
+          return;
+        }
+        if (!modal.hasAttribute('tabindex')) modal.setAttribute('tabindex', '-1');
+        modal.focus();
+      };
+      const restoreModalFocus = (modal) => {
+        const opener = returnFocus.get(modal);
+        returnFocus.delete(modal);
+        if (opener instanceof HTMLElement && opener.isConnected) {
+          window.requestAnimationFrame(() => opener.focus());
+        }
+      };
+      const syncModal = (modal) => {
+        const isOpen = modal.classList.contains('is-open') && modal.getAttribute('aria-hidden') === 'false';
+        if (!isOpen) {
+          if (returnFocus.has(modal)) restoreModalFocus(modal);
+          return;
+        }
+        if (!returnFocus.has(modal)) {
+          const opener = lastTrigger instanceof HTMLElement && lastTrigger.isConnected
+            ? lastTrigger
+            : document.activeElement;
+          if (opener instanceof HTMLElement && !modal.contains(opener)) returnFocus.set(modal, opener);
+        }
+        window.requestAnimationFrame(() => {
+          if (modal.classList.contains('is-open') && !modal.contains(document.activeElement)) focusModal(modal);
+        });
+      };
+      const observeModal = (modal) => {
+        if (!(modal instanceof HTMLElement) || modal.getAttribute('data-focus-management-ready') === '1') return;
+        modal.setAttribute('data-focus-management-ready', '1');
+        new MutationObserver(() => syncModal(modal)).observe(modal, {
+          attributes: true,
+          attributeFilter: ['class', 'aria-hidden']
+        });
+        syncModal(modal);
+      };
+      document.querySelectorAll('.modal, [data-modal]').forEach(observeModal);
+      new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof HTMLElement)) return;
+          if (node.matches('.modal, [data-modal]')) observeModal(node);
+          node.querySelectorAll?.('.modal, [data-modal]').forEach(observeModal);
+        }));
+      }).observe(document.body, { childList: true, subtree: true });
+      document.addEventListener('focusin', (event) => {
+        const modal = Array.from(document.querySelectorAll('.modal.is-open, [data-modal].is-open')).at(-1);
+        if (modal && !modal.contains(event.target)) focusModal(modal);
+      });
+      document.addEventListener('keydown', (event) => {
+        const modal = Array.from(document.querySelectorAll('.modal.is-open, [data-modal].is-open')).at(-1);
+        if (!modal) return;
+        const items = visibleFocusable(modal);
+        if (event.key === 'Tab') {
+          if (!items.length) {
+            event.preventDefault();
+            focusModal(modal);
+            return;
+          }
+          const first = items[0];
+          const last = items[items.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
+      }, true);
+    };
+
     const initDiscipleshipTreePane = (panel) => {
       if (
         !panel
@@ -6014,6 +6229,7 @@
       initDiscipleshipTreePane(panel);
     });
     setupFilePreviewModal(document);
+    setupAccessibilityFocusManagement();
 
   };
 

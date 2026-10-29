@@ -1185,20 +1185,33 @@ button.nav-item {
 
 .page-file-preview-standalone {
   background: #111827;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  overflow: hidden;
 }
 
 .page-file-preview-standalone .container {
   max-width: none;
   margin: 0;
-  padding: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   width: 100vw;
+  min-height: 100vh;
+  min-height: 100svh;
   height: 100vh;
+  height: 100svh;
+  height: 100dvh;
 }
 
 .page-file-preview-standalone .file-page-embed {
   display: block;
   width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
   height: 100vh;
+  height: 100svh;
+  height: 100dvh;
   border: 0;
   background: #111827;
 }
@@ -5363,7 +5376,8 @@ textarea {
   min-height: 0 !important;
   height: auto !important;
   max-height: none !important;
-  overflow: visible !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
 }
 
 @media (max-width: 640px) {
@@ -17049,28 +17063,29 @@ button,
   }
 }
 
-body.page-discipleship-workspace:not(.modal-open) {
+/* Normal workspaces use document scroll; tree-v2 keeps its own contained surface. */
+body.page-discipleship-workspace:not(.page-tree-v2):not(.modal-open) {
   height: auto;
   min-height: 100vh;
   overflow: visible;
 }
 
-.page-discipleship-workspace .app-shell,
-.page-discipleship-workspace .app-main,
-.page-discipleship-workspace .container {
+.page-discipleship-workspace:not(.page-tree-v2) .app-shell,
+.page-discipleship-workspace:not(.page-tree-v2) .app-main,
+.page-discipleship-workspace:not(.page-tree-v2) .container {
   height: auto;
   min-height: 0;
   overflow: visible;
 }
 
-.page-discipleship-workspace .app-shell,
-.page-discipleship-workspace .app-main {
+.page-discipleship-workspace:not(.page-tree-v2) .app-shell,
+.page-discipleship-workspace:not(.page-tree-v2) .app-main {
   min-height: 100vh;
 }
 
-.page-discipleship-workspace .discipleship-workspace,
-.page-discipleship-workspace .discipleship-workspace__panels,
-.page-discipleship-workspace [data-discipleship-tab-panel] {
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-workspace,
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-workspace__panels,
+.page-discipleship-workspace:not(.page-tree-v2) [data-discipleship-tab-panel] {
   flex: 0 0 auto !important;
   height: auto !important;
   min-height: 0 !important;
@@ -17080,9 +17095,9 @@ body.page-discipleship-workspace:not(.modal-open) {
   scrollbar-gutter: auto;
 }
 
-.page-discipleship-workspace .discipleship-list-card.table-card-plain,
-.page-discipleship-workspace [data-discipleship-tab-panel] > .table-card-plain,
-.page-discipleship-workspace [data-discipleship-tab-panel] > .dg-recap-section-card {
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-list-card.table-card-plain,
+.page-discipleship-workspace:not(.page-tree-v2) [data-discipleship-tab-panel] > .table-card-plain,
+.page-discipleship-workspace:not(.page-tree-v2) [data-discipleship-tab-panel] > .dg-recap-section-card {
   flex: 0 0 auto !important;
   height: auto !important;
   min-height: 0 !important;
@@ -17090,12 +17105,12 @@ body.page-discipleship-workspace:not(.modal-open) {
   overflow: visible !important;
 }
 
-.page-discipleship-workspace [data-discipleship-people-scroll],
-.page-discipleship-workspace [data-discipleship-groups-scroll],
-.page-discipleship-workspace [data-msk-scroll],
-.page-discipleship-workspace [data-spiritual-journey-scroll],
-.page-discipleship-workspace [data-dg-recap-summary-scroll],
-.page-discipleship-workspace [data-member-feedback-summary-scroll] {
+.page-discipleship-workspace:not(.page-tree-v2) [data-discipleship-people-scroll],
+.page-discipleship-workspace:not(.page-tree-v2) [data-discipleship-groups-scroll],
+.page-discipleship-workspace:not(.page-tree-v2) [data-msk-scroll],
+.page-discipleship-workspace:not(.page-tree-v2) [data-spiritual-journey-scroll],
+.page-discipleship-workspace:not(.page-tree-v2) [data-dg-recap-summary-scroll],
+.page-discipleship-workspace:not(.page-tree-v2) [data-member-feedback-summary-scroll] {
   flex: 0 0 auto !important;
   height: auto !important;
   min-height: 0 !important;
@@ -17106,25 +17121,25 @@ body.page-discipleship-workspace:not(.modal-open) {
   scrollbar-gutter: auto;
 }
 
-.page-discipleship-workspace .discipleship-tree-panel .tree-v2-surface,
-.page-discipleship-workspace .discipleship-tree-panel .tree-v2-scroll {
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-tree-panel .tree-v2-surface,
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-tree-panel .tree-v2-scroll {
   flex: 0 0 auto !important;
   height: auto !important;
   max-height: none !important;
 }
 
-.page-discipleship-workspace .discipleship-tree-panel .tree-v2-surface {
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-tree-panel .tree-v2-surface {
   min-height: 0 !important;
   overflow: visible !important;
 }
 
-.page-discipleship-workspace .discipleship-tree-panel .tree-v2-scroll {
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-tree-panel .tree-v2-scroll {
   min-height: 480px !important;
   overflow-x: auto !important;
   overflow-y: visible !important;
 }
 
-.page-discipleship-workspace .discipleship-overdue-list {
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-overdue-list {
   max-height: none;
   overflow: visible;
   padding-right: 0;
@@ -17145,7 +17160,8 @@ body.page-discipleship-workspace:not(.modal-open) {
   min-height: 0 !important;
   height: auto !important;
   max-height: none !important;
-  overflow: visible !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
 }
 
 @media (max-width: 720px) {
@@ -17340,6 +17356,13 @@ body.page-discipleship-workspace:not(.modal-open) {
 [data-table-horizontal-scroll] {
   position: relative;
   cursor: grab;
+  scroll-margin-inline: 8px;
+  outline: none;
+}
+
+[data-table-horizontal-scroll]:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 70%, white);
+  outline-offset: 3px;
 }
 
 [data-table-horizontal-scroll].is-dragging {
@@ -17357,6 +17380,81 @@ body.page-discipleship-workspace:not(.modal-open) {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+.table-scroll-hint,
+[data-table-scroll-hint] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 2px 0;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.table-scroll-hint::before,
+[data-table-scroll-hint]::before {
+  content: "↔";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border: 1px solid rgba(100, 116, 139, 0.34);
+  border-radius: 999px;
+  color: var(--primary-strong);
+  background: rgba(15, 118, 110, 0.06);
+}
+
+@media (max-width: 720px) {
+  .dashboard-lazy-shell[aria-busy="true"] {
+    min-height: 120px;
+  }
+
+  .dashboard-section-loading,
+  .dashboard-section-error {
+    min-height: 96px;
+  }
+
+  .discipleship-workspace__tabbar {
+    position: relative;
+    gap: 0;
+    padding-right: 48px;
+  }
+
+  .discipleship-workspace__tabs {
+    padding-right: 12px;
+    scrollbar-width: thin;
+  }
+
+  .discipleship-workspace__refresh {
+    position: absolute;
+    top: auto;
+    right: 6px;
+    bottom: 0;
+    margin: 0;
+    background: #ffffff;
+  }
+
+  .table-scroll-hint,
+  [data-table-scroll-hint] {
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .dashboard-lazy-shell[aria-busy="true"] {
+    min-height: 96px;
+  }
+
+  .dashboard-section-loading,
+  .dashboard-section-error {
+    min-height: 84px;
+    gap: 8px;
+    font-size: 12px;
+  }
 }
 
 .member-feedback-recap-group-card.dg-recap-section-card {

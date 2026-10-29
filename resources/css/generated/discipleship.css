@@ -2028,7 +2028,8 @@ button.note-link.dg-recap-photo-trigger {
   min-height: 0 !important;
   height: auto !important;
   max-height: none !important;
-  overflow: visible !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
 }
 
 @media (max-width: 640px) {
@@ -8023,28 +8024,28 @@ button.member-feedback-recap-count-pill:focus-visible {
   }
 }
 
-body.page-discipleship-workspace:not(.modal-open) {
+body.page-discipleship-workspace:not(.page-tree-v2):not(.modal-open) {
   height: auto;
   min-height: 100vh;
   overflow: visible;
 }
 
-.page-discipleship-workspace .app-shell,
-.page-discipleship-workspace .app-main,
-.page-discipleship-workspace .container {
+.page-discipleship-workspace:not(.page-tree-v2) .app-shell,
+.page-discipleship-workspace:not(.page-tree-v2) .app-main,
+.page-discipleship-workspace:not(.page-tree-v2) .container {
   height: auto;
   min-height: 0;
   overflow: visible;
 }
 
-.page-discipleship-workspace .app-shell,
-.page-discipleship-workspace .app-main {
+.page-discipleship-workspace:not(.page-tree-v2) .app-shell,
+.page-discipleship-workspace:not(.page-tree-v2) .app-main {
   min-height: 100vh;
 }
 
-.page-discipleship-workspace .discipleship-workspace,
-.page-discipleship-workspace .discipleship-workspace__panels,
-.page-discipleship-workspace [data-discipleship-tab-panel] {
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-workspace,
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-workspace__panels,
+.page-discipleship-workspace:not(.page-tree-v2) [data-discipleship-tab-panel] {
   flex: 0 0 auto !important;
   height: auto !important;
   min-height: 0 !important;
@@ -8054,9 +8055,9 @@ body.page-discipleship-workspace:not(.modal-open) {
   scrollbar-gutter: auto;
 }
 
-.page-discipleship-workspace .discipleship-list-card.table-card-plain,
-.page-discipleship-workspace [data-discipleship-tab-panel] > .table-card-plain,
-.page-discipleship-workspace [data-discipleship-tab-panel] > .dg-recap-section-card {
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-list-card.table-card-plain,
+.page-discipleship-workspace:not(.page-tree-v2) [data-discipleship-tab-panel] > .table-card-plain,
+.page-discipleship-workspace:not(.page-tree-v2) [data-discipleship-tab-panel] > .dg-recap-section-card {
   flex: 0 0 auto !important;
   height: auto !important;
   min-height: 0 !important;
@@ -8064,12 +8065,12 @@ body.page-discipleship-workspace:not(.modal-open) {
   overflow: visible !important;
 }
 
-.page-discipleship-workspace [data-discipleship-people-scroll],
-.page-discipleship-workspace [data-discipleship-groups-scroll],
-.page-discipleship-workspace [data-msk-scroll],
-.page-discipleship-workspace [data-spiritual-journey-scroll],
-.page-discipleship-workspace [data-dg-recap-summary-scroll],
-.page-discipleship-workspace [data-member-feedback-summary-scroll] {
+.page-discipleship-workspace:not(.page-tree-v2) [data-discipleship-people-scroll],
+.page-discipleship-workspace:not(.page-tree-v2) [data-discipleship-groups-scroll],
+.page-discipleship-workspace:not(.page-tree-v2) [data-msk-scroll],
+.page-discipleship-workspace:not(.page-tree-v2) [data-spiritual-journey-scroll],
+.page-discipleship-workspace:not(.page-tree-v2) [data-dg-recap-summary-scroll],
+.page-discipleship-workspace:not(.page-tree-v2) [data-member-feedback-summary-scroll] {
   flex: 0 0 auto !important;
   height: auto !important;
   min-height: 0 !important;
@@ -8080,25 +8081,25 @@ body.page-discipleship-workspace:not(.modal-open) {
   scrollbar-gutter: auto;
 }
 
-.page-discipleship-workspace .discipleship-tree-panel .tree-v2-surface,
-.page-discipleship-workspace .discipleship-tree-panel .tree-v2-scroll {
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-tree-panel .tree-v2-surface,
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-tree-panel .tree-v2-scroll {
   flex: 0 0 auto !important;
   height: auto !important;
   max-height: none !important;
 }
 
-.page-discipleship-workspace .discipleship-tree-panel .tree-v2-surface {
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-tree-panel .tree-v2-surface {
   min-height: 0 !important;
   overflow: visible !important;
 }
 
-.page-discipleship-workspace .discipleship-tree-panel .tree-v2-scroll {
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-tree-panel .tree-v2-scroll {
   min-height: 480px !important;
   overflow-x: auto !important;
   overflow-y: visible !important;
 }
 
-.page-discipleship-workspace .discipleship-overdue-list {
+.page-discipleship-workspace:not(.page-tree-v2) .discipleship-overdue-list {
   max-height: none;
   overflow: visible;
   padding-right: 0;
@@ -8119,7 +8120,8 @@ body.page-discipleship-workspace:not(.modal-open) {
   min-height: 0 !important;
   height: auto !important;
   max-height: none !important;
-  overflow: visible !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
 }
 
 @media (max-width: 720px) {
@@ -8287,6 +8289,29 @@ body.page-discipleship-workspace:not(.modal-open) {
     min-width: 960px;
   }
 
+}
+
+@media (max-width: 720px) {
+
+  .discipleship-workspace__tabbar {
+    position: relative;
+    gap: 0;
+    padding-right: 48px;
+  }
+
+  .discipleship-workspace__tabs {
+    padding-right: 12px;
+    scrollbar-width: thin;
+  }
+
+  .discipleship-workspace__refresh {
+    position: absolute;
+    top: auto;
+    right: 6px;
+    bottom: 0;
+    margin: 0;
+    background: #ffffff;
+  }
 }
 
 .member-feedback-recap-group-card.dg-recap-section-card {
