@@ -133,23 +133,6 @@ class PublicMaterialTextFormatter
             return true;
         }
 
-        if ($length <= 100 && str_ends_with($line, '?')) {
-            if (preg_match('/^[\p{Lu}]/u', $line) !== 1) {
-                return false;
-            }
-            if (! empty($currentLines)) {
-                $prev = end($currentLines);
-                if (! is_string($prev) || preg_match('/[.!?:"”’)]$/u', trim($prev)) !== 1) {
-                    return false;
-                }
-                if ($this->startsNumberedItem($currentLines[0])) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
         return false;
     }
 
