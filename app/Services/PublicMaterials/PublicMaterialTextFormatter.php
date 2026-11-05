@@ -155,18 +155,33 @@ class PublicMaterialTextFormatter
             return false;
         }
 
+        if (preg_match('/^[)\],.:;\d+:\-]/u', $line) === 1) {
+            return false;
+        }
+
         $currentText = implode(' ', $currentLines);
         $length = function_exists('mb_strlen') ? mb_strlen($currentText) : strlen($currentText);
         if ($length < 360) {
             return false;
         }
 
-        $previous = end($currentLines);
-        if (! is_string($previous) || preg_match('/[.!?:"”’)]$/u', $previous) !== 1) {
+        $openParens = substr_count($currentText, '(') - substr_count($currentText, ')');
+        if ($openParens > 0) {
             return false;
         }
 
-        return preg_match('/^[\p{Lu}0-9"]/u', $line) === 1;
+        $openQuotes = (substr_count($currentText, '“') - substr_count($currentText, '”'))
+            + (substr_count($currentText, '"') % 2);
+        if ($openQuotes > 0) {
+            return false;
+        }
+
+        $previous = end($currentLines);
+        if (! is_string($previous) || preg_match('/[.!?:"”’)]$/u', trim($previous)) !== 1) {
+            return false;
+        }
+
+        return preg_match('/^[\p{Lu}"]/u', $line) === 1;
     }
 
     private function leadText(string $line): string
