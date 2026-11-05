@@ -26,7 +26,7 @@ class PublicMaterialTextFormatter
                 continue;
             }
 
-            if ($this->isHeadingLine($line)) {
+            if ($this->isHeadingLine($line, $currentLines)) {
                 $this->flushParagraph($blocks, $currentLines, $currentLead);
                 $blocks[] = $this->headingBlock($line);
 
@@ -66,6 +66,10 @@ class PublicMaterialTextFormatter
 
         $text = trim((string) preg_replace('/\s+/u', ' ', implode(' ', $lines)));
         if ($text !== '') {
+            if (preg_match('/^(\d+\.)([^\s])/u', $text, $matches)) {
+                $text = $matches[1] . ' ' . substr($text, strlen($matches[1]));
+            }
+
             $rest = '';
             if ($lead !== '' && str_starts_with($text, $lead)) {
                 $rest = trim(substr($text, strlen($lead)));
@@ -100,7 +104,7 @@ class PublicMaterialTextFormatter
         ];
     }
 
-    private function isHeadingLine(string $line): bool
+    private function isHeadingLine(string $line, array $currentLines = []): bool
     {
         $length = function_exists('mb_strlen') ? mb_strlen($line) : strlen($line);
         if ($length > 120) {
@@ -115,7 +119,7 @@ class PublicMaterialTextFormatter
             return true;
         }
 
-        if ($length <= 100 && str_ends_with($line, '?')) {
+        if (preg_match('/^(Ayat Hafalan|Refleksi dan [Ss]haring [Kk]elompok)\b/iu', $line) === 1) {
             return true;
         }
 
@@ -125,8 +129,28 @@ class PublicMaterialTextFormatter
         }
 
         $uppercaseLine = function_exists('mb_strtoupper') ? mb_strtoupper($line, 'UTF-8') : strtoupper($line);
+        if ($line === $uppercaseLine && $length <= 100) {
+            return true;
+        }
 
-        return $line === $uppercaseLine && $length <= 100;
+        if ($length <= 100 && str_ends_with($line, '?')) {
+            if (preg_match('/^[\p{Lu}]/u', $line) !== 1) {
+                return false;
+            }
+            if (! empty($currentLines)) {
+                $prev = end($currentLines);
+                if (! is_string($prev) || preg_match('/[.!?:"”’)]$/u', trim($prev)) !== 1) {
+                    return false;
+                }
+                if ($this->startsNumberedItem($currentLines[0])) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     private function startsOrdinalSubsection(string $line): bool
@@ -136,7 +160,7 @@ class PublicMaterialTextFormatter
 
     private function startsNumberedItem(string $line): bool
     {
-        return preg_match('/^\d+\.\s+/', $line) === 1;
+        return preg_match('/^\d+\.\s*/', $line) === 1;
     }
 
     /**
